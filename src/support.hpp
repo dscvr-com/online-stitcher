@@ -1,13 +1,15 @@
 #include <algorithm>
 #include <string>
 #include "lib/tinyxml2/tinyxml2.h"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/opencv_modules.hpp"
-#include "opencv2/core/core.hpp"
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/opencv.hpp>
 
 using namespace cv;
 using namespace std;
 using namespace tinyxml2;
+
+#ifndef OPTONAUT_SUPPORT_HEADER
+#define OPTONAUT_SUPPORT_HEADER
 
 namespace optonaut {
 	bool StringEndsWith(const string& a, const string& b) {
@@ -42,4 +44,12 @@ namespace optonaut {
 		text >> val;
 		return val;
 	}
+
+	string ToString(int i) {
+		ostringstream text;
+		text << i;
+		return text.str();
+	}
 }
+
+#endif

@@ -9,13 +9,16 @@
 #include "lib/tinyxml2/tinyxml2.h"
 #include "support.hpp"
 
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/opencv_modules.hpp"
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include <opencv2/features2d.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/opencv.hpp>
 
 using namespace std;
 using namespace cv;
+
+
+#ifndef OPTONAUT_CORE_HEADER
+#define OPTONAUT_CORE_HEADER
 
 namespace optonaut {
 	struct Image {
@@ -24,6 +27,9 @@ namespace optonaut {
 		Mat intrinsics; 
 		int id;
 		std::string source;
+
+		vector<KeyPoint> features;
+		Mat descriptors;
 	};
 
 	Image* ImageFromFile(string path) {
@@ -47,3 +53,5 @@ namespace optonaut {
 		return result;
 	}
 }
+
+#endif
