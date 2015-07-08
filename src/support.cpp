@@ -104,5 +104,9 @@ namespace optonaut {
 
 	double GetDistanceZ(Mat a, Mat b) {
 	    return GetDistanceByDimension(a, b, 2);
-}
+	}
+
+	void From4DoubleTo3Float(const Mat &in, Mat &out) {
+		((Mat)(in(Rect(0, 0, 3, 3)))).convertTo(out, CV_32F);
+	}
 }

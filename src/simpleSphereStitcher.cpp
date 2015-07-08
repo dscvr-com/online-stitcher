@@ -22,7 +22,7 @@ vector<Image*> RStitcher::PrepareMatrices(vector<Image*> r) {
     vector<Mat> matrices(r.size());
 
     for(size_t i = 0; i <  r.size(); i++) {
-        ((Mat)(center * r[i]->intrinsics)).convertTo(matrices[i], CV_32F);
+        From4DoubleTo3Float(center * r[i]->intrinsics, matrices[i]);
     }
 
     //Do wave correction
@@ -44,7 +44,7 @@ StitchingResult *RStitcher::Stitch(std::vector<Image*> in) {
 
     for(size_t i = 0; i < n; i++) {
         images[i] = in[i]->img;
-        ((Mat)(in[i]->extrinsics(Rect(0, 0, 3, 3)))).convertTo(cameras[i].R, CV_32F);
+        From4DoubleTo3Float(in[i]->extrinsics,cameras[i].R);
     }
 
 	//Create masks and small images for fast stitching. 
@@ -83,7 +83,7 @@ StitchingResult *RStitcher::Stitch(std::vector<Image*> in) {
 
 	for (size_t i = 0; i < n; i++) {
        	Mat k;
-        ((Mat)(in[i]->intrinsics(Rect(0, 0, 3, 3)))).convertTo(k, CV_32F);
+        From4DoubleTo3Float(in[i]->intrinsics, k);
 
         //Big
         corners[i] = warper->warp(images[i], k, cameras[i].R, INTER_LINEAR, BORDER_CONSTANT, warpedImages[i]);

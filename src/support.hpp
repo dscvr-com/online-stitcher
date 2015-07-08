@@ -25,6 +25,7 @@ namespace optonaut {
 	double GetDistanceX(cv::Mat a, cv::Mat b);
 	double GetDistanceY(cv::Mat a, cv::Mat b);
 	double GetDistanceZ(cv::Mat a, cv::Mat b);
+	void From4DoubleTo3Float(const cv::Mat &in, cv::Mat &out);
 }
 
 #endif
