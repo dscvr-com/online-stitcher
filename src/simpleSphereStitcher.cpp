@@ -22,14 +22,14 @@ vector<Image*> RStitcher::PrepareMatrices(vector<Image*> r) {
     vector<Mat> matrices(r.size());
 
     for(size_t i = 0; i <  r.size(); i++) {
-        matrices[i] = center * r[i]->intrinsics;
+        ((Mat)(center * r[i]->intrinsics)).convertTo(matrices[i], CV_32F);
     }
 
     //Do wave correction
     waveCorrect(matrices, WAVE_CORRECT_HORIZ);
 
     for(size_t i = 0; i <  r.size(); i++) {
-        r[i]->intrinsics = matrices[i]; 
+        matrices[i].convertTo(r[i]->intrinsics, CV_64F);
     }
 
     return r;
@@ -44,7 +44,7 @@ StitchingResult *RStitcher::Stitch(std::vector<Image*> in) {
 
     for(size_t i = 0; i < n; i++) {
         images[i] = in[i]->img;
-        cameras[i].R = in[i]->extrinsics;
+        ((Mat)(in[i]->extrinsics(Rect(0, 0, 3, 3)))).convertTo(cameras[i].R, CV_32F);
     }
 
 	//Create masks and small images for fast stitching. 
@@ -82,7 +82,8 @@ StitchingResult *RStitcher::Stitch(std::vector<Image*> in) {
 	vector<UMat> miniWarpedImagesAsFloat(n);
 
 	for (size_t i = 0; i < n; i++) {
-       	Mat k = in[i]->intrinsics;
+       	Mat k;
+        ((Mat)(in[i]->intrinsics(Rect(0, 0, 3, 3)))).convertTo(k, CV_32F);
 
         //Big
         corners[i] = warper->warp(images[i], k, cameras[i].R, INTER_LINEAR, BORDER_CONSTANT, warpedImages[i]);
