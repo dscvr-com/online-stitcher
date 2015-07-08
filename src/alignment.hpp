@@ -3,6 +3,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "core.hpp"
+#include "support.hpp"
 
 using namespace cv;
 using namespace std;
@@ -16,11 +17,10 @@ class MatchInfo {
 public:
 	bool valid;
 	Mat homography;
-	Mat fundamental;
-	Mat essential;
-	float hshift;
-	float hrotation;
-	float error;
+
+	double hshift;
+	double hrotation;
+	double error;
 
 	MatchInfo() : valid(false) {}
 };
@@ -30,25 +30,6 @@ class Aligner {
 private:
 	Ptr<AKAZE> detector;
 
-	Mat ScaleIntrinsicsToImage(Mat intrinsics, Mat image) {
-		Mat i = intrinsics.clone();
-		//TODO - this is correct, but we had a mixup with our testcase - use this as soon as we have new samples
-		//float scaleFactor = image.cols / intrinsics.at<float>(0, 2);
-		//i.at<float>(0, 2) = image.cols / 2;
-		//i.at<float>(1, 2) = image.rows / 2;
-		//i.at<float>(0, 0) = intrinsics.at<float>(0, 0) * scaleFactor;
-		//i.at<float>(1, 1) = intrinsics.at<float>(1, 1) * scaleFactor;
-
-		cout << "INCORRECT INTRINSICS OO" << endl;
-
-		float scaleFactor = image.cols / intrinsics.at<float>(0, 0) / 2;
-		i.at<float>(0, 2) = image.cols / 2;
-		i.at<float>(1, 2) = image.rows / 2;
-		i.at<float>(0, 0) = intrinsics.at<float>(0, 2) * scaleFactor;
-		i.at<float>(1, 1) = intrinsics.at<float>(1, 2) * scaleFactor;
-
-		return i;
-	}
 public:
 
 	Aligner() : detector(AKAZE::create()) { }
@@ -93,14 +74,9 @@ public:
 		}
 
 		info->homography = findHomography(aFeatures, bFeatures, CV_RANSAC);
-		info->fundamental = findFundamentalMat(aFeatures, bFeatures, CV_RANSAC);
-		Mat scaledK = ScaleIntrinsicsToImage(a->intrinsics, a->img);
-
-		//Todo: find matrix type missmatch here. 
-		info->essential = scaledK.t() * info->fundamental * scaledK;
 
 
-		if(info->homography.cols != 0) {
+		if(info->homography.cols != 0) {	
 			info->valid = true;
 
 			vector<Point2f> poi(5); //Points of interest
@@ -114,10 +90,23 @@ public:
 			perspectiveTransform(poi, poi_projected, info->homography);
 
 			info->hshift = poi[0].x - poi_projected[0].x;
-			float hrotUp = (poi[2].x - poi[1].x) - (poi_projected[2].x - poi_projected[1].x);
-			float hrotLow = (poi[4].x - poi[3].x) - (poi_projected[4].x - poi_projected[3].x);
-			info->hrotation = asin((hrotUp + hrotLow) / (2 * (poi[2].x - poi[1].x)));
-			info->error = (poi_projected[2].x - poi_projected[4].x + poi_projected[1].x - poi_projected[3].x) / 2;
+			double hrotUp = (poi[2].x - poi[1].x) - (poi_projected[2].x - poi_projected[1].x);
+			double hrotLow = (poi[4].x - poi[3].x) - (poi_projected[4].x - poi_projected[3].x);
+			
+			double averageNormedSkew = (hrotUp + hrotLow) / (2 * (poi[2].x - poi[1].x)); 
+			double x = 1 + averageNormedSkew;
+			double l = cos(GetHorizontalFov(a->intrinsics) / 2);
+			double h = 1;
+
+			if(averageNormedSkew - l == 0) {
+				info->hrotation = 0;
+				info->error = 1;
+			} else {
+				cout << "skew " << x << endl;
+				cout << "hfov " << (GetHorizontalFov(a->intrinsics) * 180 / M_PI) << endl; 
+				info->hrotation = 2 * atan((sqrt(h * h * l * l + h * h - x * x) - h * l) / (h + x));
+				info->error = (poi_projected[2].x - poi_projected[4].x + poi_projected[1].x - poi_projected[3].x) / 2;
+ 			}
  		}
 	
 		//debug
@@ -147,6 +136,9 @@ public:
 			cout << "Debug: Homography not found." << endl;
 		}
 		imwrite( "dbg/Homogpraphy" + ToString(a->id) + "_" + ToString(b->id) + ".jpg", img_matches );
+
+		//debug end
+
 		return info;
 	}
 };

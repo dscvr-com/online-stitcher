@@ -1,55 +1,30 @@
 #include <algorithm>
 #include <string>
 #include "lib/tinyxml2/tinyxml2.h"
-#include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
-
-using namespace cv;
-using namespace std;
-using namespace tinyxml2;
 
 #ifndef OPTONAUT_SUPPORT_HEADER
 #define OPTONAUT_SUPPORT_HEADER
 
 namespace optonaut {
-	bool StringEndsWith(const string& a, const string& b) {
-	    if (b.size() > a.size()) return false;
-	    return std::equal(a.begin() + a.size() - b.size(), a.end(), b.begin());
-	}
 
-	Mat MatrixFromXml(XMLElement* node) {
-		int size;
-		istringstream(node->Attribute("size")) >> size;
+	bool StringEndsWith(const std::string& a, const std::string& b);
+	cv::Mat MatrixFromXml(tinyxml2::XMLElement* node);
+	int ParseInt(const char* data);
 
-		assert(size == 9 || size == 16);
-		int dim = size == 9 ? 3 : 4;
+	std::string ToString(int i);
 
-		Mat m(dim, dim, CV_32F);
+	void ScaleIntrinsicsToImage(cv::Mat intrinsics, cv::Mat image, cv::Mat &scaled);
 
-		for(int i = 0; i < dim; i++) {
-			for(int j = 0; j < dim; j++) {
-				ostringstream name;
-				name << "m" << i << j;
-				istringstream text(node->FirstChildElement(name.str().c_str())->GetText());
-				text >> m.at<float>(i, j);
-			}
-		}
+	double GetHorizontalFov(cv::Mat intrinsics);
 
-		return m;
-	}
+	cv::Mat ExtractRotationVector(cv::Mat r);
+	double GetAngleOfRotation(cv::Mat r);
 
-	int ParseInt(const char* data) {
-		int val;
-		istringstream text(data);
-		text >> val;
-		return val;
-	}
-
-	string ToString(int i) {
-		ostringstream text;
-		text << i;
-		return text.str();
-	}
+	double GetDistanceByDimension(cv::Mat a, cv::Mat b, int dim);
+	double GetDistanceX(cv::Mat a, cv::Mat b);
+	double GetDistanceY(cv::Mat a, cv::Mat b);
+	double GetDistanceZ(cv::Mat a, cv::Mat b);
 }
 
 #endif
