@@ -16,7 +16,7 @@ namespace optonaut {
 	    return std::equal(a.begin() + a.size() - b.size(), a.end(), b.begin());
 	}
 
-	Mat MatrixFromXml(XMLElement* node) {
+	void MatrixFromXml(XMLElement* node, Mat &out) {
 		int size;
 		istringstream(node->Attribute("size")) >> size;
 
@@ -34,7 +34,7 @@ namespace optonaut {
 			}
 		}
 
-		return m;
+		out = m.clone();
 	}
 
 	int ParseInt(const char* data) {
@@ -50,14 +50,16 @@ namespace optonaut {
 		return text.str();
 	}
 
-	void ScaleIntrinsicsToImage(Mat intrinsics, Mat image, Mat &scaled) {
+	void ScaleIntrinsicsToImage(Mat intrinsics, Mat image, Mat &scaled, double fupscaling) {
 		scaled = Mat::zeros(3, 3, CV_64F);
 		
 		double scaleFactor = image.cols / (intrinsics.at<double>(0, 2) * 2);
 		scaled.at<double>(0, 2) = image.cols / 2;
 		scaled.at<double>(1, 2) = image.rows / 2;
-		scaled.at<double>(0, 0) = intrinsics.at<double>(0, 0) * scaleFactor;
-		scaled.at<double>(1, 1) = intrinsics.at<double>(1, 1) * scaleFactor;
+		//Todo: Remove factor 10 - only for debug. 
+		scaled.at<double>(0, 0) = intrinsics.at<double>(0, 0) * scaleFactor * fupscaling;
+		scaled.at<double>(1, 1) = intrinsics.at<double>(1, 1) * scaleFactor * fupscaling;
+		scaled.at<double>(2, 2) = 1;
 	}
 
 	double GetHorizontalFov(Mat intrinsics) {
@@ -67,15 +69,54 @@ namespace optonaut {
 		return 2 * atan2(w / 2, f);
 	}
 
-	Mat ExtractRotationVector(Mat r) {
+	void ExtractRotationVector(Mat r, Mat &v) {
 		Mat vec = Mat::zeros(3, 1, CV_64F);
 
 		vec.at<double>(0, 0) = atan2(r.at<double>(2, 1), r.at<double>(2, 2));
 		vec.at<double>(1, 0) = atan2(-r.at<double>(2, 0), sqrt(r.at<double>(2, 1) * r.at<double>(2, 1) + r.at<double>(2, 2) * r.at<double>(2, 2)));
 		vec.at<double>(2, 0) = atan2(r.at<double>(1, 0), r.at<double>(0, 0));
 
-		return vec;
+		v = vec.clone();
 	}
+	void CreateRotationZ(double a, Mat &t) {
+		double v[] = {
+			cos(a), -sin(a), 0, 0,
+			sin(a), cos(a),  0, 0,
+			0, 	    0,       1, 0,
+			0,      0,       0, 1 
+		};
+		Mat rot(4, 4, CV_64F, v);
+
+		t = rot.clone();
+	}
+
+	void CreateRotationX(double a, Mat &t) {
+		double v[] = {
+			1, 0,      0,       0,
+			0, cos(a), -sin(a), 0,
+			0, sin(a), cos(a),  0,
+			0, 0,      0,       1 
+		};
+		Mat rot(4, 4, CV_64F, v);
+
+		t = rot.clone();
+	}
+
+	void CreateRotationY(double a, Mat &t) {
+		double v[] = {
+			cos(a),  0, sin(a), 0,
+			0, 	     1, 0,      0,
+			-sin(a), 0, cos(a), 0,
+			0,       0, 0,      1 
+		};
+		Mat rot(4, 4, CV_64F, v);
+
+		cout << "rot" << rot << endl;
+
+		t = rot.clone();
+	}
+
+
 
 	double GetAngleOfRotation(Mat r) {
 		double t = r.at<double>(0, 0) + r.at<double>(1, 1) + r.at<double>(2, 2);
@@ -107,6 +148,20 @@ namespace optonaut {
 	}
 
 	void From4DoubleTo3Float(const Mat &in, Mat &out) {
-		((Mat)(in(Rect(0, 0, 3, 3)))).convertTo(out, CV_32F);
+		out = Mat::zeros(3, 3, CV_32F);
+		for(int i = 0; i < 3; i++) {
+			for(int j = 0; j < 3; j++) {
+				out.at<float>(i, j) = (float)in.at<double>(i, j);
+			}
+		}
+	}
+	void From3FloatTo4Double(const Mat &in, Mat &out) {
+		out = Mat::zeros(4, 4, CV_64F);
+		for(int i = 0; i < 3; i++) {
+			for(int j = 0; j < 3; j++) {
+				out.at<double>(i, j) = (double)in.at<float>(i, j);
+			}
+		}
+		out.at<double>(3, 3) = 1;
 	}
 }

@@ -21,6 +21,10 @@ namespace optonaut {
 		
 		Image* result = new Image();
 		result->img = imread(path);
+
+		//TODO: That's only correct for certain cases!
+		flip(result->img, result->img, -1);
+
 		result->source = path;
 
 		path.replace(path.length() - 3, 3, "xml");
@@ -31,8 +35,9 @@ namespace optonaut {
 		XMLElement* root = doc.FirstChildElement("imageParameters");
 
 		result->id = ParseInt(root->Attribute("id"));
-		result->extrinsics = MatrixFromXml(root->FirstChildElement("extrinsics")->FirstChildElement("matrix"));
-		result->intrinsics = MatrixFromXml(root->FirstChildElement("intrinsics")->FirstChildElement("matrix"));
+		MatrixFromXml(root->FirstChildElement("extrinsics")->FirstChildElement("matrix"), result->extrinsics);
+		result->extrinsics = result->extrinsics.inv();
+		MatrixFromXml(root->FirstChildElement("intrinsics")->FirstChildElement("matrix"), result->intrinsics);
 	
 		return result;
 	}

@@ -15,21 +15,21 @@ using namespace cv::detail;
 
 namespace optonaut {
 vector<Image*> RStitcher::PrepareMatrices(vector<Image*> r) {
-    
+
 
     //Orient around first image (Correct orientation from start.)
-    Mat center = r[0]->intrinsics.inv();
+    Mat center = r[0]->extrinsics.inv();
     vector<Mat> matrices(r.size());
 
     for(size_t i = 0; i <  r.size(); i++) {
-        From4DoubleTo3Float(center * r[i]->intrinsics, matrices[i]);
+        From4DoubleTo3Float(center * r[i]->extrinsics, matrices[i]);
     }
 
     //Do wave correction
     waveCorrect(matrices, WAVE_CORRECT_HORIZ);
 
     for(size_t i = 0; i <  r.size(); i++) {
-        matrices[i].convertTo(r[i]->intrinsics, CV_64F);
+        From3FloatTo4Double(matrices[i], r[i]->extrinsics);
     }
 
     return r;
@@ -44,7 +44,7 @@ StitchingResult *RStitcher::Stitch(std::vector<Image*> in) {
 
     for(size_t i = 0; i < n; i++) {
         images[i] = in[i]->img;
-        From4DoubleTo3Float(in[i]->extrinsics,cameras[i].R);
+        From4DoubleTo3Float(in[i]->extrinsics, cameras[i].R);
     }
 
 	//Create masks and small images for fast stitching. 
@@ -83,7 +83,9 @@ StitchingResult *RStitcher::Stitch(std::vector<Image*> in) {
 
 	for (size_t i = 0; i < n; i++) {
        	Mat k;
-        From4DoubleTo3Float(in[i]->intrinsics, k);
+        Mat scaledIntrinsics;
+        ScaleIntrinsicsToImage(in[i]->intrinsics, images[i], scaledIntrinsics, 10);
+        From4DoubleTo3Float(scaledIntrinsics, k);
 
         //Big
         corners[i] = warper->warp(images[i], k, cameras[i].R, INTER_LINEAR, BORDER_CONSTANT, warpedImages[i]);

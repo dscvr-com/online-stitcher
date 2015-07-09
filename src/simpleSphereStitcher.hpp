@@ -20,9 +20,9 @@ struct StitchingResult {
 class RStitcher {
 	public:
 		bool compensate = false;
-		bool seam = false;
+		bool seam = true;
 		float workScale = 0.2f;
-		float warperScale = 400;
+		float warperScale = 800;
 
 		StitchingResult *Stitch(std::vector<Image*> images);
 		static std::vector<Image*> PrepareMatrices(std::vector<Image*> r);

@@ -18,8 +18,9 @@ public:
 	bool valid;
 	Mat homography;
 
-	double hshift;
-	double hrotation;
+	vector<Mat> translations;
+	vector<Mat> rotations;
+	vector<Mat> normals;
 	double error;
 
 	MatchInfo() : valid(false) {}
@@ -75,37 +76,18 @@ public:
 
 		info->homography = findHomography(aFeatures, bFeatures, CV_RANSAC);
 
+		info->rotations = vector<Mat>(4);
+		info->translations = vector<Mat>(4);
 
 		if(info->homography.cols != 0) {	
 			info->valid = true;
-
-			vector<Point2f> poi(5); //Points of interest
-			poi[0] = Point2f(a->img.cols / 2, a->img.rows / 2); //Center
-			poi[1] = Point2f(0, 0); //Left Upper
-			poi[2] = Point2f(a->img.cols, 0); //Right Upper
-			poi[3] = Point2f(0, a->img.rows); //Left Lower
-			poi[4] = Point2f(a->img.cols, a->img.rows); //Right Lower
-			vector<Point2f> poi_projected; //Points of interest
-
-			perspectiveTransform(poi, poi_projected, info->homography);
-
-			info->hshift = poi[0].x - poi_projected[0].x;
-			double hrotUp = (poi[2].x - poi[1].x) - (poi_projected[2].x - poi_projected[1].x);
-			double hrotLow = (poi[4].x - poi[3].x) - (poi_projected[4].x - poi_projected[3].x);
-			
-			double averageNormedSkew = (hrotUp + hrotLow) / (2 * (poi[2].x - poi[1].x)); 
-			double x = 1 + averageNormedSkew;
-			double l = cos(GetHorizontalFov(a->intrinsics) / 2);
-			double h = 1;
-
-			if(averageNormedSkew - l == 0) {
-				info->hrotation = 0;
-				info->error = 1;
-			} else {
-				cout << "skew " << x << endl;
-				cout << "hfov " << (GetHorizontalFov(a->intrinsics) * 180 / M_PI) << endl; 
-				info->hrotation = 2 * atan((sqrt(h * h * l * l + h * h - x * x) - h * l) / (h + x));
-				info->error = (poi_projected[2].x - poi_projected[4].x + poi_projected[1].x - poi_projected[3].x) / 2;
+			Mat scaledK;
+			ScaleIntrinsicsToImage(a->intrinsics, a->img, scaledK);
+			int nsols = decomposeHomographyMat(info->homography, scaledK, info->rotations, info->translations, info->normals);
+ 			cout << "Number of solutions: " << nsols << endl;
+ 			for(int i = 0; i < nsols; i++) {
+ 				cout << "rotation " << i << ": " << info->rotations[i] << endl;
+ 				cout << "translation " << i << ": " << info->translations[i] << endl;
  			}
  		}
 	
