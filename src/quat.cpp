@@ -1,5 +1,6 @@
 #include <opencv2/opencv.hpp>
-#include "quat.h"
+#include "quat.hpp"
+#include "support.hpp"
 
 using namespace std;
 using namespace cv;
@@ -8,13 +9,14 @@ namespace optonaut {
 namespace quat {
 
     bool IsQuat(const Mat &q) {
-        return q.rows == 4 && q.cols == 3 && q.type() == CV_64F;  
+        return MatIs(q, 4, 1, CV_64F);
     }
 
     //Mat To Quaterion Conversion from http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/
     void FromMat(const Mat &a, Mat &q) {
 
         assert(IsQuat(q));
+        assert(MatIs(a, 3, 3, CV_64F));
 
         QT w, x, y, z;
         QT trace = a.at<QT>(0, 0) + a.at<QT>(1, 1) + a.at<QT>(2, 2); // I removed + 1.0f; see discussion with Ethan
@@ -52,9 +54,10 @@ namespace quat {
         q.at<QT>(3, 0) = z;
     }
 
-    void ToMat(const Mat &q, Mat &a){
+    void ToMat(const Mat &q, Mat &a) {
 
         assert(IsQuat(q));
+        assert(MatIs(a, 3, 3, CV_64F));
 
         QT w = q.at<QT>(0, 0);
         QT x = q.at<QT>(1, 0);

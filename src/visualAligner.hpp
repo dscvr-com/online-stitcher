@@ -62,7 +62,6 @@ public:
 		}
 
 		if(goodMatches.size() == 0) {
-			cout << "Debug: No matches found." << endl;
 			return info;
 		}
 
@@ -80,16 +79,25 @@ public:
 		info->translations = vector<Mat>(4);
 
 		if(info->homography.cols != 0) {	
-			info->valid = true;
 			Mat scaledK;
 			ScaleIntrinsicsToImage(a->intrinsics, a->img, scaledK);
 			int nsols = decomposeHomographyMat(info->homography, scaledK, info->rotations, info->translations, info->normals);
- 			cout << "Number of solutions: " << nsols << endl;
+ 			//cout << "Number of solutions: " << nsols << endl;
  			for(int i = 0; i < nsols; i++) {
- 				cout << "rotation " << i << ": " << info->rotations[i] << endl;
- 				cout << "translation " << i << ": " << info->translations[i] << endl;
- 				cout << "normal " << i << ": " << info->normals[i] << endl;
+
+ 				if(ContainsNaN(info->rotations[i])) {
+ 					info->rotations.erase(info->rotations.begin() + i);
+ 					info->translations.erase(info->translations.begin() + i);
+ 					info->normals.erase(info->normals.begin() + i);
+ 					nsols--;
+ 					i--;
+ 				}
+
+ 				//cout << "rotation " << i << ": " << info->rotations[i] << endl;
+ 				//cout << "translation " << i << ": " << info->translations[i] << endl;
+ 				//cout << "normal " << i << ": " << info->normals[i] << endl;
  			}
+			info->valid = info->rotations.size() > 0;
  		}
 	
 		//debug

@@ -1,6 +1,8 @@
 #include "core.hpp"
-#include "alignment.hpp"
+#include "VisualAligner.hpp"
 #include "simpleSphereStitcher.hpp"
+#include "streamAligner.hpp"
+#include "monoStitcher.hpp"
 #include <iostream>
 #include <algorithm>
 
@@ -8,13 +10,12 @@ using namespace std;
 using namespace cv;
 using namespace optonaut;
 
+RStitcher stitcher;
 
 bool CompareById (const Image* a, const Image* b) { return (a->id < b->id); }
 
-void Stitch(vector<Image*> imgs, string name = "stitched.jpg") {
-    RStitcher stitcher;
-    //stitcher.PrepareMatrices(imgs);
-    StitchingResult* res = stitcher.Stitch(imgs);
+void Stitch(vector<Image*> imgs, string name = "stitched.jpg", bool debug = false) {
+    StitchingResult* res = stitcher.Stitch(imgs, debug);
 
     imwrite("dbg/" + name, res->image);
 
@@ -22,10 +23,8 @@ void Stitch(vector<Image*> imgs, string name = "stitched.jpg") {
 }
 
 void Align(vector<Image*> imgs) {
-    Aligner aligner;
+    VisualAligner aligner;
     int n = imgs.size();
-
-    sort(imgs.begin(), imgs.end(), CompareById);
 
     for(int i = 0; i < n; i++) {
         aligner.FindKeyPoints(imgs[i]);
@@ -58,6 +57,49 @@ void Align(vector<Image*> imgs) {
 }
 
 
+vector<StereoImage*> Make3D(vector<Image*> images) {
+    vector<StereoImage*> stereos;
+    int n = images.size();
+
+    for(int i = 0; i < n; i++) {
+        StereoImage* img = CreateStereo(images[i], images[(i + 1) % n]);
+        if(img->valid) {
+            stereos.push_back(img);
+        }
+    }
+
+    return stereos;
+}
+
+
+void StreamAlign(vector<Image*> images) {
+    StreamAligner aligner;
+    Stitch(images, "dbg_0_raw.jpg", false);
+    stitcher.PrepareMatrices(images);
+
+    Stitch(images, "dbg_1_prepared.jpg", false);
+
+    for(size_t i = 0; i < images.size(); i++) {
+        aligner.Push(images[i]);
+        images[i]->extrinsics = aligner.GetCurrentRotation().clone();
+    }
+
+    Stitch(images, "dbg_2_aligned.jpg", false);
+
+    vector<StereoImage*> stereos = Make3D(images);
+
+    vector<Image*> imagesLeft;
+    vector<Image*> imagesRight;
+
+    for(size_t i = 0; i < stereos.size(); i++) {
+        imagesLeft.push_back(&(stereos[i]->A));
+        imagesRight.push_back(&(stereos[i]->B));
+    }
+
+    Stitch(imagesLeft, "dbg_3_left.jpg");
+    Stitch(imagesRight, "dbg_4_right.jpg");
+}
+
 int main(int argc, char* argv[]) {
     int n = argc - 1;
     vector<Image*> imgs(n);
@@ -66,15 +108,16 @@ int main(int argc, char* argv[]) {
         string imageName(argv[i + 1]);
         imgs[i] = ImageFromFile(imageName);
 
-        cout << "Loaded " << imgs[i]->source << endl;
-        cout << "ID " << imgs[i]->id << endl;
-        cout << "Size " << imgs[i]->img.size() << endl;
-        cout << "Intrinsics " << imgs[i]->intrinsics << endl;
-        cout << "Extrinsics " << imgs[i]->extrinsics << endl;
+        //cout << "Loaded " << imgs[i]->source << endl;
+        //cout << "ID " << imgs[i]->id << endl;
+        //cout << "Size " << imgs[i]->img.size() << endl;
+        //cout << "Intrinsics " << imgs[i]->intrinsics << endl;
+        //cout << "Extrinsics " << imgs[i]->extrinsics << endl;
     }
+    sort(imgs.begin(), imgs.end(), CompareById);
 
-   // Stitch(imgs);
-    Align(imgs);
+    //Align(imgs);
+    StreamAlign(imgs);
 
     for(int i = 0; i < n; i++) {
         delete imgs[i];

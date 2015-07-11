@@ -23,7 +23,7 @@ namespace optonaut {
 		result->img = imread(path);
 
 		//TODO: That's only correct for certain cases!
-		flip(result->img, result->img, -1);
+		//flip(result->img, result->img, -1);
 
 		result->source = path;
 

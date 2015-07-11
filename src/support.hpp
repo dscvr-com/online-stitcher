@@ -8,6 +8,7 @@
 
 namespace optonaut {
 
+	bool MatIs(const cv::Mat &in, int rows, int cols, int type);
 	bool StringEndsWith(const std::string& a, const std::string& b);
 	void MatrixFromXml(tinyxml2::XMLElement* node, cv::Mat &out);
 	int ParseInt(const char* data);
@@ -29,7 +30,17 @@ namespace optonaut {
 	double GetDistanceY(cv::Mat a, cv::Mat b);
 	double GetDistanceZ(cv::Mat a, cv::Mat b);
 	void From4DoubleTo3Float(const cv::Mat &in, cv::Mat &out);
+	void From3DoubleTo3Float(const cv::Mat &in, cv::Mat &out);
 	void From3FloatTo4Double(const cv::Mat &in, cv::Mat &out);
+	void From3DoubleTo4Double(const cv::Mat &in, cv::Mat &out);
+	bool ContainsNaN(const cv::Mat &in);
+
+	double min2(double a, double b);
+	double max2(double a, double b);
+	double min4(double a, double b, double c, double d);
+	double max4(double a, double b, double c, double d);
+	double angleAvg(double x, double y);
+	double interpolate(double x, double x1, double x2, double y1, double y2);
 }
 
 #endif

@@ -11,6 +11,10 @@ using namespace tinyxml2;
 
 namespace optonaut {
 
+	bool MatIs(const Mat &in, int rows, int cols, int type) {
+		return in.rows >= rows && in.cols >= cols && in.type() == type;
+	}
+
 	bool StringEndsWith(const string& a, const string& b) {
 	    if (b.size() > a.size()) return false;
 	    return std::equal(a.begin() + a.size() - b.size(), a.end(), b.begin());
@@ -51,6 +55,8 @@ namespace optonaut {
 	}
 
 	void ScaleIntrinsicsToImage(Mat intrinsics, Mat image, Mat &scaled, double fupscaling) {
+		assert(MatIs(intrinsics, 3, 3, CV_64F));
+
 		scaled = Mat::zeros(3, 3, CV_64F);
 		
 		double scaleFactor = image.cols / (intrinsics.at<double>(0, 2) * 2);
@@ -63,6 +69,8 @@ namespace optonaut {
 	}
 
 	double GetHorizontalFov(Mat intrinsics) {
+		assert(MatIs(intrinsics, 3, 3, CV_64F));
+
 		double w = intrinsics.at<double>(0, 2) * 2;
 		double f = intrinsics.at<double>(0, 0);
 
@@ -70,6 +78,8 @@ namespace optonaut {
 	}
 
 	void ExtractRotationVector(Mat r, Mat &v) {
+		assert(MatIs(r, 3, 3, CV_64F));
+
 		Mat vec = Mat::zeros(3, 1, CV_64F);
 
 		vec.at<double>(0, 0) = atan2(r.at<double>(2, 1), r.at<double>(2, 2));
@@ -119,11 +129,15 @@ namespace optonaut {
 
 
 	double GetAngleOfRotation(Mat r) {
+		assert(MatIs(r, 3, 3, CV_64F));
 		double t = r.at<double>(0, 0) + r.at<double>(1, 1) + r.at<double>(2, 2);
 		return acos((t - 1) / 2);
 	}
 
 	double GetDistanceByDimension(Mat a, Mat b, int dim) {
+		assert(MatIs(a, 4, 4, CV_64F));
+		assert(MatIs(b, 4, 4, CV_64F));
+
 	    float vdata[] = {0, 0, 1, 0};
 	    Mat vec(4, 1, CV_64F, vdata);
 
@@ -147,7 +161,21 @@ namespace optonaut {
 	    return GetDistanceByDimension(a, b, 2);
 	}
 
+	//TODO: Cleanup conversion mess. 
+
 	void From4DoubleTo3Float(const Mat &in, Mat &out) {
+		assert(MatIs(in, 4, 4, CV_64F));
+
+		out = Mat::zeros(3, 3, CV_32F);
+		for(int i = 0; i < 3; i++) {
+			for(int j = 0; j < 3; j++) {
+				out.at<float>(i, j) = (float)in.at<double>(i, j);
+			}
+		}
+	}
+	void From3DoubleTo3Float(const Mat &in, Mat &out) {
+		assert(MatIs(in, 3, 3, CV_64F));
+
 		out = Mat::zeros(3, 3, CV_32F);
 		for(int i = 0; i < 3; i++) {
 			for(int j = 0; j < 3; j++) {
@@ -156,6 +184,8 @@ namespace optonaut {
 		}
 	}
 	void From3FloatTo4Double(const Mat &in, Mat &out) {
+		assert(MatIs(in, 3, 3, CV_32F));
+
 		out = Mat::zeros(4, 4, CV_64F);
 		for(int i = 0; i < 3; i++) {
 			for(int j = 0; j < 3; j++) {
@@ -163,5 +193,60 @@ namespace optonaut {
 			}
 		}
 		out.at<double>(3, 3) = 1;
+	}
+
+	bool ContainsNaN(const Mat &in) {
+		assert(in.type() == CV_64F);
+		for(int i = 0; i < in.rows; i++) {
+			for(int j = 0; j < in.cols; j++) {
+				if(in.at<double>(i, j) != in.at<double>(i, j)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+
+	void From3DoubleTo4Double(const Mat &in, Mat &out) {
+		assert(MatIs(in, 3, 3, CV_64F));
+
+		out = Mat::zeros(4, 4, CV_64F);
+		for(int i = 0; i < 3; i++) {
+			for(int j = 0; j < 3; j++) {
+				out.at<double>(i, j) = in.at<double>(i, j);
+			}
+		}
+		out.at<double>(3, 3) = 1;
+	}
+
+	double min2(double a, double b) {
+		return a > b ? b : a;
+	}
+
+	double max2(double a, double b) {
+		return a < b ? b : a;
+	}
+
+	double min4(double a, double b, double c, double d) {
+		return min2(min2(a, b), min2(c, d));
+	}
+
+	double max4(double a, double b, double c, double d) {
+		return max2(max2(a, b), max2(c, d));
+	}
+
+	double angleAvg(double x, double y) {
+		double r = (((x + 2 * M_PI) + (y + 2 * M_PI)) / 2);
+
+		while(r >= 2 * M_PI) {
+			r -= 2 * M_PI;
+		}
+
+		return r;
+	}
+
+	double interpolate(double x, double x1, double x2, double y1, double y2) {
+		return y1 + (y2 - y1) * (x - x1) / (x2 - x1);
 	}
 }

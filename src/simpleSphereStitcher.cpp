@@ -35,7 +35,7 @@ vector<Image*> RStitcher::PrepareMatrices(vector<Image*> r) {
     return r;
 }
 
-StitchingResult *RStitcher::Stitch(std::vector<Image*> in) {
+StitchingResult *RStitcher::Stitch(std::vector<Image*> in, bool debug) {
 	size_t n = in.size();
     assert(n > 0);
 
@@ -84,8 +84,8 @@ StitchingResult *RStitcher::Stitch(std::vector<Image*> in) {
 	for (size_t i = 0; i < n; i++) {
        	Mat k;
         Mat scaledIntrinsics;
-        ScaleIntrinsicsToImage(in[i]->intrinsics, images[i], scaledIntrinsics, 10);
-        From4DoubleTo3Float(scaledIntrinsics, k);
+        ScaleIntrinsicsToImage(in[i]->intrinsics, images[i], scaledIntrinsics, debug ? 10 : 1);
+        From3DoubleTo3Float(scaledIntrinsics, k);
 
         //Big
         corners[i] = warper->warp(images[i], k, cameras[i].R, INTER_LINEAR, BORDER_CONSTANT, warpedImages[i]);

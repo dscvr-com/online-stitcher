@@ -13,8 +13,8 @@ namespace quat {
     typedef double QT; 
 
 	bool IsQuat(const cv::Mat &q);
-	void ToMat(const cv::Mat q, const cv::Mat a);
-	void FromMat(const cv::Mat &a, cv:: Mat &q);
+	void ToMat(const cv::Mat &q, cv::Mat &a);
+	void FromMat(const cv::Mat &a, cv::Mat &q);
     QT Dot(const cv::Mat& a, const cv::Mat &b);
 
     void Cross(const cv::Mat& a, const cv::Mat &b, cv::Mat &res);
