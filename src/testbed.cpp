@@ -60,9 +60,10 @@ void Align(vector<Image*> imgs) {
 vector<StereoImage*> Make3D(vector<Image*> images) {
     vector<StereoImage*> stereos;
     int n = images.size();
+    int offset = 1; //TODO: Find good offset based on image position.
 
     for(int i = 0; i < n; i++) {
-        StereoImage* img = CreateStereo(images[i], images[(i + 1) % n]);
+        StereoImage* img = CreateStereo(images[i], images[(i + offset) % n]);
         if(img->valid) {
             stereos.push_back(img);
         }
