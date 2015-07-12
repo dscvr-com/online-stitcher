@@ -129,6 +129,9 @@ namespace quat {
 
     void Mult(const Mat& a, const Mat &b, Mat &res) {
 
+        assert(IsQuat(a));
+        assert(IsQuat(res));
+
         Cross(a, b, res);
 
         res.at<QT>(0, 0) = 
@@ -152,14 +155,17 @@ namespace quat {
 
     void Mult(const Mat& a, const QT &b, Mat &res) {
 
-        res.at<QT>(0, 0) = 
-            a.at<QT>(0, 0) * b +
-            a.at<QT>(1, 0) * b +
-            a.at<QT>(2, 0) * b +
-            a.at<QT>(3, 0) * b;
+        assert(IsQuat(a));
+        assert(IsQuat(res));
+
+        res.at<QT>(0, 0) = a.at<QT>(0, 0) * b;
+        res.at<QT>(1, 0) = a.at<QT>(1, 0) * b;
+        res.at<QT>(2, 0) = a.at<QT>(2, 0) * b;
+        res.at<QT>(3, 0) = a.at<QT>(3, 0) * b;
     }
 
     QT Norm(const Mat& a) {
+        assert(IsQuat(a));
         return a.at<QT>(0, 0) * a.at<QT>(0, 0) +
             a.at<QT>(1, 0) * a.at<QT>(1, 0) +
             a.at<QT>(2, 0) * a.at<QT>(2, 0) +
@@ -168,6 +174,8 @@ namespace quat {
 
     //Inverse, if its a unit quat. 
     void Conjugate(const Mat &a, Mat &res) {
+        assert(IsQuat(a));
+        assert(IsQuat(res));
         res.at<QT>(0, 0) = a.at<QT>(0, 0);
         res.at<QT>(1, 0) = -a.at<QT>(1, 0);
         res.at<QT>(2, 0) = -a.at<QT>(2, 0);

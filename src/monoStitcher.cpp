@@ -38,12 +38,13 @@ StereoImage *CreateStereo(Image *a, Image *b) {
 	//cout << "R: " << rot << endl;
 
 	Mat rotQ(4, 1, CV_64F);
+	Mat avg(4, 1, CV_64F);
 	quat::FromMat(rot, rotQ);
 	
 	//cout << "AQ: " << rotQ << endl;
 
 	//Todo - don't we need a lerping here? 
-	Mat avg = rotQ;
+	quat::Mult(rotQ, 0.5f, avg);
 
 	Mat rotN = Mat::eye(3, 3, CV_64F);
 	quat::ToMat(avg, rotN);
@@ -117,12 +118,11 @@ StereoImage *CreateStereo(Image *a, Image *b) {
 		return result; 
 	}
 
-	Mat newKA(3, 3, CV_32F);
- 	aIntrinsics.copyTo(newKA);
- 	newKA.at<float>(0, 0) = newKA.at<float>(0, 0) * ((float)width / a->img.cols);
- 	newKA.at<float>(0, 2) = newKA.at<float>(0, 2) * ((float)width / a->img.cols);
- 	newKA.at<float>(1, 1) = (float)width / 2.0f;
- 	newKA.at<float>(1, 2) = (float)height / 2.0f;
+	Mat newKA(3, 3, CV_64F);
+ 	newKA.at<double>(0, 0) = aIntrinsics.at<double>(0, 0);
+ 	newKA.at<double>(1, 1) = aIntrinsics.at<double>(1, 1);
+ 	newKA.at<double>(0, 2) = width / 2.0f;
+ 	newKA.at<double>(1, 2) = height / 2.0f;
 
  	Mat rotN4;
  	From3DoubleTo4Double(rotN, rotN4);
@@ -131,12 +131,11 @@ StereoImage *CreateStereo(Image *a, Image *b) {
 	result->A.extrinsics = a->extrinsics * rotN4;
 	result->A.id = a->id;
 
-	Mat newKB(3, 3, CV_32F);
- 	bIntrinsics.copyTo(newKB);
- 	newKB.at<float>(0, 0) = newKB.at<float>(0, 0) * ((float)width / b->img.cols);
- 	newKB.at<float>(0, 2) = newKB.at<float>(0, 2) * ((float)width / b->img.cols);
- 	newKB.at<float>(1, 1) = (float)width / 2.0f;
- 	newKB.at<float>(1, 2) = (float)height / 2.0f;
+	Mat newKB = Mat::eye(3, 3, CV_64F);
+ 	newKB.at<double>(0, 0) = bIntrinsics.at<double>(0, 0);
+ 	newKB.at<double>(1, 1) = bIntrinsics.at<double>(1, 1);
+ 	newKB.at<double>(0, 2) = width / 2.0f;
+ 	newKB.at<double>(1, 2) = height / 2.0f;
 
 	result->B.intrinsics = newKB;
 	result->B.extrinsics = a->extrinsics * rotN4;

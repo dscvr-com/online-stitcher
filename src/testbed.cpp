@@ -75,8 +75,32 @@ vector<StereoImage*> Make3D(vector<Image*> images) {
 
 void StreamAlign(vector<Image*> images) {
     StreamAligner aligner;
-    Stitch(images, "dbg_0_raw.jpg", false);
+    Stitch(images, "dbg_0_raw.jpg", true);
+
     stitcher.PrepareMatrices(images);
+
+    //We need to do this if our 
+    //pictures were recorded "upside-down".
+    //The phone adjusts image orientation for us,
+    //but the sensors are not adjusted. An incorrect
+    //rotation results. 
+    //TODO: Make this decision automatically. 
+    //TODO: Might not be needed if code runs on phone with raw input 
+    //data. 
+    bool isLandscapeFlipped = true;
+
+    if(isLandscapeFlipped) {
+        double landscapeLtoRData[] = {-1, 0, 0, 0,
+                                     0, -1, 0, 0, 
+                                     0, 0, 1, 0,
+                                     0, 0, 0, 1};
+        Mat landscapeLtoR(4, 4, CV_64F, landscapeLtoRData);
+
+        for(size_t i = 0; i < images.size(); i++) {
+            images[i]->extrinsics = landscapeLtoR * images[i]->extrinsics * landscapeLtoR;
+        }
+    }
+
 
     Stitch(images, "dbg_1_prepared.jpg", false);
 
@@ -87,18 +111,19 @@ void StreamAlign(vector<Image*> images) {
 
     Stitch(images, "dbg_2_aligned.jpg", false);
 
+    //Before stereofiying, make sure that images are sorted correctly!
     vector<StereoImage*> stereos = Make3D(images);
 
     vector<Image*> imagesLeft;
     vector<Image*> imagesRight;
 
-    for(size_t i = 0; i < stereos.size(); i++) {
+    for(size_t i = 0; i < stereos.size(); i += 1) {
         imagesLeft.push_back(&(stereos[i]->A));
         imagesRight.push_back(&(stereos[i]->B));
     }
 
-    Stitch(imagesLeft, "dbg_3_left.jpg");
-    Stitch(imagesRight, "dbg_4_right.jpg");
+    Stitch(imagesLeft, "dbg_3_left.jpg", false);
+    Stitch(imagesRight, "dbg_4_right.jpg", false);
 }
 
 int main(int argc, char* argv[]) {
