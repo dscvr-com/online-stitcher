@@ -2,7 +2,6 @@
 #include <cmath>
 #include <vector>
 #include <map>
-#include "lib/tinyxml2/tinyxml2.h"
 #include "core.hpp"
 #include "support.hpp"
 
@@ -12,7 +11,6 @@
 
 using namespace std;
 using namespace cv;
-using namespace tinyxml2;
 
 namespace optonaut {
 
