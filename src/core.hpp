@@ -19,7 +19,6 @@ namespace optonaut {
 		cv::Mat descriptors;
 	};
 
-	Image* ImageFromFile(std::string path);
 }
 
 #endif

@@ -1,46 +1,18 @@
 #include <algorithm>
 #include <string>
-#include "lib/tinyxml2/tinyxml2.h"
 #include "support.hpp"
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
 
 using namespace cv;
 using namespace std;
-using namespace tinyxml2;
 
 namespace optonaut {
 
 	bool MatIs(const Mat &in, int rows, int cols, int type) {
 		return in.rows >= rows && in.cols >= cols && in.type() == type;
 	}
-
-	bool StringEndsWith(const string& a, const string& b) {
-	    if (b.size() > a.size()) return false;
-	    return std::equal(a.begin() + a.size() - b.size(), a.end(), b.begin());
-	}
-
-	void MatrixFromXml(XMLElement* node, Mat &out) {
-		int size;
-		istringstream(node->Attribute("size")) >> size;
-
-		assert(size == 9 || size == 16);
-		int dim = size == 9 ? 3 : 4;
-
-		Mat m(dim, dim, CV_64F);
-
-		for(int i = 0; i < dim; i++) {
-			for(int j = 0; j < dim; j++) {
-				ostringstream name;
-				name << "m" << i << j;
-				istringstream text(node->FirstChildElement(name.str().c_str())->GetText());
-				text >> m.at<double>(i, j);
-			}
-		}
-
-		out = m.clone();
-	}
-
+	
 	int ParseInt(const char* data) {
 		int val;
 		istringstream text(data);

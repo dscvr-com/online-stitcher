@@ -3,6 +3,7 @@
 #include "simpleSphereStitcher.hpp"
 #include "streamAligner.hpp"
 #include "monoStitcher.hpp"
+#include "io.hpp"
 #include <iostream>
 #include <algorithm>
 
@@ -77,8 +78,6 @@ void StreamAlign(vector<Image*> images) {
     StreamAligner aligner;
     Stitch(images, "dbg_0_raw.jpg", true);
 
-    stitcher.PrepareMatrices(images);
-
     //We need to do this if our 
     //pictures were recorded "upside-down".
     //The phone adjusts image orientation for us,
@@ -102,14 +101,16 @@ void StreamAlign(vector<Image*> images) {
     }
 
 
-    Stitch(images, "dbg_1_prepared.jpg", false);
+    Stitch(images, "dbg_1_prepared.jpg", true);
 
     for(size_t i = 0; i < images.size(); i++) {
         aligner.Push(images[i]);
         images[i]->extrinsics = aligner.GetCurrentRotation().clone();
     }
 
-    Stitch(images, "dbg_2_aligned.jpg", false);
+    stitcher.PrepareMatrices(images);
+
+    Stitch(images, "dbg_2_aligned.jpg", true);
 
     //Before stereofiying, make sure that images are sorted correctly!
     vector<StereoImage*> stereos = Make3D(images);

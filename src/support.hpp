@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <string>
-#include "lib/tinyxml2/tinyxml2.h"
 #include <opencv2/opencv.hpp>
 
 #ifndef OPTONAUT_SUPPORT_HEADER
@@ -9,10 +8,8 @@
 namespace optonaut {
 
 	bool MatIs(const cv::Mat &in, int rows, int cols, int type);
-	bool StringEndsWith(const std::string& a, const std::string& b);
-	void MatrixFromXml(tinyxml2::XMLElement* node, cv::Mat &out);
-	int ParseInt(const char* data);
 
+	int ParseInt(const char* data);
 	std::string ToString(int i);
 
 	void ScaleIntrinsicsToImage(cv::Mat intrinsics, cv::Mat image, cv::Mat &scaled, double fupscaling = 1);

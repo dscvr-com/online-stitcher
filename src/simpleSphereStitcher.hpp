@@ -20,7 +20,7 @@ struct StitchingResult {
 class RStitcher {
 	public:
 		bool compensate = false;
-		bool seam = false;
+		bool seam = true;
 		float workScale = 0.2f;
 		float warperScale = 800;
 
