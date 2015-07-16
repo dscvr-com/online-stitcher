@@ -13,7 +13,7 @@ namespace optonaut {
 	StreamAligner state;
 	Image *prev = NULL;
 
-	void Push(double extrinsics[], double intrinsics[], char *image, int width, int height, double newExtrinsics[], int id) {
+	void Push(double extrinsics[], double intrinsics[], unsigned char *image, int width, int height, double newExtrinsics[], int id) {
 		Mat inputExtrinsics = Mat(3, 3, CV_64F, extrinsics);
 
 		Image *current = new Image();
@@ -22,6 +22,8 @@ namespace optonaut {
 		current->intrinsics = Mat(3, 3, CV_64F, intrinsics);
 		current->id = id;
 		current->source = "dynamic";
+
+		imwrite("dbg/pushed.jpg", current->img);
 
 		state.Push(current);
 

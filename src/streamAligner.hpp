@@ -39,6 +39,7 @@ namespace optonaut {
 				Mat visualRVec(3, 1, CV_64F);
 
 				//2nd. Do approximation/decision 
+				cout << "Finding homography " << endl;
         		MatchInfo* hom = visual.FindHomography(previous, next);
 
         		//cout << "Image " << next->id << endl;
