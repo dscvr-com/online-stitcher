@@ -4,6 +4,7 @@
 #include <map>
 #include "wrapper.hpp"
 #include "core.hpp"
+#include "support.hpp"
 #include "streamAligner.hpp"
 
 
@@ -13,9 +14,11 @@ namespace optonaut {
 	Image *prev = NULL;
 
 	void Push(double extrinsics[], double intrinsics[], char *image, int width, int height, double newExtrinsics[], int id) {
+		Mat inputExtrinsics = Mat(3, 3, CV_64F, extrinsics);
+
 		Image *current = new Image();
-		current->img = Mat(height, width, CV_8UC3, image);
-		current->extrinsics = Mat(4, 4, CV_64F, extrinsics);
+		current->img = Mat(height, width, CV_8UC4, image);
+		From3DoubleTo4Double(inputExtrinsics, current->extrinsics);
 		current->intrinsics = Mat(3, 3, CV_64F, intrinsics);
 		current->id = id;
 		current->source = "dynamic";

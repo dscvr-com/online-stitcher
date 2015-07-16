@@ -66,11 +66,11 @@ namespace optonaut {
 	        		//cout << "Sensor" << endl;
 	        	} else if(GetAngleOfRotation(sensorDiff) > GetAngleOfRotation(visualDiff) * 2) {
 	        		//If your sensor moved a lot more, discard!
-	        		rPrevious = rPrevious * visualDiff;
+	        		rPrevious = rPrevious * visualDiff.inv();
 	        		//cout << "Visual" << endl;
 	        	} else {
 	        		//Use sensor - it's our best bet since everything except y rotation is very well measured
-	        		rPrevious = rPrevious * sensorDiff;
+	        		rPrevious = rPrevious * visualDiff.inv();
 	        		//cout << "Sensor" << endl;
 	        	}
 			}
