@@ -6,6 +6,7 @@
 #include "io.hpp"
 #include <iostream>
 #include <algorithm>
+#include "wrapper.hpp"
 
 using namespace std;
 using namespace cv;
@@ -108,7 +109,7 @@ void StreamAlign(vector<Image*> images) {
         images[i]->extrinsics = aligner.GetCurrentRotation().clone();
     }
 
-    stitcher.PrepareMatrices(images);
+    //stitcher.PrepareMatrices(images);
 
     Stitch(images, "dbg_2_aligned.jpg", true);
 

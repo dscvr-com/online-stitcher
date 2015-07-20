@@ -1,14 +1,18 @@
 #include <algorithm>
 #include <string>
 #include "lib/tinyxml2/tinyxml2.h"
+#include "lib/rapidjson/document.h"
+#include "lib/rapidjson/filereadstream.h"
 #include "support.hpp"
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
 #include "core.hpp"
+#include <fstream>
 
 using namespace cv;
 using namespace std;
 using namespace tinyxml2;
+using namespace rapidjson;
 
 namespace optonaut {
 
@@ -17,25 +21,79 @@ namespace optonaut {
 	    return std::equal(a.begin() + a.size() - b.size(), a.end(), b.begin());
 	}
 
-	void MatrixFromXml(XMLElement* node, Mat &out) {
+	int MatrixFromXml(XMLElement* node, Mat &out) {
 		int size;
 		istringstream(node->Attribute("size")) >> size;
 
 		assert(size == 9 || size == 16);
 		int dim = size == 9 ? 3 : 4;
 
-		Mat m(dim, dim, CV_64F);
+		out = Mat(dim, dim, CV_64F);
 
 		for(int i = 0; i < dim; i++) {
 			for(int j = 0; j < dim; j++) {
 				ostringstream name;
 				name << "m" << i << j;
 				istringstream text(node->FirstChildElement(name.str().c_str())->GetText());
-				text >> m.at<double>(i, j);
+				text >> out.at<double>(i, j);
 			}
 		}
 
-		out = m.clone();
+		return dim;
+	}
+
+	int MatrixFromJson(Value& matrix, Mat &out) {
+		assert(matrix.IsArray());
+
+		int size = matrix.Size();
+
+		assert(size == 9 || size == 16);
+		int dim = size == 9 ? 3 : 4;
+
+		out = Mat(dim, dim, CV_64F);
+
+		for(int i = 0; i < dim; i++) {
+			for(int j = 0; j < dim; j++) {
+				out.at<double>(i, j) = matrix[i * dim + j].GetDouble();
+			}
+		}		
+
+		return dim;
+	}
+
+ 	void ParseXml(string path, Image* result) {
+		XMLDocument doc;
+		doc.LoadFile(path.c_str());
+
+		XMLElement* root = doc.FirstChildElement("imageParameters");
+
+		result->id = ParseInt(root->Attribute("id"));
+		assert(MatrixFromXml(root->FirstChildElement("extrinsics")->FirstChildElement("matrix"), result->extrinsics) == 4);
+		result->extrinsics = result->extrinsics.inv();
+		assert(MatrixFromXml(root->FirstChildElement("intrinsics")->FirstChildElement("matrix"), result->intrinsics) == 3);
+ 	}
+
+ 	void ParseJson(string path, Image* result) {
+		FILE* fileRef = fopen(path.c_str(), "rb");
+		assert(fileRef != NULL);
+		char buffer[65536];
+		FileReadStream file(fileRef, buffer, sizeof(buffer));
+		Document doc;
+		doc.ParseStream<0>(file);
+
+		//TODO
+		//result->id = doc["id"].GetInt();
+		result->id = 0;
+		assert(MatrixFromJson(doc["intrinsics"], result->intrinsics) == 3);
+		assert(MatrixFromJson(doc["extrinsics"], result->extrinsics) == 4);
+		
+		fclose(fileRef);
+ 	}
+
+ 	bool FileExists(const string &fileName)
+	{
+	    std::ifstream infile(fileName);
+	    return infile.good();
 	}
 
 	Image* ImageFromFile(string path) {
@@ -44,24 +102,34 @@ namespace optonaut {
 		Image* result = new Image();
 		result->img = imread(path);
 
-		//TODO: That's only correct for certain cases!
-		//flip(result->img, result->img, -1);
-
 		result->source = path;
 
-		path.replace(path.length() - 3, 3, "xml");
+		string pathWithoutExtensions = path.substr(0, path.length() - 4);
+		string xmlPath = pathWithoutExtensions + ".xml";
+		string jsonPath = pathWithoutExtensions + ".json";
 
-		XMLDocument doc;
-		doc.LoadFile(path.c_str());
+		if(FileExists(xmlPath)) {
+			cout << "Parsing XML" << endl;
+			ParseXml(xmlPath, result);
+		} else if(FileExists(jsonPath)) {
+			cout << "Parsing JSON" << endl;
+			ParseJson(jsonPath, result);
+		} else {
+			cout << "Unable to open parameter file for " << path << endl;
+			assert(false);
+		}
 
-		XMLElement* root = doc.FirstChildElement("imageParameters");
-
-		result->id = ParseInt(root->Attribute("id"));
-		MatrixFromXml(root->FirstChildElement("extrinsics")->FirstChildElement("matrix"), result->extrinsics);
-		result->extrinsics = result->extrinsics.inv();
-		MatrixFromXml(root->FirstChildElement("intrinsics")->FirstChildElement("matrix"), result->intrinsics);
-	
 		return result;
 	}
 
+	void BufferFromBinFile(unsigned char buf[], int *len, string file) {
+
+	    ifstream input(file, std::ios::binary);
+
+	    int i;
+	    for(i = 0; i < *len && input.good(); i++) {
+	        buf[i] = input.get();
+	    }
+	    *len = i;
+	}
 }

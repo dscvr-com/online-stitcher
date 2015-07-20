@@ -47,6 +47,7 @@ namespace optonaut {
         		
         		if(hom->valid) {
 	        		From3DoubleTo4Double(hom->rotations[0], visualDiff);
+	        		visualDiff = visualDiff.inv();
 	        		ExtractRotationVector(visualDiff, visualRVec);
 	        		//cout << "Visual diff " << visualRVec.t() << endl;
 				}
@@ -64,15 +65,25 @@ namespace optonaut {
 	        		//if the homoghraphy is invalid or the homography shows a big drift on the z-axis, discard.
 	        		//z-axis drift should never happen, at least not on the middle ring. 
 	        		rPrevious = rPrevious * sensorDiff;
-	        		//cout << "Sensor" << endl;
+	        		cout << "Sensor" << endl;
 	        	} else if(GetAngleOfRotation(sensorDiff) > GetAngleOfRotation(visualDiff) * 2) {
 	        		//If your sensor moved a lot more, discard!
-	        		rPrevious = rPrevious * visualDiff.inv();
-	        		//cout << "Visual" << endl;
+	        		rPrevious = rPrevious * visualDiff;
+	        		cout << "Visual" << endl;
 	        	} else {
 	        		//Use sensor - it's our best bet since everything except y rotation is very well measured
-	        		rPrevious = rPrevious * visualDiff.inv();
-	        		//cout << "Sensor" << endl;
+	        		//rPrevious = rPrevious * sensorDiff;
+	        		cout << "Combined" << endl;
+
+	        		Mat mx(4, 4, CV_64F);
+	        		Mat my(4, 4, CV_64F);
+	        		Mat mz(4, 4, CV_64F);
+
+	        		CreateRotationX(sensorRVec.at<double>(0, 0), mx);
+	        		CreateRotationY(sensorRVec.at<double>(1, 0), my);
+	        		CreateRotationZ(visualRVec.at<double>(2, 0), mz);
+
+	        		rPrevious = rPrevious * (mx * my * mz);
 	        	}
 			}
 
