@@ -109,10 +109,8 @@ namespace optonaut {
 		string jsonPath = pathWithoutExtensions + ".json";
 
 		if(FileExists(xmlPath)) {
-			cout << "Parsing XML" << endl;
 			ParseXml(xmlPath, result);
 		} else if(FileExists(jsonPath)) {
-			cout << "Parsing JSON" << endl;
 			ParseJson(jsonPath, result);
 		} else {
 			cout << "Unable to open parameter file for " << path << endl;
