@@ -19,20 +19,21 @@ namespace wrapper {
 	bool debug = false;
 
 	Image* AllocateImage(double extrinsics[], double intrinsics[], unsigned char *image, int width, int height, int id) {
-		Mat inputExtrinsics = Mat(3, 3, CV_64F, extrinsics);
+		Mat inputExtrinsics = Mat(4, 4, CV_64F, extrinsics);
 		Image *current = new Image();
 		current->img = Mat(height, width, CV_8UC3);
 		cvtColor(Mat(height, width, CV_8UC4, image), current->img, COLOR_RGBA2RGB);
 
 		//IOS Base Conversion
-		double baseV[] = {0, 1, 0,
-						 -1, 0, 0, 
-						 0, 0, 1};
+		double baseV[] = {0, 1, 0, 0,
+						 -1, 0, 0, 0,
+						 0, 0, 1, 0, 
+						 0, 0, 0, 1};
 
-	    Mat base(3,3, CV_64F, baseV);
+	    Mat base(4, 4, CV_64F, baseV);
 
 
-		From3DoubleTo4Double(base * inputExtrinsics.inv() * base.inv(), current->extrinsics);
+		current->extrinsics = base * inputExtrinsics.inv() * base.inv();
 		current->intrinsics = Mat(3, 3, CV_64F, intrinsics);
 		current->id = id;
 		current->source = "dynamic";
