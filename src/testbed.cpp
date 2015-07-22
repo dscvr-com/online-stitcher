@@ -88,6 +88,7 @@ void StreamAlign(vector<Image*> images) {
     //TODO: Might not be needed if code runs on phone with raw input 
     //data. 
     bool isLandscapeFlipped = true;
+    bool isIos = false;
 
     if(isLandscapeFlipped) {
         double landscapeLtoRData[] = {-1, 0, 0, 0,
@@ -98,6 +99,17 @@ void StreamAlign(vector<Image*> images) {
 
         for(size_t i = 0; i < images.size(); i++) {
             images[i]->extrinsics = landscapeLtoR * images[i]->extrinsics * landscapeLtoR;
+        }
+    }
+    if(isIos) {
+        double iosToSData[] = {0, 1, 0, 0,
+                                     -1, 0, 0, 0, 
+                                     0, 0, 1, 0,
+                                     0, 0, 0, 1};
+        Mat iosToS(4, 4, CV_64F, iosToSData);
+
+        for(size_t i = 0; i < images.size(); i++) {
+            images[i]->extrinsics = iosToS * images[i]->extrinsics * iosToS;
         }
     }
 

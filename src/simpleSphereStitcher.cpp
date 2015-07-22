@@ -8,6 +8,7 @@
 #include "support.hpp"
 #include "simpleSphereStitcher.hpp"
 #include "support.hpp"
+#include "simpleSeamer.hpp"
 
 using namespace std;
 using namespace cv;
@@ -120,7 +121,7 @@ StitchingResult *RStitcher::Stitch(std::vector<Image*> in, bool debug) {
 
     //Seam finding
     if(seam) {
-		Ptr<SeamFinder> seamFinder = new GraphCutSeamFinder(GraphCutSeamFinderBase::COST_COLOR);
+		Ptr<SeamFinder> seamFinder = new SimpleSeamer();
 		seamFinder->find(miniWarpedImagesAsFloat, miniCorners, miniWarpedMasks);
 		
 		//Merge masks from warper/seam finder
@@ -148,7 +149,7 @@ StitchingResult *RStitcher::Stitch(std::vector<Image*> in, bool debug) {
 	Mat warpedImageAsShort;
 	Ptr<Blender> blender;
 
-	blender = Blender::createDefault(Blender::MULTI_BAND, true);
+	blender = Blender::createDefault(Blender::NO, true);
     Size destinationSize = resultRoi(corners, warpedSizes).size();
   
     MultiBandBlender* mb = dynamic_cast<MultiBandBlender*>(static_cast<Blender*>(blender));

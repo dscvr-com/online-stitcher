@@ -68,9 +68,9 @@ namespace optonaut {
 		XMLElement* root = doc.FirstChildElement("imageParameters");
 
 		result->id = ParseInt(root->Attribute("id"));
+		assert(MatrixFromXml(root->FirstChildElement("intrinsics")->FirstChildElement("matrix"), result->intrinsics) == 3);
 		assert(MatrixFromXml(root->FirstChildElement("extrinsics")->FirstChildElement("matrix"), result->extrinsics) == 4);
 		result->extrinsics = result->extrinsics.inv();
-		assert(MatrixFromXml(root->FirstChildElement("intrinsics")->FirstChildElement("matrix"), result->intrinsics) == 3);
  	}
 
  	void ParseJson(string path, Image* result) {
@@ -80,12 +80,11 @@ namespace optonaut {
 		FileReadStream file(fileRef, buffer, sizeof(buffer));
 		Document doc;
 		doc.ParseStream<0>(file);
-
-		//TODO
-		//result->id = doc["id"].GetInt();
-		result->id = 0;
+		
+		result->id = doc["id"].GetInt();
 		assert(MatrixFromJson(doc["intrinsics"], result->intrinsics) == 3);
 		assert(MatrixFromJson(doc["extrinsics"], result->extrinsics) == 4);
+		result->extrinsics = result->extrinsics.inv();
 		
 		fclose(fileRef);
  	}
