@@ -44,9 +44,17 @@ void SimpleSeamer::find(const std::vector<Size> &sizes, const std::vector<Point>
 
 void SimpleSeamer::findInPair(size_t first, size_t second, Rect roi)
 {
+    cout << "Finding " << first << " and " << second << endl;
     Size img1 = sizes_[first], img2 = sizes_[second];
-    Mat mask1 = masks_[first].getMat(ACCESS_READ), mask2 = masks_[second].getMat(ACCESS_READ);
-    Point tl1 = corners_[first], tl2 = corners_[second];
+    Mat mask1 = masks_[first].getMat(ACCESS_WRITE);
+    Mat mask2 = masks_[second].getMat(ACCESS_WRITE);
+    Point tl1 = corners_[first];
+    Point tl2 = corners_[second];
+
+    assert(img1.width == mask1.cols);
+    assert(img2.width == mask2.cols);
+    assert(img1.height == mask1.rows);
+    assert(img2.height == mask2.rows);
 
     //All coordinates in ROI center space
 
@@ -76,18 +84,18 @@ void SimpleSeamer::findInPair(size_t first, size_t second, Rect roi)
 
     for(int x = 0; x < img1.width; x++) 
     {
-        for(int y = 0; y < img1.width; y++) 
+        for(int y = 0; y < img1.height; y++) 
         {
             int x1 = x + aToRoiX;
             int y1 = y + aToRoiY;
 
             if(greaterZero) {
                 if(x1 * dy + y1 * dx < 0) {
-                    mask1.at<uchar>(x, y) = 0;
+                    mask1.at<uchar>(y, x) = 0;
                 }
             } else {
                 if(x1 * dy + y1 * dx > 0) {
-                    mask1.at<uchar>(x, y) = 0;
+                    mask1.at<uchar>(y, x) = 0;
                 }
             }
         }       
@@ -97,18 +105,18 @@ void SimpleSeamer::findInPair(size_t first, size_t second, Rect roi)
 
     for(int x = 0; x < img2.width; x++) 
     {
-        for(int y = 0; y < img2.width; y++) 
+        for(int y = 0; y < img2.height; y++) 
         {
             int x2 = x + bToRoiX;
             int y2 = y + bToRoiY;
 
             if(greaterZero) {
                 if(x2 * dy + y2 * dx < 0) {
-                    mask2.at<uchar>(x, y) = 0;
+                    mask2.at<uchar>(y, x) = 0;
                 }
             } else {
                 if(x2 * dy + y2 * dx > 0) {
-                    mask2.at<uchar>(x, y) = 0;
+                    mask2.at<uchar>(y, x) = 0;
                 }
             }
         }       

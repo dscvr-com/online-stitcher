@@ -27,6 +27,7 @@ StereoImage *CreateStereo(Image *a, Image *b) {
 	Mat k;
 
 	StereoImage* result = new StereoImage();
+	result->valid = false;
 
 	assert(a->img.cols == b->img.cols);
 	assert(a->img.rows == b->img.rows);

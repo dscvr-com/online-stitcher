@@ -79,6 +79,8 @@ void StreamAlign(vector<Image*> images) {
     StreamAligner aligner;
     Stitch(images, "dbg_0_raw.jpg", true);
 
+    cout << "RAW OUT FINISHED" << endl;
+
     //We need to do this if our 
     //pictures were recorded "upside-down".
     //The phone adjusts image orientation for us,
@@ -115,6 +117,7 @@ void StreamAlign(vector<Image*> images) {
 
 
     Stitch(images, "dbg_1_prepared.jpg", true);
+    cout << "PREPARE OUT FINISHED" << endl;
 
     for(size_t i = 0; i < images.size(); i++) {
         aligner.Push(images[i]);
@@ -124,6 +127,7 @@ void StreamAlign(vector<Image*> images) {
     //stitcher.PrepareMatrices(images);
 
     Stitch(images, "dbg_2_aligned.jpg", true);
+    cout << "ALIGN OUT FINISHED" << endl;
 
     //Before stereofiying, make sure that images are sorted correctly!
     vector<StereoImage*> stereos = Make3D(images);
@@ -135,9 +139,11 @@ void StreamAlign(vector<Image*> images) {
         imagesLeft.push_back(&(stereos[i]->A));
         imagesRight.push_back(&(stereos[i]->B));
     }
+    cout << "3D PROCESS FINISHED" << endl;
 
     Stitch(imagesLeft, "dbg_3_left.jpg", false);
     Stitch(imagesRight, "dbg_4_right.jpg", false);
+    cout << "3D OUT FINISHED" << endl;
 }
 
 int main(int argc, char* argv[]) {

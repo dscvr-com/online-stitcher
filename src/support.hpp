@@ -14,18 +14,18 @@ namespace optonaut {
 
 	void ScaleIntrinsicsToImage(cv::Mat intrinsics, cv::Mat image, cv::Mat &scaled, double fupscaling = 1);
 
-	double GetHorizontalFov(cv::Mat intrinsics);
+	double GetHorizontalFov(const cv::Mat &intrinsics);
 
-	void ExtractRotationVector(cv::Mat r, cv::Mat &vec);
-	double GetAngleOfRotation(cv::Mat r);
+	void ExtractRotationVector(const cv::Mat &r, cv::Mat &vec);
+	double GetAngleOfRotation(const cv::Mat &r);
 	void CreateRotationZ(double radians, cv::Mat &out);
 	void CreateRotationX(double radians, cv::Mat &out);
 	void CreateRotationY(double radians, cv::Mat &out);
 
-	double GetDistanceByDimension(cv::Mat a, cv::Mat b, int dim);
-	double GetDistanceX(cv::Mat a, cv::Mat b);
-	double GetDistanceY(cv::Mat a, cv::Mat b);
-	double GetDistanceZ(cv::Mat a, cv::Mat b);
+	double GetDistanceByDimension(const cv::Mat &a, const cv::Mat &b, int dim);
+	double GetDistanceX(const cv::Mat &a, const cv::Mat &b);
+	double GetDistanceY(const cv::Mat &a, const cv::Mat &b);
+	double GetDistanceZ(const cv::Mat &a, const cv::Mat &b);
 	void From4DoubleTo3Float(const cv::Mat &in, cv::Mat &out);
 	void From3DoubleTo3Float(const cv::Mat &in, cv::Mat &out);
 	void From3FloatTo4Double(const cv::Mat &in, cv::Mat &out);

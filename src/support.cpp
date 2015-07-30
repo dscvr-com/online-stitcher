@@ -40,7 +40,7 @@ namespace optonaut {
 		scaled.at<double>(2, 2) = 1;
 	}
 
-	double GetHorizontalFov(Mat intrinsics) {
+	double GetHorizontalFov(const Mat &intrinsics) {
 		assert(MatIs(intrinsics, 3, 3, CV_64F));
 
 		double w = intrinsics.at<double>(0, 2) * 2;
@@ -49,7 +49,7 @@ namespace optonaut {
 		return 2 * atan2(w / 2, f);
 	}
 
-	void ExtractRotationVector(Mat r, Mat &v) {
+	void ExtractRotationVector(const Mat &r, Mat &v) {
 		assert(MatIs(r, 3, 3, CV_64F));
 
 		Mat vec = Mat::zeros(3, 1, CV_64F);
@@ -100,36 +100,37 @@ namespace optonaut {
 
 
 
-	double GetAngleOfRotation(Mat r) {
+	double GetAngleOfRotation(const Mat &r) {
 		assert(MatIs(r, 3, 3, CV_64F));
 		double t = r.at<double>(0, 0) + r.at<double>(1, 1) + r.at<double>(2, 2);
 		return acos((t - 1) / 2);
 	}
 
-	double GetDistanceByDimension(Mat a, Mat b, int dim) {
+	double GetDistanceByDimension(const Mat &a, const Mat &b, int dim) {
 		assert(MatIs(a, 4, 4, CV_64F));
 		assert(MatIs(b, 4, 4, CV_64F));
+		double dist = 0;
 
-	    float vdata[] = {0, 0, 1, 0};
+	    double vdata[] = {0, 0, 1, 0};
 	    Mat vec(4, 1, CV_64F, vdata);
 
 	    Mat aproj = a * vec;
 	    Mat bproj = b * vec;
 
-	    double dist = abs(aproj.at<double>(dim) - bproj.at<double>(dim));
+	    dist = abs(aproj.at<double>(dim) - bproj.at<double>(dim));
 	    dist = asin(dist); 
 	    return dist;
 	}
 
-	double GetDistanceX(Mat a, Mat b) {
+	double GetDistanceX(const Mat &a, const Mat &b) {
 	    return GetDistanceByDimension(a, b, 0);
 	}
 
-	double GetDistanceY(Mat a, Mat b) {
+	double GetDistanceY(const Mat &a, const Mat &b) {
 	    return GetDistanceByDimension(a, b, 1);
 	}
 
-	double GetDistanceZ(Mat a, Mat b) {
+	double GetDistanceZ(const Mat &a, const Mat &b) {
 	    return GetDistanceByDimension(a, b, 2);
 	}
 
