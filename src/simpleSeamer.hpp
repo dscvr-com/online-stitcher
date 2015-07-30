@@ -44,7 +44,6 @@ void SimpleSeamer::find(const std::vector<Size> &sizes, const std::vector<Point>
 
 void SimpleSeamer::findInPair(size_t first, size_t second, Rect roi)
 {
-    cout << "Finding " << first << " and " << second << endl;
     Size img1 = sizes_[first], img2 = sizes_[second];
     Mat mask1 = masks_[first].getMat(ACCESS_WRITE);
     Mat mask2 = masks_[second].getMat(ACCESS_WRITE);
