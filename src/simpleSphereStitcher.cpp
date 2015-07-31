@@ -149,7 +149,7 @@ StitchingResult *RStitcher::Stitch(std::vector<Image*> in, bool debug) {
 	Mat warpedImageAsShort;
 	Ptr<Blender> blender;
 
-	blender = Blender::createDefault(Blender::NO, true);
+	blender = Blender::createDefault(Blender::FEATHER, true);
     Size destinationSize = resultRoi(corners, warpedSizes).size();
   
     MultiBandBlender* mb = dynamic_cast<MultiBandBlender*>(static_cast<Blender*>(blender));

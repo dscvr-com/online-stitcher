@@ -13,7 +13,7 @@ using namespace std;
 #ifndef OPTONAUT_STREAM_ALIGNMENT_HEADER
 #define OPTONAUT_STREAM_ALIGNMENT_HEADER
 
-#define ORDER 3
+#define ORDER 5
 	
 namespace optonaut {
 	class StreamAligner {
@@ -59,8 +59,8 @@ namespace optonaut {
 
 		        		//Filter out stupid homomomomographies! 
 		        		if(visualRVec.at<double>(2, 0) > 0.0 && //Don't allow "backward" rotation
-		        			abs(visualRVec.at<double>(0, 0)) < 0.05 && //Don't allow rotation around other axis
-		        			abs(visualRVec.at<double>(2, 0)) < 0.05) { 
+		        			abs(visualRVec.at<double>(0, 0)) < 0.02 && //Don't allow rotation around other axis
+		        			abs(visualRVec.at<double>(2, 0)) < 0.02) { 
 		        			if(visualAnchor == -1 || 
 		        				GetAngleOfRotation(rPrevious[0].inv() * rPrevious[visualAnchor] * visualDiff) > 
 		        				GetAngleOfRotation(rPrevious[0].inv() * rPrevious[i] * rotation)) {
@@ -98,13 +98,15 @@ namespace optonaut {
         		//Todo: Might replace this by a kalman-filtering model, if
         		//we understand the error modelling better. 
 
+				Mat offset(4, 4, CV_64F);
+	        	CreateRotationY(0.005, offset);
 
         		if(visualAnchor == -1) {
-	        		rPrevious.push_back(GetCurrentRotation() * sensorDiff);
+	        		rPrevious.push_back(GetCurrentRotation() * sensorDiff * offset);
 	        		cout << "Sensor" << endl;
 	        	} else if(GetAngleOfRotation(sensorDiff) > GetAngleOfRotation(visualDiff) * 2) {
 	        		//If your sensor moved a lot more, discard!
-	        		rPrevious.push_back(rPrevious[visualAnchor] * visualDiff);
+	        		rPrevious.push_back(rPrevious[visualAnchor] * visualDiff * offset);
 	        		cout << "Visual" << endl;
 	        	} else {
 
@@ -123,7 +125,7 @@ namespace optonaut {
 	        		CreateRotationY(sensorRVec.at<double>(1, 0), my);
 	        		CreateRotationZ(visualRVec.at<double>(2, 0), mz);
 
-	        		rPrevious.push_back(rPrevious[visualAnchor] * (mx * my * mz));
+	        		rPrevious.push_back(rPrevious[visualAnchor] * (mx * my * mz) * offset);
 	        		
 	        	}
 			}

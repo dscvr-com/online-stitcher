@@ -44,7 +44,6 @@ StereoImage *CreateStereo(Image *a, Image *b) {
 	
 	//cout << "AQ: " << rotQ << endl;
 
-	//Todo - don't we need a lerping here? 
 	quat::Mult(rotQ, 0.5f, avg);
 
 	Mat rotN = Mat::eye(3, 3, CV_64F);
@@ -92,6 +91,9 @@ StereoImage *CreateStereo(Image *a, Image *b) {
 	int width = min2(cornersA[1].x, cornersA[2].x) - x;
 	width = max(0, width);
 
+	x += width * 2 / 6;
+	width /= 3;
+
 	int y = max4(interpolate(x, cornersB[0].x, cornersB[1].x, cornersB[0].y, cornersB[1].y), 
 		interpolate(x, cornersA[0].x, cornersA[1].x, cornersA[0].y, cornersA[1].y),
 		interpolate(x + width, cornersB[0].x, cornersB[1].x, cornersB[0].y, cornersB[1].y), 
@@ -114,10 +116,18 @@ StereoImage *CreateStereo(Image *a, Image *b) {
 		return result;
 	}
 
-	if(finalRoi.width <= 0 || finalRoi.height <= 0) {
-		cout << "Zero ROI - Skipping" << endl;
+	if(finalRoi.width <= 5 || finalRoi.height <= 5) {
+		cout << "Mini ROI - Skipping" << endl;
 		return result; 
 	}
+
+	imwrite("dbg/warped_" + ToString(a->id) + "A.jpg", resA(finalRoi));
+	imwrite("dbg/warped_" + ToString(a->id) + "B.jpg", resB(finalRoi));
+
+	Mat rvec(4, 1, CV_64F);
+	ExtractRotationVector(rot, rvec);
+
+	cout << "Diff for " << a->id << " " << rvec.t() << endl;
 
 	Mat newKA(3, 3, CV_64F);
  	newKA.at<double>(0, 0) = aIntrinsics.at<double>(0, 0);

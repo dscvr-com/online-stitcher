@@ -89,8 +89,8 @@ void StreamAlign(vector<Image*> images) {
     //TODO: Make this decision automatically. 
     //TODO: Might not be needed if code runs on phone with raw input 
     //data. 
-    bool isLandscapeFlipped = true;
-    bool isIos = false;
+    bool isLandscapeFlipped = false;
+    bool isIos = true;
 
     if(isLandscapeFlipped) {
         double landscapeLtoRData[] = {-1, 0, 0, 0,
@@ -105,7 +105,7 @@ void StreamAlign(vector<Image*> images) {
     }
     if(isIos) {
         double iosToSData[] = {0, 1, 0, 0,
-                                     -1, 0, 0, 0, 
+                                     1, 0, 0, 0, 
                                      0, 0, 1, 0,
                                      0, 0, 0, 1};
         Mat iosToS(4, 4, CV_64F, iosToSData);

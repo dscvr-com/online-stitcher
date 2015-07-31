@@ -69,7 +69,7 @@ void SimpleSeamer::findInPair(size_t first, size_t second, Rect roi)
     //Center of second image in ROI space
     int bToRoiX = tl2.x - roi.x - roi.width / 2;
     int bToRoiY = tl2.y - roi.y - roi.height / 2;
-    int bx = img2.width / 2 + aToRoiX;
+    int bx = img2.width / 2 + bToRoiX;
     int by = img2.height / 2 + bToRoiY;
 
     //Derivation of the line orthogonal to the line connecting a and b
@@ -79,7 +79,7 @@ void SimpleSeamer::findInPair(size_t first, size_t second, Rect roi)
     dy = dx / l;
     dx = dy / l;
 
-    bool greaterZero = (ax * dy) + (ay * dx) > 0;
+    bool greaterZero = (ax * dy) - (ay * dx) > 0;
 
     for(int x = 0; x < img1.width; x++) 
     {
@@ -89,18 +89,18 @@ void SimpleSeamer::findInPair(size_t first, size_t second, Rect roi)
             int y1 = y + aToRoiY;
 
             if(greaterZero) {
-                if(x1 * dy + y1 * dx < 0) {
+                if(x1 * dy - y1 * dx < 0 && mask2.at<uchar>(x1 - bToRoiX, y1 - bToRoiY) != 0) {
                     mask1.at<uchar>(y, x) = 0;
                 }
             } else {
-                if(x1 * dy + y1 * dx > 0) {
+                if(x1 * dy - y1 * dx > 0 && mask2.at<uchar>(x1 - bToRoiX, y1 - bToRoiY) != 0) {
                     mask1.at<uchar>(y, x) = 0;
                 }
             }
         }       
     }
 
-    greaterZero = (bx * dy) + (by * dx) > 0;
+    greaterZero = (bx * dy) - (by * dx) > 0;
 
     for(int x = 0; x < img2.width; x++) 
     {
@@ -110,11 +110,11 @@ void SimpleSeamer::findInPair(size_t first, size_t second, Rect roi)
             int y2 = y + bToRoiY;
 
             if(greaterZero) {
-                if(x2 * dy + y2 * dx < 0) {
+                if(x2 * dy - y2 * dx < 0 && mask1.at<uchar>(x2 - aToRoiX, y2 - aToRoiY) != 0) {
                     mask2.at<uchar>(y, x) = 0;
                 }
             } else {
-                if(x2 * dy + y2 * dx > 0) {
+                if(x2 * dy - y2 * dx > 0 && mask1.at<uchar>(x2 - aToRoiX, y2 - aToRoiY) != 0) {
                     mask2.at<uchar>(y, x) = 0;
                 }
             }
