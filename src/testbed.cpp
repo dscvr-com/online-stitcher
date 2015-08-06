@@ -2,7 +2,7 @@
 #include "VisualAligner.hpp"
 #include "simpleSphereStitcher.hpp"
 #include "streamAligner.hpp"
-#include "monoStitcher.hpp"
+#include "monoStitcher2.hpp"
 #include "io.hpp"
 #include <iostream>
 #include <algorithm>
@@ -63,8 +63,9 @@ vector<StereoImage*> Make3D(vector<Image*> images) {
     vector<StereoImage*> stereos;
     int n = images.size();
     int offset = 1; //TODO: Find good offset based on image position.
+    int step = 1;
 
-    for(int i = 0; i < n; i++) {
+    for(int i = 0; i < n; i += step) {
         StereoImage* img = CreateStereo(images[i], images[(i + offset) % n]);
         if(img->valid) {
             stereos.push_back(img);
@@ -126,7 +127,7 @@ void StreamAlign(vector<Image*> images) {
 
     //stitcher.PrepareMatrices(images);
 
-    Stitch(images, "dbg_2_aligned.jpg", true);
+    Stitch(images, "dbg_2_aligned.jpg", false);
     cout << "ALIGN OUT FINISHED" << endl;
 
     //Before stereofiying, make sure that images are sorted correctly!

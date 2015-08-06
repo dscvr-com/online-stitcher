@@ -13,7 +13,7 @@ using namespace std;
 #ifndef OPTONAUT_STREAM_ALIGNMENT_HEADER
 #define OPTONAUT_STREAM_ALIGNMENT_HEADER
 
-#define ORDER 5
+#define ORDER 3
 	
 namespace optonaut {
 	class StreamAligner {
@@ -55,7 +55,7 @@ namespace optonaut {
 
 	        			ExtractRotationVector(rotation, visualRVec);
 
-	        			cout << next->id << " <-> " << previous[i]->id<< ": " << visualRVec.t() << endl;
+	        			cout << next->id << " <-> " << previous[i]->id<< " R: " << visualRVec.t() << " T: " << hom->translations[0].t() << endl;
 
 		        		//Filter out stupid homomomomographies! 
 		        		if(visualRVec.at<double>(2, 0) > 0.0 && //Don't allow "backward" rotation

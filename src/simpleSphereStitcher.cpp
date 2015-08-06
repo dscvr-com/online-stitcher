@@ -9,6 +9,7 @@
 #include "simpleSphereStitcher.hpp"
 #include "support.hpp"
 #include "simpleSeamer.hpp"
+#include "thresholdSeamer.hpp"
 
 using namespace std;
 using namespace cv;
@@ -48,39 +49,26 @@ StitchingResult *RStitcher::Stitch(std::vector<Image*> in, bool debug) {
         From4DoubleTo3Float(in[i]->extrinsics, cameras[i].R);
     }
 
-	//Create masks and small images for fast stitching. 
+	//Create masks
     vector<Mat> masks(n);
-
-    vector<Mat> miniImages(n);
-    vector<Mat> miniMasks(n);
 
     for(size_t i = 0; i < n; i++) {
         masks[i].create(images[i].size(), CV_8U);
+        ThresholdSeamer::createMask(masks[i]);
         masks[i].setTo(Scalar::all(255));
-
-        resize(images[i], miniImages[i], Size(), workScale, workScale, INTER_NEAREST);
-
-        miniMasks[i].create(miniImages[i].size(), CV_8U);
-        miniMasks[i].setTo(Scalar::all(255));
+        imwrite("dbg/premask" + ToString(i) + ".jpg", masks[i]);
     }
 
     //Create warper
     Ptr<WarperCreator> warperFactory = new cv::SphericalWarper();
-
     Ptr<RotationWarper> warper = warperFactory->create(static_cast<float>(warperScale)); 
-	Ptr<RotationWarper> miniWarper = warperFactory->create(static_cast<float>(warperScale * workScale)); //Set scale to 1
 
 	//Create data structures for warped images
 	vector<Point> corners(n);
-	vector<Mat> warpedImages(n);
-	vector<Mat> warpedMasks(n);
+	vector<UMat> warpedImages(n);
+    vector<UMat> warpedImagesAsFloat(n);
+	vector<UMat> warpedMasks(n);
 	vector<Size> warpedSizes(n);
-
-	vector<Point> miniCorners(n);
-	vector<UMat> miniWarpedImages(n);
-	vector<UMat> miniWarpedMasks(n);
-	vector<Size> miniWarpedSizes(n);
-	vector<UMat> miniWarpedImagesAsFloat(n);
 
 	for (size_t i = 0; i < n; i++) {
        	Mat k;
@@ -92,58 +80,26 @@ StitchingResult *RStitcher::Stitch(std::vector<Image*> in, bool debug) {
         corners[i] = warper->warp(images[i], k, cameras[i].R, INTER_LINEAR, BORDER_CONSTANT, warpedImages[i]);
         warper->warp(masks[i], k, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, warpedMasks[i]);
         warpedSizes[i] = warpedImages[i].size();
-       
-        //Mini      
-        float miniKData[] = {
-            k.at<float>(0, 0) * workScale, 0, k.at<float>(0, 2) * workScale,
-            0, k.at<float>(1, 1) * workScale, k.at<float>(1, 2) * workScale,
-            0, 0, 1
-        };
+        warpedImages[i].convertTo(warpedImagesAsFloat[i], CV_32F);
+        imwrite("dbg/warpmask" + ToString(i) + ".jpg", warpedMasks[i]);
 
-        Mat miniK(3, 3, CV_32F, miniKData);
-
-        miniCorners[i] = miniWarper->warp(miniImages[i], miniK, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, miniWarpedImages[i]);
-        miniWarper->warp(miniMasks[i], miniK, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, miniWarpedMasks[i]);
-        miniWarpedSizes[i] = miniWarpedImages[i].size(); 
-        miniWarpedImages[i].convertTo(miniWarpedImagesAsFloat[i], CV_32F);
     }
-
-	//Exposure compensation
-    if(compensate) {
-	 	Ptr<ExposureCompensator> compensator = ExposureCompensator::createDefault(ExposureCompensator::GAIN_BLOCKS);
-	    compensator->feed(miniCorners, miniWarpedImages, miniWarpedMasks);
-
-	    for (size_t i = 0; i < n; i++)
-	    {
-	        compensator->apply(i, corners[i], warpedImages[i], warpedMasks[i]);
-	    }
-    }
+    masks.clear();
+    images.clear();
 
     //Seam finding
     if(seam) {
-		Ptr<SeamFinder> seamFinder = new SimpleSeamer();
-		seamFinder->find(miniWarpedImagesAsFloat, miniCorners, miniWarpedMasks);
-		
-		//Merge masks from warper/seam finder
-		Mat diliatedMask;
-	    for (size_t i = 0; i < n; i++)
-	    {
-	        //Diliate mask (sharpen edges)
-	        dilate(miniWarpedMasks[i], diliatedMask, Mat());
-	        //Scale up mini mask to fit big mask. 
-	        Mat seamedMask; 
-	        resize(diliatedMask, seamedMask, warpedMasks[i].size());
-	        warpedMasks[i] = warpedMasks[i] & seamedMask;
-	    }
+        //Ptr<SeamFinder> seamFinder = new GraphCutSeamFinder();
+		Ptr<SeamFinder> seamFinder = new ThresholdSeamer();
+		seamFinder->find(warpedImagesAsFloat, corners, warpedMasks);
     }
+    warpedImagesAsFloat.clear();
 
-    miniWarpedImagesAsFloat.clear();
-    miniWarpedImages.clear();
-    masks.clear();
-
-    miniCorners.clear();
-    miniImages.clear();
-    miniMasks.clear();
+    for (size_t i = 0; i < n; i++) {
+        imwrite("dbg/submask" + ToString(i) + ".jpg", warpedMasks[i]);
+        ThresholdSeamer::brightenMask(warpedMasks[i]);
+        imwrite("dbg/mask" + ToString(i) + ".jpg", warpedMasks[i]);
+    }
 
     //Final blending
 	Mat warpedImageAsShort;

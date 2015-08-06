@@ -44,33 +44,35 @@ void SimpleSeamer::find(const std::vector<Size> &sizes, const std::vector<Point>
 
 void SimpleSeamer::findInPair(size_t first, size_t second, Rect roi)
 {
-    Size img1 = sizes_[first], img2 = sizes_[second];
-    Mat mask1 = masks_[first].getMat(ACCESS_WRITE);
-    Mat mask2 = masks_[second].getMat(ACCESS_WRITE);
-    Point tl1 = corners_[first];
-    Point tl2 = corners_[second];
+    Size imgA = sizes_[first];
+    Size imgB = sizes_[second];
+    Mat maskA = masks_[first].getMat(ACCESS_WRITE);
+    Mat maskB = masks_[second].getMat(ACCESS_WRITE);
+    Point tlA = corners_[first];
+    Point tlB = corners_[second];
 
-    assert(img1.width == mask1.cols);
-    assert(img2.width == mask2.cols);
-    assert(img1.height == mask1.rows);
-    assert(img2.height == mask2.rows);
+    assert(maskA.type() == CV_8U);
+    assert(maskB.type() == CV_8U);
+
+    assert(imgA.width == maskA.cols);
+    assert(imgB.width == maskB.cols);
+    assert(imgA.height == maskA.rows);
+    assert(imgB.height == maskB.rows);
+
 
     //All coordinates in ROI center space
 
-    int p0x = 0;
-    int p0y = 0;
-
     //Center of first image in ROI space
-    int aToRoiX = tl1.x - roi.x - roi.width / 2;
-    int aToRoiY = tl1.y - roi.y - roi.height / 2;
-    int ax = img1.width / 2 + aToRoiX;
-    int ay = img1.height / 2 + aToRoiY;
+    int aToRoiX = tlA.x - roi.x - roi.width / 2;
+    int aToRoiY = tlA.y - roi.y - roi.height / 2;
+    int ax = imgA.width / 2 + aToRoiX;
+    int ay = imgA.height / 2 + aToRoiY;
 
     //Center of second image in ROI space
-    int bToRoiX = tl2.x - roi.x - roi.width / 2;
-    int bToRoiY = tl2.y - roi.y - roi.height / 2;
-    int bx = img2.width / 2 + bToRoiX;
-    int by = img2.height / 2 + bToRoiY;
+    int bToRoiX = tlB.x - roi.x - roi.width / 2;
+    int bToRoiY = tlB.y - roi.y - roi.height / 2;
+    int bx = imgB.width / 2 + bToRoiX;
+    int by = imgB.height / 2 + bToRoiY;
 
     //Derivation of the line orthogonal to the line connecting a and b
     double dy = (ay - by);
@@ -81,20 +83,20 @@ void SimpleSeamer::findInPair(size_t first, size_t second, Rect roi)
 
     bool greaterZero = (ax * dy) - (ay * dx) > 0;
 
-    for(int x = 0; x < img1.width; x++) 
+    for(int x = 0; x < imgA.width; x++) 
     {
-        for(int y = 0; y < img1.height; y++) 
+        for(int y = 0; y < imgA.height; y++) 
         {
-            int x1 = x + aToRoiX;
-            int y1 = y + aToRoiY;
+            int xA = x + aToRoiX;
+            int yA = y + aToRoiY;
 
             if(greaterZero) {
-                if(x1 * dy - y1 * dx < 0 && mask2.at<uchar>(x1 - bToRoiX, y1 - bToRoiY) != 0) {
-                    mask1.at<uchar>(y, x) = 0;
+                if(xA * dy - yA * dx < 0 && maskB.at<uchar>(xA - bToRoiX, yA - bToRoiY) != 0) {
+                    maskA.at<uchar>(y, x) = 0;
                 }
             } else {
-                if(x1 * dy - y1 * dx > 0 && mask2.at<uchar>(x1 - bToRoiX, y1 - bToRoiY) != 0) {
-                    mask1.at<uchar>(y, x) = 0;
+                if(xA * dy - yA * dx > 0 && maskB.at<uchar>(xA - bToRoiX, yA - bToRoiY) != 0) {
+                    maskA.at<uchar>(y, x) = 0;
                 }
             }
         }       
@@ -102,20 +104,20 @@ void SimpleSeamer::findInPair(size_t first, size_t second, Rect roi)
 
     greaterZero = (bx * dy) - (by * dx) > 0;
 
-    for(int x = 0; x < img2.width; x++) 
+    for(int x = 0; x < imgB.width; x++) 
     {
-        for(int y = 0; y < img2.height; y++) 
+        for(int y = 0; y < imgB.height; y++) 
         {
-            int x2 = x + bToRoiX;
-            int y2 = y + bToRoiY;
+            int xB = x + bToRoiX;
+            int yB = y + bToRoiY;
 
             if(greaterZero) {
-                if(x2 * dy - y2 * dx < 0 && mask1.at<uchar>(x2 - aToRoiX, y2 - aToRoiY) != 0) {
-                    mask2.at<uchar>(y, x) = 0;
+                if(xB * dy - yB * dx < 0 && maskA.at<uchar>(xB - aToRoiX, yB - aToRoiY) != 0) {
+                    maskB.at<uchar>(y, x) = 0;
                 }
             } else {
-                if(x2 * dy - y2 * dx > 0 && mask1.at<uchar>(x2 - aToRoiX, y2 - aToRoiY) != 0) {
-                    mask2.at<uchar>(y, x) = 0;
+                if(xB * dy - yB * dx > 0 && maskA.at<uchar>(xB - aToRoiX, yB - aToRoiY) != 0) {
+                    maskB.at<uchar>(y, x) = 0;
                 }
             }
         }       

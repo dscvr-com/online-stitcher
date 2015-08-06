@@ -121,13 +121,26 @@ StereoImage *CreateStereo(Image *a, Image *b) {
 		return result; 
 	}
 
-	imwrite("dbg/warped_" + ToString(a->id) + "A.jpg", resA(finalRoi));
-	imwrite("dbg/warped_" + ToString(a->id) + "B.jpg", resB(finalRoi));
+	/*
+	line( resA, cvPoint(finalRoi.x, finalRoi.y), cvPoint(finalRoi.x + finalRoi.width, finalRoi.y), Scalar(0, 255, 0), 4 );
+	line( resA, cvPoint(finalRoi.x, finalRoi.y + finalRoi.height), cvPoint(finalRoi.x + finalRoi.width, finalRoi.y + finalRoi.height), Scalar(0, 255, 0), 4 );
+	line( resA, cvPoint(finalRoi.x, finalRoi.y), cvPoint(finalRoi.x, finalRoi.y + finalRoi.height), Scalar(0, 255, 0), 4 );
+	line( resA, cvPoint(finalRoi.x + finalRoi.width, finalRoi.y + finalRoi.height), cvPoint(finalRoi.x + finalRoi.width, finalRoi.y), Scalar(0, 255, 0), 4 );
+
+	line( resB, cvPoint(finalRoi.x, finalRoi.y), cvPoint(finalRoi.x + finalRoi.width, finalRoi.y), Scalar(0, 255, 0), 4 );
+	line( resB, cvPoint(finalRoi.x, finalRoi.y + finalRoi.height), cvPoint(finalRoi.x + finalRoi.width, finalRoi.y + finalRoi.height), Scalar(0, 255, 0), 4 );
+	line( resB, cvPoint(finalRoi.x, finalRoi.y), cvPoint(finalRoi.x, finalRoi.y + finalRoi.height), Scalar(0, 255, 0), 4 );
+	line( resB, cvPoint(finalRoi.x + finalRoi.width, finalRoi.y + finalRoi.height), cvPoint(finalRoi.x + finalRoi.width, finalRoi.y), Scalar(0, 255, 0), 4 );
+	*/
+	imwrite("dbg/warped_" + ToString(a->id) + "A.jpg", resA);
+	imwrite("dbg/warped_" + ToString(a->id) + "B.jpg", resB);
 
 	Mat rvec(4, 1, CV_64F);
 	ExtractRotationVector(rot, rvec);
 
 	cout << "Diff for " << a->id << " " << rvec.t() << endl;
+
+	//Intrinsics are probably wrong. Principal point is not correct. Focal lens might have changed due to projection. 
 
 	Mat newKA(3, 3, CV_64F);
  	newKA.at<double>(0, 0) = aIntrinsics.at<double>(0, 0);
@@ -139,7 +152,7 @@ StereoImage *CreateStereo(Image *a, Image *b) {
  	From3DoubleTo4Double(rotN, rotN4);
 
 	result->A.intrinsics = newKA;
-	result->A.extrinsics = a->extrinsics * rotN4;
+	result->A.extrinsics = a->extrinsics;
 	result->A.id = a->id;
 
 	Mat newKB = Mat::eye(3, 3, CV_64F);
@@ -149,10 +162,10 @@ StereoImage *CreateStereo(Image *a, Image *b) {
  	newKB.at<double>(1, 2) = height / 2.0f;
 
 	result->B.intrinsics = newKB;
-	result->B.extrinsics = a->extrinsics * rotN4;
+	result->B.extrinsics = b->extrinsics;
 	result->B.id = b->id;
 
-	result->extrinsics = a->extrinsics * rotN4;
+	result->extrinsics = rotN4.inv() * b->extrinsics;
 
 	result->valid = true;
 	return result;
