@@ -2,7 +2,7 @@
 #include "VisualAligner.hpp"
 #include "simpleSphereStitcher.hpp"
 #include "streamAligner.hpp"
-#include "monoStitcher2.hpp"
+#include "monoStitcher.hpp"
 #include "io.hpp"
 #include <iostream>
 #include <algorithm>
@@ -90,8 +90,8 @@ void StreamAlign(vector<Image*> images) {
     //TODO: Make this decision automatically. 
     //TODO: Might not be needed if code runs on phone with raw input 
     //data. 
-    bool isLandscapeFlipped = false;
-    bool isIos = true;
+    bool isLandscapeFlipped = true;
+    bool isIos = false;
 
     if(isLandscapeFlipped) {
         double landscapeLtoRData[] = {-1, 0, 0, 0,

@@ -44,6 +44,7 @@ StereoImage *CreateStereo(Image *a, Image *b) {
 	
 	//cout << "AQ: " << rotQ << endl;
 
+	//Todo - write unit test for quat functions. 
 	quat::Mult(rotQ, 0.5f, avg);
 
 	Mat rotN = Mat::eye(3, 3, CV_64F);
@@ -152,7 +153,7 @@ StereoImage *CreateStereo(Image *a, Image *b) {
  	From3DoubleTo4Double(rotN, rotN4);
 
 	result->A.intrinsics = newKA;
-	result->A.extrinsics = a->extrinsics;
+	result->A.extrinsics = a->extrinsics * rotN4;
 	result->A.id = a->id;
 
 	Mat newKB = Mat::eye(3, 3, CV_64F);
@@ -162,7 +163,7 @@ StereoImage *CreateStereo(Image *a, Image *b) {
  	newKB.at<double>(1, 2) = height / 2.0f;
 
 	result->B.intrinsics = newKB;
-	result->B.extrinsics = b->extrinsics;
+	result->B.extrinsics = b->extrinsics * rotN4.inv();
 	result->B.id = b->id;
 
 	result->extrinsics = rotN4.inv() * b->extrinsics;

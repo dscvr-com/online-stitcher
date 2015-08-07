@@ -99,7 +99,8 @@ namespace optonaut {
         		//we understand the error modelling better. 
 
 				Mat offset(4, 4, CV_64F);
-	        	CreateRotationY(0.005, offset);
+	        	//CreateRotationY(0.005, offset);
+	        	CreateRotationY(0.000, offset);
 
         		if(visualAnchor == -1) {
 	        		rPrevious.push_back(GetCurrentRotation() * sensorDiff * offset);
