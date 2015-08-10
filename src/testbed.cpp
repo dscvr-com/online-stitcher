@@ -63,7 +63,7 @@ vector<StereoImage*> Make3D(vector<Image*> images) {
     vector<StereoImage*> stereos;
     int n = images.size();
     int offset = 1; //TODO: Find good offset based on image position.
-    int step = 1;
+    int step = 2;
 
     for(int i = 0; i < n; i += step) {
         StereoImage* img = CreateStereo(images[i], images[(i + offset) % n]);
@@ -90,8 +90,8 @@ void StreamAlign(vector<Image*> images) {
     //TODO: Make this decision automatically. 
     //TODO: Might not be needed if code runs on phone with raw input 
     //data. 
-    bool isLandscapeFlipped = true;
-    bool isIos = false;
+    bool isLandscapeFlipped = false;
+    bool isIos = true;
 
     if(isLandscapeFlipped) {
         double landscapeLtoRData[] = {-1, 0, 0, 0,
