@@ -5,5 +5,5 @@ include(GNUInstallDirs)
 
 find_package( OpenCV REQUIRED )
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall -std=c++1y -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall -std=c++1y -g -Werror")
 add_subdirectory(src)

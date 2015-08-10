@@ -19,6 +19,7 @@ namespace wrapper {
 	Image *prev = NULL;
 	bool debug = false;
 	deque<Image*> images;
+	string debugDir;
 
 
 	//IOS Base Conversion
@@ -49,7 +50,7 @@ namespace wrapper {
 		return current;
 	}
 
-    bool Push(double extrinsics[], double intrinsics[], unsigned char *image, int width, int height, double newExtrinsics[], int id, std::string debugDir) {
+    bool Push(double extrinsics[], double intrinsics[], unsigned char *image, int width, int height, double newExtrinsics[], int id) {
         
         Image* current = AllocateImage(extrinsics, intrinsics, image, width, height, id);
 
@@ -74,8 +75,9 @@ namespace wrapper {
 		return true;
 	}
 
-	void Debug() {
+	void EnableDebug(string dbgDir) {
 		debug = true;
+		debugDir = dbgDir;
 	}
 
 	void Free() {

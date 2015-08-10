@@ -7,4 +7,4 @@ if [ ! -d "build" ]; then
 fi
 cd build
 cmake .. $@
-make $MAKEOPTS
+make $MAKEOPTS 

@@ -63,8 +63,6 @@ void Align(vector<Image*> imgs) {
 vector<StereoImage*> Make3D(vector<Image*> images) {
     vector<StereoImage*> stereos;
     int n = images.size();
-    int offset = 1; //TODO: Find good offset based on image position.
-    int step = 1;
 
 
     ImageSelector selector(images[0]->intrinsics);
@@ -75,12 +73,15 @@ vector<StereoImage*> Make3D(vector<Image*> images) {
 
     //Select good images and 3dify. Todo: Make optimal decisions. 
     //Handle missing images. Handle multi-rings. 
-    for(int i = 0; i < n; i += step) {
+    for(int i = 0; i < n; i++) {
         if(selector.FitsModel(images[i])) {
             if(prev != NULL) {
                 StereoImage* img = CreateStereo(prev, images[i]);
                 if(img->valid) {
                     stereos.push_back(img);
+                }
+                if(prev != first) {
+                    delete prev;
                 }
             }
             if(first == NULL)
@@ -94,6 +95,11 @@ vector<StereoImage*> Make3D(vector<Image*> images) {
     StereoImage* img = CreateStereo(prev, first);
     if(img->valid) {
         stereos.push_back(img);
+    }
+
+    if(first != NULL) {
+        delete prev;
+        delete first;
     }
 
     return stereos;
@@ -141,8 +147,8 @@ void StreamAlign(vector<Image*> images) {
     }
 
 
-    Stitch(images, "dbg_1_prepared.jpg", true);
-    cout << "PREPARE OUT FINISHED" << endl;
+   // Stitch(images, "dbg_1_prepared.jpg", true);
+    cout << "PREPARE FINISHED" << endl;
 
     for(size_t i = 0; i < images.size(); i++) {
         aligner.Push(images[i]);
@@ -151,11 +157,13 @@ void StreamAlign(vector<Image*> images) {
 
     //stitcher.PrepareMatrices(images);
 
-    Stitch(images, "dbg_2_aligned.jpg", false);
-    cout << "ALIGN OUT FINISHED" << endl;
+   // Stitch(images, "dbg_2_aligned.jpg", false);
+    cout << "ALIGN FINISHED" << endl;
 
     //Before stereofiying, make sure that images are sorted correctly!
     vector<StereoImage*> stereos = Make3D(images);
+    //Also, take care! The images are deleted within the make 3D process. 
+    images.clear();
 
     vector<Image*> imagesLeft;
     vector<Image*> imagesRight;
@@ -193,7 +201,8 @@ int main(int argc, char* argv[]) {
     StreamAlign(imgs);
 
     for(int i = 0; i < n; i++) {
-        delete imgs[i];
+       //We're already freeing during 3dify to safe memory.    
+       //delete imgs[i];
     }
 
     return 0;
