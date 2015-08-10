@@ -49,6 +49,15 @@ namespace optonaut {
 		return 2 * atan2(w / 2, f);
 	}
 
+	double GetVerticalFov(const Mat &intrinsics) {
+		assert(MatIs(intrinsics, 3, 3, CV_64F));
+
+		double h = intrinsics.at<double>(1, 2) * 2;
+		double f = intrinsics.at<double>(0, 0);
+
+		return 2 * atan2(h / 2, f);
+	}
+
 	void ExtractRotationVector(const Mat &r, Mat &v) {
 		assert(MatIs(r, 3, 3, CV_64F));
 
@@ -92,8 +101,6 @@ namespace optonaut {
 			0,       0, 0,      1 
 		};
 		Mat rot(4, 4, CV_64F, v);
-
-		cout << "rot" << rot << endl;
 
 		t = rot.clone();
 	}

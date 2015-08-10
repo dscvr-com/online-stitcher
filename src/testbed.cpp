@@ -7,6 +7,7 @@
 #include <iostream>
 #include <algorithm>
 #include "wrapper.hpp"
+#include "imageSelector.hpp"
 
 using namespace std;
 using namespace cv;
@@ -76,6 +77,11 @@ vector<StereoImage*> Make3D(vector<Image*> images) {
 }
 
 void StreamAlign(vector<Image*> images) {
+
+    ImageSelector selector(images[0]->intrinsics);
+
+    Stitch(selector.GenerateDebugImages(), "dbd_select.jpg", true);
+
     StreamAligner aligner;
     Stitch(images, "dbg_0_raw.jpg", true);
 
@@ -148,6 +154,7 @@ void StreamAlign(vector<Image*> images) {
 
 
 int main(int argc, char* argv[]) {
+
     int n = argc - 1;
     vector<Image*> imgs(n);
 

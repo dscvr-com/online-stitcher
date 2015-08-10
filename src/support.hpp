@@ -15,6 +15,7 @@ namespace optonaut {
 	void ScaleIntrinsicsToImage(cv::Mat intrinsics, cv::Mat image, cv::Mat &scaled, double fupscaling = 1);
 
 	double GetHorizontalFov(const cv::Mat &intrinsics);
+	double GetVerticalFov(const cv::Mat &intrinsics);
 
 	void ExtractRotationVector(const cv::Mat &r, cv::Mat &vec);
 	double GetAngleOfRotation(const cv::Mat &r);

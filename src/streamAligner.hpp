@@ -39,7 +39,7 @@ namespace optonaut {
 				Mat visualRVec(3, 1, CV_64F);
 
 				//2nd. Do approximation/decision 
-				cout << "Finding homographies " << endl;
+				//cout << "Finding homographies " << endl;
 
 				int visualAnchor = -1;
 				Mat visualDiff = Mat::eye(4, 4, CV_64F);
@@ -72,9 +72,9 @@ namespace optonaut {
 				}
 
 				if(visualAnchor != -1) {
-					cout << "Picking anchor between " << next->id << " <-> " << (next->id - (int)previous.size() + visualAnchor) << endl;
+					//cout << "Picking anchor between " << next->id << " <-> " << (next->id - (int)previous.size() + visualAnchor) << endl;
 				} else {
-					cout << "Could not find visual anchor." << endl;
+					//cout << "Could not find visual anchor." << endl;
 				}
 
         		//cout << "Image " << next->id << endl;
@@ -103,11 +103,11 @@ namespace optonaut {
 
         		if(visualAnchor == -1) {
 	        		rPrevious.push_back(GetCurrentRotation() * sensorDiff * offset);
-	        		cout << "Sensor" << endl;
+	        		//cout << "Sensor" << endl;
 	        	} else if(GetAngleOfRotation(sensorDiff) > GetAngleOfRotation(visualDiff) * 2) {
 	        		//If your sensor moved a lot more, discard!
 	        		rPrevious.push_back(rPrevious[visualAnchor] * visualDiff * offset);
-	        		cout << "Visual" << endl;
+	        		//cout << "Visual" << endl;
 	        	} else {
 
 	        		//rPrevious.push_back(rPrevious[visualAnchor] * visualDiff);
@@ -115,7 +115,7 @@ namespace optonaut {
 
 	        		//Use sensor - it's our best bet since everything except y rotation is very well measured
 	        		//rPrevious = rPrevious * sensorDiff;
-	        		cout << "Combined" << endl;
+	        		//cout << "Combined" << endl;
 
 	        		Mat mx(4, 4, CV_64F);
 	        		Mat my(4, 4, CV_64F);

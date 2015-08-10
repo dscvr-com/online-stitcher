@@ -63,7 +63,7 @@ public:
 		}
 
 		if(goodMatches.size() == 0) {
-			cout << "Homography: no matches. " << endl;
+			//cout << "Homography: no matches. " << endl;
 			return info;
 		}
 
