@@ -56,7 +56,7 @@ StitchingResult *RStitcher::Stitch(std::vector<Image*> in, bool debug) {
         masks[i].create(images[i].size(), CV_8U);
         ThresholdSeamer::createMask(masks[i]);
         masks[i].setTo(Scalar::all(255));
-        imwrite("dbg/premask" + ToString(i) + ".jpg", masks[i]);
+        //imwrite("dbg/premask" + ToString(i) + ".jpg", masks[i]);
     }
 
     //Create warper
@@ -81,7 +81,7 @@ StitchingResult *RStitcher::Stitch(std::vector<Image*> in, bool debug) {
         warper->warp(masks[i], k, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, warpedMasks[i]);
         warpedSizes[i] = warpedImages[i].size();
         warpedImages[i].convertTo(warpedImagesAsFloat[i], CV_32F);
-        imwrite("dbg/warpmask" + ToString(i) + ".jpg", warpedMasks[i]);
+        //imwrite("dbg/warpmask" + ToString(i) + ".jpg", warpedMasks[i]);
 
     }
     masks.clear();
@@ -96,16 +96,16 @@ StitchingResult *RStitcher::Stitch(std::vector<Image*> in, bool debug) {
     warpedImagesAsFloat.clear();
 
     for (size_t i = 0; i < n; i++) {
-        imwrite("dbg/submask" + ToString(i) + ".jpg", warpedMasks[i]);
+        //imwrite("dbg/submask" + ToString(i) + ".jpg", warpedMasks[i]);
         ThresholdSeamer::brightenMask(warpedMasks[i]);
-        imwrite("dbg/mask" + ToString(i) + ".jpg", warpedMasks[i]);
+        //imwrite("dbg/mask" + ToString(i) + ".jpg", warpedMasks[i]);
     }
 
     //Final blending
 	Mat warpedImageAsShort;
 	Ptr<Blender> blender;
 
-	blender = Blender::createDefault(Blender::NO, true);
+	blender = Blender::createDefault(Blender::FEATHER, true);
     Size destinationSize = resultRoi(corners, warpedSizes).size();
   
     MultiBandBlender* mb = dynamic_cast<MultiBandBlender*>(static_cast<Blender*>(blender));

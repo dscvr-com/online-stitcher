@@ -62,7 +62,7 @@ void Align(vector<Image*> imgs) {
 vector<StereoImage*> Make3D(vector<Image*> images) {
     vector<StereoImage*> stereos;
     int n = images.size();
-    int offset = 1; //TODO: Find good offset based on image position.
+    int offset = 2; //TODO: Find good offset based on image position.
     int step = 2;
 
     for(int i = 0; i < n; i += step) {
@@ -74,7 +74,6 @@ vector<StereoImage*> Make3D(vector<Image*> images) {
 
     return stereos;
 }
-
 
 void StreamAlign(vector<Image*> images) {
     StreamAligner aligner;
@@ -147,7 +146,7 @@ void StreamAlign(vector<Image*> images) {
     cout << "3D OUT FINISHED" << endl;
 }
 
-/*
+
 int main(int argc, char* argv[]) {
     int n = argc - 1;
     vector<Image*> imgs(n);
@@ -173,4 +172,3 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
-*/

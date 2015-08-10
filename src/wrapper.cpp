@@ -52,7 +52,7 @@ namespace wrapper {
 
 		aligner.Push(current);
 
-		Mat e = aligner.GetCurrentRotation();
+		Mat e = aligner.GetCurrentRotation() * aigner.GetZero();
 		for(int i = 0; i < 4; i++)
 			for(int j = 0; j < 4; j++)
 				newExtrinsics[i * 4 + j] = e.at<double>(i, j);

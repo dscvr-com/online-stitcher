@@ -133,8 +133,8 @@ StereoImage *CreateStereo(Image *a, Image *b) {
 	line( resB, cvPoint(finalRoi.x, finalRoi.y), cvPoint(finalRoi.x, finalRoi.y + finalRoi.height), Scalar(0, 255, 0), 4 );
 	line( resB, cvPoint(finalRoi.x + finalRoi.width, finalRoi.y + finalRoi.height), cvPoint(finalRoi.x + finalRoi.width, finalRoi.y), Scalar(0, 255, 0), 4 );
 	*/
-	imwrite("dbg/warped_" + ToString(a->id) + "A.jpg", resA);
-	imwrite("dbg/warped_" + ToString(a->id) + "B.jpg", resB);
+	//imwrite("dbg/warped_" + ToString(a->id) + "A.jpg", resA);
+	//imwrite("dbg/warped_" + ToString(a->id) + "B.jpg", resB);
 
 	Mat rvec(4, 1, CV_64F);
 	ExtractRotationVector(rot, rvec);

@@ -103,7 +103,7 @@ public:
  		}
 	
 		//debug
- 		
+ 		/*
 		Mat img_matches;
   		drawMatches( a->img, a->features, b->img, b->features,
                goodMatches, img_matches, Scalar::all(-1), Scalar::all(-1),
@@ -129,7 +129,7 @@ public:
 			cout << "Debug: Homography not found." << endl;
 		}
 		imwrite( "dbg/Homogpraphy" + ToString(a->id) + "_" + ToString(b->id) + ".jpg", img_matches );
-
+		*/
 		//debug end
 		
 		return info;
