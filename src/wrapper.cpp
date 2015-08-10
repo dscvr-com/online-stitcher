@@ -18,8 +18,9 @@ namespace wrapper {
 	Image *prev = NULL;
 	bool debug = false;
 
-	Image* AllocateImage(double extrinsics[], double intrinsics[], unsigned char *image, int width, int height, int id) {
-		Mat inputExtrinsics = Mat(4, 4, CV_64F, extrinsics);
+    Image* AllocateImage(double extrinsics[], double intrinsics[], unsigned char *image, int width, int height, int id, std::string dir) {
+		Mat inputExtrinsics = Mat(4, 4, CV_64F, extrinsics).clone();
+//        Mat inputExtrinsics = Mat::eye(4, 4, CV_64F);
 		Image *current = new Image();
 		current->img = Mat(height, width, CV_8UC3);
 		cvtColor(Mat(height, width, CV_8UC4, image), current->img, COLOR_RGBA2RGB);
@@ -31,20 +32,30 @@ namespace wrapper {
 						 0, 0, 0, 1};
 
 	    Mat base(4, 4, CV_64F, baseV);
+        
+//        imwrite(dir + "/test.jpg", current->img);
+
 
 
 		current->extrinsics = base * inputExtrinsics.inv() * base.inv();
-		current->intrinsics = Mat(3, 3, CV_64F, intrinsics);
+		current->intrinsics = Mat(3, 3, CV_64F, intrinsics).clone();
+//        current->intrinsics = Mat::eye(3, 3, CV_64F);
 		current->id = id;
 		current->source = "dynamic";
 
 		return current;
 	}
 
-	bool Push(double extrinsics[], double intrinsics[], unsigned char *image, int width, int height, double newExtrinsics[], int id) {
-		Image* current = AllocateImage(extrinsics, intrinsics, image, width, height, id);
+    bool Push(double extrinsics[], double intrinsics[], unsigned char *image, int width, int height, double newExtrinsics[], int id, std::string dir) {
+		
+//        FILE* d;
+//        d = fopen((dir + "/raw.out").c_str(), "w");
+//        fwrite(image, 1, sizeof(unsigned char) * 4 * width * height, d);
+//        fclose(d);
+        
+        Image* current = AllocateImage(extrinsics, intrinsics, image, width, height, id, dir);
 
-		imwrite("dbg/pushed.jpg", current->img);
+//		imwrite(dir + "/dbg-pushed.jpg", current->img);
 
 		aligner.Push(current);
 
@@ -55,7 +66,7 @@ namespace wrapper {
 
 		//Only safe because we know what goes on inside the StreamAligner. 
 		if(prev != NULL && !debug) {
-			delete prev;
+//			delete prev;
 		}
 
 		prev = current;
