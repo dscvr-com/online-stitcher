@@ -53,8 +53,7 @@ namespace optonaut {
 		        		rotation = rotation.inv();
 
 	        			ExtractRotationVector(rotation, visualRVec);
-
-	        			cout << next->id << " <-> " << previous[i]->id<< " R: " << visualRVec.t() << " T: " << hom->translations[0].t() << endl;
+						//cout << next->id << " <-> " << previous[i]->id<< " R: " << visualRVec.t() << " T: " << hom->translations[0].t() << endl;
 
 		        		//Filter out stupid homomomomographies! 
 		        		if(visualRVec.at<double>(2, 0) > 0.0 && //Don't allow "backward" rotation

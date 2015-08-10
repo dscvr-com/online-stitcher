@@ -63,24 +63,43 @@ void Align(vector<Image*> imgs) {
 vector<StereoImage*> Make3D(vector<Image*> images) {
     vector<StereoImage*> stereos;
     int n = images.size();
-    int offset = 2; //TODO: Find good offset based on image position.
-    int step = 2;
+    int offset = 1; //TODO: Find good offset based on image position.
+    int step = 1;
 
+
+    ImageSelector selector(images[0]->intrinsics);
+    //Stitch(selector.GenerateDebugImages(), "dbd_select.jpg", true);
+
+    Image* prev = NULL;
+    Image* first = NULL;
+
+    //Select good images and 3dify. Todo: Make optimal decisions. 
+    //Handle missing images. Handle multi-rings. 
     for(int i = 0; i < n; i += step) {
-        StereoImage* img = CreateStereo(images[i], images[(i + offset) % n]);
-        if(img->valid) {
-            stereos.push_back(img);
+        if(selector.FitsModel(images[i])) {
+            if(prev != NULL) {
+                StereoImage* img = CreateStereo(prev, images[i]);
+                if(img->valid) {
+                    stereos.push_back(img);
+                }
+            }
+            if(first == NULL)
+                first = images[i];
+            prev = images[i];
+            //Todo - f & l
         }
+    }
+
+    //Wrap around end
+    StereoImage* img = CreateStereo(prev, first);
+    if(img->valid) {
+        stereos.push_back(img);
     }
 
     return stereos;
 }
 
 void StreamAlign(vector<Image*> images) {
-
-    ImageSelector selector(images[0]->intrinsics);
-
-    Stitch(selector.GenerateDebugImages(), "dbd_select.jpg", true);
 
     StreamAligner aligner;
     Stitch(images, "dbg_0_raw.jpg", true);

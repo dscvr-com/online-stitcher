@@ -86,12 +86,13 @@ public:
 		auto i = targets.begin();
 		Mat eInv = img->extrinsics.inv();
 
+		//Todo: Change to optimal selection. E.g. discard a previous selection if a new one is better. 
 		while (i != targets.end()) {
-
 		    if (GetAngleOfRotation(eInv * *i) < tolerance) {
 		    	targets.erase(i);
 		    	return true;
 		    }
+		    i++;
 		}
 
 		return false;
