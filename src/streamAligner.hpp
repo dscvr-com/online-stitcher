@@ -13,8 +13,6 @@ using namespace std;
 #ifndef OPTONAUT_STREAM_ALIGNMENT_HEADER
 #define OPTONAUT_STREAM_ALIGNMENT_HEADER
 
-#define ORDER 3
-	
 namespace optonaut {
 	class StreamAligner {
 	private:
@@ -23,8 +21,9 @@ namespace optonaut {
 		Mat rOrigin;
 		deque<Mat> rPrevious;
 		deque<Mat> rSensorPrevious;
+		size_t order;
 	public:
-		StreamAligner() : visual(), rOrigin(4, 4, CV_64F) { }
+		StreamAligner(size_t order = 3) : visual(), rOrigin(4, 4, CV_64F), order(order) { }
 
 		double Push(Image* next) {
 
@@ -134,7 +133,7 @@ namespace optonaut {
 			previous.push_back(next);
 			rSensorPrevious.push_back(next->extrinsics.clone());
 
-			if(previous.size() > ORDER) {
+			if(previous.size() > order) {
 				previous.pop_front();
 				rSensorPrevious.pop_front();
 				rPrevious.pop_front();

@@ -31,8 +31,8 @@ int main(int argc, char* argv[]) {
         path.replace(path.length() - 3, 3, "int");
         BufferFromStringFile<double>(intrinsics, 9, path);
 
-        wrapper::Push(extrinsics, intrinsics, image, width, height, outExtrinsics, i);
-        images.push_back(wrapper::GetLastImae());
+        wrapper::Push(extrinsics, intrinsics, image, width, height, outExtrinsics, i, "/");
+        images.push_back(wrapper::GetLastImage());
         
         wrapper::GetLastImage()->extrinsics = cv::Mat(4, 4, CV_64F, outExtrinsics).clone();
 

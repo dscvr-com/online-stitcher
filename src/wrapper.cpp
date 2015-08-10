@@ -14,13 +14,18 @@ using namespace cv;
 namespace optonaut {
 namespace wrapper {
 
-	StreamAligner aligner;
+	size_t alignmentOrder = 3;
+	StreamAligner aligner(alignmentOrder);
 	Image *prev = NULL;
 	bool debug = false;
+	deque<Image*> images;
 
-	Image* AllocateImage(double extrinsics[], double intrinsics[], unsigned char *image, int width, int height, int id) {
-		Mat inputExtrinsics = Mat(4, 4, CV_64F, extrinsics);
+    Image* AllocateImage(double extrinsics[], double intrinsics[], unsigned char *image, int width, int height, int id) {
+		Mat inputExtrinsics = Mat(4, 4, CV_64F, extrinsics).clone();
+
 		Image *current = new Image();
+		images.push_back(current);
+
 		current->img = Mat(height, width, CV_8UC3);
 		cvtColor(Mat(height, width, CV_8UC4, image), current->img, COLOR_RGBA2RGB);
 
@@ -31,20 +36,19 @@ namespace wrapper {
 						 0, 0, 0, 1};
 
 	    Mat base(4, 4, CV_64F, baseV);
-
-
+       
 		current->extrinsics = base * inputExtrinsics.inv() * base.inv();
-		current->intrinsics = Mat(3, 3, CV_64F, intrinsics);
+		current->intrinsics = Mat(3, 3, CV_64F, intrinsics).clone();
+
 		current->id = id;
 		current->source = "dynamic";
 
 		return current;
 	}
 
-	bool Push(double extrinsics[], double intrinsics[], unsigned char *image, int width, int height, double newExtrinsics[], int id) {
-		Image* current = AllocateImage(extrinsics, intrinsics, image, width, height, id);
-
-		imwrite("dbg/pushed.jpg", current->img);
+    bool Push(double extrinsics[], double intrinsics[], unsigned char *image, int width, int height, double newExtrinsics[], int id, std::string debugDir) {
+        
+        Image* current = AllocateImage(extrinsics, intrinsics, image, width, height, id);
 
 		aligner.Push(current);
 
@@ -55,7 +59,11 @@ namespace wrapper {
 
 		//Only safe because we know what goes on inside the StreamAligner. 
 		if(prev != NULL && !debug) {
-			delete prev;
+			if(images.size() > alignmentOrder) {
+				Image* r = images.front();
+				images.pop_front();
+				delete r;
+			}
 		}
 
 		prev = current;

@@ -129,4 +129,11 @@ namespace optonaut {
 	    }
 	    assert(i == len);
 	}
+
+	void BufferToBinFile(unsigned char buf[], size_t len, string file) {
+	    FILE* d;
+		d = fopen(file.c_str(), "w");
+		fwrite(buf, 1, len, d);
+		fclose(d);
+	}
 }

@@ -42,7 +42,8 @@ public:
 	}
 
 	MatchInfo *FindHomography(Image* a, Image* b) {
-		if(a->features.empty())
+        assert(a != NULL);
+        if(a->features.empty())
 			FindKeyPoints(a);
 		if(b->features.empty()) 
 			FindKeyPoints(b);
