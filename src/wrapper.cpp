@@ -20,6 +20,17 @@ namespace wrapper {
 	bool debug = false;
 	deque<Image*> images;
 
+
+	//IOS Base Conversion
+	//If baseV != baseV^-1, add inversion below. 
+	double baseV[] = {0, 1, 0, 0,
+					 1, 0, 0, 0,
+					 0, 0, 1, 0, 
+					 0, 0, 0, 1};
+
+    Mat iosBase(4, 4, CV_64F, baseV);
+       
+
     Image* AllocateImage(double extrinsics[], double intrinsics[], unsigned char *image, int width, int height, int id) {
 		Mat inputExtrinsics = Mat(4, 4, CV_64F, extrinsics).clone();
 
@@ -29,15 +40,7 @@ namespace wrapper {
 		current->img = Mat(height, width, CV_8UC3);
 		cvtColor(Mat(height, width, CV_8UC4, image), current->img, COLOR_RGBA2RGB);
 
-		//IOS Base Conversion
-		double baseV[] = {0, 1, 0, 0,
-						 1, 0, 0, 0,
-						 0, 0, 1, 0, 
-						 0, 0, 0, 1};
-
-	    Mat base(4, 4, CV_64F, baseV);
-       
-		current->extrinsics = base * inputExtrinsics.inv() * base.inv();
+		current->extrinsics = iosBase * inputExtrinsics.inv() * iosBase;
 		current->intrinsics = Mat(3, 3, CV_64F, intrinsics).clone();
 
 		current->id = id;
@@ -52,7 +55,7 @@ namespace wrapper {
 
 		aligner.Push(current);
 
-		Mat e = aligner.GetCurrentRotation() * aigner.GetZero();
+		Mat e = iosBase * (aligner.GetCurrentRotation() * aligner.GetZero()) * iosBase;
 		for(int i = 0; i < 4; i++)
 			for(int j = 0; j < 4; j++)
 				newExtrinsics[i * 4 + j] = e.at<double>(i, j);
