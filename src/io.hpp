@@ -25,7 +25,7 @@ namespace optonaut {
 	    }
 	}
 
-	void BufferFromBinFile(unsigned char buf[], int *len, std::string file);
+	void BufferFromBinFile(unsigned char buf[], int len, std::string file);
 }
 
 #endif

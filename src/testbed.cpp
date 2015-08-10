@@ -147,6 +147,7 @@ void StreamAlign(vector<Image*> images) {
     cout << "3D OUT FINISHED" << endl;
 }
 
+/*
 int main(int argc, char* argv[]) {
     int n = argc - 1;
     vector<Image*> imgs(n);
@@ -172,3 +173,4 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
+*/

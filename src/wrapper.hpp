@@ -10,7 +10,7 @@
 namespace optonaut {
 namespace wrapper {
 	void Debug();
-	void Push(double extrinsics[], double intrinsics[], unsigned char *image, int width, int height, double newExtrinsics[], int id);
+	bool Push(double extrinsics[], double intrinsics[], unsigned char *image, int width, int height, double newExtrinsics[], int id);
 	Image* GetLastImage();
 	void Free();
 	Image* AllocateImage(double extrinsics[], double intrinsics[], unsigned char *image, int width, int height, int id);
