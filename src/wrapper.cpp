@@ -14,7 +14,7 @@ using namespace cv;
 namespace optonaut {
 namespace wrapper {
 
-	StreamAligner state;
+	StreamAligner aligner;
 	Image *prev = NULL;
 	bool debug = false;
 
@@ -26,7 +26,7 @@ namespace wrapper {
 
 		//IOS Base Conversion
 		double baseV[] = {0, 1, 0, 0,
-						 -1, 0, 0, 0,
+						 1, 0, 0, 0,
 						 0, 0, 1, 0, 
 						 0, 0, 0, 1};
 
@@ -41,24 +41,26 @@ namespace wrapper {
 		return current;
 	}
 
-	void Push(double extrinsics[], double intrinsics[], unsigned char *image, int width, int height, double newExtrinsics[], int id) {
+	bool Push(double extrinsics[], double intrinsics[], unsigned char *image, int width, int height, double newExtrinsics[], int id) {
 		Image* current = AllocateImage(extrinsics, intrinsics, image, width, height, id);
 
 		imwrite("dbg/pushed.jpg", current->img);
 
-		state.Push(current);
+		aligner.Push(current);
 
-		Mat e = state.GetCurrentRotation();
+		Mat e = aligner.GetCurrentRotation();
 		for(int i = 0; i < 4; i++)
 			for(int j = 0; j < 4; j++)
 				newExtrinsics[i * 4 + j] = e.at<double>(i, j);
 
-		//Only safe because we know what goes on inside state. 
+		//Only safe because we know what goes on inside the StreamAligner. 
 		if(prev != NULL && !debug) {
 			delete prev;
 		}
 
 		prev = current;
+
+		return true;
 	}
 
 	void Debug() {
