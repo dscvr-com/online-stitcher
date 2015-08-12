@@ -19,6 +19,7 @@ namespace optonaut {
 struct SelectionPoint {
 	int id;
 	int ringId;
+	int localId;
 	bool enabled;
 	Mat extrinsics;
 };
@@ -82,6 +83,7 @@ public:
 				p.extrinsics = hRot * vRot;
 				p.enabled = true;
 				p.ringId = i;
+				p.localId = j;
 
 				adj.push_back(vector<int>());
 				if(j != 0)
@@ -124,7 +126,7 @@ public:
 		return images;
 	}
 
-	SelectionInfo TrySelect(ImageP img) {
+	SelectionInfo FindClosestSelectionPoint(ImageP img) {
 		SelectionInfo info;
 		info.dist = -1;
 		info.isValid = false;
@@ -147,7 +149,9 @@ public:
 		return info;
 	}
 
-	
+	void DisableSelectionPoint(const SelectionPoint& p) {
+		targets[p.ringId][p.localId].enabled = false;
+	}
 
 	bool AreAdjacent(const SelectionPoint& left, const SelectionPoint& right) {
 		return find(adj[left.id].begin(), adj[left.id].end(), right.id) != adj[left.id].end();
