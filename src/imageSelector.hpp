@@ -16,10 +16,26 @@ using namespace std;
 
 namespace optonaut {
 
+struct SelectionPoint {
+	int id;
+	int ringId;
+	bool enabled;
+	Mat extrinsics;
+};
+
+struct SelectionInfo {
+	SelectionPoint closestPoint;
+	ImageP image;
+	double dist;
+	bool isValid;
+};
+
 class ImageSelector {
 
 private:
-	vector<Mat> targets;
+	//adj[n] contains m if m is right of n
+	vector<vector<int>> adj;
+	vector<vector<SelectionPoint>> targets;
 	Mat intrinsics;
 	//Horizontal and Vertical overlap in procent. 
 	const double hOverlap = 0.8;
@@ -41,6 +57,8 @@ public:
 	
 		vFov = M_PI / vCount;
 
+		int id = 0;
+
 		for(int i = 0; i < vCount; i++) {
 
 			double vAngle = i * vFov + vFov / 2 - M_PI / 2;
@@ -48,55 +66,93 @@ public:
 			int hCount = hCenterCount * cos(vAngle);
 			hFov = M_PI * 2 / hCount;
 
+			int initId = 0;
+
+			targets.push_back(vector<SelectionPoint>());
+
 			for(int j = 0; j < hCount; j++) {
 				Mat hRot;
 				Mat vRot;
 
-
 				CreateRotationY(j * hFov + hFov / 2, hRot);
 				CreateRotationX(vAngle, vRot);
 
-				targets.push_back(hRot * vRot);
+				SelectionPoint p;
+				p.id = id;
+				p.extrinsics = hRot * vRot;
+				p.enabled = true;
+				p.ringId = i;
+
+				adj.push_back(vector<int>());
+				if(j != 0)
+					adj[j - 1].push_back(j);
+				else
+					initId = id;
+
+				targets[i].push_back(p);
+
+				id++;
 			}
+
+			adj[hCount - 1].push_back(initId);
 		} 
 	}
 
-	vector<Image*> GenerateDebugImages() {
-		vector<Image*> images;
+	vector<vector<SelectionPoint>> &GetRings() {
+		return targets;
+	}
 
-		for(auto t : targets) {
+	vector<ImageP> GenerateDebugImages() {
+		vector<ImageP> images;
 
-			Image *d = new Image();
+		for(auto ring : targets) {
+			for(auto t : ring) {
+				ImageP d(new Image());
 
-			d->extrinsics = t;
-			d->intrinsics = intrinsics;
-			d->img = Mat::zeros(240, 320, CV_8UC3);
-			d->id = 0;
+				d->extrinsics = t.extrinsics;
+				d->intrinsics = intrinsics;
+				d->img = Mat::zeros(240, 320, CV_8UC3);
+				d->id = 0;
 
-			line(d->img, Point2f(0, 0), Point2f(320, 240), Scalar(0, 255, 0), 4);
-			line(d->img, Point2f(320, 0), Point2f(0, 240), Scalar(0, 255, 0), 4);
+				line(d->img, Point2f(0, 0), Point2f(320, 240), Scalar(0, 255, 0), 4);
+				line(d->img, Point2f(320, 0), Point2f(0, 240), Scalar(0, 255, 0), 4);
 
-			images.push_back(d);
+				images.push_back(d);
+			}
 		}
 
 		return images;
 	}
 
-	bool FitsModel(ImageP img) {
-		auto i = targets.begin();
+	SelectionInfo TrySelect(ImageP img) {
+		SelectionInfo info;
+		info.dist = -1;
+		info.isValid = false;
 		Mat eInv = img->extrinsics.inv();
 
-		//Todo: Change to optimal selection. E.g. discard a previous selection if a new one is better. 
-		while (i != targets.end()) {
-		    if (GetAngleOfRotation(eInv * *i) < tolerance) {
-		    	targets.erase(i);
-		    	return true;
-		    }
-		    i++;
+		for(auto ring : targets) {
+			for(auto target : ring) {
+				if(!target.enabled)
+					continue;
+			    	double dist = GetAngleOfRotation(eInv * target.extrinsics);
+			    	if (dist < info.dist || info.dist < 0) {
+					info.image = img;
+					info.closestPoint = target;
+					info.dist = dist;
+					info.isValid = tolerance >= dist;
+			    	}
+			}
 		}
 
-		return false;
+		return info;
 	}
+
+	
+
+	bool AreAdjacent(const SelectionPoint& left, const SelectionPoint& right) {
+		return find(adj[left.id].begin(), adj[left.id].end(), right.id) != adj[left.id].end();
+	}	
+
 };
 }
 

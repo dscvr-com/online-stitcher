@@ -75,7 +75,7 @@ vector<StereoImageP> Make3D(vector<ImageP> images) {
     //Select good images and 3dify. Todo: Make optimal decisions. 
     //Handle missing images. Handle multi-rings. 
     for(int i = 0; i < n; i++) {
-        if(selector.FitsModel(images[i])) {
+        //if(selector.FitsModel(images[i])) {
             if(prev != NULL) {
                 StereoImageP img = CreateStereo(prev, images[i]);
                 if(img->valid) {
@@ -86,7 +86,7 @@ vector<StereoImageP> Make3D(vector<ImageP> images) {
                 first = images[i];
             prev = images[i];
             //Todo - f & l
-        }
+        //}
     }
 
     //Wrap around end

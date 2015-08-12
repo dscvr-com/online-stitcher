@@ -16,3 +16,7 @@ A data package consists of a number of data/image pairs (`NUMBER.json`/`NUMBER.j
   ```
   
 * `NUMBER.jpg` is the image of the respective frame.
+
+## Notes on compiling on Mac
+
+Please set the environment variable OpenCV_DIR to the path of opencv. 
