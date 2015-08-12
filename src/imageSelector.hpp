@@ -3,7 +3,7 @@
 #include <opencv2/opencv.hpp>
 #include <math.h>
 
-#include "core.hpp"
+#include "image.hpp"
 #include "support.hpp"
 
 using namespace cv;
@@ -82,7 +82,7 @@ public:
 		return images;
 	}
 
-	bool FitsModel(Image* img) {
+	bool FitsModel(ImageP img) {
 		auto i = targets.begin();
 		Mat eInv = img->extrinsics.inv();
 

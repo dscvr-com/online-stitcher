@@ -1,13 +1,14 @@
 #include <algorithm>
 #include <string>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/opencv.hpp>
+#include <fstream>
+
 #include "lib/tinyxml2/tinyxml2.h"
 #include "lib/rapidjson/document.h"
 #include "lib/rapidjson/filereadstream.h"
 #include "support.hpp"
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/opencv.hpp>
-#include "core.hpp"
-#include <fstream>
+#include "image.hpp"
 
 using namespace cv;
 using namespace std;
@@ -61,7 +62,7 @@ namespace optonaut {
 		return dim;
 	}
 
- 	void ParseXml(string path, Image* result) {
+ 	void ParseXml(string path, ImageP result) {
 		XMLDocument doc;
 		doc.LoadFile(path.c_str());
 
@@ -73,7 +74,7 @@ namespace optonaut {
 		result->extrinsics = result->extrinsics.inv();
  	}
 
- 	void ParseJson(string path, Image* result) {
+ 	void ParseJson(string path, ImageP result) {
 		FILE* fileRef = fopen(path.c_str(), "rb");
 		assert(fileRef != NULL);
 		char buffer[65536];
@@ -95,10 +96,10 @@ namespace optonaut {
 	    return infile.good();
 	}
 
-	Image* ImageFromFile(string path) {
+	ImageP ImageFromFile(string path) {
 		assert(StringEndsWith(path, "jpg") || StringEndsWith(path, "JPG"));
 		
-		Image* result = new Image();
+		ImageP result(new Image());
 		result->img = imread(path);
 
 		result->source = path;

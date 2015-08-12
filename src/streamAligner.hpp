@@ -3,7 +3,7 @@
 #include <opencv2/opencv.hpp>
 #include <deque>
 
-#include "core.hpp"
+#include "image.hpp"
 #include "support.hpp"
 #include "visualAligner.hpp"
 
@@ -17,7 +17,7 @@ namespace optonaut {
 	class StreamAligner {
 	private:
 		VisualAligner visual;
-		deque<Image*> previous;
+		deque<ImageP> previous;
 		Mat rOrigin;
 		deque<Mat> rPrevious;
 		deque<Mat> rSensorPrevious;
@@ -25,7 +25,7 @@ namespace optonaut {
 	public:
 		StreamAligner(size_t order = 3) : visual(), rOrigin(4, 4, CV_64F), order(order) { }
 
-		double Push(Image* next) {
+		double Push(ImageP next) {
 
 			visual.FindKeyPoints(next);
 

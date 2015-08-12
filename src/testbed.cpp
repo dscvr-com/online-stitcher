@@ -1,11 +1,12 @@
-#include "core.hpp"
-#include "VisualAligner.hpp"
+#include <iostream>
+#include <algorithm>
+
+#include "image.hpp"
+#include "visualAligner.hpp"
 #include "simpleSphereStitcher.hpp"
 #include "streamAligner.hpp"
 #include "monoStitcher.hpp"
 #include "io.hpp"
-#include <iostream>
-#include <algorithm>
 #include "wrapper.hpp"
 #include "imageSelector.hpp"
 
@@ -15,9 +16,9 @@ using namespace optonaut;
 
 RStitcher stitcher;
 
-bool CompareById (const Image* a, const Image* b) { return (a->id < b->id); }
+bool CompareById (const ImageP a, const ImageP b) { return (a->id < b->id); }
 
-void Stitch(vector<Image*> imgs, string name = "stitched.jpg", bool debug = false) {
+void Stitch(vector<ImageP> imgs, string name = "stitched.jpg", bool debug = false) {
     StitchingResult* res = stitcher.Stitch(imgs, debug);
 
     imwrite("dbg/" + name, res->image);
@@ -25,7 +26,7 @@ void Stitch(vector<Image*> imgs, string name = "stitched.jpg", bool debug = fals
     delete res;
 }
 
-void Align(vector<Image*> imgs) {
+void Align(vector<ImageP> imgs) {
     VisualAligner aligner;
     int n = imgs.size();
 
@@ -60,28 +61,25 @@ void Align(vector<Image*> imgs) {
 }
 
 
-vector<StereoImage*> Make3D(vector<Image*> images) {
-    vector<StereoImage*> stereos;
+vector<StereoImageP> Make3D(vector<ImageP> images) {
+    vector<StereoImageP> stereos;
     int n = images.size();
 
 
     ImageSelector selector(images[0]->intrinsics);
     //Stitch(selector.GenerateDebugImages(), "dbd_select.jpg", true);
 
-    Image* prev = NULL;
-    Image* first = NULL;
+    ImageP prev = NULL;
+    ImageP first = NULL;
 
     //Select good images and 3dify. Todo: Make optimal decisions. 
     //Handle missing images. Handle multi-rings. 
     for(int i = 0; i < n; i++) {
         if(selector.FitsModel(images[i])) {
             if(prev != NULL) {
-                StereoImage* img = CreateStereo(prev, images[i]);
+                StereoImageP img = CreateStereo(prev, images[i]);
                 if(img->valid) {
                     stereos.push_back(img);
-                }
-                if(prev != first) {
-                    delete prev;
                 }
             }
             if(first == NULL)
@@ -92,20 +90,15 @@ vector<StereoImage*> Make3D(vector<Image*> images) {
     }
 
     //Wrap around end
-    StereoImage* img = CreateStereo(prev, first);
+    StereoImageP img = CreateStereo(prev, first);
     if(img->valid) {
         stereos.push_back(img);
-    }
-
-    if(first != NULL) {
-        delete prev;
-        delete first;
     }
 
     return stereos;
 }
 
-void StreamAlign(vector<Image*> images) {
+void StreamAlign(vector<ImageP> images) {
 
     StreamAligner aligner;
     Stitch(images, "dbg_0_raw.jpg", true);
@@ -161,16 +154,16 @@ void StreamAlign(vector<Image*> images) {
     cout << "ALIGN FINISHED" << endl;
 
     //Before stereofiying, make sure that images are sorted correctly!
-    vector<StereoImage*> stereos = Make3D(images);
+    vector<StereoImageP> stereos = Make3D(images);
     //Also, take care! The images are deleted within the make 3D process. 
     images.clear();
 
-    vector<Image*> imagesLeft;
-    vector<Image*> imagesRight;
+    vector<ImageP> imagesLeft;
+    vector<ImageP> imagesRight;
 
     for(size_t i = 0; i < stereos.size(); i += 1) {
-        imagesLeft.push_back(&(stereos[i]->A));
-        imagesRight.push_back(&(stereos[i]->B));
+        imagesLeft.push_back(stereos[i]->A);
+        imagesRight.push_back(stereos[i]->B);
     }
     cout << "3D PROCESS FINISHED" << endl;
 
@@ -183,7 +176,7 @@ void StreamAlign(vector<Image*> images) {
 int main(int argc, char* argv[]) {
 
     int n = argc - 1;
-    vector<Image*> imgs(n);
+    vector<ImageP> imgs(n);
 
     for(int i = 0; i < n; i++) {
         string imageName(argv[i + 1]);

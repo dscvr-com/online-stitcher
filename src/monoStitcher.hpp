@@ -6,7 +6,7 @@
 //
 //
 
-#include "core.hpp"
+#include "image.hpp"
 
 #ifndef OPTONAUT_MONO_STITCH_HEADER
 #define OPTONAUT_MONO_STITCH_HEADER
@@ -14,15 +14,17 @@
 namespace optonaut {
 
 	struct StereoImage {
-		Image A;
-		Image B;
+		ImageP A;
+		ImageP B;
 		cv::Mat extrinsics; //Center
 		bool valid;
 
-		StereoImage() : valid(false) { }
+		StereoImage() : A(new Image()), B(new Image()), extrinsics(4, 4, CV_64F), valid(false) { }
 	};
 
-	StereoImage *CreateStereo(Image *a, Image *b);
+	typedef std::shared_ptr<StereoImage> StereoImageP;
+
+	StereoImageP CreateStereo(ImageP a, ImageP b);
 }
 
 #endif

@@ -2,7 +2,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
 
-#include "core.hpp"
+#include "image.hpp"
 #include "support.hpp"
 
 using namespace cv;
@@ -35,13 +35,13 @@ public:
 
 	VisualAligner() : detector(AKAZE::create()) { }
 
-	void FindKeyPoints(Image* img) {
+	void FindKeyPoints(ImageP img) {
 		img->features.clear();
 
 		detector->detectAndCompute(img->img, noArray(), img->features, img->descriptors);
 	}
 
-	MatchInfo *FindHomography(Image* a, Image* b) {
+	MatchInfo *FindHomography(ImageP a, ImageP b) {
         assert(a != NULL);
         if(a->features.empty())
 			FindKeyPoints(a);

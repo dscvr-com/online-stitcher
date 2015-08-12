@@ -1,10 +1,9 @@
-
 #include <vector>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/stitching.hpp>
 
-#include "core.hpp"
+#include "image.hpp"
 #include "support.hpp"
 #include "simpleSphereStitcher.hpp"
 #include "support.hpp"
@@ -16,7 +15,7 @@ using namespace cv;
 using namespace cv::detail;
 
 namespace optonaut {
-vector<Image*> RStitcher::PrepareMatrices(vector<Image*> r) {
+vector<ImageP> RStitcher::PrepareMatrices(vector<ImageP> r) {
 
 
     //Orient around first image (Correct orientation from start.)
@@ -37,7 +36,7 @@ vector<Image*> RStitcher::PrepareMatrices(vector<Image*> r) {
     return r;
 }
 
-StitchingResult *RStitcher::Stitch(std::vector<Image*> in, bool debug) {
+StitchingResult *RStitcher::Stitch(std::vector<ImageP> in, bool debug) {
 	size_t n = in.size();
     assert(n > 0);
 

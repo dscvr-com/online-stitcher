@@ -11,7 +11,7 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/stitching.hpp>
 
-#include "core.hpp"
+#include "image.hpp"
 #include "quat.hpp"
 #include "support.hpp"
 #include "simpleSphereStitcher.hpp"
@@ -23,10 +23,10 @@ using namespace cv::detail;
 
 namespace optonaut {
 
-StereoImage *CreateStereo(Image *a, Image *b) {
+StereoImageP CreateStereo(ImageP a, ImageP b) {
 	Mat k;
 
-	StereoImage* result = new StereoImage();
+	StereoImageP result(new StereoImage());
 	result->valid = false;
 
 	assert(a->img.cols == b->img.cols);
@@ -110,8 +110,8 @@ StereoImage *CreateStereo(Image *a, Image *b) {
 	Rect finalRoi(x, y, width, height);
 
 	try {
-	 	result->A.img = resA(finalRoi);
-		result->B.img = resB(finalRoi);
+	 	result->A->img = resA(finalRoi);
+		result->B->img = resB(finalRoi);
 	} catch(Exception e) {
 		cout << "ROI error - an image might be missing. Skipping." << endl;
 		return result;
@@ -152,9 +152,9 @@ StereoImage *CreateStereo(Image *a, Image *b) {
  	Mat rotN4;
  	From3DoubleTo4Double(rotN, rotN4);
 
-	result->A.intrinsics = newKA;
-	result->A.extrinsics = a->extrinsics * rotN4;
-	result->A.id = a->id;
+	result->A->intrinsics = newKA;
+	result->A->extrinsics = a->extrinsics * rotN4;
+	result->A->id = a->id;
 
 	Mat newKB = Mat::eye(3, 3, CV_64F);
  	newKB.at<double>(0, 0) = bIntrinsics.at<double>(0, 0);
@@ -162,9 +162,9 @@ StereoImage *CreateStereo(Image *a, Image *b) {
  	newKB.at<double>(0, 2) = width / 2.0f;
  	newKB.at<double>(1, 2) = height / 2.0f;
 
-	result->B.intrinsics = newKB;
-	result->B.extrinsics = b->extrinsics * rotN4.inv();
-	result->B.id = b->id;
+	result->B->intrinsics = newKB;
+	result->B->extrinsics = b->extrinsics * rotN4.inv();
+	result->B->id = b->id;
 
 	result->extrinsics = rotN4.inv() * b->extrinsics;
 

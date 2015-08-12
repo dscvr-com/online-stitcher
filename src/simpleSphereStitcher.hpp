@@ -1,10 +1,9 @@
-
 #include <vector>
-
-#include "core.hpp"
-#include "support.hpp"
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
+
+#include "image.hpp"
+#include "support.hpp"
 
 namespace optonaut {
 struct StitchingResult {
@@ -24,7 +23,7 @@ class RStitcher {
 		float workScale = 0.2f;
 		float warperScale = 800;
 
-		StitchingResult *Stitch(std::vector<Image*> images, bool debug = false);
-		static std::vector<Image*> PrepareMatrices(std::vector<Image*> r);
+		StitchingResult *Stitch(std::vector<ImageP> images, bool debug = false);
+		static std::vector<ImageP> PrepareMatrices(std::vector<ImageP> r);
 };
 }

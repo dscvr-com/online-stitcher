@@ -3,7 +3,7 @@
 #include <vector>
 #include <map>
 #include "wrapper.hpp"
-#include "core.hpp"
+#include "image.hpp"
 #include "support.hpp"
 #include "streamAligner.hpp"
 #include <opencv2/imgproc/imgproc.hpp>
@@ -16,9 +16,9 @@ namespace wrapper {
 
 	size_t alignmentOrder = 3;
 	StreamAligner aligner(alignmentOrder);
-	Image *prev = NULL;
+	ImageP prev = NULL;
 	bool debug = false;
-	deque<Image*> images;
+	deque<ImageP> images;
 	string debugDir;
 
 
@@ -32,10 +32,10 @@ namespace wrapper {
     Mat iosBase(4, 4, CV_64F, baseV);
        
 
-    Image* AllocateImage(double extrinsics[], double intrinsics[], unsigned char *image, int width, int height, int id) {
+    ImageP AllocateImage(double extrinsics[], double intrinsics[], unsigned char *image, int width, int height, int id) {
 		Mat inputExtrinsics = Mat(4, 4, CV_64F, extrinsics).clone();
 
-		Image *current = new Image();
+		ImageP current(new Image());
 		images.push_back(current);
 
 		current->img = Mat(height, width, CV_8UC3);
@@ -52,7 +52,7 @@ namespace wrapper {
 
     bool Push(double extrinsics[], double intrinsics[], unsigned char *image, int width, int height, double newExtrinsics[], int id) {
         
-        Image* current = AllocateImage(extrinsics, intrinsics, image, width, height, id);
+        ImageP current = AllocateImage(extrinsics, intrinsics, image, width, height, id);
 
 		aligner.Push(current);
 
@@ -60,15 +60,6 @@ namespace wrapper {
 		for(int i = 0; i < 4; i++)
 			for(int j = 0; j < 4; j++)
 				newExtrinsics[i * 4 + j] = e.at<double>(i, j);
-
-		//Only safe because we know what goes on inside the StreamAligner. 
-		if(prev != NULL && !debug) {
-			if(images.size() > alignmentOrder) {
-				Image* r = images.front();
-				images.pop_front();
-				delete r;
-			}
-		}
 
 		prev = current;
 
@@ -81,13 +72,10 @@ namespace wrapper {
 	}
 
 	void Free() {
-		if(prev != NULL && !debug) {
-			delete prev;
-			prev = NULL;
-		}
+		//TODO: Flush aligner history
 	}
 
-	Image* GetLastImage() {
+	ImageP GetLastImage() {
 		return prev;
 	}
 }
