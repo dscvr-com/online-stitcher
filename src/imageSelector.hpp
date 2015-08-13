@@ -29,6 +29,10 @@ struct SelectionInfo {
 	ImageP image;
 	double dist;
 	bool isValid;
+
+	SelectionInfo() {
+		isValid = false;
+	}
 };
 
 class ImageSelector {
@@ -100,11 +104,11 @@ public:
 		} 
 	}
 
-	vector<vector<SelectionPoint>> &GetRings() {
+	const vector<vector<SelectionPoint>> &GetRings() const {
 		return targets;
 	}
 
-	vector<ImageP> GenerateDebugImages() {
+	vector<ImageP> GenerateDebugImages() const {
 		vector<ImageP> images;
 
 		for(auto ring : targets) {
@@ -126,7 +130,7 @@ public:
 		return images;
 	}
 
-	SelectionInfo FindClosestSelectionPoint(ImageP img) {
+	const SelectionInfo FindClosestSelectionPoint(ImageP img) const {
 		SelectionInfo info;
 		info.dist = -1;
 		info.isValid = false;
@@ -136,13 +140,13 @@ public:
 			for(auto target : ring) {
 				if(!target.enabled)
 					continue;
-			    	double dist = GetAngleOfRotation(eInv * target.extrinsics);
-			    	if (dist < info.dist || info.dist < 0) {
+			    double dist = GetAngleOfRotation(eInv * target.extrinsics);
+			    if (dist < info.dist || info.dist < 0) {
 					info.image = img;
 					info.closestPoint = target;
 					info.dist = dist;
 					info.isValid = tolerance >= dist;
-			    	}
+			    }
 			}
 		}
 
@@ -153,7 +157,7 @@ public:
 		targets[p.ringId][p.localId].enabled = false;
 	}
 
-	bool AreAdjacent(const SelectionPoint& left, const SelectionPoint& right) {
+	bool AreAdjacent(const SelectionPoint& left, const SelectionPoint& right) const {
 		return find(adj[left.id].begin(), adj[left.id].end(), right.id) != adj[left.id].end();
 	}	
 

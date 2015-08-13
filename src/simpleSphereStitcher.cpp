@@ -36,7 +36,7 @@ vector<ImageP> RStitcher::PrepareMatrices(vector<ImageP> r) {
     return r;
 }
 
-StitchingResult *RStitcher::Stitch(std::vector<ImageP> in, bool debug) {
+StitchingResultP RStitcher::Stitch(std::vector<ImageP> in, bool debug) {
 	size_t n = in.size();
     assert(n > 0);
 
@@ -115,7 +115,7 @@ StitchingResult *RStitcher::Stitch(std::vector<ImageP> in, bool debug) {
 		blender->feed(warpedImageAsShort, warpedMasks[i], corners[i]);
 	}
 
-	StitchingResult *res = new StitchingResult();
+	StitchingResultP res(new StitchingResult());
 	blender->blend(res->image, res->mask);
 
 	//Rotate by 180°

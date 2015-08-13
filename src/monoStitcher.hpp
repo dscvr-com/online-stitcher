@@ -23,8 +23,10 @@ namespace optonaut {
 	};
 
 	typedef std::shared_ptr<StereoImage> StereoImageP;
-
-	StereoImageP CreateStereo(ImageP a, ImageP b);
+    class MonoStitcher {
+        public:
+        StereoImageP CreateStereo(ImageP a, ImageP b);
+    };
 }
 
 #endif

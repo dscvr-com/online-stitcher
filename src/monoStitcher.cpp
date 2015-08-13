@@ -22,8 +22,7 @@ using namespace cv;
 using namespace cv::detail;
 
 namespace optonaut {
-
-StereoImageP CreateStereo(ImageP a, ImageP b) {
+StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b) {
 	Mat k;
 
 	StereoImageP result(new StereoImage());
@@ -171,5 +170,4 @@ StereoImageP CreateStereo(ImageP a, ImageP b) {
 	result->valid = true;
 	return result;
 }
-
 }

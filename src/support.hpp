@@ -9,6 +9,7 @@ namespace optonaut {
 
 	bool MatIs(const cv::Mat &in, int rows, int cols, int type);
 
+    int ParseInt(const std::string &data);
 	int ParseInt(const char* data);
 	std::string ToString(int i);
 

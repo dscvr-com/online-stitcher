@@ -1,6 +1,7 @@
 #include <vector>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
+#include <memory>
 
 #include "image.hpp"
 #include "support.hpp"
@@ -15,6 +16,8 @@ struct StitchingResult {
 	cv::Point corner;
 };
 
+typedef std::shared_ptr<StitchingResult> StitchingResultP;
+
 //Fast pure R-Matrix based stitcher
 class RStitcher {
 	public:
@@ -23,7 +26,7 @@ class RStitcher {
 		float workScale = 0.2f;
 		float warperScale = 800;
 
-		StitchingResult *Stitch(std::vector<ImageP> images, bool debug = false);
+		StitchingResultP Stitch(std::vector<ImageP> images, bool debug = false);
 		static std::vector<ImageP> PrepareMatrices(std::vector<ImageP> r);
 };
 }

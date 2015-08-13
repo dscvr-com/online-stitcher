@@ -141,11 +141,11 @@ namespace optonaut {
 			return 0;
 		}
 
-		const Mat &GetZero() {
+		const Mat &GetZero() const {
 			return rOrigin;
 		}
 
-		const Mat &GetCurrentRotation() {
+		const Mat &GetCurrentRotation() const {
 			return rPrevious.back();
 		}
 	};

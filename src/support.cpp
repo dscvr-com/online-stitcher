@@ -12,7 +12,11 @@ namespace optonaut {
 	bool MatIs(const Mat &in, int rows, int cols, int type) {
 		return in.rows >= rows && in.cols >= cols && in.type() == type;
 	}
-	
+
+    int ParseInt(const string &data) {
+        return ParseInt(data.c_str());
+    }
+
 	int ParseInt(const char* data) {
 		int val;
 		istringstream text(data);
