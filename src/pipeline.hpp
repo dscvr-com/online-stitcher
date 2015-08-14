@@ -1,5 +1,3 @@
-#include <algorithm>
-
 #include "image.hpp"
 #include "streamAligner.hpp"
 #include "monoStitcher.hpp"
