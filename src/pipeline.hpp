@@ -91,19 +91,28 @@ namespace optonaut {
             //Remember the closest match for the currently closest point.
             //If we change our closest point, merge the two closest matches
             //for the two past points. 
+            
+            //cout << "Pushing image: " << image->id << endl;
             if(current.isValid) {
+
+                //cout << "Image valid: " << current.closestPoint.id << endl;
+
                 if(currentBest.isValid && currentBest.closestPoint.id == current.closestPoint.id) {
                     if(currentBest.dist > current.dist) {
                         //Better match for current.
                         currentBest = current;
+                        //cout << "Better match" << endl;
                     } 
                 } else {
                     //New current point - if we can, merge
+                    
+                    //cout << "New Point" << endl;
                     if(previous.isValid && currentBest.isValid) {
                         if(selector.AreAdjacent(
                                     previous.closestPoint, 
                                     currentBest.closestPoint)) {
                             StereoImageP stereo = stereoConverter.CreateStereo(previous.image, currentBest.image);
+                            //cout << "Doing stereo" << endl;
                             PushLeft(stereo->A);
                             PushRight(stereo->B);
 
@@ -123,6 +132,10 @@ namespace optonaut {
 
         StitchingResultP FinishRight() {
             return rightStitcher.Stitch(rights, false);
+        }
+
+        bool HasResults() {
+            return lefts.size() > 0 && rights.size() > 0;
         }
     };
 

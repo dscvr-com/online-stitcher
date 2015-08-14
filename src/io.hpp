@@ -12,8 +12,8 @@
 
 namespace optonaut {
 
+    int IdFromFileName(const string &in);
 	bool StringEndsWith(const std::string& a, const std::string& b);
-	//void MatrixFromXml(tinyxml2::XMLElement* node, cv::Mat &out);
 
 	ImageP ImageFromFile(std::string path);
 

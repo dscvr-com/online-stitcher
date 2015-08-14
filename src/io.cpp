@@ -22,6 +22,15 @@ namespace optonaut {
 	    return std::equal(a.begin() + a.size() - b.size(), a.end(), b.begin());
 	}
 
+    int IdFromFileName(const string &in) {
+        size_t l = in.find_last_of("/");
+        if(l == string::npos) {
+            return ParseInt(in.substr(0, in.length() - 4));
+        } else {
+            return ParseInt(in.substr(l + 1, in.length() - 5 - l));
+        }
+    }
+
 	int MatrixFromXml(XMLElement* node, Mat &out) {
 		int size;
 		istringstream(node->Attribute("size")) >> size;

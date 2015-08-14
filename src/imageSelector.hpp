@@ -91,7 +91,7 @@ public:
 
 				adj.push_back(vector<int>());
 				if(j != 0)
-					adj[j - 1].push_back(j);
+					adj[id - 1].push_back(id);
 				else
 					initId = id;
 
@@ -100,8 +100,14 @@ public:
 				id++;
 			}
 
-			adj[hCount - 1].push_back(initId);
+			adj[id - 1].push_back(initId);
 		} 
+
+        /*for(size_t i = 0; i < adj.size(); i++) {
+            for(size_t j = 0; j < adj[i].size(); j++) {
+                cout << i << " -> "<< adj[i][j] << endl;
+            }
+        }*/
 	}
 
 	const vector<vector<SelectionPoint>> &GetRings() const {
