@@ -15,7 +15,7 @@ namespace optonaut {
 namespace wrapper {
 
 	size_t alignmentOrder = 3;
-	StreamAligner aligner(alignmentOrder);
+//	StreamAligner aligner(alignmentOrder);
 	ImageP prev = NULL;
 	bool debug = false;
 	deque<ImageP> images;
@@ -53,7 +53,6 @@ namespace wrapper {
     bool Push(double extrinsics[], double intrinsics[], unsigned char *image, int width, int height, double newExtrinsics[], int id) {
         
         ImageP current = AllocateImage(extrinsics, intrinsics, image, width, height, id);
-
 		aligner.Push(current);
 
 		Mat e = iosBase * (aligner.GetCurrentRotation() * aligner.GetZero()) * iosBase;

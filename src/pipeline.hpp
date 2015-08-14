@@ -16,8 +16,9 @@ namespace optonaut {
 
         Mat base;
         Mat baseInv;
+        Mat zero;
 
-        StreamAligner aligner;
+        shared_ptr<StreamAligner> aligner;
         ImageSelector selector; 
         SelectionInfo previous;
         SelectionInfo currentBest;
@@ -45,23 +46,40 @@ namespace optonaut {
 
         static Mat androidBase;
         static Mat iosBase;
+        static Mat iosZero;
         
-        Pipeline(Mat base, Mat intrinsics) : base(base), selector(intrinsics), 
-                                          previewImageAvailable(false)
+        Pipeline(Mat base, Mat zeroWithoutBase, Mat intrinsics) : 
+            base(base),
+            selector(intrinsics), 
+            previewImageAvailable(false)
         {
             baseInv = base.inv();
+            zero = base * zeroWithoutBase * baseInv;
+            aligner = shared_ptr<StreamAligner>(new StreamAligner(zero));
         }
 
-        const Mat &GetOrigin() const {
-            return aligner.GetZero();
+        //Methods already coordinates in input base. 
+        Mat GetOrigin() const {
+            return baseInv * zero * base;
         }
 
-        const Mat &GetCurrentRotation() const {
-            return aligner.GetCurrentRotation();
+        Mat GetCurrentRotation() const {
+            return baseInv * zero * aligner->GetCurrentRotation() * base;
         }
 
-        const vector<vector<SelectionPoint>> &GetRings() const {
-            return selector.GetRings();
+        vector<SelectionPoint> GetSelectionPoints() const {
+            vector<SelectionPoint> converted;
+            for(auto ring : selector.GetRings()) {
+                for(auto point : ring) {
+                    SelectionPoint n;
+                    n.id = point.id;
+                    n.ringId = point.id;
+                    n.localId = point.id;
+                    n.enabled = point.enabled;
+                    n.extrinsics = baseInv * point.extrinsics * base;
+                }
+            }
+            return converted;
         }
 
         void DisableSelectionPoint(const SelectionPoint &p) {
@@ -80,8 +98,8 @@ namespace optonaut {
         void Push(ImageP image) {
             image->extrinsics = base * image->extrinsics * baseInv;
 
-            aligner.Push(image);
-            image->extrinsics = aligner.GetCurrentRotation().clone();
+            aligner->Push(image);
+            image->extrinsics = aligner->GetCurrentRotation().clone();
 
             //Todo - lock to ring. 
             SelectionInfo current = selector.FindClosestSelectionPoint(image);
@@ -152,8 +170,30 @@ namespace optonaut {
                                  0, 0, 1, 0,
                                  0, 0, 0, 1};
 
+    //Base picked from exsiting data - we might find something better here. 
+    double iosZeroData[16] = {
+0.04008160158991814,
+0.03753446042537689,
+0.9984911680221558,
+0,
+0.0275515615940094,
+0.998872697353363,
+-0.03865478187799454,
+0,
+-0.9988164901733398,
+0.02905933558940887,
+0.03900228440761566,
+0,
+0,
+0,
+0,
+1
+    };
+
+
     Mat Pipeline::androidBase(4, 4, CV_64F, androidBaseData);
     Mat Pipeline::iosBase(4, 4, CV_64F, iosBaseData);
+    Mat Pipeline::iosZero = Mat(4, 4, CV_64F, iosZeroData).t();
 }
 
 #endif

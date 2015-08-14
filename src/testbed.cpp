@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
         auto image = ImageFromFile(files[i]);
         
         if(i == 0) {
-            pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, image->intrinsics));
+            pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics));
         }
 
         pipe->Push(image);
