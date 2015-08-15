@@ -151,10 +151,11 @@ public:
 					info.image = img;
 					info.closestPoint = target;
 					info.dist = dist;
-					info.isValid = tolerance >= dist;
 			    }
 			}
 		}
+					
+        info.isValid = tolerance >= info.dist;
 
 		return info;
 	}

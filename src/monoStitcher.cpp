@@ -91,8 +91,8 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b) {
 	int width = min2(cornersA[1].x, cornersA[2].x) - x;
 	width = max(0, width);
 
-	//x += width * 2 / 6;
-	//width /= 3;
+	x += width * 2 / 6;
+    width /= 3;
 
 	int y = max4(interpolate(x, cornersB[0].x, cornersB[1].x, cornersB[0].y, cornersB[1].y), 
 		interpolate(x, cornersA[0].x, cornersA[1].x, cornersA[0].y, cornersA[1].y),
