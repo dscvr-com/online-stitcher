@@ -54,6 +54,12 @@ namespace optonaut {
             baseInv = base.inv();
             zero = base * zeroWithoutBase * baseInv;
             aligner = shared_ptr<StreamAligner>(new StreamAligner(zero));
+            
+            cout << "Initializing Optonaut Pipe." << endl;
+            
+            cout << "Base: " << base << endl;
+            cout << "BaseInv: " << baseInv << endl;
+            cout << "Zero: " << zero << endl;
         }
 
         //Methods already coordinates in input base. 
@@ -75,6 +81,7 @@ namespace optonaut {
                     n.localId = point.id;
                     n.enabled = point.enabled;
                     n.extrinsics = baseInv * point.extrinsics * base;
+                    converted.push_back(n);
                 }
             }
             return converted;
@@ -94,7 +101,11 @@ namespace optonaut {
 
         //In: Image with sensor sampled parameters attached. 
         void Push(ImageP image) {
+        
+            
             image->extrinsics = base * image->extrinsics * baseInv;
+            
+            cout << "Pipe received converted extrinsics: " << image->extrinsics << endl;
 
             aligner->Push(image);
             image->extrinsics = aligner->GetCurrentRotation().clone();
