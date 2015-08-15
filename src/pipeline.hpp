@@ -113,6 +113,8 @@ namespace optonaut {
             //Todo - lock to ring. 
             SelectionInfo current = selector.FindClosestSelectionPoint(image);
 
+            cout << "image " << image->id << " closest to " << current.closestPoint.id << ", dist: " << current.dist << endl;
+
             previewImageAvailable = false;
       		
             //Remember the closest match for the currently closest point.
