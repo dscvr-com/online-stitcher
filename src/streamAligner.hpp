@@ -18,12 +18,11 @@ namespace optonaut {
 	private:
 		VisualAligner visual;
 		deque<ImageP> previous;
-		Mat rOrigin;
 		deque<Mat> rPrevious;
 		deque<Mat> rSensorPrevious;
 		size_t order;
 	public:
-		StreamAligner(const Mat zero, size_t order = 3) : visual(), rOrigin(zero.clone()), order(order) { }
+		StreamAligner(size_t order = 3) : visual(), order(order) { }
 
 		double Push(ImageP next) {
 
@@ -31,7 +30,7 @@ namespace optonaut {
 
 			if(previous.size() == 0) {
 				//First!
-				rPrevious.push_back(rOrigin.inv() * next->extrinsics);
+				rPrevious.push_back(next->extrinsics);
                 cout << rPrevious.back() << endl;
 			} else {
 
@@ -139,10 +138,6 @@ namespace optonaut {
 			}
 
 			return 0;
-		}
-
-		const Mat &GetZero() const {
-			return rOrigin;
 		}
 
 		Mat GetCurrentRotation() const {
