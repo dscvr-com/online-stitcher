@@ -53,7 +53,7 @@ namespace optonaut {
         {
             baseInv = base.inv();
             zero = base * zeroWithoutBase * baseInv;
-            aligner = shared_ptr<StreamAligner>(new StreamAligner(zero));
+            aligner = shared_ptr<StreamAligner>(new StreamAligner());
             
             cout << "Initializing Optonaut Pipe." << endl;
             
@@ -102,7 +102,7 @@ namespace optonaut {
         //In: Image with sensor sampled parameters attached. 
         void Push(ImageP image) {
         
-            image->extrinsics = base * image->extrinsics * baseInv;
+            image->extrinsics = base * image->extrinsics * zero.inv() * baseInv;
             
             aligner->Push(image);
             image->extrinsics = aligner->GetCurrentRotation().clone();
