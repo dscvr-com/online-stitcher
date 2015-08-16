@@ -154,6 +154,10 @@ namespace optonaut {
                 }
             }
         }
+        
+        SelectionInfo ClosestPoint() {
+            return currentBest;
+        }
 
         StitchingResultP FinishLeft() {
             return leftStitcher.Stitch(lefts, false);
