@@ -80,7 +80,6 @@ namespace optonaut {
 		result->id = ParseInt(root->Attribute("id"));
 		assert(MatrixFromXml(root->FirstChildElement("intrinsics")->FirstChildElement("matrix"), result->intrinsics) == 3);
 		assert(MatrixFromXml(root->FirstChildElement("extrinsics")->FirstChildElement("matrix"), result->extrinsics) == 4);
-		result->extrinsics = result->extrinsics.inv();
  	}
 
  	void ParseJson(string path, ImageP result) {

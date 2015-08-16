@@ -103,7 +103,7 @@ namespace optonaut {
         void Push(ImageP image) {
         
             
-            image->extrinsics = base * image->extrinsics * baseInv;
+            image->extrinsics = base * image->extrinsics.inv() * baseInv;
             
             cout << "Pipe received converted extrinsics: " << image->extrinsics << endl;
 
