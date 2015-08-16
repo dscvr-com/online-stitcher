@@ -48,7 +48,7 @@ namespace optonaut {
         
         Pipeline(Mat base, Mat zeroWithoutBase, Mat intrinsics) : 
             base(base),
-            selector(intrinsics, ImageSelector::ModeCenter),
+            selector(intrinsics, ImageSelector::ModeAll),
             previewImageAvailable(false)
         {
             baseInv = base.inv();
@@ -88,16 +88,16 @@ namespace optonaut {
             return converted;
         }
 
-        void DisableSelectionPoint(const SelectionPoint &p) {
-            return selector.DisableSelectionPoint(p);
-        }
-
         bool IsPreviewImageAvailable() const {
             return previewImageAvailable; 
         }
 
         ImageP GetPreviewImage() const {
-            return lefts.back(); 
+            return lefts.back();
+        }
+        
+        Mat GetPreviewRotation() {
+            return (zero.inv() * baseInv * GetPreviewImage()->extrinsics * base).inv();
         }
 
         //In: Image with sensor sampled parameters attached. 
@@ -135,7 +135,7 @@ namespace optonaut {
                     
                     cout << "New Point" << endl;
                     if(previous.isValid && currentBest.isValid) {
-                        if(selector.AreAdjacent(
+                        if(AreAdjacent(
                                     previous.closestPoint, 
                                     currentBest.closestPoint)) {
                             StereoImageP stereo = stereoConverter.CreateStereo(previous.image, currentBest.image);
@@ -147,6 +147,7 @@ namespace optonaut {
                         } else {
                             cout << "Images not adjacent" << endl;
                         }
+                        selector.DisableAdjacency(previous.closestPoint, currentBest.closestPoint);
                     }
         
                     previous = currentBest;
@@ -155,8 +156,16 @@ namespace optonaut {
             }
         }
         
-        SelectionInfo ClosestPoint() {
+        bool AreAdjacent(SelectionPoint a, SelectionPoint b) {
+            return selector.AreAdjacent(a, b);
+        }
+        
+        SelectionInfo CurrentPoint() {
             return currentBest;
+        }
+        
+        SelectionInfo PreviousPoint() {
+            return previous;
         }
 
         StitchingResultP FinishLeft() {

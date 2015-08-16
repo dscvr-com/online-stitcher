@@ -169,8 +169,11 @@ public:
 		return info;
 	}
 
-	void DisableSelectionPoint(const SelectionPoint& p) {
-		targets[p.ringId][p.localId].enabled = false;
+	void DisableAdjacency(const SelectionPoint& left, const SelectionPoint& right) {
+        auto it = find(adj[left.id].begin(), adj[left.id].end(), right.id);
+        if(it != adj[left.id].end()) {
+            adj[left.id].erase(it);
+        }
 	}
 
 	bool AreAdjacent(const SelectionPoint& left, const SelectionPoint& right) const {
