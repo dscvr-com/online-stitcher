@@ -50,7 +50,10 @@ private:
 	const double tolerance = M_PI / 32;
 public:
 
-	ImageSelector(const Mat &intrinsics) { 
+    static const int ModeAll = 0;
+    static const int ModeCenter = 1;
+    
+	ImageSelector(const Mat &intrinsics, const int mode = ModeAll) {
 
 		this->intrinsics = intrinsics;
 
@@ -71,37 +74,43 @@ public:
 			int hCount = hCenterCount * cos(vAngle);
 			hFov = M_PI * 2 / hCount;
 
-			int initId = 0;
+			int initId = -1;
 
 			targets.push_back(vector<SelectionPoint>());
 
 			for(int j = 0; j < hCount; j++) {
-				Mat hRot;
-				Mat vRot;
-
-				CreateRotationY(j * hFov + hFov / 2, hRot);
-				CreateRotationX(vAngle, vRot);
-
-				SelectionPoint p;
-				p.id = id;
-				p.extrinsics = hRot * vRot;
-				p.enabled = true;
-				p.ringId = i;
-				p.localId = j;
-
-				adj.push_back(vector<int>());
-				if(j != 0)
-					adj[id - 1].push_back(id);
-				else
-					initId = id;
-
-				targets[i].push_back(p);
-
-				id++;
+                
+                if(mode == ModeAll || (mode == ModeCenter && i == 2)) {
+                    Mat hRot;
+                    Mat vRot;
+                    
+                    CreateRotationY(j * hFov + hFov / 2, hRot);
+                    CreateRotationX(vAngle, vRot);
+                    
+                    SelectionPoint p;
+                    p.id = id;
+                    p.extrinsics = hRot * vRot;
+                    p.enabled = true;
+                    p.ringId = i;
+                    p.localId = j;
+                    
+                    
+                    adj.push_back(vector<int>());
+                    if(j != 0)
+                        adj[id - 1].push_back(id);
+                    else
+                        initId = id;
+                    
+                    targets[i].push_back(p);
+                    
+                    id++;
+                }
 			}
 
-			adj[id - 1].push_back(initId);
-		} 
+            if(initId != -1) {
+                adj[id - 1].push_back(initId);
+            }
+		}
 
         /*for(size_t i = 0; i < adj.size(); i++) {
             for(size_t j = 0; j < adj[i].size(); j++) {

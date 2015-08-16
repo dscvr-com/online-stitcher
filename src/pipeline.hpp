@@ -48,7 +48,7 @@ namespace optonaut {
         
         Pipeline(Mat base, Mat zeroWithoutBase, Mat intrinsics) : 
             base(base),
-            selector(intrinsics), 
+            selector(intrinsics, ImageSelector::ModeCenter),
             previewImageAvailable(false)
         {
             baseInv = base.inv();
@@ -68,22 +68,23 @@ namespace optonaut {
         }
 
         Mat GetCurrentRotation() const {
-            return baseInv * zero * aligner->GetCurrentRotation() * base;
+            return (zero.inv() * baseInv * aligner->GetCurrentRotation() * base).inv();
         }
 
         vector<SelectionPoint> GetSelectionPoints() const {
             vector<SelectionPoint> converted;
-            for(auto ring : selector.GetRings()) {
+            for(auto ring : selector.GetRings())
                 for(auto point : ring) {
                     SelectionPoint n;
                     n.id = point.id;
-                    n.ringId = point.id;
-                    n.localId = point.id;
+                    n.ringId = point.ringId;
+                    n.localId = point.localId;
                     n.enabled = point.enabled;
-                    n.extrinsics = baseInv * point.extrinsics * base;
+                    n.extrinsics = (zero.inv() * baseInv * point.extrinsics * base).inv();
+                    
                     converted.push_back(n);
-                }
             }
+            cout << "returning " << converted.size() << " rings " << endl;
             return converted;
         }
 
@@ -110,7 +111,7 @@ namespace optonaut {
             //Todo - lock to ring. 
             SelectionInfo current = selector.FindClosestSelectionPoint(image);
 
-            cout << "image " << image->id << " closest to " << current.closestPoint.id << ", dist: " << current.dist << endl;
+            cout << "image " << image->id << " closest to " << current.closestPoint.id << ", dist: " << current.dist << ", ring: " << current.closestPoint.ringId << endl;
 
             previewImageAvailable = false;
       		
