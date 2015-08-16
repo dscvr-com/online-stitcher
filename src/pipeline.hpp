@@ -52,7 +52,7 @@ namespace optonaut {
             previewImageAvailable(false)
         {
             baseInv = base.inv();
-            zero = base * zeroWithoutBase * baseInv;
+            zero = zeroWithoutBase;
             aligner = shared_ptr<StreamAligner>(new StreamAligner());
             
             cout << "Initializing Optonaut Pipe." << endl;
@@ -102,8 +102,8 @@ namespace optonaut {
         //In: Image with sensor sampled parameters attached. 
         void Push(ImageP image) {
         
-            image->extrinsics = base * image->extrinsics.inv() * zero.inv() * baseInv;
-            
+            image->extrinsics = base * zero * image->extrinsics.inv() * baseInv;
+
             aligner->Push(image);
             image->extrinsics = aligner->GetCurrentRotation().clone();
 
@@ -121,28 +121,30 @@ namespace optonaut {
             //cout << "Pushing image: " << image->id << endl;
             if(current.isValid) {
 
-                //cout << "Image valid: " << current.closestPoint.id << endl;
+                cout << "Image valid: " << current.closestPoint.id << endl;
 
                 if(currentBest.isValid && currentBest.closestPoint.id == current.closestPoint.id) {
                     if(currentBest.dist > current.dist) {
                         //Better match for current.
                         currentBest = current;
-                        //cout << "Better match" << endl;
+                        cout << "Better match" << endl;
                     } 
                 } else {
                     //New current point - if we can, merge
                     
-                    //cout << "New Point" << endl;
+                    cout << "New Point" << endl;
                     if(previous.isValid && currentBest.isValid) {
                         if(selector.AreAdjacent(
                                     previous.closestPoint, 
                                     currentBest.closestPoint)) {
                             StereoImageP stereo = stereoConverter.CreateStereo(previous.image, currentBest.image);
-                            //cout << "Doing stereo" << endl;
+                            cout << "Doing stereo" << endl;
                             PushLeft(stereo->A);
                             PushRight(stereo->B);
 
                             previewImageAvailable = true;
+                        } else {
+                            cout << "Images not adjacent" << endl;
                         }
                     }
         
@@ -193,7 +195,7 @@ namespace optonaut {
 
     Mat Pipeline::androidBase(4, 4, CV_64F, androidBaseData);
     Mat Pipeline::iosBase(4, 4, CV_64F, iosBaseData);
-    Mat Pipeline::iosZero = Mat(4, 4, CV_64F, iosZeroData).t();
+    Mat Pipeline::iosZero = Mat(4, 4, CV_64F, iosZeroData);
 }
 
 #endif

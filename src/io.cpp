@@ -93,7 +93,7 @@ namespace optonaut {
 		result->id = doc["id"].GetInt();
 		assert(MatrixFromJson(doc["intrinsics"], result->intrinsics) == 3);
 		assert(MatrixFromJson(doc["extrinsics"], result->extrinsics) == 4);
-		result->extrinsics = result->extrinsics.inv();
+		result->extrinsics = result->extrinsics;
 		
 		fclose(fileRef);
  	}
