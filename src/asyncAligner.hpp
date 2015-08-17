@@ -76,10 +76,11 @@ namespace optonaut {
                 recentImage->intrinsics = image->intrinsics;
                 recentImage->source = image->source;
                 
-                dataReady.notify_one(); 
-                sensorDiff = sensorDiff * lastSensor.t() * image->extrinsics; 
-                current = current * sensorDiff;
-                lastSensor = image->extrinsics;
+                dataReady.notify_one();
+                Mat sensorStep = lastSensor.inv() * image->extrinsics;
+                sensorDiff = sensorDiff * sensorStep;
+                current = current * sensorStep;
+                lastSensor = image->extrinsics.clone();
                 cout << "Update by diff: " << current << endl;
             }
         }
