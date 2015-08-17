@@ -58,12 +58,13 @@ namespace optonaut {
         {
             baseInv = base.inv();
             zero = zeroWithoutBase;
-            
+            /*
             cout << "Initializing Optonaut Pipe." << endl;
             
             cout << "Base: " << base << endl;
             cout << "BaseInv: " << baseInv << endl;
             cout << "Zero: " << zero << endl;
+            */
         }
 
         //Methods already coordinates in input base. 
@@ -88,7 +89,7 @@ namespace optonaut {
                     
                     converted.push_back(n);
             }
-            cout << "returning " << converted.size() << " rings " << endl;
+            //cout << "returning " << converted.size() << " rings " << endl;
             return converted;
         }
 
@@ -119,7 +120,7 @@ namespace optonaut {
             //Todo - lock to ring. 
             SelectionInfo current = selector.FindClosestSelectionPoint(image);
 
-            cout << "image " << image->id << " closest to " << current.closestPoint.id << ", dist: " << current.dist << ", ring: " << current.closestPoint.ringId << endl;
+            //cout << "image " << image->id << " closest to " << current.closestPoint.id << ", dist: " << current.dist << ", ring: " << current.closestPoint.ringId << endl;
 
             previewImageAvailable = false;
       		
@@ -130,30 +131,30 @@ namespace optonaut {
             //cout << "Pushing image: " << image->id << endl;
             if(current.isValid) {
 
-                cout << "Image valid: " << current.closestPoint.id << endl;
+                //cout << "Image valid: " << current.closestPoint.id << endl;
 
                 if(currentBest.isValid && currentBest.closestPoint.id == current.closestPoint.id) {
                     if(currentBest.dist > current.dist) {
                         //Better match for current.
                         currentBest = current;
-                        cout << "Better match" << endl;
+                        //cout << "Better match" << endl;
                     } 
                 } else {
                     //New current point - if we can, merge
                     
-                    cout << "New Point" << endl;
+                    //cout << "New Point" << endl;
                     if(previous.isValid && currentBest.isValid) {
                         if(AreAdjacent(
                                     previous.closestPoint, 
                                     currentBest.closestPoint)) {
                             StereoImageP stereo = stereoConverter.CreateStereo(previous.image, currentBest.image);
-                            cout << "Doing stereo" << endl;
+                            //cout << "Doing stereo" << endl;
                             PushLeft(stereo->B);
                             PushRight(stereo->A);
 
                             previewImageAvailable = true;
                         } else {
-                            cout << "Images not adjacent" << endl;
+                            //cout << "Images not adjacent" << endl;
                         }
                         selector.DisableAdjacency(previous.closestPoint, currentBest.closestPoint);
                     }

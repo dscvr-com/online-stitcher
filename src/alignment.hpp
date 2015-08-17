@@ -62,7 +62,7 @@ public:
 		}
 
 		if(goodMatches.size() == 0) {
-			cout << "Debug: No matches found." << endl;
+			//cout << "Debug: No matches found." << endl;
 			return info;
 		}
 
@@ -84,16 +84,16 @@ public:
 			Mat scaledK;
 			ScaleIntrinsicsToImage(a->intrinsics, a->img, scaledK);
 			int nsols = decomposeHomographyMat(info->homography, scaledK, info->rotations, info->translations, info->normals);
- 			cout << "Number of solutions: " << nsols << endl;
+ 			//cout << "Number of solutions: " << nsols << endl;
  			for(int i = 0; i < nsols; i++) {
- 				cout << "rotation " << i << ": " << info->rotations[i] << endl;
- 				cout << "translation " << i << ": " << info->translations[i] << endl;
- 				cout << "normal " << i << ": " << info->normals[i] << endl;
+ 				//cout << "rotation " << i << ": " << info->rotations[i] << endl;
+ 				//cout << "translation " << i << ": " << info->translations[i] << endl;
+ 				//cout << "normal " << i << ": " << info->normals[i] << endl;
  			}
  		}
 	
 		//debug
-
+        /*
 		Mat img_matches;
   		drawMatches( a->img, a->features, b->img, b->features,
                goodMatches, img_matches, Scalar::all(-1), Scalar::all(-1),
@@ -119,7 +119,7 @@ public:
 			cout << "Debug: Homography not found." << endl;
 		}
 		imwrite( "dbg/Homogpraphy" + ToString(a->id) + "_" + ToString(b->id) + ".jpg", img_matches );
-
+         */
 		//debug end
 
 		return info;

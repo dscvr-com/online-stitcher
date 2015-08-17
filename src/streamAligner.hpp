@@ -61,7 +61,7 @@ namespace optonaut {
 		        			if(visualAnchor == -1 || 
 		        				GetAngleOfRotation(rPrevious[0].inv() * rPrevious[visualAnchor] * visualDiff) > 
 		        				GetAngleOfRotation(rPrevious[0].inv() * rPrevious[i] * rotation)) {
-		        				visualAnchor = i;
+		        				visualAnchor = (int)i;
 		        				visualDiff = rotation;
 		        			}
 		        		}

@@ -50,7 +50,7 @@ namespace optonaut {
                     unique_lock<mutex> lock(m);
                     current = core.GetCurrentRotation() * sensorDiff;
                     sensorDiff = Mat::eye(4, 4, CV_64F);
-                    cout << "Update by stream: " << current << endl;
+                    //cout << "Update by stream: " << current << endl;
                 }
             }
         }
@@ -81,7 +81,7 @@ namespace optonaut {
                 sensorDiff = sensorDiff * sensorStep;
                 current = current * sensorStep;
                 lastSensor = image->extrinsics.clone();
-                cout << "Update by diff: " << current << endl;
+                //cout << "Update by diff: " << current << endl;
             }
         }
 
