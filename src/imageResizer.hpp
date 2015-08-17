@@ -28,7 +28,7 @@ public:
             canvas.setTo(Scalar::all(0));
 
             Mat resized(w, ih, CV_8UC3);
-            resize(image, resized, Size(w, ih));
+            resize(image, resized, cv::Size(w, ih));
             int rowStart = (h - ih) / 2;
             
             resized.copyTo(canvas.rowRange(rowStart, rowStart + ih));
