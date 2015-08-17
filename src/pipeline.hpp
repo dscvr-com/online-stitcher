@@ -3,6 +3,7 @@
 #include "monoStitcher.hpp"
 #include "imageSelector.hpp"
 #include "simpleSphereStitcher.hpp"
+#include "imageResizer.hpp"
 
 #ifndef OPTONAUT_PIPELINE_HEADER
 #define OPTONAUT_PIPELINE_HEADER
@@ -20,6 +21,7 @@ namespace optonaut {
         ImageSelector selector; 
         SelectionInfo previous;
         SelectionInfo currentBest;
+        ImageResizer resizer;
 
         MonoStitcher stereoConverter;
 
@@ -40,15 +42,18 @@ namespace optonaut {
             rights.push_back(right);
         }
 
+        //int selectorConfiguration; 
+
     public: 
 
         static Mat androidBase;
         static Mat iosBase;
         static Mat iosZero;
         
-        Pipeline(Mat base, Mat zeroWithoutBase, Mat intrinsics) : 
+        Pipeline(Mat base, Mat zeroWithoutBase, Mat intrinsics, int selectorConfiguration = ImageSelector::ModeCenter) : 
             base(base),
-            selector(intrinsics, ImageSelector::ModeAll),
+            selector(intrinsics, selectorConfiguration),
+            resizer(selectorConfiguration),
             previewImageAvailable(false)
         {
             baseInv = base.inv();
@@ -172,11 +177,15 @@ namespace optonaut {
         }
 
         StitchingResultP FinishLeft() {
-            return leftStitcher.Stitch(lefts, false);
+            auto left = leftStitcher.Stitch(lefts, false);
+            resizer.Resize(left->image);
+            return left;
         }       
 
         StitchingResultP FinishRight() {
-            return rightStitcher.Stitch(rights, false);
+            auto right = rightStitcher.Stitch(rights, false);
+            resizer.Resize(right->image);
+            return right;
         }
 
         bool HasResults() {
