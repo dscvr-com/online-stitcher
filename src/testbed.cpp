@@ -1,6 +1,8 @@
 #include <iostream>
 #include <algorithm>
 #include <memory>
+#include <chrono>
+#include <thread>
 
 #include "pipeline.hpp"
 #include "io.hpp"
@@ -29,6 +31,8 @@ int main(int argc, char* argv[]) {
     
     for(int i = 0; i < n; i++) {
         auto image = ImageFromFile(files[i]);
+
+        this_thread::sleep_for(1s);
         
         if(i == 0) {
             pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics));
@@ -46,5 +50,8 @@ int main(int argc, char* argv[]) {
     } else {
         cout << "No results." << endl;
     }
+
+    pipe->Dispose();
+
     return 0;
 }

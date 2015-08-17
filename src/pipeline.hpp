@@ -1,5 +1,5 @@
 #include "image.hpp"
-#include "streamAligner.hpp"
+#include "asyncAligner.hpp"
 #include "monoStitcher.hpp"
 #include "imageSelector.hpp"
 #include "simpleSphereStitcher.hpp"
@@ -16,7 +16,7 @@ namespace optonaut {
         Mat baseInv;
         Mat zero;
 
-        shared_ptr<StreamAligner> aligner;
+        AsyncAligner aligner;
         ImageSelector selector; 
         SelectionInfo previous;
         SelectionInfo currentBest;
@@ -53,7 +53,6 @@ namespace optonaut {
         {
             baseInv = base.inv();
             zero = zeroWithoutBase;
-            aligner = shared_ptr<StreamAligner>(new StreamAligner());
             
             cout << "Initializing Optonaut Pipe." << endl;
             
@@ -68,7 +67,7 @@ namespace optonaut {
         }
 
         Mat GetCurrentRotation() const {
-            return (zero.inv() * baseInv * aligner->GetCurrentRotation() * base).inv();
+            return (zero.inv() * baseInv * aligner.GetCurrentRotation() * base).inv();
         }
 
         vector<SelectionPoint> GetSelectionPoints() const {
@@ -100,13 +99,17 @@ namespace optonaut {
             return (zero.inv() * baseInv * GetPreviewImage()->extrinsics * base).inv();
         }
 
+        void Dispose() {
+            aligner.Dispose();
+        }
+
         //In: Image with sensor sampled parameters attached. 
         void Push(ImageP image) {
         
             image->extrinsics = base * zero * image->extrinsics.inv() * baseInv;
 
-            aligner->Push(image);
-            image->extrinsics = aligner->GetCurrentRotation().clone();
+            aligner.Push(image);
+            image->extrinsics = aligner.GetCurrentRotation().clone();
 
             //Todo - lock to ring. 
             SelectionInfo current = selector.FindClosestSelectionPoint(image);
