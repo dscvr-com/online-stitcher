@@ -31,7 +31,7 @@ namespace optonaut {
 			if(previous.size() == 0) {
 				//First!
 				rPrevious.push_back(next->extrinsics);
-                cout << rPrevious.back() << endl;
+                //cout << rPrevious.back() << endl;
 			} else {
 
 				Mat sensorRVec(3, 1, CV_64F);
