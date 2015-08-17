@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
     for(int i = 0; i < n; i++) {
         auto image = ImageFromFile(files[i]);
 
-        this_thread::sleep_for(1s);
+        this_thread::sleep_for(0.5s);
         
         if(i == 0) {
             pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics));
