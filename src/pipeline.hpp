@@ -149,8 +149,8 @@ namespace optonaut {
                                     currentBest.closestPoint)) {
                             StereoImageP stereo = stereoConverter.CreateStereo(previous.image, currentBest.image);
                             //cout << "Doing stereo" << endl;
-                            PushLeft(stereo->B);
-                            PushRight(stereo->A);
+                            PushLeft(stereo->A);
+                            PushRight(stereo->B);
 
                             previewImageAvailable = true;
                         } else {
