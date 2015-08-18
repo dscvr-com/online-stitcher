@@ -35,6 +35,8 @@ struct SelectionInfo {
 	}
 };
 
+    
+    
 class ImageSelector {
 
 private:
