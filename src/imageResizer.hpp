@@ -22,7 +22,7 @@ public:
         if(configuration == ImageSelector::ModeCenter) {
             int w = 4096;
             int h = 4096;
-            int ih = 1536;
+            int ih = 1280;
 
             Mat canvas(w, h, CV_8UC3);
             canvas.setTo(Scalar::all(0));
