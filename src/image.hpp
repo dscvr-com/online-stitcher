@@ -20,7 +20,13 @@ namespace optonaut {
         int colorSpace;
 
         ImageRef() : data(NULL), width(0), height(0), colorSpace(colorspace::RGBA) { }
-    }
+
+        void Invaludate() {
+            data = NULL;
+            width = 0;
+            height = 0;
+        }
+    };
 
 	struct Image {
 		cv::Mat img;
@@ -33,23 +39,30 @@ namespace optonaut {
 		std::vector<cv::KeyPoint> features;
 		cv::Mat descriptors;
 
-        Image()  : img(0, 0, CV_8UC3), extrinsics(4, 4, CV_64F), intrinsics(3, 3, CV_64F), source("Unknown")
+        Image()  : img(0, 0, CV_8UC3), extrinsics(4, 4, CV_64F), intrinsics(3, 3, CV_64F), source("Unknown") { };
 
-        void IsLoaded() {
+        bool IsLoaded() {
             return img.cols != 0 && img.rows != 0;
         }
 
-        void LoadFromDataRef() {
-            assert(!IsLoaded);
-            assert(imageRef.data != NULL);
-            assert(imageRef.colorSpace = colorspace::ARGB); 
+        void LoadFromDataRef(bool copy = true) {
+            assert(!IsLoaded());
+            assert(dataRef.data != NULL);
 
-            cvtColor(Mat(imageRef.height, imageRef.width, CV_8UC4, imageRef.data), img, COLOR_RGBA2RGB);
+            if(dataRef.colorSpace == colorspace::RGBA) {
+                cv::cvtColor(cv::Mat(dataRef.height, dataRef.width, CV_8UC4, dataRef.data), img, cv::COLOR_RGBA2RGB);
+            } else if (dataRef.colorSpace == colorspace::RGB) {
+                img = cv::Mat(dataRef.height, dataRef.width, CV_8UC4, dataRef.data);
+                if(copy) {
+                    img = img.clone();
+                }
+            } else {
+                assert(false);
+            }
         }
 
         void Unload() {
-            img = Mat(0, 0, CV_8UC3);
-            //Todo: Is this enough to dispose the image?
+            img.release();
         }
 	};
 
