@@ -40,6 +40,7 @@ int main(int argc, char* argv[]) {
         image->dataRef.data = tmpMat.data;
         image->dataRef.width = tmpMat.cols;
         image->dataRef.height = tmpMat.rows;
+        image->dataRef.colorSpace = colorspace::RGB;
 
         this_thread::sleep_for(0.1s);
         

@@ -152,7 +152,8 @@ namespace optonaut {
                     if(currentBest.dist > current.dist) {
                         //Better match for current.
                         currentBest = current;
-                        currentBest.image->Load(); //Need to get image contents now. 
+                        if(!currentBest.image->IsLoaded())
+                            currentBest.image->Load(); //Need to get image contents now. 
                         //cout << "Better match" << endl;
                     } 
                 } else {
@@ -163,6 +164,9 @@ namespace optonaut {
                         if(AreAdjacent(
                                     previous.closestPoint, 
                                     currentBest.closestPoint)) {
+
+                            assert(previous.image->IsLoaded());
+                            assert(currentBest.image->IsLoaded());
                             
                             StereoImageP stereo = stereoConverter.CreateStereo(previous.image, currentBest.image);
 
@@ -178,7 +182,10 @@ namespace optonaut {
                     }
         
                     previous = currentBest;
-                    currentBest = current;               
+                    currentBest = current;
+                    
+                    if(!currentBest.image->IsLoaded())
+                        currentBest.image->Load();
                 }
             }
         }
