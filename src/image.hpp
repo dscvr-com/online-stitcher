@@ -49,8 +49,6 @@ namespace optonaut {
             assert(!IsLoaded());
             assert(dataRef.data != NULL);
 
-            std::cout << "Attempting image load" << std::endl;
-
             if(dataRef.colorSpace == colorspace::RGBA) {
                 cv::cvtColor(cv::Mat(dataRef.height, dataRef.width, CV_8UC4, dataRef.data), img, cv::COLOR_RGBA2RGB);
             } else if (dataRef.colorSpace == colorspace::RGB) {
@@ -62,7 +60,6 @@ namespace optonaut {
                 assert(false);
             }
 
-            std::cout << "Image Loaded" << std::endl;
         }
 
         void Unload() {

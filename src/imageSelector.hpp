@@ -49,7 +49,7 @@ private:
 	const double vOverlap = 0.3;
 
 	//Tolerance, measured on sphere, for hits. 
-	const double tolerance = M_PI / 16;
+	const double tolerance = M_PI / 32;
 public:
 
     static const int ModeAll = 0;

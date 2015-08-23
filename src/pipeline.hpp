@@ -60,7 +60,7 @@ namespace optonaut {
         static Mat iosBase;
         static Mat iosZero;
         
-        Pipeline(Mat base, Mat zeroWithoutBase, Mat intrinsics, int selectorConfiguration = ImageSelector::ModeCenter) : 
+        Pipeline(Mat base, Mat zeroWithoutBase, Mat intrinsics, int selectorConfiguration = ImageSelector::ModeAll) :
             base(base),
             selector(intrinsics, selectorConfiguration),
             resizer(selectorConfiguration),
@@ -169,12 +169,14 @@ namespace optonaut {
                             assert(currentBest.image->IsLoaded());
                             
                             StereoImageP stereo = stereoConverter.CreateStereo(previous.image, currentBest.image);
+                            
+                            if(stereo->valid) {
+                                //cout << "Doing stereo" << endl;
+                                PushLeft(stereo->A);
+                                PushRight(stereo->B);
 
-                            //cout << "Doing stereo" << endl;
-                            PushLeft(stereo->A);
-                            PushRight(stereo->B);
-
-                            previewImageAvailable = true;
+                                previewImageAvailable = true;
+                            }
                         } else {
                             //cout << "Images not adjacent" << endl;
                         }

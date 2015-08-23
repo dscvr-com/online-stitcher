@@ -19,9 +19,10 @@ public:
     ImageResizer(int selectorConfiguration) : configuration(selectorConfiguration) { }
 
     void Resize(Mat &image) {
+        int w = 4096;
+        int h = 4096;
+        
         if(configuration == ImageSelector::ModeCenter) {
-            int w = 4096;
-            int h = 4096;
             int ih = 1280;
 
             Mat canvas(w, h, CV_8UC3);
@@ -35,8 +36,9 @@ public:
 
             image = canvas;
         } else if (configuration == ImageSelector::ModeAll) {
-            cout << "Not Implemented" << endl;
-            assert(false);
+            Mat resized(w, h, CV_8UC3);
+            resize(image, resized, cv::Size(w, h));
+            image = resized;
         } else {
             cout << "Invalid selector mode" << endl;
             assert(false);
