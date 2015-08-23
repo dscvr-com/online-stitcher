@@ -9,6 +9,15 @@
 #define OPTONAUT_PIPELINE_HEADER
 
 namespace optonaut {
+    
+    struct PipelineState {
+        bool isOnRing;
+        
+        PipelineState() : isOnRing(false) {
+            
+        }
+    };
+    
     class Pipeline {
 
     private: 
@@ -22,6 +31,7 @@ namespace optonaut {
         SelectionInfo previous;
         SelectionInfo currentBest;
         ImageResizer resizer;
+        PipelineState state;
 
         MonoStitcher stereoConverter;
 
@@ -130,6 +140,8 @@ namespace optonaut {
             
             //cout << "Pushing image: " << image->id << endl;
             if(current.isValid) {
+                
+                state.isOnRing = true;
 
                 //cout << "Image valid: " << current.closestPoint.id << endl;
 
@@ -149,8 +161,8 @@ namespace optonaut {
                                     currentBest.closestPoint)) {
                             StereoImageP stereo = stereoConverter.CreateStereo(previous.image, currentBest.image);
                             //cout << "Doing stereo" << endl;
-                            PushLeft(stereo->B);
-                            PushRight(stereo->A);
+                            PushLeft(stereo->A);
+                            PushRight(stereo->B);
 
                             previewImageAvailable = true;
                         } else {
@@ -163,6 +175,10 @@ namespace optonaut {
                     currentBest = current;               
                 }
             }
+        }
+        
+        PipelineState GetState() {
+            return state;
         }
         
         bool AreAdjacent(SelectionPoint a, SelectionPoint b) {
