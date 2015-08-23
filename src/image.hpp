@@ -21,7 +21,7 @@ namespace optonaut {
 
         ImageRef() : data(NULL), width(0), height(0), colorSpace(colorspace::RGBA) { }
 
-        void Invaludate() {
+        void Invalidate() {
             data = NULL;
             width = 0;
             height = 0;
@@ -45,7 +45,7 @@ namespace optonaut {
             return img.cols != 0 && img.rows != 0;
         }
 
-        void LoadFromDataRef(bool copy = true) {
+        void Load(bool copy = true) {
             assert(!IsLoaded());
             assert(dataRef.data != NULL);
 

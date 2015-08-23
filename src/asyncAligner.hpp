@@ -30,6 +30,7 @@ namespace optonaut {
         condition_variable dataReady;
 
         bool isInitialized;
+        bool alignerReady;
 
         void AlignmentLoop() {
     
@@ -51,32 +52,40 @@ namespace optonaut {
                     current = core.GetCurrentRotation() * sensorDiff;
                     sensorDiff = Mat::eye(4, 4, CV_64F);
                     //cout << "Update by stream: " << current << endl;
+                    alignerReady = true;
                 }
             }
         }
 
 	public:
-		AsyncAligner() : core(), running(true), sensorDiff(Mat::eye(4, 4, CV_64F)), isInitialized(false) { }
-        
+		AsyncAligner() : core(), running(true), sensorDiff(Mat::eye(4, 4, CV_64F)), isInitialized(false), alignerReady(true) { }
+       
+        bool NeedsImageData() {
+            return alignerReady;
+        }
+
         void Push(ImageP image) {
             if(!isInitialized) {
                 lastSensor = image->extrinsics;
                 current = image->extrinsics;
                 isInitialized = true;
+                alignerReady = true;
                 worker = thread(&AsyncAligner::AlignmentLoop, this); 
             }
         
             {
                 unique_lock<mutex> lock(m);
-                
-                recentImage = ImageP(new Image);
-                recentImage->id = image->id;
-                recentImage->img = image->img;
-                recentImage->extrinsics = image->extrinsics.clone();
-                recentImage->intrinsics = image->intrinsics;
-                recentImage->source = image->source;
-                
-                dataReady.notify_one();
+               
+                if(alignerReady) { 
+                    recentImage = ImageP(new Image);
+                    recentImage->id = image->id;
+                    recentImage->img = image->img;
+                    recentImage->extrinsics = image->extrinsics.clone();
+                    recentImage->intrinsics = image->intrinsics;
+                    recentImage->source = image->source;
+                    alignerReady = false;
+                    dataReady.notify_one();
+                } 
                 Mat sensorStep = lastSensor.inv() * image->extrinsics;
                 sensorDiff = sensorDiff * sensorStep;
                 current = current * sensorStep;

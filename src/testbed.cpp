@@ -32,6 +32,15 @@ int main(int argc, char* argv[]) {
     for(int i = 0; i < n; i++) {
         auto image = ImageFromFile(files[i]);
 
+        //Create stack-local ref to mat. Clear image mat.
+        //This is to simulate hard memory management.
+        auto tmpMat = image->img;
+        image->img = Mat(0, 0, CV_8UC3);
+
+        image->dataRef.data = tmpMat.data;
+        image->dataRef.width = tmpMat.cols;
+        image->dataRef.height = tmpMat.rows;
+
         this_thread::sleep_for(0.1s);
         
         if(i == 0) {
@@ -39,6 +48,7 @@ int main(int argc, char* argv[]) {
         }
 
         pipe->Push(image);
+        tmpMat.release();
     }
     
     if(pipe->HasResults()) {

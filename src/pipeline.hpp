@@ -123,7 +123,10 @@ namespace optonaut {
         void Push(ImageP image) {
         
             image->extrinsics = base * zero * image->extrinsics.inv() * baseInv;
-
+            if(aligner.NeedsImageData()) {
+                //If the aligner needs image data, pre-load the image. 
+                image->Load();
+            }
             aligner.Push(image);
             image->extrinsics = aligner.GetCurrentRotation().clone();
 
@@ -149,6 +152,7 @@ namespace optonaut {
                     if(currentBest.dist > current.dist) {
                         //Better match for current.
                         currentBest = current;
+                        currentBest.image->Load(); //Need to get image contents now. 
                         //cout << "Better match" << endl;
                     } 
                 } else {
@@ -159,7 +163,9 @@ namespace optonaut {
                         if(AreAdjacent(
                                     previous.closestPoint, 
                                     currentBest.closestPoint)) {
+                            
                             StereoImageP stereo = stereoConverter.CreateStereo(previous.image, currentBest.image);
+
                             //cout << "Doing stereo" << endl;
                             PushLeft(stereo->A);
                             PushRight(stereo->B);
