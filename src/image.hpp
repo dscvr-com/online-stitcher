@@ -7,6 +7,9 @@
 #define OPTONAUT_IMAGE_HEADER
 
 namespace optonaut {
+    
+    const int WorkingWidth = 640;
+    const int WorkingHeight = 480;
 
     namespace colorspace {
         const int RGBA = 0;
@@ -58,6 +61,10 @@ namespace optonaut {
                 }
             } else {
                 assert(false);
+            }
+            
+            if(img.cols != WorkingWidth && img.rows != WorkingHeight) {
+                cv::resize(img, img, cv::Size(WorkingWidth, WorkingHeight));
             }
 
         }
