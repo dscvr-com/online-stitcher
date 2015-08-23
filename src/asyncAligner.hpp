@@ -5,6 +5,7 @@
 
 #include "image.hpp"
 #include "support.hpp"
+#include "aligner.hpp"
 #include "streamAligner.hpp"
 #include <thread>
 
@@ -15,7 +16,7 @@ using namespace std;
 #define OPTONAUT_ASYNC_ALIGNMENT_HEADER
 
 namespace optonaut {
-	class AsyncAligner {
+	class AsyncAligner : public Aligner {
 	private:
 		StreamAligner core;
         ImageP recentImage;

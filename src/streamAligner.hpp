@@ -5,6 +5,7 @@
 
 #include "image.hpp"
 #include "support.hpp"
+#include "aligner.hpp"
 #include "visualAligner.hpp"
 
 using namespace cv;
@@ -14,7 +15,7 @@ using namespace std;
 #define OPTONAUT_STREAM_ALIGNMENT_HEADER
 
 namespace optonaut {
-	class StreamAligner {
+	class StreamAligner : public Aligner {
 	private:
 		VisualAligner visual;
 		deque<ImageP> previous;
@@ -24,7 +25,15 @@ namespace optonaut {
 	public:
 		StreamAligner(size_t order = 3) : visual(), order(order) { }
 
-		double Push(ImageP next) {
+        bool NeedsImageData() {
+            return true;
+        }
+
+        void Dispose() {
+
+        }
+
+		void Push(ImageP next) {
 
 			visual.FindKeyPoints(next);
 
@@ -137,7 +146,6 @@ namespace optonaut {
 				rPrevious.pop_front();
 			}
 
-			return 0;
 		}
 
 		Mat GetCurrentRotation() const {

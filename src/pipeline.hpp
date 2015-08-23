@@ -26,7 +26,7 @@ namespace optonaut {
         Mat baseInv;
         Mat zero;
 
-        AsyncAligner aligner;
+        shared_ptr<Aligner> aligner;
         ImageSelector selector; 
         SelectionInfo previous;
         SelectionInfo currentBest;
@@ -60,7 +60,7 @@ namespace optonaut {
         static Mat iosBase;
         static Mat iosZero;
         
-        Pipeline(Mat base, Mat zeroWithoutBase, Mat intrinsics, int selectorConfiguration = ImageSelector::ModeAll) :
+        Pipeline(Mat base, Mat zeroWithoutBase, Mat intrinsics, int selectorConfiguration = ImageSelector::ModeAll, bool isAsync = true) :
             base(base),
             selector(intrinsics, selectorConfiguration),
             resizer(selectorConfiguration),
@@ -68,6 +68,12 @@ namespace optonaut {
         {
             baseInv = base.inv();
             zero = zeroWithoutBase;
+
+            if(isAsync) {
+                aligner = shared_ptr<Aligner>(new AsyncAligner());
+            } else {
+                aligner = shared_ptr<Aligner>(new StreamAligner());
+            }
             /*
             cout << "Initializing Optonaut Pipe." << endl;
             
@@ -83,7 +89,7 @@ namespace optonaut {
         }
 
         Mat GetCurrentRotation() const {
-            return (zero.inv() * baseInv * aligner.GetCurrentRotation() * base).inv();
+            return (zero.inv() * baseInv * aligner->GetCurrentRotation() * base).inv();
         }
 
         vector<SelectionPoint> GetSelectionPoints() const {
@@ -116,19 +122,19 @@ namespace optonaut {
         }
 
         void Dispose() {
-            aligner.Dispose();
+            aligner->Dispose();
         }
 
         //In: Image with sensor sampled parameters attached. 
         void Push(ImageP image) {
         
             image->extrinsics = base * zero * image->extrinsics.inv() * baseInv;
-            if(aligner.NeedsImageData()) {
+            if(aligner->NeedsImageData() && !image->IsLoaded()) {
                 //If the aligner needs image data, pre-load the image. 
                 image->Load();
             }
-            aligner.Push(image);
-            image->extrinsics = aligner.GetCurrentRotation().clone();
+            aligner->Push(image);
+            image->extrinsics = aligner->GetCurrentRotation().clone();
 
             //Todo - lock to ring. 
             SelectionInfo current = selector.FindClosestSelectionPoint(image);
