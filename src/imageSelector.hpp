@@ -35,21 +35,37 @@ struct SelectionInfo {
 	}
 };
 
-    
+struct SelectionEdge {
+    int from;
+    int to;
+
+    Mat roiCorners[4] ;
+    Mat roiCenter;
+};
     
 class ImageSelector {
 
 private:
 	//adj[n] contains m if m is right of n
-	vector<vector<int>> adj;
+	vector<vector<SelectionEdge>> adj;
 	vector<vector<SelectionPoint>> targets;
 	Mat intrinsics;
-	//Horizontal and Vertical overlap in procent. 
-	const double hOverlap = 0.8;
+	//Horizontal and Vertical overlap in percent. 
+	const double hOverlap = 0.6;
 	const double vOverlap = 0.3;
 
 	//Tolerance, measured on sphere, for hits. 
 	const double tolerance = M_PI / 32;
+
+    Mat GeoToRot(double hAngle, double vAngle) {
+        Mat hRot;
+        Mat vRot;
+        
+        CreateRotationY(hAngle, hRot);
+        CreateRotationX(vAngle, vRot);
+        
+        return ((Mat)(hRot * vRot)).clone();
+    }
 public:
 
     static const int ModeAll = 0;
@@ -71,47 +87,65 @@ public:
 
 		for(int i = 0; i < vCount; i++) {
 
-			double vAngle = i * vFov + vFov / 2 - M_PI / 2;
+            //Vertical center, bottom and top of ring
+			double vCenter = i * vFov + vFov / 2 - M_PI / 2;
+            double vTop = vCenter - vFov / 2;
+            double vBot = vCenter + vFov / 2;
 
-			int hCount = hCenterCount * cos(vAngle);
+			int hCount = hCenterCount * cos(vCenter);
 			hFov = M_PI * 2 / hCount;
 
-			int initId = -1;
+			int firstId = -1;
+            double hLeft = 0;
+            double hCenter = 0;
+            double hRight = 0;
+            SelectionEdge edge;
 
 			targets.push_back(vector<SelectionPoint>());
 
 			for(int j = 0; j < hCount; j++) {
                 
-                if(mode == ModeAll || (mode == ModeCenter && i == 2)) {
-                    Mat hRot;
-                    Mat vRot;
+                if(mode == ModeAll || (mode == ModeCenter && i == vCount / 2)) {
                     
-                    CreateRotationY(j * hFov + hFov / 2, hRot);
-                    CreateRotationX(vAngle, vRot);
-                    
+                    hLeft = j * hFov;
+                    hCenter = hLeft + hFov / 2;
+                    hRight = hLeft + hFov;
+
                     SelectionPoint p;
                     p.id = id;
-                    p.extrinsics = hRot * vRot;
+                    p.extrinsics = GeoToRot(hLeft, vCenter);
                     p.enabled = true;
                     p.ringId = i;
                     p.localId = j;
-                    
-                    
-                    adj.push_back(vector<int>());
-                    if(j != 0)
-                        adj[id - 1].push_back(id);
-                    else
-                        initId = id;
-                    
+                
+                    adj.push_back(vector<SelectionEdge>());
+
+                    SelectionEdge edge; 
+                    edge.from = id;
+                    edge.to = id + 1;
+                    edge.roiCenter = p.extrinsics;
+                    edge.roiCorners[0] = GeoToRot(hLeft, vTop);
+                    edge.roiCorners[1] = GeoToRot(hRight, vTop);
+                    edge.roiCorners[2] = GeoToRot(hRight, vBot);
+                    edge.roiCorners[3] = GeoToRot(hLeft, vBot);
+
+                    if(j == 0) {
+                        //Remember Id of first one. 
+                        firstId = id;
+                    }
+
+                    if(j != hCount) {
+                        adj[id].push_back(edge);
+                    } else {
+                        //Loop last one back to first one.
+                        edge.to = firstId;
+                        adj[id].push_back(edge);    
+                    } 
                     targets[i].push_back(p);
                     
                     id++;
                 }
 			}
-
-            if(initId != -1) {
-                adj[id - 1].push_back(initId);
-            }
 		}
 
         /*for(size_t i = 0; i < adj.size(); i++) {
@@ -125,22 +159,35 @@ public:
 		return targets;
 	}
 
+    ImageP CreateDebugImage(Mat pos, double scale, Scalar color) const {
+        ImageP d(new Image());
+
+        d->extrinsics = pos;
+        d->intrinsics = intrinsics.clone();
+        d->intrinsics.at<double>(0, 2) *= scale;
+        d->intrinsics.at<double>(1, 2) *= scale;
+        d->img = Mat::zeros(240, 320, CV_8UC3);
+        d->id = 0;
+
+        line(d->img, Point2f(0, 0), Point2f(320, 240), color, 4);
+        line(d->img, Point2f(320, 0), Point2f(0, 240), color, 4);
+
+        return d;
+    }
+
 	vector<ImageP> GenerateDebugImages() const {
 		vector<ImageP> images;
 
 		for(auto ring : targets) {
 			for(auto t : ring) {
-				ImageP d(new Image());
 
-				d->extrinsics = t.extrinsics;
-				d->intrinsics = intrinsics;
-				d->img = Mat::zeros(240, 320, CV_8UC3);
-				d->id = 0;
+				images.push_back(CreateDebugImage(t.extrinsics, 1.0, Scalar(0, 255, 0)));
 
-				line(d->img, Point2f(0, 0), Point2f(320, 240), Scalar(0, 255, 0), 4);
-				line(d->img, Point2f(320, 0), Point2f(0, 240), Scalar(0, 255, 0), 4);
-
-				images.push_back(d);
+                for(auto edge : adj[t.id]) {
+                    for(auto corner : edge.roiCorners) {
+				        images.push_back(CreateDebugImage(corner, 0.1, Scalar(0, 0, 255)));
+                    }
+                }
 			}
 		}
 
@@ -172,14 +219,21 @@ public:
 	}
 
 	void DisableAdjacency(const SelectionPoint& left, const SelectionPoint& right) {
-        auto it = find(adj[left.id].begin(), adj[left.id].end(), right.id);
-        if(it != adj[left.id].end()) {
-            adj[left.id].erase(it);
+        for(auto it = adj[left.id].begin(); it != adj[left.id].end(); it++) {
+            if(it->to == right.id) {
+                adj[left.id].erase(it);
+                break;
+            }
         }
 	}
 
 	bool AreAdjacent(const SelectionPoint& left, const SelectionPoint& right) const {
-		return find(adj[left.id].begin(), adj[left.id].end(), right.id) != adj[left.id].end();
+        for(auto it = adj[left.id].begin(); it != adj[left.id].end(); it++) {
+            if(it->to == right.id) {
+                return true;
+            }
+        }
+        return false;
 	}	
 
 };

@@ -3,6 +3,7 @@
 #include <memory>
 #include <chrono>
 #include <thread>
+#include <opencv2/stitching/detail/blenders.hpp>
 
 #include "pipeline.hpp"
 #include "io.hpp"
@@ -17,7 +18,9 @@ bool CompareByFilename (const string &a, const string &b) {
 }
 
 int main(int argc, char* argv[]) {
-    
+
+
+
     int n = argc - 1;
     shared_ptr<Pipeline> pipe(NULL);
     vector<string> files;
@@ -32,6 +35,17 @@ int main(int argc, char* argv[]) {
     for(int i = 0; i < n; i++) {
         auto image = ImageFromFile(files[i]);
 
+
+    RStitcher stitcher; 
+    stitcher.blendMode = cv::detail::Blender::FEATHER;
+    
+    ImageSelector selector(image->intrinsics, ImageSelector::ModeAll);
+
+    auto res = stitcher.Stitch(selector.GenerateDebugImages());
+    imwrite("dbg/points.jpg", res->image);
+
+    return 0;
+
         //Create stack-local ref to mat. Clear image mat.
         //This is to simulate hard memory management.
         //auto tmpMat = image->img;
@@ -43,7 +57,7 @@ int main(int argc, char* argv[]) {
         //image->dataRef.colorSpace = colorspace::RGB;
 
         if(i == 0) {
-            pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics, ImageSelector::ModeAll, false));
+            pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics, ImageSelector::ModeCenter, false));
         }
 
         pipe->Push(image);

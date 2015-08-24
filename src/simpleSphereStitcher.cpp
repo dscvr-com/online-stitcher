@@ -104,7 +104,7 @@ StitchingResultP RStitcher::Stitch(std::vector<ImageP> in, bool debug) {
 	Mat warpedImageAsShort;
 	Ptr<Blender> blender;
 
-	blender = Blender::createDefault(Blender::FEATHER, true);
+	blender = Blender::createDefault(blendMode, true);
     //Size destinationSize = resultRoi(corners, warpedSizes).size();
   
     blender->prepare(corners, warpedSizes);
