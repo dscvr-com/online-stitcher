@@ -22,8 +22,11 @@ using namespace cv;
 using namespace cv::detail;
 
 namespace optonaut {
-StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b) {
+StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target) {
 	Mat k;
+
+    //Avoid unused param warning. 
+    assert(target.center.cols == 4);
 
 	StereoImageP result(new StereoImage());
 	result->valid = false;

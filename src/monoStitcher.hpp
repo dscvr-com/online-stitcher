@@ -12,6 +12,10 @@
 #define OPTONAUT_MONO_STITCH_HEADER
 
 namespace optonaut {
+    struct StereoTarget {
+        cv::Mat center;
+        cv::Mat corners[4];
+    };
 
 	struct StereoImage {
 		ImageP A;
@@ -25,7 +29,7 @@ namespace optonaut {
 	typedef std::shared_ptr<StereoImage> StereoImageP;
     class MonoStitcher {
         public:
-        StereoImageP CreateStereo(ImageP a, ImageP b);
+        StereoImageP CreateStereo(ImageP a, ImageP b, StereoTarget target);
     };
 }
 

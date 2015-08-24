@@ -167,14 +167,22 @@ namespace optonaut {
                     
                     //cout << "New Point" << endl;
                     if(previous.isValid && currentBest.isValid) {
-                        if(AreAdjacent(
+                        SelectionEdge edge; 
+                        if(selector.AreAdjacent(
                                     previous.closestPoint, 
-                                    currentBest.closestPoint)) {
+                                    currentBest.closestPoint, edge)) {
 
                             assert(previous.image->IsLoaded());
                             assert(currentBest.image->IsLoaded());
+
+                            StereoTarget target;
+                            target.center = edge.roiCenter;
+
+                            for(int i = 0; i < 4; i++) {
+                                target.corners[i] = edge.roiCorners[i];
+                            }
                             
-                            StereoImageP stereo = stereoConverter.CreateStereo(previous.image, currentBest.image);
+                            StereoImageP stereo = stereoConverter.CreateStereo(previous.image, currentBest.image, target);
                             
                             if(stereo->valid) {
                                 //cout << "Doing stereo" << endl;
@@ -203,7 +211,8 @@ namespace optonaut {
         }
         
         bool AreAdjacent(SelectionPoint a, SelectionPoint b) {
-            return selector.AreAdjacent(a, b);
+            SelectionEdge dummy; 
+            return selector.AreAdjacent(a, b, dummy);
         }
         
         SelectionInfo CurrentPoint() {

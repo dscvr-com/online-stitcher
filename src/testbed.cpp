@@ -35,16 +35,16 @@ int main(int argc, char* argv[]) {
     for(int i = 0; i < n; i++) {
         auto image = ImageFromFile(files[i]);
 
-
-    RStitcher stitcher; 
-    stitcher.blendMode = cv::detail::Blender::FEATHER;
-    
-    ImageSelector selector(image->intrinsics, ImageSelector::ModeAll);
-
-    auto res = stitcher.Stitch(selector.GenerateDebugImages());
-    imwrite("dbg/points.jpg", res->image);
-
-    return 0;
+        //Print out selector points.
+        //RStitcher stitcher; 
+        //stitcher.blendMode = cv::detail::Blender::FEATHER;
+        //
+        //ImageSelector selector(image->intrinsics, ImageSelector::ModeAll);
+        //
+        //auto res = stitcher.Stitch(selector.GenerateDebugImages());
+        //imwrite("dbg/points.jpg", res->image);
+        //
+        //return 0;
 
         //Create stack-local ref to mat. Clear image mat.
         //This is to simulate hard memory management.

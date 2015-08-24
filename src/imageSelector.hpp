@@ -51,7 +51,7 @@ private:
 	vector<vector<SelectionPoint>> targets;
 	Mat intrinsics;
 	//Horizontal and Vertical overlap in percent. 
-	const double hOverlap = 0.6;
+	const double hOverlap = 0.8;
 	const double vOverlap = 0.3;
 
 	//Tolerance, measured on sphere, for hits. 
@@ -227,9 +227,10 @@ public:
         }
 	}
 
-	bool AreAdjacent(const SelectionPoint& left, const SelectionPoint& right) const {
+	bool AreAdjacent(const SelectionPoint& left, const SelectionPoint& right, SelectionEdge &edge) const {
         for(auto it = adj[left.id].begin(); it != adj[left.id].end(); it++) {
             if(it->to == right.id) {
+                edge = *it;
                 return true;
             }
         }
