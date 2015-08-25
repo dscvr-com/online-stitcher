@@ -15,6 +15,7 @@ using namespace cv;
 using namespace cv::detail;
 
 namespace optonaut {
+    
 vector<ImageP> RStitcher::PrepareMatrices(vector<ImageP> r) {
 
 
@@ -37,6 +38,12 @@ vector<ImageP> RStitcher::PrepareMatrices(vector<ImageP> r) {
 }
 
 StitchingResultP RStitcher::Stitch(std::vector<ImageP> in, bool debug) {
+    //This is needed because xcode does not like the CV stitching header.
+    //So we can't initialize this constant in the header. 
+    if(blendMode == -1) {
+        blendMode = cv::detail::Blender::FEATHER;
+    }
+    
 	size_t n = in.size();
     assert(n > 0);
 

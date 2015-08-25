@@ -134,7 +134,7 @@ public:
                         firstId = id;
                     }
 
-                    if(j != hCount) {
+                    if(j != hCount - 1) {
                         adj[id].push_back(edge);
                     } else {
                         //Loop last one back to first one.

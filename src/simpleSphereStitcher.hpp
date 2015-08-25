@@ -2,7 +2,6 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
 #include <memory>
-#include <opencv2/stitching/detail/blenders.hpp>
 
 #include "image.hpp"
 #include "support.hpp"
@@ -26,7 +25,7 @@ class RStitcher {
 		bool seam = false;
 		float workScale = 0.2f;
 		float warperScale = 800;
-        int blendMode = cv::detail::Blender::FEATHER;
+        int blendMode = -1;
 
 		StitchingResultP Stitch(std::vector<ImageP> images, bool debug = false);
 		static std::vector<ImageP> PrepareMatrices(std::vector<ImageP> r);
