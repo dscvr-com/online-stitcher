@@ -76,8 +76,8 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target)
         Mat rot4;
         From3DoubleTo4Double(rot, rot4);
         
-	    corners[i].x = tan(GetDistanceByDimension(I, rot4, 0)) + 0.5;
-	    corners[i].y = tan(GetDistanceByDimension(I, rot4, 1)) + 0.5;
+	    corners[i].x = -tan(GetDistanceByDimension(I, rot4, 0)) + 0.5;
+	    corners[i].y = -tan(GetDistanceByDimension(I, rot4, 1)) + 0.5;
         corners[i].x *= a->img.cols;
         corners[i].y *= a->img.rows;
         //cout << "Corner " << i << corners[i] << endl;
@@ -88,7 +88,7 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target)
 
 	warpPerspective(a->img, resA, transA, resA.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
 	warpPerspective(b->img, resB, transB, resB.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
-   /* 
+    
     for(size_t i = 0; i < corners.size(); i++) {
         line(resA, corners[i], corners[(i + 1) % corners.size()], Scalar(0, 0, 255), 3);
         line(resB, corners[i], corners[(i + 1) % corners.size()], Scalar(0, 0, 255), 3);
@@ -96,22 +96,20 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target)
 
 	imwrite("dbg/warped_" + ToString(a->id) + "A.jpg", resA);
 	imwrite("dbg/warped_" + ToString(a->id) + "B.jpg", resB);
-*/
+
 	Mat rvec(4, 1, CV_64F);
 	ExtractRotationVector(rot, rvec);
 
-    float x = min2(corners[1].x, corners[2].x);
-    float y = min2(corners[0].y, corners[1].y);
-    float width = max2(corners[0].x, corners[3].x) - x;
-    float height = max2(corners[2].y, corners[3].y) - y;
+    float x = min2(corners[0].x, corners[3].x);
+    float y = min2(corners[2].y, corners[3].y);
+    float width = max2(corners[1].x, corners[2].x) - x;
+    float height = max2(corners[0].y, corners[1].y) - y;
     Rect roi(x, y, width, height); 
 
     result->A->img = resA(roi);
     result->B->img = resB(roi);
 
 	//cout << "Diff for " << a->id << " " << rvec.t() << endl;
-
-	//Intrinsics are probably wrong. Principal point is not correct. Focal lens might have changed due to projection. 
 
 	Mat newKA(3, 3, CV_64F);
  	newKA.at<double>(0, 0) = aIntrinsics.at<double>(0, 0);

@@ -5,6 +5,7 @@
 #include <thread>
 #include <opencv2/stitching/detail/blenders.hpp>
 
+#include "intrinsics.hpp"
 #include "pipeline.hpp"
 #include "io.hpp"
 
@@ -34,6 +35,7 @@ int main(int argc, char* argv[]) {
   
     for(int i = 0; i < n; i++) {
         auto image = ImageFromFile(files[i]);
+        image->intrinsics = iPhone6Intrinsics;
 
         //Print out selector points.
         //RStitcher stitcher; 
@@ -57,7 +59,7 @@ int main(int argc, char* argv[]) {
         //image->dataRef.colorSpace = colorspace::RGB;
 
         if(i == 0) {
-            pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics, ImageSelector::ModeCenter, false));
+            pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics, ImageSelector::ModeAll, true));
         }
 
         pipe->Push(image);

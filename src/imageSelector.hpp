@@ -74,9 +74,14 @@ public:
 	ImageSelector(const Mat &intrinsics, const int mode = ModeAll) {
 
 		this->intrinsics = intrinsics;
+        double maxHFov = GetHorizontalFov(intrinsics);
+        double maxVFov = GetVerticalFov(intrinsics); 
+		double hFov = maxHFov * (1.0 - hOverlap);
+		double vFov = maxVFov * (1.0 - vOverlap);
 
-		double hFov = GetHorizontalFov(intrinsics) * (1.0 - hOverlap);
-		double vFov = GetVerticalFov(intrinsics) * (1.0 - vOverlap);
+        cout << "H-FOV: " << (maxHFov * 180 / M_PI) << endl;
+        cout << "V-FOV: " << (maxVFov * 180 / M_PI) << endl;
+        cout << "Ratio: " << (sin(maxVFov) / sin(maxHFov)) << endl;
 
 		int vCount = ceil(M_PI / vFov);
 		int hCenterCount = ceil(2 * M_PI / hFov);
@@ -124,6 +129,7 @@ public:
                     edge.from = id;
                     edge.to = id + 1;
                     edge.roiCenter = p.extrinsics;
+                    GeoToRot(hCenter, vCenter, edge.roiCenter);
                     GeoToRot(hLeft, vTop, edge.roiCorners[0]);
                     GeoToRot(hRight, vTop, edge.roiCorners[1]);
                     GeoToRot(hRight, vBot, edge.roiCorners[2]);

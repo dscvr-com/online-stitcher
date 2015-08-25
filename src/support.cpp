@@ -47,19 +47,19 @@ namespace optonaut {
 	double GetHorizontalFov(const Mat &intrinsics) {
 		assert(MatIs(intrinsics, 3, 3, CV_64F));
 
-		double w = intrinsics.at<double>(0, 2) * 2;
+		double w = intrinsics.at<double>(0, 2);
 		double f = intrinsics.at<double>(0, 0);
 
-		return 2 * atan2(w / 2, f);
+		return 2 * atan2(w, f);
 	}
 
 	double GetVerticalFov(const Mat &intrinsics) {
 		assert(MatIs(intrinsics, 3, 3, CV_64F));
 
-		double h = intrinsics.at<double>(1, 2) * 2;
+		double h = intrinsics.at<double>(1, 2);
 		double f = intrinsics.at<double>(0, 0);
 
-		return 2 * atan2(h / 2, f);
+		return 2 * atan2(h, f);
 	}
 
 	void ExtractRotationVector(const Mat &r, Mat &v) {
@@ -73,6 +73,7 @@ namespace optonaut {
 
 		v = vec.clone();
 	}
+
 	void CreateRotationZ(double a, Mat &t) {
 		double v[] = {
 			cos(a), -sin(a), 0, 0,
@@ -108,8 +109,6 @@ namespace optonaut {
 
 		t = rot.clone();
 	}
-
-
 
 	double GetAngleOfRotation(const Mat &r) {
 		assert(MatIs(r, 3, 3, CV_64F));
