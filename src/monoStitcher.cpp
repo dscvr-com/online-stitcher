@@ -10,6 +10,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/stitching.hpp>
+#include <opencv2/stitching/detail/warpers.hpp>
 
 #include "image.hpp"
 #include "quat.hpp"
@@ -24,7 +25,7 @@ using namespace cv::detail;
 namespace optonaut {
 StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target) {
 	Mat k;
-
+    
     //Avoid unused param warning. 
     assert(target.center.cols == 4);
 
@@ -68,78 +69,45 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target)
 	Mat resA(a->img.rows, a->img.cols, CV_32F);
 	Mat resB(b->img.rows, b->img.cols, CV_32F);
 
-	vector<Point2f> cornersA(4);
-	cornersA[0] = cvPoint(0, 0);
-	cornersA[1] = cvPoint(a->img.cols, 0);
-	cornersA[2] = cvPoint(a->img.cols, a->img.rows);
-	cornersA[3] = cvPoint(0, a->img.rows);
-	vector<Point2f> cornersB(4);
-	cornersB[0] = cvPoint(0, 0);
-	cornersB[1] = cvPoint(b->img.cols, 0);
-	cornersB[2] = cvPoint(b->img.cols, b->img.rows);
-	cornersB[3] = cvPoint(0, b->img.rows);
-
 	Mat I = Mat::eye(4, 4, CV_64F);
-	transB.at<float>(0, 2) = -GetDistanceByDimension(I, rot, 0);
-	transB.at<float>(1, 2) = -GetDistanceByDimension(I, rot, 1);
-
-	perspectiveTransform(cornersA, cornersA, transA);
-	perspectiveTransform(cornersB, cornersB, transB);
+	vector<Point2f> corners(4);
+    for(int i = 0; i < 4; i++) { 
+        Mat rot = target.center.inv() * target.corners[i];
+        Mat rot4;
+        From3DoubleTo4Double(rot, rot4);
+        
+	    corners[i].x = tan(GetDistanceByDimension(I, rot4, 0)) + 0.5;
+	    corners[i].y = tan(GetDistanceByDimension(I, rot4, 1)) + 0.5;
+        corners[i].x *= a->img.cols;
+        corners[i].y *= a->img.rows;
+        //cout << "Corner " << i << corners[i] << endl;
+        //cout << "MatDiff: " << rot << endl;
+    }
+	//transB.at<float>(0, 2) = -tan(GetDistanceByDimension(I, rot, 0)) * a->img.cols;
+	//transB.at<float>(1, 2) = -tan(GetDistanceByDimension(I, rot, 1)) * a->img.rows;
 
 	warpPerspective(a->img, resA, transA, resA.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
 	warpPerspective(b->img, resB, transB, resB.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
+   /* 
+    for(size_t i = 0; i < corners.size(); i++) {
+        line(resA, corners[i], corners[(i + 1) % corners.size()], Scalar(0, 0, 255), 3);
+        line(resB, corners[i], corners[(i + 1) % corners.size()], Scalar(0, 0, 255), 3);
+    } 
 
-	int x = max2(cornersB[0].x, cornersB[3].x);
-	x = max2(x, 0);
-	int width = min2(cornersA[1].x, cornersA[2].x) - x;
-	width = max(0, width);
-
-	x += width * 2 / 6;
-    width /= 3;
-
-	int y = max4(interpolate(x, cornersB[0].x, cornersB[1].x, cornersB[0].y, cornersB[1].y), 
-		interpolate(x, cornersA[0].x, cornersA[1].x, cornersA[0].y, cornersA[1].y),
-		interpolate(x + width, cornersB[0].x, cornersB[1].x, cornersB[0].y, cornersB[1].y), 
-		interpolate(x + width, cornersA[0].x, cornersA[1].x, cornersA[0].y, cornersA[1].y));
-	y = max2(y, 0);
-
-	int height = min4(interpolate(x, cornersB[3].x, cornersB[2].x, cornersB[3].y, cornersB[2].y), 
-		interpolate(x, cornersA[3].x, cornersA[2].x, cornersA[3].y, cornersA[2].y),
-		interpolate(x + width, cornersB[3].x, cornersB[2].x, cornersB[3].y, cornersB[2].y), 
-		interpolate(x + width, cornersA[3].x, cornersA[2].x, cornersA[3].y, cornersA[2].y)) - y;
-
-	height = max(0, height);
-	Rect finalRoi(x, y, width, height);
-
-	try {
-	 	result->A->img = resA(finalRoi);
-		result->B->img = resB(finalRoi);
-	} catch(Exception e) {
-		cout << "ROI error - an image might be missing. Skipping." << endl;
-		return result;
-	}
-
-	if(finalRoi.width <= 5 || finalRoi.height <= 5) {
-		cout << "Mini ROI - Skipping" << endl;
-		return result; 
-	}
-
-	/*
-	line( resA, cvPoint(finalRoi.x, finalRoi.y), cvPoint(finalRoi.x + finalRoi.width, finalRoi.y), Scalar(0, 255, 0), 4 );
-	line( resA, cvPoint(finalRoi.x, finalRoi.y + finalRoi.height), cvPoint(finalRoi.x + finalRoi.width, finalRoi.y + finalRoi.height), Scalar(0, 255, 0), 4 );
-	line( resA, cvPoint(finalRoi.x, finalRoi.y), cvPoint(finalRoi.x, finalRoi.y + finalRoi.height), Scalar(0, 255, 0), 4 );
-	line( resA, cvPoint(finalRoi.x + finalRoi.width, finalRoi.y + finalRoi.height), cvPoint(finalRoi.x + finalRoi.width, finalRoi.y), Scalar(0, 255, 0), 4 );
-
-	line( resB, cvPoint(finalRoi.x, finalRoi.y), cvPoint(finalRoi.x + finalRoi.width, finalRoi.y), Scalar(0, 255, 0), 4 );
-	line( resB, cvPoint(finalRoi.x, finalRoi.y + finalRoi.height), cvPoint(finalRoi.x + finalRoi.width, finalRoi.y + finalRoi.height), Scalar(0, 255, 0), 4 );
-	line( resB, cvPoint(finalRoi.x, finalRoi.y), cvPoint(finalRoi.x, finalRoi.y + finalRoi.height), Scalar(0, 255, 0), 4 );
-	line( resB, cvPoint(finalRoi.x + finalRoi.width, finalRoi.y + finalRoi.height), cvPoint(finalRoi.x + finalRoi.width, finalRoi.y), Scalar(0, 255, 0), 4 );
-	*/
-	//imwrite("dbg/warped_" + ToString(a->id) + "A.jpg", resA);
-	//imwrite("dbg/warped_" + ToString(a->id) + "B.jpg", resB);
-
+	imwrite("dbg/warped_" + ToString(a->id) + "A.jpg", resA);
+	imwrite("dbg/warped_" + ToString(a->id) + "B.jpg", resB);
+*/
 	Mat rvec(4, 1, CV_64F);
 	ExtractRotationVector(rot, rvec);
+
+    float x = min2(corners[1].x, corners[2].x);
+    float y = min2(corners[0].y, corners[1].y);
+    float width = max2(corners[0].x, corners[3].x) - x;
+    float height = max2(corners[2].y, corners[3].y) - y;
+    Rect roi(x, y, width, height); 
+
+    result->A->img = resA(roi);
+    result->B->img = resB(roi);
 
 	//cout << "Diff for " << a->id << " " << rvec.t() << endl;
 

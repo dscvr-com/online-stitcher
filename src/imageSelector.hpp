@@ -51,20 +51,20 @@ private:
 	vector<vector<SelectionPoint>> targets;
 	Mat intrinsics;
 	//Horizontal and Vertical overlap in percent. 
-	const double hOverlap = 0.8;
+	const double hOverlap = 0.9;
 	const double vOverlap = 0.3;
 
 	//Tolerance, measured on sphere, for hits. 
 	const double tolerance = M_PI / 32;
 
-    Mat GeoToRot(double hAngle, double vAngle) {
+    void GeoToRot(double hAngle, double vAngle, Mat &res) {
         Mat hRot;
         Mat vRot;
         
         CreateRotationY(hAngle, hRot);
         CreateRotationX(vAngle, vRot);
         
-        return ((Mat)(hRot * vRot)).clone();
+        res = hRot * vRot;
     }
 public:
 
@@ -88,9 +88,9 @@ public:
 		for(int i = 0; i < vCount; i++) {
 
             //Vertical center, bottom and top of ring
-			double vCenter = i * vFov + vFov / 2 - M_PI / 2;
-            double vTop = vCenter - vFov / 2;
-            double vBot = vCenter + vFov / 2;
+			double vCenter = i * vFov + vFov / 2.0 - M_PI / 2.0;
+            double vTop = vCenter - vFov / 2.0;
+            double vBot = vCenter + vFov / 2.0;
 
 			int hCount = hCenterCount * cos(vCenter);
 			hFov = M_PI * 2 / hCount;
@@ -113,7 +113,7 @@ public:
 
                     SelectionPoint p;
                     p.id = id;
-                    p.extrinsics = GeoToRot(hLeft, vCenter);
+                    GeoToRot(hLeft, vCenter, p.extrinsics);
                     p.enabled = true;
                     p.ringId = i;
                     p.localId = j;
@@ -124,10 +124,10 @@ public:
                     edge.from = id;
                     edge.to = id + 1;
                     edge.roiCenter = p.extrinsics;
-                    edge.roiCorners[0] = GeoToRot(hLeft, vTop);
-                    edge.roiCorners[1] = GeoToRot(hRight, vTop);
-                    edge.roiCorners[2] = GeoToRot(hRight, vBot);
-                    edge.roiCorners[3] = GeoToRot(hLeft, vBot);
+                    GeoToRot(hLeft, vTop, edge.roiCorners[0]);
+                    GeoToRot(hRight, vTop, edge.roiCorners[1]);
+                    GeoToRot(hRight, vBot, edge.roiCorners[2]);
+                    GeoToRot(hLeft, vBot, edge.roiCorners[3]);
 
                     if(j == 0) {
                         //Remember Id of first one. 

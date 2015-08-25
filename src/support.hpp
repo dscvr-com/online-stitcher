@@ -32,6 +32,7 @@ namespace optonaut {
 	void From3DoubleTo3Float(const cv::Mat &in, cv::Mat &out);
 	void From3FloatTo4Double(const cv::Mat &in, cv::Mat &out);
 	void From3DoubleTo4Double(const cv::Mat &in, cv::Mat &out);
+	void From4DoubleTo3Double(const cv::Mat &in, cv::Mat &out);
 	bool ContainsNaN(const cv::Mat &in);
 
 	double min2(double a, double b);

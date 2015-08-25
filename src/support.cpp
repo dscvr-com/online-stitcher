@@ -128,7 +128,7 @@ namespace optonaut {
 	    Mat aproj = a * vec;
 	    Mat bproj = b * vec;
 
-	    dist = abs(aproj.at<double>(dim) - bproj.at<double>(dim));
+	    dist = aproj.at<double>(dim) - bproj.at<double>(dim);
 	    dist = asin(dist); 
 	    return dist;
 	}
@@ -154,6 +154,16 @@ namespace optonaut {
 		for(int i = 0; i < 3; i++) {
 			for(int j = 0; j < 3; j++) {
 				out.at<float>(i, j) = (float)in.at<double>(i, j);
+			}
+		}
+	}
+	void From4DoubleTo3Double(const Mat &in, Mat &out) {
+		assert(MatIs(in, 4, 4, CV_64F));
+
+		out = Mat::zeros(3, 3, CV_64F);
+		for(int i = 0; i < 3; i++) {
+			for(int j = 0; j < 3; j++) {
+				out.at<double>(i, j) = in.at<double>(i, j);
 			}
 		}
 	}
