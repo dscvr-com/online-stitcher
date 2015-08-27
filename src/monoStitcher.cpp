@@ -54,6 +54,8 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target)
 	Mat rotN = Mat::eye(3, 3, CV_64F);
 	quat::ToMat(avg, rotN);
 
+ 	Mat rotN4;
+ 	From3DoubleTo4Double(rotN, rotN4);
 
 	//cout << "rotN: " << rotN << endl;
 	//cout << "rotNI: " << rotN.inv() << endl;
@@ -73,7 +75,8 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target)
 	Mat I = Mat::eye(4, 4, CV_64F);
 	vector<Point2f> corners(4);
     for(int i = 0; i < 4; i++) { 
-        Mat rot = a->offset * target.center.inv() * target.corners[i];
+        cout << "offset: " << a->offset.inv() << endl;
+        Mat rot = target.center.inv() * target.corners[i];
         Mat rot4;
         From3DoubleTo4Double(rot, rot4);
         
@@ -118,11 +121,8 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target)
  	newKA.at<double>(0, 2) = width / 2.0f;
  	newKA.at<double>(1, 2) = height / 2.0f;
 
- 	Mat rotN4;
- 	From3DoubleTo4Double(rotN, rotN4);
-
 	result->A->intrinsics = newKA;
-	result->A->extrinsics = target.center;
+	result->A->extrinsics = a->extrinsics * rotN4;
 	result->A->id = a->id;
 
 	Mat newKB = Mat::eye(3, 3, CV_64F);

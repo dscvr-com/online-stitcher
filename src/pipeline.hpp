@@ -159,7 +159,6 @@ namespace optonaut {
                         //Better match for current.
                         currentBest = current;
                         
-                        currentBest.image->offset = currentBest.image->extrinsics.inv() * currentBest.closestPoint.extrinsics;
 
                         if(!currentBest.image->IsLoaded())
                             currentBest.image->Load(); //Need to get image contents now. 
@@ -185,6 +184,9 @@ namespace optonaut {
                             for(int i = 0; i < 4; i++) {
                                 target.corners[i] = edge.roiCorners[i];
                             }
+                        
+                            currentBest.image->offset = currentBest.image->extrinsics.inv() * currentBest.closestPoint.extrinsics;
+                            previous.image->offset = previous.image->extrinsics.inv() * previous.closestPoint.extrinsics;
                             
                             StereoImageP stereo = stereoConverter.CreateStereo(previous.image, currentBest.image, target);
                             
