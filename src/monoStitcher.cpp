@@ -39,6 +39,7 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target)
 	//cout << "BR: " << b->extrinsics << endl;
 
 	Mat rot = a->extrinsics.inv() * b->extrinsics;
+    
 	//cout << "R: " << rot << endl;
 
 	Mat rotQ(4, 1, CV_64F);
@@ -72,7 +73,7 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target)
 	Mat I = Mat::eye(4, 4, CV_64F);
 	vector<Point2f> corners(4);
     for(int i = 0; i < 4; i++) { 
-        Mat rot = target.center.inv() * target.corners[i];
+        Mat rot = a->offset * target.center.inv() * target.corners[i];
         Mat rot4;
         From3DoubleTo4Double(rot, rot4);
         
@@ -121,7 +122,7 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target)
  	From3DoubleTo4Double(rotN, rotN4);
 
 	result->A->intrinsics = newKA;
-	result->A->extrinsics = a->extrinsics * rotN4;
+	result->A->extrinsics = target.center;
 	result->A->id = a->id;
 
 	Mat newKB = Mat::eye(3, 3, CV_64F);

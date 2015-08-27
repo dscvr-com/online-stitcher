@@ -158,6 +158,9 @@ namespace optonaut {
                     if(currentBest.dist > current.dist) {
                         //Better match for current.
                         currentBest = current;
+                        
+                        currentBest.image->offset = currentBest.image->extrinsics.inv() * currentBest.closestPoint.extrinsics;
+
                         if(!currentBest.image->IsLoaded())
                             currentBest.image->Load(); //Need to get image contents now. 
                         //cout << "Better match" << endl;
@@ -174,6 +177,7 @@ namespace optonaut {
 
                             assert(previous.image->IsLoaded());
                             assert(currentBest.image->IsLoaded());
+
 
                             StereoTarget target;
                             target.center = edge.roiCenter;

@@ -35,6 +35,7 @@ namespace optonaut {
 		cv::Mat img;
         ImageRef dataRef;
 		cv::Mat extrinsics;
+        cv::Mat offset;
 		cv::Mat intrinsics; 
 		int id;
 		std::string source;
@@ -42,7 +43,9 @@ namespace optonaut {
 		std::vector<cv::KeyPoint> features;
 		cv::Mat descriptors;
 
-        Image()  : img(0, 0, CV_8UC3), extrinsics(4, 4, CV_64F), intrinsics(3, 3, CV_64F), source("Unknown") { };
+        Image()  : img(0, 0, CV_8UC3), extrinsics(4, 4, CV_64F), intrinsics(3, 3, CV_64F), source("Unknown") {
+            offset = cv::Mat::eye(4, 4, CV_64F);
+        };
 
         bool IsLoaded() {
             return img.cols != 0 && img.rows != 0;
