@@ -53,6 +53,8 @@ private:
 	//Horizontal and Vertical overlap in percent. 
 	const double hOverlap = 0.9;
 	const double vOverlap = 0.2;
+    const double vBufferRatio = 0.02;
+    const double hBufferRatio = 0.05;
 
 	//Tolerance, measured on sphere, for hits. 
 	const double tolerance = M_PI / 8;
@@ -78,6 +80,8 @@ public:
         double maxVFov = GetVerticalFov(intrinsics); 
 		double hFov = maxHFov * (1.0 - hOverlap);
 		double vFov = maxVFov * (1.0 - vOverlap);
+        double vBuffer = maxVFov * vBufferRatio;
+        double hBuffer = maxVFov * hBufferRatio;
 
         cout << "H-FOV: " << (maxHFov * 180 / M_PI) << endl;
         cout << "V-FOV: " << (maxVFov * 180 / M_PI) << endl;
@@ -130,10 +134,10 @@ public:
                     edge.to = id + 1;
                     edge.roiCenter = p.extrinsics;
                     GeoToRot(hCenter, vCenter, edge.roiCenter);
-                    GeoToRot(hLeft, vTop, edge.roiCorners[0]);
-                    GeoToRot(hRight, vTop, edge.roiCorners[1]);
-                    GeoToRot(hRight, vBot, edge.roiCorners[2]);
-                    GeoToRot(hLeft, vBot, edge.roiCorners[3]);
+                    GeoToRot(hLeft - hBuffer, vTop - vBuffer, edge.roiCorners[0]);
+                    GeoToRot(hRight + hBuffer, vTop - vBuffer, edge.roiCorners[1]);
+                    GeoToRot(hRight + hBuffer, vBot + vBuffer, edge.roiCorners[2]);
+                    GeoToRot(hLeft - hBuffer, vBot + vBuffer, edge.roiCorners[3]);
 
                     if(j == 0) {
                         //Remember Id of first one. 
