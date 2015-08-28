@@ -72,18 +72,28 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target)
 	Mat resA(a->img.rows, a->img.cols, CV_32F);
 	Mat resB(b->img.rows, b->img.cols, CV_32F);
 
+    Mat ai4;
+    From3DoubleTo4Double(aIntrinsics, ai4);
+
 	Mat I = Mat::eye(4, 4, CV_64F);
 	vector<Point2f> corners(4);
+        
+    double maxHFov = GetHorizontalFov(aIntrinsics);
+    double maxVFov = GetVerticalFov(aIntrinsics); 
+    
     for(int i = 0; i < 4; i++) { 
+        //TODO: This math is wrong!
         cout << "offset: " << a->offset.inv() << endl;
         Mat rot = target.center.inv() * target.corners[i];
         Mat rot4;
         From3DoubleTo4Double(rot, rot4);
         
-	    corners[i].x = -tan(GetDistanceByDimension(I, rot4, 0)) + 0.5;
-	    corners[i].y = -tan(GetDistanceByDimension(I, rot4, 1)) + 0.5;
+	    corners[i].x = -tan(GetDistanceByDimension(I, rot4, 0)) / tan(maxHFov) + 0.5;
+	    corners[i].y = -tan(GetDistanceByDimension(I, rot4, 1)) / tan(maxVFov) + 0.5;
+        cout << "Corners A " << i << corners[i] << endl;
         corners[i].x *= a->img.cols;
         corners[i].y *= a->img.rows;
+        cout << "Corners B " << i << corners[i] << endl;
         //cout << "Corner " << i << corners[i] << endl;
         //cout << "MatDiff: " << rot << endl;
     }

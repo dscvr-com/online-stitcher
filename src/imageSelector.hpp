@@ -52,10 +52,10 @@ private:
 	Mat intrinsics;
 	//Horizontal and Vertical overlap in percent. 
 	const double hOverlap = 0.9;
-	const double vOverlap = 0.3;
+	const double vOverlap = 0.2;
 
 	//Tolerance, measured on sphere, for hits. 
-	const double tolerance = M_PI / 32;
+	const double tolerance = M_PI / 8;
 
     void GeoToRot(double hAngle, double vAngle, Mat &res) {
         Mat hRot;
