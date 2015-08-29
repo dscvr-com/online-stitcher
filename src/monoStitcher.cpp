@@ -82,8 +82,9 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target)
     double maxVFov = GetVerticalFov(aIntrinsics); 
     
     for(int i = 0; i < 4; i++) { 
-        cout << "offset: " << a->offset.inv() << endl;
-        Mat rot = target.center.inv() * target.corners[i] * a->offset; 
+        
+        //Mat rot = target.center.inv() * target.corners[i] * a->offset; 
+        Mat rot = target.center.inv() * target.corners[i]; 
         Mat rot4;
         From3DoubleTo4Double(rot, rot4);
         
@@ -131,7 +132,8 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target)
  	newKA.at<double>(1, 2) = height / 2.0f;
 
 	result->A->intrinsics = newKA;
-	result->A->extrinsics = target.center;
+	//result->A->extrinsics = target.center;
+	result->A->extrinsics = a->extrinsics * rotN4;
 	result->A->id = a->id;
 
 	Mat newKB = Mat::eye(3, 3, CV_64F);

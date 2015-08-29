@@ -95,6 +95,11 @@ public:
 
 		int id = 0;
 
+        if(vCount % 2 == 0) {
+            cout << "Center mode not possible with even number of rings." << endl;
+            assert(false);
+        }
+
 		for(int i = 0; i < vCount; i++) {
 
             //Vertical center, bottom and top of ring
