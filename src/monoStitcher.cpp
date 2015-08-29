@@ -102,14 +102,15 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target)
 
 	warpPerspective(a->img, resA, transA, resA.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
 	warpPerspective(b->img, resB, transB, resB.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
-    
+   /* 
     for(size_t i = 0; i < corners.size(); i++) {
         line(resA, corners[i], corners[(i + 1) % corners.size()], Scalar(0, 0, 255), 3);
         line(resB, corners[i], corners[(i + 1) % corners.size()], Scalar(0, 0, 255), 3);
-    } 
+    }
 
 	imwrite("dbg/warped_" + ToString(a->id) + "A.jpg", resA);
 	imwrite("dbg/warped_" + ToString(a->id) + "B.jpg", resB);
+    */
 
 	Mat rvec(4, 1, CV_64F);
 	ExtractRotationVector(rot, rvec);
