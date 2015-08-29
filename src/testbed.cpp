@@ -36,6 +36,10 @@ int main(int argc, char* argv[]) {
     for(int i = 0; i < n; i++) {
         auto image = ImageFromFile(files[i]);
         image->intrinsics = iPhone6Intrinsics;
+        
+        //Flip image accordingly to portrait. 
+        cv::flip(image->img, image->img, 0);
+        image->img = image->img.t();
 
         //Print out selector points.
         //RStitcher stitcher; 

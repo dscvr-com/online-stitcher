@@ -13,8 +13,8 @@ using namespace cv;
 namespace optonaut {
     //Portrait to landscape (use with ios app)
     double iosBaseData[16] = {
-        0, 1, 0, 0,
-        1, 0, 0, 0,
+        -1, 0, 0, 0,
+        0, -1, 0, 0,
         0, 0, 1, 0,
         0, 0, 0, 1
     };
@@ -29,9 +29,9 @@ namespace optonaut {
 
     //Base picked from exsiting data - we might find something better here.
     double iosZeroData[16] = {
+        0, 1, 0, 0,
         0, 0, 1, 0,
         1, 0, 0, 0,
-        0, 1, 0, 0,
         0, 0, 0, 1
     };
 

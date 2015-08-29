@@ -66,22 +66,20 @@ namespace optonaut {
             resizer(selectorConfiguration),
             previewImageAvailable(false)
         {
-            base = Mat::eye(4, 4, CV_64F);
             baseInv = base.inv();
             zero = zeroWithoutBase;
+
 
             if(isAsync) {
                 aligner = shared_ptr<Aligner>(new AsyncAligner());
             } else {
                 aligner = shared_ptr<Aligner>(new StreamAligner());
             }
-            /*
             cout << "Initializing Optonaut Pipe." << endl;
             
             cout << "Base: " << base << endl;
             cout << "BaseInv: " << baseInv << endl;
             cout << "Zero: " << zero << endl;
-            */
         }
 
         //Methods already coordinates in input base. 
