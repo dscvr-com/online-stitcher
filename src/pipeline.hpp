@@ -32,6 +32,7 @@ namespace optonaut {
         SelectionInfo currentBest;
         ImageResizer resizer;
         PipelineState state;
+        ImageP previewImage;
 
         MonoStitcher stereoConverter;
 
@@ -125,7 +126,7 @@ namespace optonaut {
         }
 
         ImageP GetPreviewImage() const {
-            return lefts.back();
+            return previewImage;
         }
         
         Mat GetPreviewRotation() {
@@ -204,6 +205,10 @@ namespace optonaut {
                             
                             if(stereo->valid) {
                                 //cout << "Doing stereo" << endl;
+                                
+                                previewImage = ImageP(new Image(*stereo->A));
+                                previewImage->img = stereo->A->img.clone();
+                                
                                 stereo->A->SaveToDisk();
                                 stereo->B->SaveToDisk();
                                 PushLeft(stereo->A);
