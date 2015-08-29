@@ -61,6 +61,15 @@ namespace optonaut {
 
 		return 2 * atan2(h, f);
 	}
+    
+    double IsPortrait(const Mat &intrinsics) {
+        assert(MatIs(intrinsics, 3, 3, CV_64F));
+        
+        double h = intrinsics.at<double>(1, 2);
+        double w = intrinsics.at<double>(0, 2);
+        
+        return h > w;
+    }
 
 	void ExtractRotationVector(const Mat &r, Mat &v) {
 		assert(MatIs(r, 3, 3, CV_64F));

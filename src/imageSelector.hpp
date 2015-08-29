@@ -53,8 +53,8 @@ private:
 	//Horizontal and Vertical overlap in percent. 
 	const double hOverlap = 0.9;
 	const double vOverlap = 0.2;
-    const double vBufferRatio = 0.05;
     const double hBufferRatio = 0.02;
+    const double vBufferRatio = 0.02;
 
 	//Tolerance, measured on sphere, for hits. 
     //We sould calc this from buffer, overlap, fov
@@ -63,6 +63,7 @@ private:
     void GeoToRot(double hAngle, double vAngle, Mat &res) {
         Mat hRot;
         Mat vRot;
+        Mat zCorr;
         
         CreateRotationY(hAngle, hRot);
         CreateRotationX(vAngle, vRot);
@@ -214,7 +215,9 @@ public:
 		SelectionInfo info;
 		info.dist = -1;
 		info.isValid = false;
-		Mat eInv = img->extrinsics.inv();
+        Mat eInv = img->extrinsics.inv();
+        Mat zCorr;
+        CreateRotationZ(M_PI / 2, zCorr);
 
 		for(auto ring : targets) {
 			for(auto target : ring) {

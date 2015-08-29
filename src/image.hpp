@@ -51,33 +51,14 @@ namespace optonaut {
             return img.cols != 0 && img.rows != 0;
         }
 
-        void Load(bool copy = true) {
-            assert(!IsLoaded());
-            assert(dataRef.data != NULL);
-
-            if(dataRef.colorSpace == colorspace::RGBA) {
-                cv::cvtColor(cv::Mat(dataRef.height, dataRef.width, CV_8UC4, dataRef.data), img, cv::COLOR_RGBA2RGB);
-            } else if (dataRef.colorSpace == colorspace::RGB) {
-                img = cv::Mat(dataRef.height, dataRef.width, CV_8UC3, dataRef.data);
-                if(copy) {
-                    img = img.clone();
-                }
-            } else {
-                assert(false);
-            }
-            
-            if(img.cols != WorkingWidth && img.rows != WorkingHeight) {
-                cv::resize(img, img, cv::Size(WorkingWidth, WorkingHeight));
-            }
-
-        }
+        void Load(bool copy = true);
 
         void Unload() {
             img.release();
         }
 	};
-
-	typedef std::shared_ptr<Image> ImageP;
+    
+    typedef std::shared_ptr<Image> ImageP;
 }
 
 

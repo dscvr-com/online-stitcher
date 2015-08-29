@@ -66,6 +66,7 @@ namespace optonaut {
             resizer(selectorConfiguration),
             previewImageAvailable(false)
         {
+            base = Mat::eye(4, 4, CV_64F);
             baseInv = base.inv();
             zero = zeroWithoutBase;
 
@@ -124,22 +125,23 @@ namespace optonaut {
         void Dispose() {
             aligner->Dispose();
         }
-
-        //In: Image with sensor sampled parameters attached. 
-        void Push(ImageP image) {
         
+        //In: Image with sensor sampled parameters attached.
+        void Push(ImageP image) {
+            
             image->extrinsics = base * zero * image->extrinsics.inv() * baseInv;
             if(aligner->NeedsImageData() && !image->IsLoaded()) {
                 //If the aligner needs image data, pre-load the image. 
                 image->Load();
             }
+            
             aligner->Push(image);
             image->extrinsics = aligner->GetCurrentRotation().clone();
 
             //Todo - lock to ring. 
             SelectionInfo current = selector.FindClosestSelectionPoint(image);
 
-            //cout << "image " << image->id << " closest to " << current.closestPoint.id << ", dist: " << current.dist << ", ring: " << current.closestPoint.ringId << endl;
+            cout << "image " << image->id << " closest to " << current.closestPoint.id << ", dist: " << current.dist << ", ring: " << current.closestPoint.ringId << endl;
 
             previewImageAvailable = false;
       		
@@ -244,37 +246,7 @@ namespace optonaut {
         bool HasResults() {
             return lefts.size() > 0 && rights.size() > 0;
         }
-    };
-
-    
-    //Portrait to landscape (use with ios app)
-    double iosBaseData[16] = {
-        1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 1, 0,
-        0, 0, 0, 1
-    };
-
-    //Landscape L to R (use with android app)
-    double androidBaseData[16] = {
-        -1, 0, 0, 0,
-        0, -1, 0, 0,
-        0, 0, 1, 0,
-        0, 0, 0, 1
-    };
-
-    //Base picked from exsiting data - we might find something better here. 
-    double iosZeroData[16] = {
-        0, 0, 1, 0,
-        1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 0, 1
-    };
-
-
-    Mat Pipeline::androidBase(4, 4, CV_64F, androidBaseData);
-    Mat Pipeline::iosBase(4, 4, CV_64F, iosBaseData);
-    Mat Pipeline::iosZero = Mat(4, 4, CV_64F, iosZeroData);
+    };    
 }
 
 #endif
