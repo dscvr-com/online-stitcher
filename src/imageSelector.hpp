@@ -51,10 +51,10 @@ private:
 	vector<vector<SelectionPoint>> targets;
 	Mat intrinsics;
 	//Horizontal and Vertical overlap in percent. 
-	const double hOverlap = 0.9;
-	const double vOverlap = 0.2;
-    const double hBufferRatio = 0.02;
-    const double vBufferRatio = 0.02;
+	const double hOverlap = 0.8;
+	const double vOverlap = 0.1;
+    const double hBufferRatio = 0.002;
+    const double vBufferRatio = 0.002;
 
 	//Tolerance, measured on sphere, for hits. 
     //We sould calc this from buffer, overlap, fov
