@@ -15,7 +15,10 @@ using namespace std;
 using namespace cv;
 
 namespace optonaut {
-    void Image::Load(bool copy) {
+
+    //This method knows too much over the system. Change.
+
+    void Image::LoadFromDataRef(bool copy) {
         assert(!IsLoaded());
         assert(dataRef.data != NULL);
         
@@ -40,8 +43,30 @@ namespace optonaut {
             cv::flip(img, img, 0);
             img = img.t();
         }
+
+        //InvalidateDataRef afterwards.
+        dataRef.data = NULL;
         
     }
-    
 
+    string Image::GetFilePath() {
+        return Pipeline::tempDirectory + "/" + ToString(id) + ".bmp";
+    }
+    
+    void Image::SaveToDisk() {
+        assert(IsLoaded());
+        cout << "Saving image " << id << ", width: " << img.cols << ", height: " << img.rows << endl;
+        imwrite(GetFilePath(), img); 
+        Unload();
+    }
+
+    void Image::LoadFromDisk(bool removeFile) {
+        assert(!IsLoaded());
+        img = imread(GetFilePath());
+        cout << "Loading image " << id << ", width: " << img.cols << ", height: " << img.rows << endl;
+        if(removeFile) { 
+            std::remove(GetFilePath().c_str());
+        }
+        assert(IsLoaded());
+    }
 }

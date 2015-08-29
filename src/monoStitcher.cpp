@@ -145,7 +145,7 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target)
 
 	result->B->intrinsics = newKB;
 	result->B->extrinsics = b->extrinsics * rotN4.inv();
-	result->B->id = b->id;
+	result->B->id = a->id + 100000;
 
 	result->extrinsics = rotN4.inv() * b->extrinsics;
 

@@ -51,11 +51,17 @@ namespace optonaut {
             return img.cols != 0 && img.rows != 0;
         }
 
-        void Load(bool copy = true);
+        void LoadFromDataRef(bool copy = true);
+    
+        void SaveToDisk();
+
+        void LoadFromDisk(bool removeFile = true);
 
         void Unload() {
             img.release();
         }
+        
+        std::string GetFilePath();
 	};
     
     typedef std::shared_ptr<Image> ImageP;

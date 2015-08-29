@@ -42,7 +42,6 @@ namespace optonaut {
         RStitcher rightStitcher;
 
         bool previewImageAvailable;
-        
 
         void PushLeft(ImageP left) {
             lefts.push_back(left);
@@ -52,13 +51,26 @@ namespace optonaut {
             rights.push_back(right);
         }
 
-        //int selectorConfiguration; 
+        StitchingResultP Finish(vector<ImageP> &images) {
+            for(auto image : images) {
+               image->LoadFromDisk();
+            }
+            auto res = leftStitcher.Stitch(images, false);
+            resizer.Resize(res->image);
+            for(auto image : images) {
+               image->Unload();
+            }
+            return res;
+        }
+
 
     public: 
 
         static Mat androidBase;
         static Mat iosBase;
         static Mat iosZero;
+
+        static string tempDirectory;
         
         Pipeline(Mat base, Mat zeroWithoutBase, Mat intrinsics, int selectorConfiguration = ImageSelector::ModeAll, bool isAsync = true) :
             base(base),
@@ -130,7 +142,7 @@ namespace optonaut {
             image->extrinsics = base * zero * image->extrinsics.inv() * baseInv;
             if(aligner->NeedsImageData() && !image->IsLoaded()) {
                 //If the aligner needs image data, pre-load the image. 
-                image->Load();
+                image->LoadFromDataRef();
             }
             
             aligner->Push(image);
@@ -161,7 +173,7 @@ namespace optonaut {
                         
 
                         if(!currentBest.image->IsLoaded())
-                            currentBest.image->Load(); //Need to get image contents now. 
+                            currentBest.image->LoadFromDataRef(); //Need to get image contents now. 
                         //cout << "Better match" << endl;
                     } 
                 } else {
@@ -192,6 +204,8 @@ namespace optonaut {
                             
                             if(stereo->valid) {
                                 //cout << "Doing stereo" << endl;
+                                stereo->A->SaveToDisk();
+                                stereo->B->SaveToDisk();
                                 PushLeft(stereo->A);
                                 PushRight(stereo->B);
 
@@ -207,7 +221,7 @@ namespace optonaut {
                     currentBest = current;
                     
                     if(!currentBest.image->IsLoaded())
-                        currentBest.image->Load();
+                        currentBest.image->LoadFromDataRef();
                 }
             }
         }
@@ -230,15 +244,11 @@ namespace optonaut {
         }
 
         StitchingResultP FinishLeft() {
-            auto left = leftStitcher.Stitch(lefts, false);
-            resizer.Resize(left->image);
-            return left;
+            return Finish(lefts);
         }       
 
         StitchingResultP FinishRight() {
-            auto right = rightStitcher.Stitch(rights, false);
-            resizer.Resize(right->image);
-            return right;
+            return Finish(rights);
         }
 
         bool HasResults() {
