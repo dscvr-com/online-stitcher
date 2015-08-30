@@ -22,8 +22,12 @@ public:
         int w = 4096;
         int h = 4096;
         
-        if(configuration == ImageSelector::ModeCenter) {
+        if(configuration == ImageSelector::ModeCenter || configuration == ImageSelector::ModeTruncated) {
             int ih = 1280;
+            
+            if(configuration == ImageSelector::ModeTruncated) {
+                ih *= 2.5f;
+            }
 
             Mat canvas(w, h, CV_8UC3);
             canvas.setTo(Scalar::all(0));
