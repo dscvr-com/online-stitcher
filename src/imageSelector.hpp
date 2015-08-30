@@ -74,6 +74,7 @@ public:
 
     static const int ModeAll = 0;
     static const int ModeCenter = 1;
+    static const int ModeTruncated = 1;
     
 	ImageSelector(const Mat &intrinsics, const int mode = ModeAll) {
 
@@ -92,7 +93,9 @@ public:
 		int vCount = ceil(M_PI / vFov);
 		int hCenterCount = ceil(2 * M_PI / hFov);
 	
-		vFov = M_PI / vCount;
+        double vStart = maxVFov * vOverlap;
+        
+		vFov = (M_PI - 2 * vStart) / vCount;
 
 		int id = 0;
 
@@ -104,7 +107,7 @@ public:
 		for(int i = 0; i < vCount; i++) {
 
             //Vertical center, bottom and top of ring
-			double vCenter = i * vFov + vFov / 2.0 - M_PI / 2.0;
+			double vCenter = i * vFov + vFov / 2.0 - M_PI / 2.0 + vStart;
             double vTop = vCenter - vFov / 2.0;
             double vBot = vCenter + vFov / 2.0;
 
@@ -118,11 +121,13 @@ public:
             SelectionEdge edge;
 
 			targets.push_back(vector<SelectionPoint>());
-
-			for(int j = 0; j < hCount; j++) {
                 
-                if(mode == ModeAll || (mode == ModeCenter && i == vCount / 2)) {
+            if(mode == ModeAll
+                || (mode == ModeCenter && i == vCount / 2)
+                || (mode == ModeTruncated && i != vCount - 1 && i != 0)) {
                     
+                for(int j = 0; j < hCount; j++) {
+                        
                     hLeft = j * hFov;
                     hCenter = hLeft + hFov / 2;
                     hRight = hLeft + hFov;
