@@ -50,7 +50,7 @@ namespace optonaut {
     }
 
     string Image::GetFilePath() {
-        return Pipeline::tempDirectory + "/" + ToString(id) + ".bmp";
+        return Pipeline::tempDirectory + ToString(id) + ".bmp";
     }
     
     void Image::SaveToDisk() {
