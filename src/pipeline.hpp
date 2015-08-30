@@ -53,14 +53,8 @@ namespace optonaut {
         }
 
         StitchingResultP Finish(vector<ImageP> &images) {
-            for(auto image : images) {
-               image->LoadFromDisk();
-            }
             auto res = leftStitcher.Stitch(images, false);
             resizer.Resize(res->image);
-            for(auto image : images) {
-               image->Unload();
-            }
             return res;
         }
 
@@ -152,7 +146,7 @@ namespace optonaut {
             //Todo - lock to ring. 
             SelectionInfo current = selector.FindClosestSelectionPoint(image);
 
-            cout << "image " << image->id << " closest to " << current.closestPoint.id << ", dist: " << current.dist << ", ring: " << current.closestPoint.ringId << endl;
+            //cout << "image " << image->id << " closest to " << current.closestPoint.id << ", dist: " << current.dist << ", ring: " << current.closestPoint.ringId << endl;
 
             previewImageAvailable = false;
       		

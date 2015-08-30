@@ -36,6 +36,7 @@ public:
 
             image = canvas;
         } else if (configuration == ImageSelector::ModeAll) {
+            cout << "Resizer got image of size: " << image.size() << endl;
             Mat resized(w, h, CV_8UC3);
             resize(image, resized, cv::Size(w, h));
             image = resized;

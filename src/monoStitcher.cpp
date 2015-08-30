@@ -90,10 +90,10 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target)
         
 	    corners[i].x = -tan(GetDistanceByDimension(I, rot4, 0)) / tan(maxHFov) + 0.5;
 	    corners[i].y = -tan(GetDistanceByDimension(I, rot4, 1)) / tan(maxVFov) + 0.5;
-        cout << "Corners A " << i << corners[i] << endl;
+        //cout << "Corners A " << i << corners[i] << endl;
         corners[i].x *= a->img.cols;
         corners[i].y *= a->img.rows;
-        cout << "Corners B " << i << corners[i] << endl;
+        //cout << "Corners B " << i << corners[i] << endl;
         //cout << "Corner " << i << corners[i] << endl;
         //cout << "MatDiff: " << rot << endl;
     }

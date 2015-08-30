@@ -74,11 +74,15 @@ int main(int argc, char* argv[]) {
     if(pipe->HasResults()) {
         {
             auto left = pipe->FinishLeft();
-            imwrite("dbg/left.jpg", left->image);    
+            imwrite("dbg/left.jpg", left->image);
+            left->image.release();  
+            left->mask.release();  
         }
         {
             auto right = pipe->FinishRight();
             imwrite("dbg/right.jpg", right->image);    
+            right->image.release();  
+            right->mask.release();  
         }
     } else {
         cout << "No results." << endl;

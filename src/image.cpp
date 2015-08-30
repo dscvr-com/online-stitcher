@@ -49,23 +49,33 @@ namespace optonaut {
         
     }
 
-    string Image::GetFilePath() {
+   string Image::GetFilePath(int id) {
         return Pipeline::tempDirectory + ToString(id) + ".bmp";
     }
+        
+
+   void Image::LoadFromDisk(int id, cv::Mat &img, int loadFlags) {
+        img = imread(GetFilePath(id), loadFlags);
+        assert(img.cols != 0 && img.rows != 0);
+   }
+        
+   void Image::SaveToDisk(int id, cv::Mat &img) {
+        imwrite(GetFilePath(id), img); 
+   }
     
     void Image::SaveToDisk() {
         assert(IsLoaded());
-        cout << "Saving image " << id << ", width: " << img.cols << ", height: " << img.rows << endl;
-        imwrite(GetFilePath(), img); 
+        //cout << "Saving image " << id << ", width: " << img.cols << ", height: " << img.rows << endl;
+        Image::SaveToDisk(id, img);
         Unload();
     }
 
     void Image::LoadFromDisk(bool removeFile) {
         assert(!IsLoaded());
-        img = imread(GetFilePath());
-        cout << "Loading image " << id << ", width: " << img.cols << ", height: " << img.rows << endl;
+        Image::LoadFromDisk(id, img);
+        //cout << "Loading image " << id << ", width: " << img.cols << ", height: " << img.rows << endl;
         if(removeFile) { 
-            std::remove(GetFilePath().c_str());
+            std::remove(GetFilePath(id).c_str());
         }
         assert(IsLoaded());
     }

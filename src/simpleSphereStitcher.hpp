@@ -22,7 +22,6 @@ typedef std::shared_ptr<StitchingResult> StitchingResultP;
 class RStitcher {
 	public:
 		bool compensate = false;
-		bool seam = false;
 		float workScale = 0.2f;
 		float warperScale = 800;
         int blendMode = -1;
