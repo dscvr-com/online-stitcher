@@ -95,7 +95,7 @@ public:
 	
         double vStart = maxVFov * vOverlap;
         
-		vFov = (M_PI - 2 * vStart) / vCount;
+		vFov = (M_PI - 4 * vStart) / vCount;
 
 		int id = 0;
 

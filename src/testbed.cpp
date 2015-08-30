@@ -42,15 +42,15 @@ int main(int argc, char* argv[]) {
        // image->img = image->img.t();
 
         //Print out selector points.
-        //RStitcher stitcher; 
-        //stitcher.blendMode = cv::detail::Blender::FEATHER;
-        //
-        //ImageSelector selector(image->intrinsics, ImageSelector::ModeAll);
-        //
-        //auto res = stitcher.Stitch(selector.GenerateDebugImages());
-        //imwrite("dbg/points.jpg", res->image);
-        //
-        //return 0;
+        /*RStitcher stitcher; 
+        stitcher.blendMode = cv::detail::Blender::FEATHER;
+        
+        ImageSelector selector(image->intrinsics, ImageSelector::ModeAll);
+        
+        auto res = stitcher.Stitch(selector.GenerateDebugImages());
+        imwrite("dbg/points.jpg", res->image);
+        
+        return 0;*/
 
         //Create stack-local ref to mat. Clear image mat.
         //This is to simulate hard memory management.

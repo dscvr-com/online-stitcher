@@ -59,7 +59,8 @@ StitchingResultP RStitcher::Stitch(const std::vector<ImageP> &in, bool debug) {
         
         //Camera
         ImageP img = in[i];
-        img->LoadFromDisk();
+        if(!img->IsLoaded())
+            img->LoadFromDisk();
         cv::detail::CameraParams camera;
         From4DoubleTo3Float(img->extrinsics, camera.R);
         Mat K; 
