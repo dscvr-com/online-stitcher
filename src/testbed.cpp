@@ -38,8 +38,8 @@ int main(int argc, char* argv[]) {
         image->intrinsics = iPhone6Intrinsics;
         
         //Flip image accordingly to portrait. 
-        cv::flip(image->img, image->img, 0);
-        image->img = image->img.t();
+       // cv::flip(image->img, image->img, 0);
+       // image->img = image->img.t();
 
         //Print out selector points.
         //RStitcher stitcher; 
@@ -54,28 +54,32 @@ int main(int argc, char* argv[]) {
 
         //Create stack-local ref to mat. Clear image mat.
         //This is to simulate hard memory management.
-        //auto tmpMat = image->img;
-        //image->img = Mat(0, 0, CV_8UC3);
-        //
-        //image->dataRef.data = tmpMat.data;
-        //image->dataRef.width = tmpMat.cols;
-        //image->dataRef.height = tmpMat.rows;
-        //image->dataRef.colorSpace = colorspace::RGB;
+        auto tmpMat = image->img;
+        
+        image->img = Mat(0, 0, CV_8UC3);
+        
+        image->dataRef.data = tmpMat.data;
+        image->dataRef.width = tmpMat.cols;
+        image->dataRef.height = tmpMat.rows;
+        image->dataRef.colorSpace = colorspace::RGB;
 
         if(i == 0) {
             pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics, ImageSelector::ModeAll, true));
         }
 
         pipe->Push(image);
-        //tmpMat.release();
+        tmpMat.release();
     }
     
     if(pipe->HasResults()) {
-        auto left = pipe->FinishLeft();
-        auto right = pipe->FinishRight();
-            
-        imwrite("dbg/left.jpg", left->image);    
-        imwrite("dbg/right.jpg", right->image);    
+        {
+            auto left = pipe->FinishLeft();
+            imwrite("dbg/left.jpg", left->image);    
+        }
+        {
+            auto right = pipe->FinishRight();
+            imwrite("dbg/right.jpg", right->image);    
+        }
     } else {
         cout << "No results." << endl;
     }

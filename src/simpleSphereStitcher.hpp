@@ -27,7 +27,7 @@ class RStitcher {
 		float warperScale = 800;
         int blendMode = -1;
 
-		StitchingResultP Stitch(std::vector<ImageP> images, bool debug = false);
-		static std::vector<ImageP> PrepareMatrices(std::vector<ImageP> r);
+		StitchingResultP Stitch(const std::vector<ImageP> &images, bool debug = false);
+		static void PrepareMatrices(const std::vector<ImageP> &r);
 };
 }

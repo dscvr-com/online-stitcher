@@ -96,7 +96,7 @@ public:
 
 		int id = 0;
 
-        if(vCount % 2 == 0) {
+        if(vCount % 2 == 0 && mode == ModeCenter) {
             cout << "Center mode not possible with even number of rings." << endl;
             assert(false);
         }

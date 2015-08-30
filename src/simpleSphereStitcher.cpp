@@ -16,7 +16,7 @@ using namespace cv::detail;
 
 namespace optonaut {
     
-vector<ImageP> RStitcher::PrepareMatrices(vector<ImageP> r) {
+void RStitcher::PrepareMatrices(const vector<ImageP> &r) {
 
 
     //Orient around first image (Correct orientation from start.)
@@ -33,11 +33,9 @@ vector<ImageP> RStitcher::PrepareMatrices(vector<ImageP> r) {
     for(size_t i = 0; i <  r.size(); i++) {
         From3FloatTo4Double(matrices[i], r[i]->extrinsics);
     }
-
-    return r;
 }
 
-StitchingResultP RStitcher::Stitch(std::vector<ImageP> in, bool debug) {
+StitchingResultP RStitcher::Stitch(const std::vector<ImageP> &in, bool debug) {
     //This is needed because xcode does not like the CV stitching header.
     //So we can't initialize this constant in the header. 
     if(blendMode == -1) {
@@ -60,7 +58,9 @@ StitchingResultP RStitcher::Stitch(std::vector<ImageP> in, bool debug) {
 
     for(size_t i = 0; i < n; i++) {
         masks[i].create(images[i].size(), CV_8U);
-        ThresholdSeamer::createMask(masks[i]);
+        if(seam) {
+            ThresholdSeamer::createMask(masks[i]);
+        }
         masks[i].setTo(Scalar::all(255));
         //imwrite("dbg/premask" + ToString(i) + ".jpg", masks[i]);
     }
@@ -84,9 +84,12 @@ StitchingResultP RStitcher::Stitch(std::vector<ImageP> in, bool debug) {
 
         //Big
         corners[i] = warper->warp(images[i], k, cameras[i].R, INTER_LINEAR, BORDER_CONSTANT, warpedImages[i]);
+        in[i]->Unload();
         warper->warp(masks[i], k, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, warpedMasks[i]);
         warpedSizes[i] = warpedImages[i].size();
-        warpedImages[i].convertTo(warpedImagesAsFloat[i], CV_32F);
+        if(seam) {
+            warpedImages[i].convertTo(warpedImagesAsFloat[i], CV_32F);
+        }
         //imwrite("dbg/warpmask" + ToString(i) + ".jpg", warpedMasks[i]);
 
     }
@@ -98,14 +101,15 @@ StitchingResultP RStitcher::Stitch(std::vector<ImageP> in, bool debug) {
         //Ptr<SeamFinder> seamFinder = new GraphCutSeamFinder();
 		Ptr<SeamFinder> seamFinder = new ThresholdSeamer();
 		seamFinder->find(warpedImagesAsFloat, corners, warpedMasks);
+    
+        for (size_t i = 0; i < n; i++) {
+            //imwrite("dbg/submask" + ToString(i) + ".jpg", warpedMasks[i]);
+            ThresholdSeamer::brightenMask(warpedMasks[i]);
+            //imwrite("dbg/mask" + ToString(i) + ".jpg", warpedMasks[i]);
+        }
     }
     warpedImagesAsFloat.clear();
 
-    for (size_t i = 0; i < n; i++) {
-        //imwrite("dbg/submask" + ToString(i) + ".jpg", warpedMasks[i]);
-        ThresholdSeamer::brightenMask(warpedMasks[i]);
-        //imwrite("dbg/mask" + ToString(i) + ".jpg", warpedMasks[i]);
-    }
 
     //Final blending
 	Mat warpedImageAsShort;
@@ -119,8 +123,11 @@ StitchingResultP RStitcher::Stitch(std::vector<ImageP> in, bool debug) {
 	for (size_t i = 0; i < n; i++)
 	{
         warpedImages[i].convertTo(warpedImageAsShort, CV_16S);
+        warpedImages[i].release();
 		blender->feed(warpedImageAsShort, warpedMasks[i], corners[i]);
 	}
+
+    warpedImages.clear();
 
 	StitchingResultP res(new StitchingResult());
 	blender->blend(res->image, res->mask);
@@ -139,6 +146,9 @@ StitchingResultP RStitcher::Stitch(std::vector<ImageP> in, bool debug) {
         res->corner.x = min(res->corner.x, corners[i].x);
         res->corner.y = min(res->corner.y, corners[i].y);
     }
+
+    warpedImages.clear();
+    warpedMasks.clear();
     
     res->image.convertTo(res->image, CV_8U);
 
