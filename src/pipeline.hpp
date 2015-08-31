@@ -192,11 +192,8 @@ namespace optonaut {
                             for(int i = 0; i < 4; i++) {
                                 target.corners[i] = edge.roiCorners[i];
                             }
-                        
-                            currentBest.image->offset = currentBest.image->extrinsics.inv() * currentBest.closestPoint.extrinsics;
-                            previous.image->offset = previous.image->extrinsics.inv() * previous.closestPoint.extrinsics;
                             
-                            StereoImageP stereo = stereoConverter.CreateStereo(previous.image, currentBest.image, target);
+                            StereoImageP stereo = stereoConverter.CreateStereo(previous, currentBest, target);
                             
                             if(stereo->valid) {
                                 //cout << "Doing stereo" << endl;

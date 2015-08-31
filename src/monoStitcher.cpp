@@ -34,7 +34,7 @@ Rect CornersToRoi(const vector<Point2f> &corners) {
     return roi;
 }
 
-void GetCorners(vector<Point2f> &corners, const StereoTarget &target, const Mat &rotN4, const Mat &intrinsics, int width, int height) {
+void GetCorners(vector<Point2f> &corners, const StereoTarget &target, const Mat &intrinsics, int width, int height) {
     
     double maxHFov = GetHorizontalFov(intrinsics);
     double maxVFov = GetVerticalFov(intrinsics); 
@@ -44,9 +44,7 @@ void GetCorners(vector<Point2f> &corners, const StereoTarget &target, const Mat 
        
         //Todo: Don't we need some offset here?  
 
-        
-        Mat rot = rotN4;
-        rot = target.center.inv() * target.corners[i]; // * rotN4; 
+        Mat rot = target.center.inv() * target.corners[i]; // * rotN4; 
         
 	    corners[i].x = -tan(GetDistanceByDimension(I, rot, 0)) / tan(maxHFov) + 0.5;
 	    corners[i].y = -tan(GetDistanceByDimension(I, rot, 1)) / tan(maxVFov) + 0.5;
@@ -60,7 +58,7 @@ void GetCorners(vector<Point2f> &corners, const StereoTarget &target, const Mat 
     }
 }
 
-StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target) {
+StereoImageP MonoStitcher::CreateStereo(SelectionInfo a, SelectionInfo b, StereoTarget target) {
 	Mat k;
     
     //Avoid unused param warning. 
@@ -69,13 +67,13 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target)
 	StereoImageP result(new StereoImage());
 	result->valid = false;
 
-	assert(a->img.cols == b->img.cols);
-	assert(a->img.rows == b->img.rows);
+	assert(a.image->img.cols == b.image->img.cols);
+	assert(a.image->img.rows == b.image->img.rows);
 
 	//cout << "AR: " << a->extrinsics << endl;
 	//cout << "BR: " << b->extrinsics << endl;
 
-	Mat rot = a->extrinsics.inv() * b->extrinsics;
+	Mat rot = a.closestPoint.extrinsics.inv() * b.closestPoint.extrinsics;
     
 	//cout << "R: " << rot << endl;
 
@@ -100,24 +98,30 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target)
 	Mat aIntrinsics;
 	Mat bIntrinsics;
 
-	ScaleIntrinsicsToImage(a->intrinsics, a->img, aIntrinsics); 
-	ScaleIntrinsicsToImage(b->intrinsics, b->img, bIntrinsics);
-    
-	Mat transA = aIntrinsics * rotN.inv() * aIntrinsics.inv();
-	Mat transB = bIntrinsics * rotN * bIntrinsics.inv();
+	ScaleIntrinsicsToImage(a.image->intrinsics, a.image->img, aIntrinsics); 
+	ScaleIntrinsicsToImage(b.image->intrinsics, b.image->img, bIntrinsics);
 
-	Mat resA(a->img.rows, a->img.cols, CV_32F);
-	Mat resB(b->img.rows, b->img.cols, CV_32F);
+    Mat aOffset;
+    From4DoubleTo3Double(a.image->extrinsics.inv() * a.closestPoint.extrinsics, aOffset);
+
+    Mat bOffset; 
+    From4DoubleTo3Double(b.image->extrinsics.inv() * b.closestPoint.extrinsics, bOffset);
+    
+	Mat transA = aIntrinsics * aOffset.inv() * rotN.inv() * aIntrinsics.inv();
+	Mat transB = bIntrinsics * bOffset.inv() * rotN * bIntrinsics.inv();
+
+	Mat resA(a.image->img.rows, a.image->img.cols, CV_32F);
+	Mat resB(b.image->img.rows, b.image->img.cols, CV_32F);
 
 	Mat I = Mat::eye(4, 4, CV_64F);
 	vector<Point2f> cornersA(4);
 	vector<Point2f> cornersB(4);
        
-    GetCorners(cornersA, target, rotN4.inv(), aIntrinsics, a->img.cols, a->img.rows);
-    GetCorners(cornersB, target, rotN4, bIntrinsics, b->img.cols, a->img.rows);
+    GetCorners(cornersA, target, aIntrinsics, a.image->img.cols, a.image->img.rows);
+    GetCorners(cornersB, target, bIntrinsics, b.image->img.cols, a.image->img.rows);
 
-	warpPerspective(a->img, resA, transA, resA.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
-	warpPerspective(b->img, resB, transB, resB.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
+	warpPerspective(a.image->img, resA, transA, resA.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
+	warpPerspective(b.image->img, resB, transB, resB.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
     
     /*for(size_t i = 0; i < cornersA.size(); i++) {
         line(resA, cornersA[i], cornersA[(i + 1) % cornersA.size()], Scalar(0, 0, 255), 3);
@@ -143,8 +147,8 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target)
 
 	result->A->intrinsics = newKA;
 	//result->A->extrinsics = target.center;
-	result->A->extrinsics = a->extrinsics * a->offset;
-	result->A->id = a->id;
+	result->A->extrinsics = target.center;
+	result->A->id = a.image->id;
 
     //Todo: Focal len not correct. 
 
@@ -156,10 +160,10 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target)
 
 	result->B->intrinsics = newKB;
 	//result->B->extrinsics = target.center;
-	result->B->extrinsics = b->extrinsics * b->offset;
-	result->B->id = a->id + 100000;
+	result->B->extrinsics = target.center;
+	result->B->id = a.image->id + 100000;
 
-	result->extrinsics = rotN4.inv() * b->extrinsics;
+	result->extrinsics = rotN4.inv() * b.image->extrinsics;
 
 	result->valid = true;
 	return result;
