@@ -106,7 +106,7 @@ namespace optonaut {
 	        	CreateRotationY(0.005, offset);
 	        	//CreateRotationY(0.000, offset);
 
-        		if(visualAnchor == -1) {
+        		if(visualAnchor == -1 || true) {
 	        		rPrevious.push_back(GetCurrentRotation() * sensorDiff * offset);
 	        		//cout << "Sensor" << endl;
 	        	} else if(GetAngleOfRotation(sensorDiff) > GetAngleOfRotation(visualDiff) * 2) {

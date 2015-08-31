@@ -43,5 +43,6 @@ namespace optonaut {
 
     string Pipeline::tempDirectory = "tmp/";
     string Pipeline::version = "0.4.0";
+    bool Pipeline::debug = false;
 }
 

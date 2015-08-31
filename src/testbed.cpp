@@ -64,7 +64,9 @@ int main(int argc, char* argv[]) {
         image->dataRef.colorSpace = colorspace::RGB;
 
         if(i == 0) {
-            pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics, ImageSelector::ModeTruncated, true));
+            pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics, ImageSelector::ModeTruncated, false));
+
+            Pipeline::debug = true;
         }
 
         pipe->Push(image);
@@ -83,6 +85,10 @@ int main(int argc, char* argv[]) {
             imwrite("dbg/right.jpg", right->image);    
             right->image.release();  
             right->mask.release();  
+        }
+        if(Pipeline::debug) {
+            auto aligned = pipe->FinishAligned();
+            imwrite("dbg/aligned.jpg", aligned->image);
         }
     } else {
         cout << "No results." << endl;

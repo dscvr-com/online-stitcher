@@ -37,7 +37,9 @@ namespace optonaut {
         MonoStitcher stereoConverter;
 
         vector<ImageP> lefts;
-        vector<ImageP> rights; 
+        vector<ImageP> rights;
+
+        vector<ImageP> aligned; 
 
         RStitcher leftStitcher;
         RStitcher rightStitcher;
@@ -67,6 +69,8 @@ namespace optonaut {
 
         static string tempDirectory;
         static string version;
+
+        static bool debug;
         
         Pipeline(Mat base, Mat zeroWithoutBase, Mat intrinsics, int selectorConfiguration = ImageSelector::ModeAll, bool isAsync = true) :
             base(base),
@@ -143,6 +147,12 @@ namespace optonaut {
             
             aligner->Push(image);
             image->extrinsics = aligner->GetCurrentRotation().clone();
+
+            if(Pipeline::debug) {
+                if(!image->IsLoaded())
+                    image->LoadFromDataRef();
+                aligned.push_back(image);
+            }
 
             //Todo - lock to ring. 
             SelectionInfo current = selector.FindClosestSelectionPoint(image);
@@ -246,6 +256,10 @@ namespace optonaut {
 
         StitchingResultP FinishRight() {
             return Finish(rights);
+        }
+
+        StitchingResultP FinishAligned() {
+            return Finish(aligned);
         }
 
         bool HasResults() {
