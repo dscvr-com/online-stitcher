@@ -33,7 +33,7 @@ namespace optonaut {
         ImageResizer resizer;
         PipelineState state;
         ImageP previewImage;
-        Mat lastPosition;
+        Mat lastPosition; //TODO: This variable is dirty. Replace with aligner. 
 
         MonoStitcher stereoConverter;
 
