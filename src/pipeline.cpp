@@ -42,5 +42,6 @@ namespace optonaut {
     Mat Pipeline::iosZero = Pipeline::iosBase * Mat(4, 4, CV_64F, iosZeroData) * Pipeline::iosBase.inv();
 
     string Pipeline::tempDirectory = "tmp/";
+    string Pipeline::version = "0.4.0";
 }
 

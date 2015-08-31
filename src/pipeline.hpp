@@ -59,13 +59,14 @@ namespace optonaut {
         }
 
 
-    public: 
+    public:
 
         static Mat androidBase;
         static Mat iosBase;
         static Mat iosZero;
 
         static string tempDirectory;
+        static string version;
         
         Pipeline(Mat base, Mat zeroWithoutBase, Mat intrinsics, int selectorConfiguration = ImageSelector::ModeAll, bool isAsync = true) :
             base(base),
