@@ -33,6 +33,7 @@ namespace optonaut {
         ImageResizer resizer;
         PipelineState state;
         ImageP previewImage;
+        Mat lastPosition;
 
         MonoStitcher stereoConverter;
 
@@ -76,6 +77,7 @@ namespace optonaut {
         {
             baseInv = base.inv();
             zero = zeroWithoutBase;
+            lastPosition = Mat::eye(4, 4, CV_64F);
 
 
             if(isAsync) {
@@ -96,7 +98,7 @@ namespace optonaut {
         }
 
         Mat GetCurrentRotation() const {
-            return (zero.inv() * baseInv * aligner->GetCurrentRotation() * base).inv();
+            return (zero.inv() * baseInv * lastPosition * base).inv();
         }
 
         vector<SelectionPoint> GetSelectionPoints() const {
@@ -136,6 +138,7 @@ namespace optonaut {
         void Push(ImageP image) {
             
             image->extrinsics = base * zero * image->extrinsics.inv() * baseInv;
+            lastPosition = image->extrinsics.clone();
             //if(aligner->NeedsImageData() && !image->IsLoaded()) {
             //    //If the aligner needs image data, pre-load the image. 
             //    image->LoadFromDataRef();
