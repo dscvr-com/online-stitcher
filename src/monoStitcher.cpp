@@ -44,7 +44,8 @@ void GetCorners(vector<Point2f> &corners, const StereoTarget &target, const Mat 
        
         //Todo: Don't we need some offset here?  
 
-        Mat rot = target.center.inv() * target.corners[i]; // * rotN4; 
+        
+        Mat rot = target.center.inv() * target.corners[i];
         
 	    corners[i].x = -tan(GetDistanceByDimension(I, rot, 0)) / tan(maxHFov) + 0.5;
 	    corners[i].y = -tan(GetDistanceByDimension(I, rot, 1)) / tan(maxVFov) + 0.5;
