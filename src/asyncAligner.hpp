@@ -90,7 +90,7 @@ namespace optonaut {
                     recentImage->intrinsics = image->intrinsics;
                     recentImage->source = image->source;
                     alignerReady = false;
-                    cout << "Pushing new data to alignment loop " << endl;
+                   // cout << "Pushing new data to alignment loop " << endl;
                     dataReady = true;
                     sem.notify_one();
                 } 
