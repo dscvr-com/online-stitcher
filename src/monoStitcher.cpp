@@ -43,8 +43,10 @@ void GetCorners(vector<Point2f> &corners, const StereoTarget &target, const Mat 
     for(int i = 0; i < 4; i++) { 
        
         //Todo: Don't we need some offset here?  
+
         
-        Mat rot = target.center.inv() * target.corners[i] * rotN4; 
+        Mat rot = rotN4;
+        rot = target.center.inv() * target.corners[i]; // * rotN4; 
         
 	    corners[i].x = -tan(GetDistanceByDimension(I, rot, 0)) / tan(maxHFov) + 0.5;
 	    corners[i].y = -tan(GetDistanceByDimension(I, rot, 1)) / tan(maxVFov) + 0.5;
@@ -140,8 +142,8 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target)
  	newKA.at<double>(1, 2) = result->B->img.rows / 2.0f;
 
 	result->A->intrinsics = newKA;
-	result->A->extrinsics = target.center;
-	//result->A->extrinsics = a->extrinsics * a->offset;
+	//result->A->extrinsics = target.center;
+	result->A->extrinsics = a->extrinsics * a->offset;
 	result->A->id = a->id;
 
     //Todo: Focal len not correct. 
@@ -153,7 +155,8 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target)
  	newKB.at<double>(1, 2) = result->B->img.rows / 2.0f;
 
 	result->B->intrinsics = newKB;
-	result->B->extrinsics = target.center;
+	//result->B->extrinsics = target.center;
+	result->B->extrinsics = b->extrinsics * b->offset;
 	result->B->id = a->id + 100000;
 
 	result->extrinsics = rotN4.inv() * b->extrinsics;
