@@ -58,7 +58,8 @@ public:
 		vector<vector<DMatch>> matches;
 		matcher.knnMatch(a->descriptors, b->descriptors, matches, 1);
 
-		//TODO - find "good" matches based on Dist.
+		//TODO - find "good" matches based on Dist, angle and more.
+        //Also find 'certaincy' of matches, or quality of homography. 
 		vector<DMatch> goodMatches;
 		for(size_t i = 0; i < matches.size(); i++) {
 			if(matches[i].size() > 0) {

@@ -41,8 +41,7 @@ namespace optonaut {
 
         vector<ImageP> aligned; 
 
-        RStitcher leftStitcher;
-        RStitcher rightStitcher;
+        RStitcher stitcher;
 
         bool previewImageAvailable;
 
@@ -54,8 +53,8 @@ namespace optonaut {
             rights.push_back(right);
         }
 
-        StitchingResultP Finish(vector<ImageP> &images) {
-            auto res = leftStitcher.Stitch(images, false);
+        StitchingResultP Finish(vector<ImageP> &images, bool debug = false) {
+            auto res = stitcher.Stitch(images, debug);
             resizer.Resize(res->image);
             return res;
         }
@@ -259,7 +258,7 @@ namespace optonaut {
         }
 
         StitchingResultP FinishAligned() {
-            return Finish(aligned);
+            return Finish(aligned, true);
         }
 
         bool HasResults() {

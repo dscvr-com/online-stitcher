@@ -64,7 +64,7 @@ namespace optonaut {
 
                         Mat sensorDiff = rPrevious[i].t() * next->extrinsics;
 
-                        if(GetAngleOfRotation(visualDiff) < GetAngleOfRotation(sensorDiff) * 1.5) {
+                        if(GetAngleOfRotation(visualDiff) < GetAngleOfRotation(sensorDiff)) {
 		        			if(visualAnchor == -1 || 
 		        				GetAngleOfRotation(rPrevious[0].t() * rPrevious[visualAnchor] * visualDiff) > 
 		        				GetAngleOfRotation(rPrevious[0].t() * rPrevious[i] * rotation)) {
