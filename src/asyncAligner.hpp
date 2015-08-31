@@ -28,18 +28,22 @@ namespace optonaut {
         Mat current;
 
         mutex m;
-        condition_variable dataReady;
+        condition_variable sem;
 
         bool isInitialized;
         bool alignerReady;
+        bool dataReady;
 
         void AlignmentLoop() {
     
+            cout << "Async alignment loop running" << endl;
+             
             while(running) {
                 ImageP recentImage;
                 {
                     unique_lock<mutex> lock(m);
-                    dataReady.wait(lock);
+                    if(!dataReady) 
+                        sem.wait(lock);
                     recentImage = this->recentImage;    
                 }
 
@@ -70,6 +74,7 @@ namespace optonaut {
                 lastSensor = image->extrinsics;
                 current = image->extrinsics;
                 isInitialized = true;
+                running = true;
                 alignerReady = true;
                 worker = thread(&AsyncAligner::AlignmentLoop, this); 
             }
@@ -85,7 +90,9 @@ namespace optonaut {
                     recentImage->intrinsics = image->intrinsics;
                     recentImage->source = image->source;
                     alignerReady = false;
-                    dataReady.notify_one();
+                   // cout << "Pushing new data to alignment loop " << endl;
+                    dataReady = true;
+                    sem.notify_one();
                 } 
                 Mat sensorStep = lastSensor.inv() * image->extrinsics;
                 sensorDiff = sensorDiff * sensorStep;
@@ -99,7 +106,7 @@ namespace optonaut {
             running = false;
             {
                 unique_lock<mutex> lock(m);
-                dataReady.notify_one();
+                sem.notify_one();
             }
             worker.join();
         }

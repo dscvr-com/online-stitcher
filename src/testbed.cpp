@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
 
         //Create stack-local ref to mat. Clear image mat.
         //This is to simulate hard memory management.
-        auto tmpMat = image->img;
+        Mat tmpMat = image->img;
         
         image->img = Mat(0, 0, CV_8UC3);
         
@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
         image->dataRef.colorSpace = colorspace::RGB;
 
         if(i == 0) {
-            pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics, ImageSelector::ModeCenter, true));
+            pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics, ImageSelector::ModeTruncated, true));
         }
 
         pipe->Push(image);

@@ -33,6 +33,7 @@ namespace optonaut {
         ImageResizer resizer;
         PipelineState state;
         ImageP previewImage;
+        Mat lastPosition; //TODO: This variable is dirty. Replace with aligner. 
 
         MonoStitcher stereoConverter;
 
@@ -76,6 +77,7 @@ namespace optonaut {
         {
             baseInv = base.inv();
             zero = zeroWithoutBase;
+            lastPosition = Mat::eye(4, 4, CV_64F);
 
 
             if(isAsync) {
@@ -96,7 +98,7 @@ namespace optonaut {
         }
 
         Mat GetCurrentRotation() const {
-            return (zero.inv() * baseInv * aligner->GetCurrentRotation() * base).inv();
+            return (zero.inv() * baseInv * lastPosition * base).inv();
         }
 
         vector<SelectionPoint> GetSelectionPoints() const {
@@ -129,20 +131,21 @@ namespace optonaut {
         }
 
         void Dispose() {
-            aligner->Dispose();
+            //aligner->Dispose();
         }
         
         //In: Image with sensor sampled parameters attached.
         void Push(ImageP image) {
             
             image->extrinsics = base * zero * image->extrinsics.inv() * baseInv;
-            if(aligner->NeedsImageData() && !image->IsLoaded()) {
-                //If the aligner needs image data, pre-load the image. 
-                image->LoadFromDataRef();
-            }
-            
-            aligner->Push(image);
-            image->extrinsics = aligner->GetCurrentRotation().clone();
+            lastPosition = image->extrinsics.clone();
+            //if(aligner->NeedsImageData() && !image->IsLoaded()) {
+            //    //If the aligner needs image data, pre-load the image. 
+            //    image->LoadFromDataRef();
+            //}
+            //
+            //aligner->Push(image);
+            //image->extrinsics = aligner->GetCurrentRotation().clone();
 
             //Todo - lock to ring. 
             SelectionInfo current = selector.FindClosestSelectionPoint(image);
@@ -192,11 +195,8 @@ namespace optonaut {
                             for(int i = 0; i < 4; i++) {
                                 target.corners[i] = edge.roiCorners[i];
                             }
-                        
-                            currentBest.image->offset = currentBest.image->extrinsics.inv() * currentBest.closestPoint.extrinsics;
-                            previous.image->offset = previous.image->extrinsics.inv() * previous.closestPoint.extrinsics;
                             
-                            StereoImageP stereo = stereoConverter.CreateStereo(previous.image, currentBest.image, target);
+                            StereoImageP stereo = stereoConverter.CreateStereo(previous, currentBest, target);
                             
                             if(stereo->valid) {
                                 //cout << "Doing stereo" << endl;

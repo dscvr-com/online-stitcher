@@ -7,6 +7,7 @@
 //
 
 #include "image.hpp"
+#include "imageSelector.hpp"
 
 #ifndef OPTONAUT_MONO_STITCH_HEADER
 #define OPTONAUT_MONO_STITCH_HEADER
@@ -29,7 +30,7 @@ namespace optonaut {
 	typedef std::shared_ptr<StereoImage> StereoImageP;
     class MonoStitcher {
         public:
-        StereoImageP CreateStereo(ImageP a, ImageP b, StereoTarget target);
+        StereoImageP CreateStereo(SelectionInfo a, SelectionInfo b, StereoTarget target);
     };
 }
 
