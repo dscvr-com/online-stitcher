@@ -35,6 +35,8 @@ namespace optonaut {
 
 		void Push(ImageP next) {
 
+            cout << "Stream aligner receiving: " << next->id << endl;
+
 			visual.FindKeyPoints(next);
 
 			if(previous.size() == 0) {
@@ -60,16 +62,12 @@ namespace optonaut {
 		        		From3DoubleTo4Double(hom->rotations[0], rotation);
 		        		rotation = rotation.inv();
 
-	        			ExtractRotationVector(rotation, visualRVec);
-						//cout << next->id << " <-> " << previous[i]->id<< " R: " << visualRVec.t() << " T: " << hom->translations[0].t() << endl;
+                        Mat sensorDiff = rPrevious[i].t() * next->extrinsics;
 
-		        		//Filter out stupid homomomomographies! 
-		        		if(visualRVec.at<double>(2, 0) > 0.0 && //Don't allow "backward" rotation
-		        			abs(visualRVec.at<double>(0, 0)) < 0.02 && //Don't allow rotation around other axis
-		        			abs(visualRVec.at<double>(2, 0)) < 0.02) { 
+                        if(GetAngleOfRotation(visualDiff) < GetAngleOfRotation(sensorDiff) * 1.5) {
 		        			if(visualAnchor == -1 || 
-		        				GetAngleOfRotation(rPrevious[0].inv() * rPrevious[visualAnchor] * visualDiff) > 
-		        				GetAngleOfRotation(rPrevious[0].inv() * rPrevious[i] * rotation)) {
+		        				GetAngleOfRotation(rPrevious[0].t() * rPrevious[visualAnchor] * visualDiff) > 
+		        				GetAngleOfRotation(rPrevious[0].t() * rPrevious[i] * rotation)) {
 		        				visualAnchor = (int)i;
 		        				visualDiff = rotation;
 		        			}

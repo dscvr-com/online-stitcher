@@ -37,8 +37,10 @@ public:
 
 	void FindKeyPoints(ImageP img) {
 		img->features.clear();
+        Mat tmp;
+        resize(img->img, tmp, Size(img->img.cols * 0.5, img->img.rows * 0.5));
 
-		detector->detectAndCompute(img->img, noArray(), img->features, img->descriptors);
+		detector->detectAndCompute(tmp, noArray(), img->features, img->descriptors);
 	}
 
 	MatchInfo *FindHomography(ImageP a, ImageP b) {
@@ -49,6 +51,8 @@ public:
 			FindKeyPoints(b);
 
 		MatchInfo* info = new MatchInfo();
+
+        cout << "Visual Aligner receiving " << a->id << " and " << b->id << endl;
 
 		BFMatcher  matcher;
 		vector<vector<DMatch>> matches;
@@ -103,7 +107,7 @@ public:
  		}
 	
 		//debug
- 		/*
+ 		
 		Mat img_matches;
   		drawMatches( a->img, a->features, b->img, b->features,
                goodMatches, img_matches, Scalar::all(-1), Scalar::all(-1),
@@ -129,7 +133,7 @@ public:
 			cout << "Debug: Homography not found." << endl;
 		}
 		imwrite( "dbg/Homogpraphy" + ToString(a->id) + "_" + ToString(b->id) + ".jpg", img_matches );
-		*/
+		
 		//debug end
 		
 		return info;
