@@ -54,7 +54,7 @@ private:
 	const double hOverlap = 0.8;
 	const double vOverlap = 0.1;
     const double hBufferRatio = 0.03;
-    const double vBufferRatio = 0.03;
+    const double vBufferRatio = 0.1;
 
 	//Tolerance, measured on sphere, for hits. 
     //We sould calc this from buffer, overlap, fov
