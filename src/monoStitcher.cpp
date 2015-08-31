@@ -23,6 +23,41 @@ using namespace cv;
 using namespace cv::detail;
 
 namespace optonaut {
+
+Rect CornersToRoi(const vector<Point2f> &corners) {
+    float x = min2(corners[0].x, corners[3].x);
+    float y = min2(corners[2].y, corners[3].y);
+    float width = max2(corners[1].x, corners[2].x) - x;
+    float height = max2(corners[0].y, corners[1].y) - y;
+    Rect roi(x, y, width, height); 
+
+    return roi;
+}
+
+void GetCorners(vector<Point2f> &corners, const StereoTarget &target, const Mat &rotN4, const Mat &intrinsics, int width, int height) {
+    
+    double maxHFov = GetHorizontalFov(intrinsics);
+    double maxVFov = GetVerticalFov(intrinsics); 
+	Mat I = Mat::eye(4, 4, CV_64F);
+
+    for(int i = 0; i < 4; i++) { 
+       
+        //Todo: Don't we need some offset here?  
+        
+        Mat rot = target.center.inv() * target.corners[i] * rotN4; 
+        
+	    corners[i].x = -tan(GetDistanceByDimension(I, rot, 0)) / tan(maxHFov) + 0.5;
+	    corners[i].y = -tan(GetDistanceByDimension(I, rot, 1)) / tan(maxVFov) + 0.5;
+       
+        //cout << "Corners A " << i << corners[i] << endl;
+        corners[i].x *= width;
+        corners[i].y *= height;
+        //cout << "Corners B " << i << corners[i] << endl;
+        //cout << "Corner " << i << corners[i] << endl;
+        //cout << "MatDiff: " << rot << endl;
+    }
+}
+
 StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target) {
 	Mat k;
     
@@ -72,79 +107,53 @@ StereoImageP MonoStitcher::CreateStereo(ImageP a, ImageP b, StereoTarget target)
 	Mat resA(a->img.rows, a->img.cols, CV_32F);
 	Mat resB(b->img.rows, b->img.cols, CV_32F);
 
-    Mat ai4;
-    From3DoubleTo4Double(aIntrinsics, ai4);
-
 	Mat I = Mat::eye(4, 4, CV_64F);
-	vector<Point2f> corners(4);
-        
-    double maxHFov = GetHorizontalFov(aIntrinsics);
-    double maxVFov = GetVerticalFov(aIntrinsics); 
-    
-    for(int i = 0; i < 4; i++) { 
-        
-        //Mat rot = target.center.inv() * target.corners[i] * a->offset; 
-        Mat rot = target.center.inv() * target.corners[i]; 
-        Mat rot4;
-        From3DoubleTo4Double(rot, rot4);
-        
-	    corners[i].x = -tan(GetDistanceByDimension(I, rot4, 0)) / tan(maxHFov) + 0.5;
-	    corners[i].y = -tan(GetDistanceByDimension(I, rot4, 1)) / tan(maxVFov) + 0.5;
-        //cout << "Corners A " << i << corners[i] << endl;
-        corners[i].x *= a->img.cols;
-        corners[i].y *= a->img.rows;
-        //cout << "Corners B " << i << corners[i] << endl;
-        //cout << "Corner " << i << corners[i] << endl;
-        //cout << "MatDiff: " << rot << endl;
-    }
-	//transB.at<float>(0, 2) = -tan(GetDistanceByDimension(I, rot, 0)) * a->img.cols;
-	//transB.at<float>(1, 2) = -tan(GetDistanceByDimension(I, rot, 1)) * a->img.rows;
+	vector<Point2f> cornersA(4);
+	vector<Point2f> cornersB(4);
+       
+    GetCorners(cornersA, target, rotN4.inv(), aIntrinsics, a->img.cols, a->img.rows);
+    GetCorners(cornersB, target, rotN4, bIntrinsics, b->img.cols, a->img.rows);
 
 	warpPerspective(a->img, resA, transA, resA.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
 	warpPerspective(b->img, resB, transB, resB.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
-   /* 
-    for(size_t i = 0; i < corners.size(); i++) {
-        line(resA, corners[i], corners[(i + 1) % corners.size()], Scalar(0, 0, 255), 3);
-        line(resB, corners[i], corners[(i + 1) % corners.size()], Scalar(0, 0, 255), 3);
+    
+    /*for(size_t i = 0; i < cornersA.size(); i++) {
+        line(resA, cornersA[i], cornersA[(i + 1) % cornersA.size()], Scalar(0, 0, 255), 3);
+        line(resB, cornersB[i], cornersB[(i + 1) % cornersB.size()], Scalar(0, 0, 255), 3);
     }
 
 	imwrite("dbg/warped_" + ToString(a->id) + "A.jpg", resA);
 	imwrite("dbg/warped_" + ToString(a->id) + "B.jpg", resB);
-    */
-
+*/
 	Mat rvec(4, 1, CV_64F);
 	ExtractRotationVector(rot, rvec);
 
-    float x = min2(corners[0].x, corners[3].x);
-    float y = min2(corners[2].y, corners[3].y);
-    float width = max2(corners[1].x, corners[2].x) - x;
-    float height = max2(corners[0].y, corners[1].y) - y;
-    Rect roi(x, y, width, height); 
-
-    result->A->img = resA(roi);
-    result->B->img = resB(roi);
+    result->A->img = resA(CornersToRoi(cornersA));
+    result->B->img = resB(CornersToRoi(cornersB));
 
 	//cout << "Diff for " << a->id << " " << rvec.t() << endl;
 
 	Mat newKA(3, 3, CV_64F);
  	newKA.at<double>(0, 0) = aIntrinsics.at<double>(0, 0);
  	newKA.at<double>(1, 1) = aIntrinsics.at<double>(1, 1);
- 	newKA.at<double>(0, 2) = width / 2.0f;
- 	newKA.at<double>(1, 2) = height / 2.0f;
+ 	newKA.at<double>(0, 2) = result->A->img.cols / 2.0f;
+ 	newKA.at<double>(1, 2) = result->B->img.rows / 2.0f;
 
 	result->A->intrinsics = newKA;
-	//result->A->extrinsics = target.center;
-	result->A->extrinsics = a->extrinsics * rotN4;
+	result->A->extrinsics = target.center;
+	//result->A->extrinsics = a->extrinsics * a->offset;
 	result->A->id = a->id;
+
+    //Todo: Focal len not correct. 
 
 	Mat newKB = Mat::eye(3, 3, CV_64F);
  	newKB.at<double>(0, 0) = bIntrinsics.at<double>(0, 0);
  	newKB.at<double>(1, 1) = bIntrinsics.at<double>(1, 1);
- 	newKB.at<double>(0, 2) = width / 2.0f;
- 	newKB.at<double>(1, 2) = height / 2.0f;
+ 	newKB.at<double>(0, 2) = result->B->img.cols / 2.0f;
+ 	newKB.at<double>(1, 2) = result->B->img.rows / 2.0f;
 
 	result->B->intrinsics = newKB;
-	result->B->extrinsics = b->extrinsics * rotN4.inv();
+	result->B->extrinsics = target.center;
 	result->B->id = a->id + 100000;
 
 	result->extrinsics = rotN4.inv() * b->extrinsics;

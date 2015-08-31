@@ -54,11 +54,11 @@ private:
 	const double hOverlap = 0.8;
 	const double vOverlap = 0.1;
     const double hBufferRatio = 0.03;
-    const double vBufferRatio = 0.1;
+    const double vBufferRatio = 0.15;
 
 	//Tolerance, measured on sphere, for hits. 
     //We sould calc this from buffer, overlap, fov
-	const double tolerance = M_PI / 32;
+	const double tolerance = M_PI / 50;
 
     void GeoToRot(double hAngle, double vAngle, Mat &res) {
         Mat hRot;
