@@ -74,7 +74,7 @@ public:
 
     static const int ModeAll = 0;
     static const int ModeCenter = 1;
-    static const int ModeTruncated = 1;
+    static const int ModeTruncated = 2;
     
 	ImageSelector(const Mat &intrinsics, const int mode = ModeAll) {
 
