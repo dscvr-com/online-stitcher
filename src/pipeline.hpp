@@ -129,20 +129,20 @@ namespace optonaut {
         }
 
         void Dispose() {
-            aligner->Dispose();
+            //aligner->Dispose();
         }
         
         //In: Image with sensor sampled parameters attached.
         void Push(ImageP image) {
             
             image->extrinsics = base * zero * image->extrinsics.inv() * baseInv;
-            if(aligner->NeedsImageData() && !image->IsLoaded()) {
-                //If the aligner needs image data, pre-load the image. 
-                image->LoadFromDataRef();
-            }
-            
-            aligner->Push(image);
-            image->extrinsics = aligner->GetCurrentRotation().clone();
+            //if(aligner->NeedsImageData() && !image->IsLoaded()) {
+            //    //If the aligner needs image data, pre-load the image. 
+            //    image->LoadFromDataRef();
+            //}
+            //
+            //aligner->Push(image);
+            //image->extrinsics = aligner->GetCurrentRotation().clone();
 
             //Todo - lock to ring. 
             SelectionInfo current = selector.FindClosestSelectionPoint(image);
