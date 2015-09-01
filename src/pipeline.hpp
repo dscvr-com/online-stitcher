@@ -258,7 +258,7 @@ namespace optonaut {
         }
 
         StitchingResultP FinishAligned() {
-            return Finish(aligned, true);
+            return Finish(aligned, false);
         }
 
         bool HasResults() {

@@ -102,16 +102,16 @@ namespace optonaut {
         		//Todo: Might replace this by a kalman-filtering model, if
         		//we understand the error modelling better. 
 
-				Mat offset(4, 4, CV_64F);
-	        	CreateRotationY(0.005, offset);
+				//Mat offset(4, 4, CV_64F);
+	        	//CreateRotationY(0.005, offset);
 	        	//CreateRotationY(0.000, offset);
 
         		if(visualAnchor == -1 || true) {
-	        		rPrevious.push_back(GetCurrentRotation() * sensorDiff * offset);
+	        		rPrevious.push_back(GetCurrentRotation() * sensorDiff);
 	        		//cout << "Sensor" << endl;
 	        	} else if(GetAngleOfRotation(sensorDiff) > GetAngleOfRotation(visualDiff) * 2) {
 	        		//If your sensor moved a lot more, discard!
-	        		rPrevious.push_back(rPrevious[visualAnchor] * visualDiff * offset);
+	        		rPrevious.push_back(rPrevious[visualAnchor] * visualDiff);
 	        		//cout << "Visual" << endl;
 	        	} else {
 
@@ -130,7 +130,7 @@ namespace optonaut {
 	        		CreateRotationY(sensorRVec.at<double>(1, 0), my);
 	        		CreateRotationZ(visualRVec.at<double>(2, 0), mz);
 
-	        		rPrevious.push_back(rPrevious[visualAnchor] * (mx * my * mz) * offset);
+	        		rPrevious.push_back(rPrevious[visualAnchor] * (mx * my * mz));
 	        		
 	        	}
 			}
