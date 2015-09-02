@@ -49,17 +49,18 @@ namespace optonaut {
         
     }
 
-   string Image::GetFilePath(int id) {
+   string Image::GetFilePath(size_t id) {
+       
         return Pipeline::tempDirectory + ToString(id) + ".bmp";
     }
         
 
-   void Image::LoadFromDisk(int id, cv::Mat &img, int loadFlags) {
+   void Image::LoadFromDisk(size_t id, cv::Mat &img, int loadFlags) {
         img = imread(GetFilePath(id), loadFlags);
         assert(img.cols != 0 && img.rows != 0);
    }
         
-   void Image::SaveToDisk(int id, cv::Mat &img) {
+   void Image::SaveToDisk(size_t id, cv::Mat &img) {
         imwrite(GetFilePath(id), img); 
    }
     

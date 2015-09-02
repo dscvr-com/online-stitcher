@@ -11,7 +11,13 @@ namespace optonaut {
 
     int ParseInt(const std::string &data);
 	int ParseInt(const char* data);
-	std::string ToString(int i);
+    
+    template <typename T>
+    std::string ToString(T i) {
+        std::ostringstream text;
+        text << i;
+        return text.str();
+    }
 
 	void ScaleIntrinsicsToImage(cv::Mat intrinsics, cv::Mat image, cv::Mat &scaled, double fupscaling = 1);
 

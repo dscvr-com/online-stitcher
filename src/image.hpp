@@ -59,11 +59,11 @@ namespace optonaut {
             img.release();
         }
          
-        static std::string GetFilePath(int id);
+        static std::string GetFilePath(size_t id);
 
-        static void LoadFromDisk(int id, cv::Mat &img, int loadFlags = CV_LOAD_IMAGE_COLOR);
+        static void LoadFromDisk(size_t id, cv::Mat &img, int loadFlags = CV_LOAD_IMAGE_COLOR);
         
-        static void SaveToDisk(int id, cv::Mat &img);
+        static void SaveToDisk(size_t id, cv::Mat &img);
 	};
     
     typedef std::shared_ptr<Image> ImageP;

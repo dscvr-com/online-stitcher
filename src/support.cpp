@@ -24,12 +24,6 @@ namespace optonaut {
 		return val;
 	}
 
-	string ToString(int i) {
-		ostringstream text;
-		text << i;
-		return text.str();
-	}
-
 	void ScaleIntrinsicsToImage(Mat intrinsics, Mat image, Mat &scaled, double fupscaling) {
 		assert(MatIs(intrinsics, 3, 3, CV_64F));
 
