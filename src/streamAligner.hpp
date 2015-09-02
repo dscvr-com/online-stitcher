@@ -109,30 +109,11 @@ namespace optonaut {
         		if(visualAnchor == -1 || true) {
 	        		rPrevious.push_back(GetCurrentRotation() * sensorDiff);
 	        		//cout << "Sensor" << endl;
-	        	} else if(GetAngleOfRotation(sensorDiff) > GetAngleOfRotation(visualDiff) * 2) {
+	        	} else {
 	        		//If your sensor moved a lot more, discard!
 	        		rPrevious.push_back(rPrevious[visualAnchor] * visualDiff);
 	        		//cout << "Visual" << endl;
-	        	} else {
-
-	        		//rPrevious.push_back(rPrevious[visualAnchor] * visualDiff);
-	        		//cout << "Visual" << endl;
-
-	        		//Use sensor - it's our best bet since everything except y rotation is very well measured
-	        		//rPrevious = rPrevious * sensorDiff;
-	        		//cout << "Combined" << endl;
-
-	        		Mat mx(4, 4, CV_64F);
-	        		Mat my(4, 4, CV_64F);
-	        		Mat mz(4, 4, CV_64F);
-
-	        		CreateRotationX(sensorRVec.at<double>(0, 0), mx);
-	        		CreateRotationY(sensorRVec.at<double>(1, 0), my);
-	        		CreateRotationZ(visualRVec.at<double>(2, 0), mz);
-
-	        		rPrevious.push_back(rPrevious[visualAnchor] * (mx * my * mz));
-	        		
-	        	}
+	        	} 
 			}
 
 			previous.push_back(next);
