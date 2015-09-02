@@ -17,9 +17,9 @@ using namespace std;
 namespace optonaut {
 
 struct SelectionPoint {
-	int id;
-	int ringId;
-	int localId;
+	uint32_t globalId;
+	uint32_t ringId;
+	uint32_t localId;
 	bool enabled;
 	Mat extrinsics;
 };
@@ -36,8 +36,8 @@ struct SelectionInfo {
 };
 
 struct SelectionEdge {
-    int from;
-    int to;
+    uint32_t from;
+    uint32_t to;
 
     Mat roiCorners[4] ;
     Mat roiCenter;
@@ -90,31 +90,31 @@ public:
         cout << "V-FOV: " << (maxVFov * 180 / M_PI) << endl;
         cout << "Ratio: " << (sin(maxVFov) / sin(maxHFov)) << endl;
 
-		int vCount = ceil(M_PI / vFov);
-		int hCenterCount = ceil(2 * M_PI / hFov);
+		uint32_t vCount = ceil(M_PI / vFov);
+		uint32_t hCenterCount = ceil(2 * M_PI / hFov);
 	
         double vStart = maxVFov * vOverlap;
         
 		vFov = (M_PI - 4 * vStart) / vCount;
 
-		int id = 0;
+		uint32_t id = 0;
 
         if(vCount % 2 == 0 && mode == ModeCenter) {
             cout << "Center mode not possible with even number of rings." << endl;
             assert(false);
         }
 
-		for(int i = 0; i < vCount; i++) {
+		for(uint32_t i = 0; i < vCount; i++) {
 
             //Vertical center, bottom and top of ring
 			double vCenter = i * vFov + vFov / 2.0 - M_PI / 2.0 + vStart;
             double vTop = vCenter - vFov / 2.0;
             double vBot = vCenter + vFov / 2.0;
 
-			int hCount = hCenterCount * cos(vCenter);
+			uint32_t hCount = hCenterCount * cos(vCenter);
 			hFov = M_PI * 2 / hCount;
 
-			int firstId = -1;
+			uint32_t firstId = 0;
             double hLeft = 0;
             double hCenter = 0;
             double hRight = 0;
@@ -126,14 +126,14 @@ public:
                 || (mode == ModeCenter && i == vCount / 2)
                 || (mode == ModeTruncated && i != vCount - 1 && i != 0)) {
                     
-                for(int j = 0; j < hCount; j++) {
+                for(size_t j = 0; j < hCount; j++) {
                         
                     hLeft = j * hFov;
                     hCenter = hLeft + hFov / 2;
                     hRight = hLeft + hFov;
 
                     SelectionPoint p;
-                    p.id = id;
+                    p.globalId = id;
                     GeoToRot(hLeft, vCenter, p.extrinsics);
                     p.enabled = true;
                     p.ringId = i;
@@ -205,7 +205,7 @@ public:
 
 				images.push_back(CreateDebugImage(t.extrinsics, 1.0, Scalar(0, 255, 0)));
 
-                for(auto edge : adj[t.id]) {
+                for(auto edge : adj[t.globalId]) {
                     for(auto corner : edge.roiCorners) {
 				        images.push_back(CreateDebugImage(corner, 0.1, Scalar(0, 0, 255)));
                     }
@@ -243,17 +243,17 @@ public:
 	}
 
 	void DisableAdjacency(const SelectionPoint& left, const SelectionPoint& right) {
-        for(auto it = adj[left.id].begin(); it != adj[left.id].end(); it++) {
-            if(it->to == right.id) {
-                adj[left.id].erase(it);
+        for(auto it = adj[left.globalId].begin(); it != adj[left.globalId].end(); it++) {
+            if(it->to == right.globalId) {
+                adj[left.globalId].erase(it);
                 break;
             }
         }
 	}
 
 	bool AreAdjacent(const SelectionPoint& left, const SelectionPoint& right, SelectionEdge &edge) const {
-        for(auto it = adj[left.id].begin(); it != adj[left.id].end(); it++) {
-            if(it->to == right.id) {
+        for(auto it = adj[left.globalId].begin(); it != adj[left.globalId].end(); it++) {
+            if(it->to == right.globalId) {
                 edge = *it;
                 return true;
             }

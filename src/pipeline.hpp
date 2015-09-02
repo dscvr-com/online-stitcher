@@ -106,7 +106,7 @@ namespace optonaut {
             for(auto ring : selector.GetRings())
                 for(auto point : ring) {
                     SelectionPoint n;
-                    n.id = point.id;
+                    n.globalId = point.globalId;
                     n.ringId = point.ringId;
                     n.localId = point.localId;
                     n.enabled = point.enabled;
@@ -165,7 +165,7 @@ namespace optonaut {
 
                 //cout << "Image valid: " << current.closestPoint.id << endl;
 
-                if(currentBest.isValid && currentBest.closestPoint.id == current.closestPoint.id) {
+                if(currentBest.isValid && currentBest.closestPoint.globalId == current.closestPoint.globalId) {
                     if(currentBest.dist > current.dist) {
                         //Better match for current.
                         currentBest = current;
