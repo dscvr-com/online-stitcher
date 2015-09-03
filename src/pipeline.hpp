@@ -44,7 +44,8 @@ namespace optonaut {
         RStitcher rightStitcher;
 
         bool previewImageAvailable;
-
+        bool isIdle;
+        
         void PushLeft(ImageP left) {
             lefts.push_back(left);
         }
@@ -73,7 +74,8 @@ namespace optonaut {
             base(base),
             selector(intrinsics, selectorConfiguration),
             resizer(selectorConfiguration),
-            previewImageAvailable(false)
+            previewImageAvailable(false),
+            isIdle(false)
         {
             baseInv = base.inv();
             zero = zeroWithoutBase;
@@ -183,7 +185,7 @@ namespace optonaut {
                         SelectionEdge edge; 
                         if(selector.AreAdjacent(
                                     previous.closestPoint, 
-                                    currentBest.closestPoint, edge)) {
+                                    currentBest.closestPoint, edge) && !isIdle) {
 
                             assert(previous.image->IsLoaded());
                             assert(currentBest.image->IsLoaded());
@@ -253,6 +255,14 @@ namespace optonaut {
 
         bool HasResults() {
             return lefts.size() > 0 && rights.size() > 0;
+        }
+        
+        bool IsIdle() {
+            return isIdle;
+        }
+        
+        void SetIdle(bool isIdle) {
+            this->isIdle = isIdle;
         }
     };    
 }
