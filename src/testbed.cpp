@@ -86,12 +86,12 @@ int main(int argc, char* argv[]) {
             right->image.release();  
             right->mask.release();  
         }
-        if(Pipeline::debug) {
-            auto aligned = pipe->FinishAligned();
-            imwrite("dbg/aligned.jpg", aligned->image);
-        }
     } else {
         cout << "No results." << endl;
+    }
+    if(Pipeline::debug) {
+        auto aligned = pipe->FinishAligned();
+        imwrite("dbg/aligned.jpg", aligned->image);
     }
 
     pipe->Dispose();

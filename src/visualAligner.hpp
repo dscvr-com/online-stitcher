@@ -37,8 +37,8 @@ public:
 
 	void FindKeyPoints(ImageP img) {
 		img->features.clear();
-        Mat tmp;
-        resize(img->img, tmp, Size(img->img.cols * 0.5, img->img.rows * 0.5));
+        Mat tmp = img->img;
+        //resize(img->img, tmp, Size(img->img.cols * 0.5, img->img.rows * 0.5));
 
 		detector->detectAndCompute(tmp, noArray(), img->features, img->descriptors);
 	}
@@ -60,6 +60,8 @@ public:
 
 		//TODO - find "good" matches based on Dist, angle and more.
         //Also find 'certaincy' of matches, or quality of homography. 
+        //
+        //Simply use "expeced" by sensor to exclude groups. 
 		vector<DMatch> goodMatches;
 		for(size_t i = 0; i < matches.size(); i++) {
 			if(matches[i].size() > 0) {
@@ -80,7 +82,25 @@ public:
 			bFeatures.push_back(b->features[goodMatches[i].trainIdx].pt);
 		}
 
-		info->homography = findHomography(aFeatures, bFeatures, CV_RANSAC);
+        Mat mask;
+
+		info->homography = findHomography(aFeatures, bFeatures, CV_RANSAC, 3, mask);
+
+        int inlinerCount = 0;
+
+        for(int i = 0; i < mask.rows; i++) {
+            if(mask.at<uchar>(i) == 1)
+                inlinerCount++;
+        }
+
+        double inlinerRatio = inlinerCount;
+        inlinerRatio /= goodMatches.size();
+
+        cout << "inliner ratio: " << inlinerRatio << endl;
+        cout << "matchCount: " << goodMatches.size() << endl;
+
+        if(inlinerRatio < 0.40 || inlinerCount < 80)
+            return info;
 
 		info->rotations = vector<Mat>(4);
 		info->translations = vector<Mat>(4);
@@ -133,7 +153,7 @@ public:
 		} else {
 			cout << "Debug: Homography not found." << endl;
 		}
-		imwrite( "dbg/Homogpraphy" + ToString(a->id) + "_" + ToString(b->id) + ".jpg", img_matches );
+		imwrite( "dbg/Homogpraphy" + ToString(a->id) + "_" + ToString(b->id) + "(C " + ToString(goodMatches.size()) + ", R " +ToString(inlinerRatio * 100) +  " ).jpg", img_matches );
 		
 		//debug end
 		

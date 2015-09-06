@@ -62,16 +62,13 @@ namespace optonaut {
 		        		From3DoubleTo4Double(hom->rotations[0], rotation);
 		        		rotation = rotation.inv();
 
-                        Mat sensorDiff = rPrevious[i].t() * next->extrinsics;
 
-                        if(GetAngleOfRotation(visualDiff) < GetAngleOfRotation(sensorDiff)) {
-		        			if(visualAnchor == -1 || 
-		        				GetAngleOfRotation(rPrevious[0].t() * rPrevious[visualAnchor] * visualDiff) > 
-		        				GetAngleOfRotation(rPrevious[0].t() * rPrevious[i] * rotation)) {
-		        				visualAnchor = (int)i;
-		        				visualDiff = rotation;
-		        			}
-		        		}
+                        if(visualAnchor == -1 || 
+                            GetAngleOfRotation(rPrevious[0].t() * rPrevious[visualAnchor] * visualDiff) > 
+                            GetAngleOfRotation(rPrevious[0].t() * rPrevious[i] * rotation)) {
+                            visualAnchor = (int)i;
+                            visualDiff = rotation;
+                        }
 		        	}
 		        	delete hom;
 				}
@@ -86,13 +83,10 @@ namespace optonaut {
         		Mat sensorDiff;
 
         		if(visualAnchor != -1) {
-	        		ExtractRotationVector(visualDiff, visualRVec);
 	        		//cout << "Visual diff " << visualRVec.t() << endl;
 	        		sensorDiff = rSensorPrevious[visualAnchor].t() * (next->extrinsics);
-	        		ExtractRotationVector(sensorDiff, sensorRVec);
 				} else {
 	        		sensorDiff = rSensorPrevious.back().t() * (next->extrinsics);
-	        		ExtractRotationVector(sensorDiff, sensorRVec);
 				}
 
         		//cout << "Sensor diff " << sensorRVec.t() << endl;
@@ -106,13 +100,20 @@ namespace optonaut {
 	        	//CreateRotationY(0.005, offset);
 	        	//CreateRotationY(0.000, offset);
 
-        		if(visualAnchor == -1 || true) {
+        		if(visualAnchor == -1) {
 	        		rPrevious.push_back(GetCurrentRotation() * sensorDiff);
 	        		//cout << "Sensor" << endl;
 	        	} else {
-	        		//If your sensor moved a lot more, discard!
-	        		rPrevious.push_back(rPrevious[visualAnchor] * visualDiff);
-	        		//cout << "Visual" << endl;
+                    if(GetAngleOfRotation(visualDiff * sensorDiff.inv()) > 0.2) {
+	        		    rPrevious.push_back(rPrevious[visualAnchor] * sensorDiff);
+                    }
+                    else 
+                    {
+	        		    //If your sensor moved a lot more, discard!
+	        		    rPrevious.push_back(rPrevious[visualAnchor] * visualDiff);
+	        		    //cout << "Visual" << endl;
+                    }
+
 	        	} 
 			}
 
