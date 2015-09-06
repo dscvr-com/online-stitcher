@@ -11,6 +11,10 @@ namespace quat {
     bool IsQuat(const Mat &q) {
         return MatIs(q, 4, 1, CV_64F);
     }
+    
+    void MakeQuat(Mat &q) {
+        q = Mat(4, 1, CV_64F);
+    }
 
     //Mat To Quaterion Conversion from http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/
     void FromMat(const Mat &a, Mat &q) {

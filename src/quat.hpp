@@ -12,6 +12,7 @@ namespace quat {
 
     typedef double QT; 
 
+    void MakeQuat(cv::Mat &q);
 	bool IsQuat(const cv::Mat &q);
 	void ToMat(const cv::Mat &q, cv::Mat &a);
 	void FromMat(const cv::Mat &a, cv::Mat &q);

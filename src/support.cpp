@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <string>
 #include "support.hpp"
+#include "quat.hpp"
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
 
@@ -112,19 +113,40 @@ namespace optonaut {
 
 		t = rot.clone();
 	}
+    
+    void Slerp(const Mat &a, const Mat &b, const double t, Mat &out) {
+        Mat q(4, 1, CV_64F);
+        Mat r(4, 1, CV_64F);
+        quat::FromMat(a.inv() * b, q);
+        quat::Mult(q, t, r);
+        quat::ToMat(r, out);
+    }
 
 	double GetAngleOfRotation(const Mat &r) {
 		assert(MatIs(r, 3, 3, CV_64F));
 		double t = r.at<double>(0, 0) + r.at<double>(1, 1) + r.at<double>(2, 2);
 		return acos((t - 1) / 2);
 	}
+    
+    double GetAngleOfRotation(const Mat &a, const Mat &b) {
+        return GetAngleOfRotation(a.inv() * b);
+    }
+    
+    void GetDistanceVector(const Mat &a, const Mat &b, Mat &vec) {
+        assert(MatIs(vec, 3, 1, CV_64F));
+        
+        for(int i = 0; i < 3; i++)
+            vec.at<double>(i) = GetDistanceByDimension(a, b, i);
+    }
 
 	double GetDistanceByDimension(const Mat &a, const Mat &b, int dim) {
 		assert(MatIs(a, 4, 4, CV_64F));
 		assert(MatIs(b, 4, 4, CV_64F));
+        assert(dim <= 3 && dim > 0);
 		double dist = 0;
 
-	    double vdata[] = {0, 0, 1, 0};
+	    double vdata[] = {0, 0, 0, 0};
+        vdata[dim] = 1;
 	    Mat vec(4, 1, CV_64F, vdata);
 
 	    Mat aproj = a * vec;

@@ -7,7 +7,7 @@
 //
 
 #include "image.hpp"
-#include "imageSelector.hpp"
+#include "recorderController.hpp"
 
 #ifndef OPTONAUT_MONO_STITCH_HEADER
 #define OPTONAUT_MONO_STITCH_HEADER

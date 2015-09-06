@@ -27,10 +27,14 @@ namespace optonaut {
 
 	void ExtractRotationVector(const cv::Mat &r, cv::Mat &vec);
 	double GetAngleOfRotation(const cv::Mat &r);
+    double GetAngleOfRotation(const cv::Mat &a, const cv::Mat &b);
 	void CreateRotationZ(double radians, cv::Mat &out);
 	void CreateRotationX(double radians, cv::Mat &out);
 	void CreateRotationY(double radians, cv::Mat &out);
-
+    
+    void Slerp(const cv::Mat &a, const cv::Mat &b, const double t, cv::Mat &out);
+    
+    void GetDistanceVector(const cv::Mat &a, const cv::Mat &b, cv::Mat &vec);
 	double GetDistanceByDimension(const cv::Mat &a, const cv::Mat &b, int dim);
 	double GetDistanceX(const cv::Mat &a, const cv::Mat &b);
 	double GetDistanceY(const cv::Mat &a, const cv::Mat &b);

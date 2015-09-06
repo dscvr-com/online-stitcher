@@ -16,6 +16,7 @@
 #include "quat.hpp"
 #include "support.hpp"
 #include "simpleSphereStitcher.hpp"
+#include "recorderController.hpp"
 #include "monoStitcher.hpp"
 
 using namespace std;
