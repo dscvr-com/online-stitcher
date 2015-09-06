@@ -90,7 +90,7 @@ namespace optonaut {
             isInitialized = true;
         }
         
-        SelectionInfo Push(const ImageP &image) {
+        SelectionInfo Push(const ImageP image) {
             assert(isInitialized);
 
             double viewDist = GetAngleOfRotation(ballTarget.extrinsics, image->extrinsics);
@@ -130,11 +130,11 @@ namespace optonaut {
             return info;
         }
         
-        bool IsFinished() {
+        bool IsFinished() const {
             return isFinished;
         }
         
-        const Mat &GetBallPosition() {
+        const Mat &GetBallPosition() const {
             return ballPosition;
         }
         

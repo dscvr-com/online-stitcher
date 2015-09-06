@@ -22,8 +22,8 @@ namespace optonaut {
         bool enabled;
         Mat extrinsics;
         
-        SelectionPoint() : extrinsics(Mat::eye(4, 4, CV_64F)), globalId(0),
-            localId(-1), ringId(-1), enabled(false) {
+        SelectionPoint() : globalId(0),
+            localId(0), ringId(0), enabled(false) {
         }
     };
     
@@ -109,7 +109,7 @@ namespace optonaut {
             CreateRotationZ(M_PI / 2, zCorr);
             
             for(auto ring : targets) {
-                if(ringId != -1 && ringId != ring[0].ringId)
+                if(ring.size() == 0 || (ringId != -1 && ringId != ring[0].ringId))
                     continue;
                 
                 for(auto target : ring) {

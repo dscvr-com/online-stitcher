@@ -90,6 +90,15 @@ namespace optonaut {
             //    aligner = shared_ptr<Aligner>(new StreamAligner());
             //}
         }
+        
+        Mat ConvertFromStitcher(const Mat &in) const {
+            return (zero.inv() * baseInv * in * base).inv();
+        }
+        
+        Mat GetBallPosition() const {
+            cout << "Ball: " << controller.GetBallPosition() << endl;
+            return ConvertFromStitcher(controller.GetBallPosition());
+        }
 
         //Methods already coordinates in input base. 
         Mat GetOrigin() const {
@@ -97,7 +106,7 @@ namespace optonaut {
         }
 
         Mat GetCurrentRotation() const {
-            return (zero.inv() * baseInv * aligner->GetCurrentRotation() * base).inv();
+            return ConvertFromStitcher(aligner->GetCurrentRotation());
         }
 
         vector<SelectionPoint> GetSelectionPoints() const {
@@ -109,7 +118,7 @@ namespace optonaut {
                     n.ringId = point.ringId;
                     n.localId = point.localId;
                     n.enabled = point.enabled;
-                    n.extrinsics = (zero.inv() * baseInv * point.extrinsics * base).inv();
+                    n.extrinsics = ConvertFromStitcher(point.extrinsics);
                     
                     converted.push_back(n);
             }
@@ -126,11 +135,19 @@ namespace optonaut {
         }
         
         Mat GetPreviewRotation() {
-            return (zero.inv() * baseInv * GetPreviewImage()->extrinsics * base).inv();
+            return ConvertFromStitcher(GetPreviewImage()->extrinsics);
         }
 
         void Dispose() {
             aligner->Dispose();
+        }
+        
+        void CapturePreviewImage(const ImageP img) {
+            
+            previewImage = ImageP(new Image(*img));
+            previewImage->img = img->img.clone();
+            
+            previewImageAvailable = true;
         }
         
         void Stitch(const SelectionInfo &a, const SelectionInfo &b) {
@@ -150,15 +167,12 @@ namespace optonaut {
 
             assert(stereo->valid);
             
-            previewImage = ImageP(new Image(*stereo->A));
-            previewImage->img = stereo->A->img.clone();
-                
+            CapturePreviewImage(stereo->A);
+            
             stereo->A->SaveToDisk();
             stereo->B->SaveToDisk();
             PushLeft(stereo->A);
             PushRight(stereo->B);
-                
-            previewImageAvailable = true;
         }
         
         //In: Image with sensor sampled parameters attached.
@@ -170,13 +184,16 @@ namespace optonaut {
                 image->LoadFromDataRef();
             }
             
-            if(isIdle)
-                return;
-            
             aligner->Push(image);
             image->extrinsics = aligner->GetCurrentRotation().clone();
 
             previewImageAvailable = false;
+            
+            if(isIdle)
+                return;
+            
+            if(!controller.IsInitialized())
+                controller.Initialize(image->extrinsics);
       		
             SelectionInfo current = controller.Push(image);
             

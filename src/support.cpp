@@ -142,7 +142,7 @@ namespace optonaut {
 	double GetDistanceByDimension(const Mat &a, const Mat &b, int dim) {
 		assert(MatIs(a, 4, 4, CV_64F));
 		assert(MatIs(b, 4, 4, CV_64F));
-        assert(dim <= 3 && dim > 0);
+        assert(dim < 3 && dim >= 0);
 		double dist = 0;
 
 	    double vdata[] = {0, 0, 0, 0};
