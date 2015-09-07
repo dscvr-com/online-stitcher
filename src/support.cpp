@@ -115,11 +115,17 @@ namespace optonaut {
 	}
     
     void Slerp(const Mat &a, const Mat &b, const double t, Mat &out) {
+        //cout << a << endl;
+        //cout << b << endl;
+
         Mat q(4, 1, CV_64F);
         Mat r(4, 1, CV_64F);
+        Mat v(4, 4, CV_64F);
         quat::FromMat(a.inv() * b, q);
         quat::Mult(q, t, r);
-        quat::ToMat(r, out);
+        quat::ToMat(r, v);
+        out = a * v;
+        //cout << out << endl;
     }
 
 	double GetAngleOfRotation(const Mat &r) {
@@ -131,22 +137,14 @@ namespace optonaut {
     double GetAngleOfRotation(const Mat &a, const Mat &b) {
         return GetAngleOfRotation(a.inv() * b);
     }
-    
-    void GetDistanceVector(const Mat &a, const Mat &b, Mat &vec) {
-        assert(MatIs(vec, 3, 1, CV_64F));
-        
-        for(int i = 0; i < 3; i++)
-            vec.at<double>(i) = GetDistanceByDimension(a, b, i);
-    }
-
-	double GetDistanceByDimension(const Mat &a, const Mat &b, int dim) {
+   
+    double GetDistanceByDimension(const Mat &a, const Mat &b, int dim) {
 		assert(MatIs(a, 4, 4, CV_64F));
 		assert(MatIs(b, 4, 4, CV_64F));
         assert(dim < 3 && dim >= 0);
 		double dist = 0;
 
-	    double vdata[] = {0, 0, 0, 0};
-        vdata[dim] = 1;
+	    double vdata[] = {0, 0, 1, 0};
 	    Mat vec(4, 1, CV_64F, vdata);
 
 	    Mat aproj = a * vec;

@@ -30,7 +30,8 @@ private:
     void GeoToRot(double hAngle, double vAngle, Mat &res) {
         Mat hRot;
         Mat vRot;
-        Mat zCorr;
+        
+        cout << hAngle << ", " << vAngle << endl;
         
         CreateRotationY(hAngle, hRot);
         CreateRotationX(vAngle, vRot);

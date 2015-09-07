@@ -96,7 +96,6 @@ namespace optonaut {
         }
         
         Mat GetBallPosition() const {
-            cout << "Ball: " << controller.GetBallPosition() << endl;
             return ConvertFromStitcher(controller.GetBallPosition());
         }
 
@@ -156,23 +155,17 @@ namespace optonaut {
             SelectionEdge edge;
             assert(recorderGraph.HasEdge(previous.closestPoint, currentBest.closestPoint, edge));
             
-            StereoTarget target;
-            target.center = edge.roiCenter;
-            
-            for(int i = 0; i < 4; i++) {
-                target.corners[i] = edge.roiCorners[i];
-            }
-            
-            StereoImageP stereo = stereoConverter.CreateStereo(previous, currentBest, target);
+            StereoImage stereo;
+            stereoConverter.CreateStereo(previous, currentBest, edge, stereo);
 
-            assert(stereo->valid);
+            assert(stereo.valid);
             
-            CapturePreviewImage(stereo->A);
+            CapturePreviewImage(stereo.A);
             
-            stereo->A->SaveToDisk();
-            stereo->B->SaveToDisk();
-            PushLeft(stereo->A);
-            PushRight(stereo->B);
+            stereo.A->SaveToDisk();
+            stereo.B->SaveToDisk();
+            PushLeft(stereo.A);
+            PushRight(stereo.B);
         }
         
         //In: Image with sensor sampled parameters attached.
@@ -197,13 +190,19 @@ namespace optonaut {
       		
             SelectionInfo current = controller.Push(image);
             
+            if(!currentBest.isValid) {
+                //Initialization. 
+                currentBest = current;
+            }
+            
             if(current.isValid) {
                 if(!image->IsLoaded())
                     image->LoadFromDataRef();
                 
                 if(current.closestPoint.globalId != currentBest.closestPoint.globalId) {
                     //Ok, hit that. We can stitch.
-                    Stitch(previous, currentBest);
+                    if(previous.isValid)
+                        Stitch(previous, currentBest);
                     previous = currentBest;
                     
                     

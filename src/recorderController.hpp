@@ -47,7 +47,7 @@ namespace optonaut {
         const double tolerance = M_PI / 50;
         
         //Ball Speed per frame, in radians
-        const double ballSpeed = M_PI / 180;
+        const double ballSpeed = M_PI / 50;
         
         
         void MoveToNextRing() {
@@ -111,15 +111,21 @@ namespace optonaut {
             //Animate ball.
             
             double dist = GetAngleOfRotation(ballPosition, ballTarget.extrinsics);
+            cout << "Ball dist: " << dist << endl;
             double t = ballSpeed / dist;
+            if(t > 1)
+                t = 1;
+            cout << "t: " << t << endl;
             
             Mat newPos(4, 4, CV_64F);
             Slerp(ballPosition, ballTarget.extrinsics, t, newPos);
             
-            ballPosition = newPos;
+            //ballPosition = newPos;
+            //cout << ballPosition << endl;
+            ballPosition = ballTarget.extrinsics;
             
             error = GetAngleOfRotation(image->extrinsics, ballPosition);
-            GetDistanceVector(image->extrinsics, ballPosition, errorVec);
+            ExtractRotationVector(image->extrinsics.inv() * ballPosition, errorVec);
             
             SelectionInfo info;
             info.closestPoint = ballTarget;

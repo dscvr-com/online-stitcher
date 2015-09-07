@@ -35,7 +35,7 @@ Rect CornersToRoi(const vector<Point2f> &corners) {
     return roi;
 }
 
-void GetCorners(vector<Point2f> &corners, const StereoTarget &target, const Mat &intrinsics, int width, int height) {
+void GetCorners(vector<Point2f> &corners, const SelectionEdge &target, const Mat &intrinsics, int width, int height) {
     
     double maxHFov = GetHorizontalFov(intrinsics);
     double maxVFov = GetVerticalFov(intrinsics); 
@@ -46,28 +46,23 @@ void GetCorners(vector<Point2f> &corners, const StereoTarget &target, const Mat 
         //Todo: Don't we need some offset here?  
 
         
-        Mat rot = target.center.inv() * target.corners[i];
+        Mat rot = target.roiCenter.inv() * target.roiCorners[i];
+        
+        cout << "Rot " << i << " " << rot << endl;
         
 	    corners[i].x = -tan(GetDistanceByDimension(I, rot, 0)) / tan(maxHFov) + 0.5;
 	    corners[i].y = -tan(GetDistanceByDimension(I, rot, 1)) / tan(maxVFov) + 0.5;
        
-        //cout << "Corners A " << i << corners[i] << endl;
         corners[i].x *= width;
         corners[i].y *= height;
-        //cout << "Corners B " << i << corners[i] << endl;
-        //cout << "Corner " << i << corners[i] << endl;
+        cout << "Corner " << i << corners[i] << endl;
         //cout << "MatDiff: " << rot << endl;
     }
 }
 
-StereoImageP MonoStitcher::CreateStereo(SelectionInfo a, SelectionInfo b, StereoTarget target) {
-	Mat k;
-    
-    //Avoid unused param warning. 
-    assert(target.center.cols == 4);
-
-	StereoImageP result(new StereoImage());
-	result->valid = false;
+void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, const SelectionEdge &target, StereoImage &stereo) {
+    Mat k;
+    stereo.valid = false;
 
 	assert(a.image->img.cols == b.image->img.cols);
 	assert(a.image->img.rows == b.image->img.rows);
@@ -136,38 +131,35 @@ StereoImageP MonoStitcher::CreateStereo(SelectionInfo a, SelectionInfo b, Stereo
 	Mat rvec(4, 1, CV_64F);
 	ExtractRotationVector(rot, rvec);
 
-    result->A->img = resA(CornersToRoi(cornersA));
-    result->B->img = resB(CornersToRoi(cornersB));
+    stereo.A->img = resA(CornersToRoi(cornersA));
+    stereo.B->img = resB(CornersToRoi(cornersB));
 
 	//cout << "Diff for " << a->id << " " << rvec.t() << endl;
 
 	Mat newKA(3, 3, CV_64F);
  	newKA.at<double>(0, 0) = aIntrinsics.at<double>(0, 0);
  	newKA.at<double>(1, 1) = aIntrinsics.at<double>(1, 1);
- 	newKA.at<double>(0, 2) = result->A->img.cols / 2.0f;
- 	newKA.at<double>(1, 2) = result->B->img.rows / 2.0f;
+ 	newKA.at<double>(0, 2) = stereo.A->img.cols / 2.0f;
+ 	newKA.at<double>(1, 2) = stereo.B->img.rows / 2.0f;
 
-	result->A->intrinsics = newKA;
-	//result->A->extrinsics = target.center;
-	result->A->extrinsics = target.center;
-	result->A->id = a.image->id;
+	stereo.A->intrinsics = newKA;
+	stereo.A->extrinsics = target.roiCenter;
+	stereo.A->id = a.image->id;
 
     //Todo: Focal len not correct. 
 
 	Mat newKB = Mat::eye(3, 3, CV_64F);
  	newKB.at<double>(0, 0) = bIntrinsics.at<double>(0, 0);
  	newKB.at<double>(1, 1) = bIntrinsics.at<double>(1, 1);
- 	newKB.at<double>(0, 2) = result->B->img.cols / 2.0f;
- 	newKB.at<double>(1, 2) = result->B->img.rows / 2.0f;
+ 	newKB.at<double>(0, 2) = stereo.B->img.cols / 2.0f;
+ 	newKB.at<double>(1, 2) = stereo.B->img.rows / 2.0f;
 
-	result->B->intrinsics = newKB;
-	//result->B->extrinsics = target.center;
-	result->B->extrinsics = target.center;
-	result->B->id = a.image->id + 100000;
+	stereo.B->intrinsics = newKB;
+	stereo.B->extrinsics = target.roiCenter;
+	stereo.B->id = a.image->id + 100000;
 
-	result->extrinsics = rotN4.inv() * b.image->extrinsics;
+	stereo.extrinsics = rotN4.inv() * b.image->extrinsics;
 
-	result->valid = true;
-	return result;
+	stereo.valid = true;
 }
 }
