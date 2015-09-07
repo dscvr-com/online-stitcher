@@ -24,14 +24,11 @@ namespace optonaut {
         shared_ptr<Aligner> aligner;
         SelectionInfo previous;
         SelectionInfo currentBest;
-        RecorderGraphGenerator generator;
         
         ImageResizer resizer;
         ImageP previewImage;
         MonoStitcher stereoConverter;
-        RecorderGraph recorderGraph;
-        RecorderController controller;
-
+        
         vector<ImageP> lefts;
         vector<ImageP> rights; 
 
@@ -40,6 +37,11 @@ namespace optonaut {
 
         bool previewImageAvailable;
         bool isIdle;
+        
+        RecorderGraphGenerator generator;
+        RecorderGraph recorderGraph;
+        RecorderController controller;
+
         
         void PushLeft(ImageP left) {
             lefts.push_back(left);
@@ -67,10 +69,10 @@ namespace optonaut {
         
         Pipeline(Mat base, Mat zeroWithoutBase, Mat intrinsics, int graphConfiguration = RecorderGraph::ModeAll, bool isAsync = true) :
             base(base),
-            generator(),
             resizer(graphConfiguration),
             previewImageAvailable(false),
             isIdle(false),
+            generator(),
             recorderGraph(generator.Generate(intrinsics, graphConfiguration)),
             controller(recorderGraph)
         {
@@ -83,12 +85,12 @@ namespace optonaut {
             baseInv = base.inv();
             zero = zeroWithoutBase;
 
+            if(isAsync) {
+                aligner = shared_ptr<Aligner>(new AsyncAligner());
+            } else {
+                aligner = shared_ptr<Aligner>(new StreamAligner());
+            }
             aligner = shared_ptr<Aligner>(new TrivialAligner());
-            //if(isAsync) {
-            //    aligner = shared_ptr<Aligner>(new AsyncAligner());
-            //} else {
-            //    aligner = shared_ptr<Aligner>(new StreamAligner());
-            //}
         }
         
         Mat ConvertFromStitcher(const Mat &in) const {
@@ -153,10 +155,10 @@ namespace optonaut {
             assert(a.image->IsLoaded());
             assert(b.image->IsLoaded());
             SelectionEdge edge;
-            assert(recorderGraph.HasEdge(previous.closestPoint, currentBest.closestPoint, edge));
+            assert(recorderGraph.HasEdge(a.closestPoint, b.closestPoint, edge));
             
             StereoImage stereo;
-            stereoConverter.CreateStereo(previous, currentBest, edge, stereo);
+            stereoConverter.CreateStereo(a, b, edge, stereo);
 
             assert(stereo.valid);
             

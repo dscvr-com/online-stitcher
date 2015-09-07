@@ -32,11 +32,11 @@ namespace optonaut {
         int currentRing;
         
         bool isFinished;
+        bool isInitialized;
         
         Mat ballPosition;
         SelectionPoint ballTarget;
         SelectionPoint prevTarget;
-        bool isInitialized;
         double prevDist;
         
         double error;
@@ -69,9 +69,8 @@ namespace optonaut {
         }
 
     public:
-        RecorderController(RecorderGraph &graph): graph(graph),
-            ballPosition(Mat::eye(4, 4, CV_64F)), isInitialized(false),
-            errorVec(3, 1, CV_64F), error(-1), isFinished(false), prevDist(100) {
+        RecorderController(RecorderGraph &graph): graph(graph), isFinished(false), isInitialized(false),
+            ballPosition(Mat::eye(4, 4, CV_64F)), prevDist(100), error(-1), errorVec(3, 1, CV_64F) {
     
         }
         
@@ -95,6 +94,10 @@ namespace optonaut {
 
             double viewDist = GetAngleOfRotation(ballTarget.extrinsics, image->extrinsics);
             
+            SelectionInfo info;
+            info.closestPoint = ballTarget;
+            info.image = image;
+
             //If we reached a viewpoint...
             if(viewDist < tolerance) {
                 SelectionPoint next;
@@ -127,11 +130,8 @@ namespace optonaut {
             error = GetAngleOfRotation(image->extrinsics, ballPosition);
             ExtractRotationVector(image->extrinsics.inv() * ballPosition, errorVec);
             
-            SelectionInfo info;
-            info.closestPoint = ballTarget;
             info.dist = viewDist;
             info.isValid = viewDist < tolerance && viewDist < tolerance;
-            info.image = image;
             
             return info;
         }

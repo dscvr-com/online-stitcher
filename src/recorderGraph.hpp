@@ -17,8 +17,8 @@ namespace optonaut {
     
     struct SelectionPoint {
         uint32_t globalId;
-        uint32_t ringId;
         uint32_t localId;
+        uint32_t ringId;
         bool enabled;
         Mat extrinsics;
         
@@ -102,14 +102,14 @@ namespace optonaut {
             targets[point.ringId][point.localId].enabled = false;
         }
         
-        const double FindClosestPoint(const Mat &extrinscs, SelectionPoint &point, const int ringId = -1) const {
+        double FindClosestPoint(const Mat &extrinscs, SelectionPoint &point, const int ringId = -1) const {
             double bestDist = -1;
             Mat eInv = extrinscs.inv();
             Mat zCorr;
             CreateRotationZ(M_PI / 2, zCorr);
             
             for(auto ring : targets) {
-                if(ring.size() == 0 || (ringId != -1 && ringId != ring[0].ringId))
+                if(ring.size() == 0 || (ringId != -1 && ringId != (int)ring[0].ringId))
                     continue;
                 
                 for(auto target : ring) {

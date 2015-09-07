@@ -120,14 +120,14 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
 	warpPerspective(a.image->img, resA, transA, resA.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
 	warpPerspective(b.image->img, resB, transB, resB.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
     
-    /*for(size_t i = 0; i < cornersA.size(); i++) {
+    for(size_t i = 0; i < cornersA.size(); i++) {
         line(resA, cornersA[i], cornersA[(i + 1) % cornersA.size()], Scalar(0, 0, 255), 3);
         line(resB, cornersB[i], cornersB[(i + 1) % cornersB.size()], Scalar(0, 0, 255), 3);
     }
 
-	imwrite("dbg/warped_" + ToString(a->id) + "A.jpg", resA);
-	imwrite("dbg/warped_" + ToString(a->id) + "B.jpg", resB);
-*/
+	imwrite("dbg/warped_" + ToString(a.image->id) + "A.jpg", resA);
+	imwrite("dbg/warped_" + ToString(a.image->id) + "B.jpg", resB);
+
 	Mat rvec(4, 1, CV_64F);
 	ExtractRotationVector(rot, rvec);
 
