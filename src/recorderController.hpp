@@ -47,7 +47,7 @@ namespace optonaut {
         const double tolerance = M_PI / 50;
         
         //Ball Speed per frame, in radians
-        const double ballSpeed = M_PI / 80;
+        const double ballSpeed = M_PI / 30;
         
         
         void MoveToNextRing() {
