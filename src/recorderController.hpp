@@ -126,7 +126,10 @@ namespace optonaut {
             ExtractRotationVector(image->extrinsics.inv() * ballPosition, errorVec);
             
             info.dist = viewDist;
-            info.isValid = viewDist < tolerance && viewDist < tolerance;
+            if(info.dist < tolerance && info.dist < prevDist) {
+                info.isValid = true;
+                prevDist = info.dist;
+            }
             
             return info;
         }
