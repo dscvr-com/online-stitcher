@@ -37,10 +37,14 @@ namespace optonaut {
 
         bool previewImageAvailable;
         bool isIdle;
+        bool previewEnabled;
         
         RecorderGraphGenerator generator;
         RecorderGraph recorderGraph;
         RecorderController controller;
+        
+        uint32_t imagesToRecord;
+        uint32_t recordedImages;
 
         
         void PushLeft(ImageP left) {
@@ -72,9 +76,12 @@ namespace optonaut {
             resizer(graphConfiguration),
             previewImageAvailable(false),
             isIdle(false),
+            previewEnabled(true),
             generator(),
             recorderGraph(generator.Generate(intrinsics, graphConfiguration)),
-            controller(recorderGraph)
+            controller(recorderGraph),
+            imagesToRecord(recorderGraph.Size()),
+            recordedImages(0)
         {
             cout << "Initializing Optonaut Pipe." << endl;
             
@@ -93,12 +100,24 @@ namespace optonaut {
             aligner = shared_ptr<Aligner>(new TrivialAligner());
         }
         
+        void SetPreviewImageEnabled(bool enabled) {
+            previewEnabled = enabled;
+        }
+        
         Mat ConvertFromStitcher(const Mat &in) const {
             return (zero.inv() * baseInv * in * base).inv();
         }
         
         Mat GetBallPosition() const {
             return ConvertFromStitcher(controller.GetBallPosition());
+        }
+        
+        double GetDistanceToBall() const {
+            return controller.GetError();
+        }
+        
+        const Mat &GetAngularDistanceToBall() const {
+            return controller.GetErrorVector();
         }
 
         //Methods already coordinates in input base. 
@@ -144,11 +163,12 @@ namespace optonaut {
         }
         
         void CapturePreviewImage(const ImageP img) {
-            
-            previewImage = ImageP(new Image(*img));
-            previewImage->img = img->img.clone();
-            
-            previewImageAvailable = true;
+            if(previewEnabled) {
+                previewImage = ImageP(new Image(*img));
+                previewImage->img = img->img.clone();
+                
+                previewImageAvailable = true;
+            }
         }
         
         void Stitch(const SelectionInfo &a, const SelectionInfo &b) {
@@ -184,11 +204,11 @@ namespace optonaut {
 
             previewImageAvailable = false;
             
-            if(isIdle)
-                return;
-            
             if(!controller.IsInitialized())
                 controller.Initialize(image->extrinsics);
+            
+            if(isIdle)
+                return;
       		
             SelectionInfo current = controller.Push(image);
             
@@ -203,8 +223,12 @@ namespace optonaut {
                 
                 if(current.closestPoint.globalId != currentBest.closestPoint.globalId) {
                     //Ok, hit that. We can stitch.
-                    if(previous.isValid)
+                    if(previous.isValid) {
                         Stitch(previous, currentBest);
+                        recorderGraph.RemoveEdge(previous.closestPoint, currentBest.closestPoint);
+                        
+                        recordedImages++;
+                    }
                     previous = currentBest;
                     
                     
@@ -243,9 +267,23 @@ namespace optonaut {
             return isIdle;
         }
         
+        bool IsFinished() {
+            return controller.IsFinished();
+        }
+        
         void SetIdle(bool isIdle) {
             this->isIdle = isIdle;
         }
+        
+        uint32_t GetImagesToRecordCount() {
+            return imagesToRecord;
+        }
+        
+        uint32_t GetRecordedImagesCount() {
+            return recordedImages;
+        }
+        
+        
     };    
 }
 

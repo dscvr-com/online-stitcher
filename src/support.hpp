@@ -30,8 +30,9 @@ namespace optonaut {
     double GetAngleOfRotation(const cv::Mat &a, const cv::Mat &b);
 	void CreateRotationZ(double radians, cv::Mat &out);
 	void CreateRotationX(double radians, cv::Mat &out);
-	void CreateRotationY(double radians, cv::Mat &out);
+    void CreateRotationY(double radians, cv::Mat &out);
     
+    void Lerp(const cv::Mat &a, const cv::Mat &b, const double t, cv::Mat &out);
     void Slerp(const cv::Mat &a, const cv::Mat &b, const double t, cv::Mat &out);
     
 	double GetDistanceByDimension(const cv::Mat &a, const cv::Mat &b, int dim);

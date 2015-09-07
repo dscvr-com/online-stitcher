@@ -114,9 +114,28 @@ namespace optonaut {
 		t = rot.clone();
 	}
     
+    void Lerp(const Mat &a, const Mat &b, const double t, Mat &out) {
+        assert(MatIs(a, 4, 4, CV_64F));
+        assert(MatIs(b, 4, 4, CV_64F));
+        out = Mat(4, 4, CV_64F);
+        
+        for(int i = 0; i < 4; i++) {
+            for(int j = 0; j < 4; j++) {
+                double av = a.at<double>(i, j);
+                double bv = b.at<double>(i, j);
+                
+                out.at<double>(i, j) = (bv - av) * t + av;
+            }
+        }
+    }
+    
     void Slerp(const Mat &a, const Mat &b, const double t, Mat &out) {
         //cout << a << endl;
         //cout << b << endl;
+        assert(false); //Buggy.
+        assert(MatIs(a, 4, 4, CV_64F));
+        assert(MatIs(b, 4, 4, CV_64F));
+
 
         Mat q(4, 1, CV_64F);
         Mat r(4, 1, CV_64F);
@@ -131,6 +150,11 @@ namespace optonaut {
 	double GetAngleOfRotation(const Mat &r) {
 		assert(MatIs(r, 3, 3, CV_64F));
 		double t = r.at<double>(0, 0) + r.at<double>(1, 1) + r.at<double>(2, 2);
+        if(t > 3)
+            return 0;
+        if(t < 1)
+            return M_PI * 2;
+        
 		return acos((t - 1) / 2);
 	}
     

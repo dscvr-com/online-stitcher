@@ -125,6 +125,15 @@ namespace optonaut {
             
             return bestDist;
         }
+        
+        uint32_t Size() {
+            uint32_t size = 0;
+            
+            for(auto ring : targets)
+                size += ring.size();
+            
+            return size;
+        }
     };
 }
 #endif

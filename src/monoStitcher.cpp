@@ -48,14 +48,14 @@ void GetCorners(vector<Point2f> &corners, const SelectionEdge &target, const Mat
         
         Mat rot = target.roiCenter.inv() * target.roiCorners[i];
         
-        cout << "Rot " << i << " " << rot << endl;
+        //cout << "Rot " << i << " " << rot << endl;
         
 	    corners[i].x = -tan(GetDistanceByDimension(I, rot, 0)) / tan(maxHFov) + 0.5;
 	    corners[i].y = -tan(GetDistanceByDimension(I, rot, 1)) / tan(maxVFov) + 0.5;
        
         corners[i].x *= width;
         corners[i].y *= height;
-        cout << "Corner " << i << corners[i] << endl;
+        //cout << "Corner " << i << corners[i] << endl;
         //cout << "MatDiff: " << rot << endl;
     }
 }
@@ -119,7 +119,7 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
 
 	warpPerspective(a.image->img, resA, transA, resA.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
 	warpPerspective(b.image->img, resB, transB, resB.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
-    
+    /*
     for(size_t i = 0; i < cornersA.size(); i++) {
         line(resA, cornersA[i], cornersA[(i + 1) % cornersA.size()], Scalar(0, 0, 255), 3);
         line(resB, cornersB[i], cornersB[(i + 1) % cornersB.size()], Scalar(0, 0, 255), 3);
@@ -127,7 +127,7 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
 
 	imwrite("dbg/warped_" + ToString(a.image->id) + "A.jpg", resA);
 	imwrite("dbg/warped_" + ToString(a.image->id) + "B.jpg", resB);
-
+*/
 	Mat rvec(4, 1, CV_64F);
 	ExtractRotationVector(rot, rvec);
 
