@@ -106,9 +106,11 @@ namespace optonaut {
                         prevTarget = ballTarget;
                         prevDist = 100;
                         ballTarget = next;
+                        cout << "Move next" << endl;
                     } else {
                         //Ring switch or finish.
                         isFinished = true;
+                        cout << "Finishe" << endl;
                     }
                 }
 

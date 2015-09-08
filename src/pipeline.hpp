@@ -220,21 +220,26 @@ namespace optonaut {
             if(current.isValid) {
                 if(!image->IsLoaded())
                     image->LoadFromDataRef();
+            
                 
                 if(current.closestPoint.globalId != currentBest.closestPoint.globalId) {
                     //Ok, hit that. We can stitch.
                     if(previous.isValid) {
                         Stitch(previous, currentBest);
                         recorderGraph.RemoveEdge(previous.closestPoint, currentBest.closestPoint);
+                        cout << "Remove edge" << endl;
                         
                         recordedImages++;
                     }
                     previous = currentBest;
-                    
-                    
                 }
+            
+                if(controller.IsFinished()) {
+                    Stitch(currentBest, current);
+                    recorderGraph.RemoveEdge(currentBest.closestPoint, current.closestPoint);
+                }
+            
                 currentBest = current;
-                
             }
         }
                 
