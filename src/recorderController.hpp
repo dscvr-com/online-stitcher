@@ -1,5 +1,6 @@
 #include <opencv2/opencv.hpp>
 #include <math.h>
+#include <chrono>
 
 #include "image.hpp"
 #include "support.hpp"
@@ -46,8 +47,10 @@ namespace optonaut {
         //We sould calc this from buffer, overlap, fov
         const double tolerance = M_PI / 50;
         
-        //Ball Speed per frame, in radians
-        const double ballSpeed = M_PI / 30;
+        //Ball Speed per second, in radians
+        const double ballSpeed = M_PI / 2;
+        
+        size_t lt;
         
         
         void MoveToNextRing() {
@@ -70,7 +73,7 @@ namespace optonaut {
 
     public:
         RecorderController(RecorderGraph &graph): graph(graph), isFinished(false), isInitialized(false),
-            ballPosition(Mat::eye(4, 4, CV_64F)), prevDist(100), error(-1), errorVec(3, 1, CV_64F) {
+            ballPosition(Mat::eye(4, 4, CV_64F)), prevDist(100), error(-1), errorVec(3, 1, CV_64F), lt(0) {
     
         }
         
@@ -93,12 +96,13 @@ namespace optonaut {
             assert(isInitialized);
 
             double viewDist = GetAngleOfRotation(image->extrinsics, ballTarget.extrinsics);
+            size_t t = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count();
             
             SelectionInfo info;
             info.closestPoint = ballTarget;
             info.image = image;
 
-            if(!isIdle) {
+            if(!isIdle && lt != 0) {
                 //If we reached a viewpoint...
                 if(viewDist < tolerance) {
                     SelectionPoint next;
@@ -115,12 +119,13 @@ namespace optonaut {
                 }
 
                 //Animate ball.
-                
                 double dist = GetAngleOfRotation(ballPosition, ballTarget.extrinsics);
-                double t = cos(dist) * ballSpeed;
-                
+                //Delta time
+                double dt = (double)(t - lt) / 1000.0;
+                //Delta pos
+                double dp = cos(dist) * ballSpeed * dt;
                 Mat newPos(4, 4, CV_64F);
-                Lerp(ballPosition, ballTarget.extrinsics, t, newPos);
+                Lerp(ballPosition, ballTarget.extrinsics, dp, newPos);
                     
                 ballPosition = newPos;
               
@@ -136,6 +141,7 @@ namespace optonaut {
                 prevDist = info.dist;
             }
             
+            lt = t;
             return info;
         }
         

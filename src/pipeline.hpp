@@ -38,6 +38,7 @@ namespace optonaut {
         bool previewImageAvailable;
         bool isIdle;
         bool previewEnabled;
+        bool isFinished;
         
         RecorderGraphGenerator generator;
         RecorderGraph recorderGraph;
@@ -77,6 +78,7 @@ namespace optonaut {
             previewImageAvailable(false),
             isIdle(false),
             previewEnabled(true),
+            isFinished(false),
             generator(),
             recorderGraph(generator.Generate(intrinsics, graphConfiguration)),
             controller(recorderGraph),
@@ -226,7 +228,6 @@ namespace optonaut {
                     //Ok, hit that. We can stitch.
                     if(previous.isValid) {
                         Stitch(previous, currentBest);
-                        recorderGraph.RemoveEdge(previous.closestPoint, currentBest.closestPoint);
                         cout << "Remove edge" << endl;
                         
                         recordedImages++;
@@ -234,13 +235,11 @@ namespace optonaut {
                     previous = currentBest;
                 }
             
-                if(controller.IsFinished()) {
-                    Stitch(currentBest, current);
-                    recorderGraph.RemoveEdge(currentBest.closestPoint, current.closestPoint);
-                }
-            
                 currentBest = current;
             }
+            
+            if(recordedImages == imagesToRecord)
+                isFinished = true;
         }
                 
         bool AreAdjacent(SelectionPoint a, SelectionPoint b) {
@@ -273,7 +272,7 @@ namespace optonaut {
         }
         
         bool IsFinished() {
-            return controller.IsFinished();
+            return isFinished;
         }
         
         void SetIdle(bool isIdle) {
