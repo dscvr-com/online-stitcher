@@ -89,7 +89,7 @@ namespace optonaut {
             isInitialized = true;
         }
         
-        SelectionInfo Push(const ImageP image) {
+        SelectionInfo Push(const ImageP image, bool isIdle) {
             assert(isInitialized);
 
             double viewDist = GetAngleOfRotation(image->extrinsics, ballTarget.extrinsics);
@@ -98,28 +98,31 @@ namespace optonaut {
             info.closestPoint = ballTarget;
             info.image = image;
 
-            //If we reached a viewpoint...
-            if(viewDist < tolerance) {
-                SelectionPoint next;
-                if(graph.GetNext(ballTarget, next)) {
-                    prevTarget = ballTarget;
-                    prevDist = 100;
-                    ballTarget = next;
-                } else {
-                    //Ring switch or finish.
-                    isFinished = true;
+            if(!isIdle) {
+                //If we reached a viewpoint...
+                if(viewDist < tolerance) {
+                    SelectionPoint next;
+                    if(graph.GetNext(ballTarget, next)) {
+                        prevTarget = ballTarget;
+                        prevDist = 100;
+                        ballTarget = next;
+                    } else {
+                        //Ring switch or finish.
+                        isFinished = true;
+                    }
                 }
-            }
 
-            //Animate ball.
-            
-            double dist = GetAngleOfRotation(ballPosition, ballTarget.extrinsics);
-            double t = cos(dist) * ballSpeed;
-            
-            Mat newPos(4, 4, CV_64F);
-            Lerp(ballPosition, ballTarget.extrinsics, t, newPos);
+                //Animate ball.
                 
-            ballPosition = newPos;
+                double dist = GetAngleOfRotation(ballPosition, ballTarget.extrinsics);
+                double t = cos(dist) * ballSpeed;
+                
+                Mat newPos(4, 4, CV_64F);
+                Lerp(ballPosition, ballTarget.extrinsics, t, newPos);
+                    
+                ballPosition = newPos;
+              
+            }
             
             
             error = GetAngleOfRotation(image->extrinsics, ballPosition);

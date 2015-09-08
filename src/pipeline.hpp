@@ -206,11 +206,11 @@ namespace optonaut {
             
             if(!controller.IsInitialized())
                 controller.Initialize(image->extrinsics);
+      		
+            SelectionInfo current = controller.Push(image);
             
             if(isIdle)
                 return;
-      		
-            SelectionInfo current = controller.Push(image);
             
             if(!currentBest.isValid) {
                 //Initialization. 
