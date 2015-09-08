@@ -1,10 +1,9 @@
-#include <opencv2/features2d.hpp>
-#include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
 #include <math.h>
 
 #include "image.hpp"
 #include "support.hpp"
+#include "recorderGraph.hpp"
 
 using namespace cv;
 using namespace std;
@@ -16,67 +15,53 @@ using namespace std;
 
 namespace optonaut {
 
-struct SelectionPoint {
-	int id;
-	int ringId;
-	int localId;
-	bool enabled;
-	Mat extrinsics;
-};
-
-struct SelectionInfo {
-	SelectionPoint closestPoint;
-	ImageP image;
-	double dist;
-	bool isValid;
-
-	SelectionInfo() {
-		isValid = false;
-	}
-};
-
-struct SelectionEdge {
-    int from;
-    int to;
-
-    Mat roiCorners[4] ;
-    Mat roiCenter;
-};
-    
-class ImageSelector {
+class RecorderGraphGenerator {
 
 private:
 	//adj[n] contains m if m is right of n
-	vector<vector<SelectionEdge>> adj;
-	vector<vector<SelectionPoint>> targets;
-	Mat intrinsics;
 	//Horizontal and Vertical overlap in percent. 
 	const double hOverlap = 0.8;
 	const double vOverlap = 0.1;
     const double hBufferRatio = 0.03;
     const double vBufferRatio = 0.1;
-
-	//Tolerance, measured on sphere, for hits. 
-    //We sould calc this from buffer, overlap, fov
-	const double tolerance = M_PI / 16;
+    
+    Mat intrinsics;
 
     void GeoToRot(double hAngle, double vAngle, Mat &res) {
         Mat hRot;
         Mat vRot;
-        Mat zCorr;
+        
+        cout << hAngle << ", " << vAngle << endl;
         
         CreateRotationY(hAngle, hRot);
         CreateRotationX(vAngle, vRot);
         
         res = hRot * vRot;
     }
-public:
-
-    static const int ModeAll = 0;
-    static const int ModeCenter = 1;
-    static const int ModeTruncated = 2;
     
-	ImageSelector(const Mat &intrinsics, const int mode = ModeAll) {
+    ImageP CreateDebugImage(Mat pos, double scale, Scalar color) const {
+        ImageP d(new Image());
+        
+        d->originalExtrinsics = pos;
+        d->adjustedExtrinsics = pos;
+        d->intrinsics = intrinsics.clone();
+        d->intrinsics.at<double>(0, 2) *= scale;
+        d->intrinsics.at<double>(1, 2) *= scale;
+        d->img = Mat::zeros(240, 320, CV_8UC3);
+        d->id = 0;
+        
+        line(d->img, Point2f(0, 0), Point2f(320, 240), color, 4);
+        line(d->img, Point2f(320, 0), Point2f(0, 240), color, 4);
+        
+        return d;
+    }
+    
+
+public:
+    
+    RecorderGraph Generate(const Mat &intrinsics, const int mode = RecorderGraph::ModeAll) {
+        
+        RecorderGraph res;
 
 		this->intrinsics = intrinsics;
         double maxHFov = GetHorizontalFov(intrinsics);
@@ -90,56 +75,56 @@ public:
         cout << "V-FOV: " << (maxVFov * 180 / M_PI) << endl;
         cout << "Ratio: " << (sin(maxVFov) / sin(maxHFov)) << endl;
 
-		int vCount = ceil(M_PI / vFov);
-		int hCenterCount = ceil(2 * M_PI / hFov);
+		uint32_t vCount = ceil(M_PI / vFov);
+		uint32_t hCenterCount = ceil(2 * M_PI / hFov);
 	
         double vStart = maxVFov * vOverlap;
         
 		vFov = (M_PI - 4 * vStart) / vCount;
 
-		int id = 0;
+		uint32_t id = 0;
 
-        if(vCount % 2 == 0 && mode == ModeCenter) {
+        if(vCount % 2 == 0 && mode == RecorderGraph::ModeCenter) {
             cout << "Center mode not possible with even number of rings." << endl;
             assert(false);
         }
 
-		for(int i = 0; i < vCount; i++) {
+		for(uint32_t i = 0; i < vCount; i++) {
 
             //Vertical center, bottom and top of ring
 			double vCenter = i * vFov + vFov / 2.0 - M_PI / 2.0 + vStart;
             double vTop = vCenter - vFov / 2.0;
             double vBot = vCenter + vFov / 2.0;
 
-			int hCount = hCenterCount * cos(vCenter);
+			uint32_t hCount = hCenterCount * cos(vCenter);
 			hFov = M_PI * 2 / hCount;
 
-			int firstId = -1;
+			uint32_t firstId = 0;
             double hLeft = 0;
             double hCenter = 0;
             double hRight = 0;
             SelectionEdge edge;
 
-			targets.push_back(vector<SelectionPoint>());
+			res.targets.push_back(vector<SelectionPoint>());
                 
-            if(mode == ModeAll
-                || (mode == ModeCenter && i == vCount / 2)
-                || (mode == ModeTruncated && i != vCount - 1 && i != 0)) {
+            if(mode == RecorderGraph::ModeAll
+                || (mode == RecorderGraph::ModeCenter && i == vCount / 2)
+                || (mode == RecorderGraph::ModeTruncated && i != vCount - 1 && i != 0)) {
                     
-                for(int j = 0; j < hCount; j++) {
+                for(uint32_t j = 0; j < hCount; j++) {
                         
                     hLeft = j * hFov;
                     hCenter = hLeft + hFov / 2;
                     hRight = hLeft + hFov;
 
                     SelectionPoint p;
-                    p.id = id;
+                    p.globalId = id;
                     GeoToRot(hLeft, vCenter, p.extrinsics);
                     p.enabled = true;
                     p.ringId = i;
                     p.localId = j;
                 
-                    adj.push_back(vector<SelectionEdge>());
+                    res.adj.push_back(vector<SelectionEdge>());
 
                     SelectionEdge edge; 
                     edge.from = id;
@@ -157,13 +142,13 @@ public:
                     }
 
                     if(j != hCount - 1) {
-                        adj[id].push_back(edge);
+                        res.adj[id].push_back(edge);
                     } else {
                         //Loop last one back to first one.
                         edge.to = firstId;
-                        adj[id].push_back(edge);    
+                        res.adj[id].push_back(edge);
                     } 
-                    targets[i].push_back(p);
+                    res.targets[i].push_back(p);
                     
                     id++;
                 }
@@ -175,37 +160,19 @@ public:
                 cout << i << " -> "<< adj[i][j] << endl;
             }
         }*/
+        
+        return res;
 	}
 
-	const vector<vector<SelectionPoint>> &GetRings() const {
-		return targets;
-	}
-
-    ImageP CreateDebugImage(Mat pos, double scale, Scalar color) const {
-        ImageP d(new Image());
-
-        d->extrinsics = pos;
-        d->intrinsics = intrinsics.clone();
-        d->intrinsics.at<double>(0, 2) *= scale;
-        d->intrinsics.at<double>(1, 2) *= scale;
-        d->img = Mat::zeros(240, 320, CV_8UC3);
-        d->id = 0;
-
-        line(d->img, Point2f(0, 0), Point2f(320, 240), color, 4);
-        line(d->img, Point2f(320, 0), Point2f(0, 240), color, 4);
-
-        return d;
-    }
-
-	vector<ImageP> GenerateDebugImages() const {
+    vector<ImageP> GenerateDebugImages(RecorderGraph &graph) const {
 		vector<ImageP> images;
 
-		for(auto ring : targets) {
+		for(auto ring : graph.targets) {
 			for(auto t : ring) {
 
 				images.push_back(CreateDebugImage(t.extrinsics, 1.0, Scalar(0, 255, 0)));
 
-                for(auto edge : adj[t.id]) {
+                for(auto edge : graph.adj[t.globalId]) {
                     for(auto corner : edge.roiCorners) {
 				        images.push_back(CreateDebugImage(corner, 0.1, Scalar(0, 0, 255)));
                     }
@@ -216,50 +183,6 @@ public:
 		return images;
 	}
 
-	const SelectionInfo FindClosestSelectionPoint(ImageP img) const {
-		SelectionInfo info;
-		info.dist = -1;
-		info.isValid = false;
-        Mat eInv = img->extrinsics.inv();
-        Mat zCorr;
-        CreateRotationZ(M_PI / 2, zCorr);
-
-		for(auto ring : targets) {
-			for(auto target : ring) {
-				if(!target.enabled)
-					continue;
-			    double dist = GetAngleOfRotation(eInv * target.extrinsics);
-			    if (dist < info.dist || info.dist < 0) {
-					info.image = img;
-					info.closestPoint = target;
-					info.dist = dist;
-			    }
-			}
-		}
-					
-        info.isValid = tolerance >= info.dist;
-
-		return info;
-	}
-
-	void DisableAdjacency(const SelectionPoint& left, const SelectionPoint& right) {
-        for(auto it = adj[left.id].begin(); it != adj[left.id].end(); it++) {
-            if(it->to == right.id) {
-                adj[left.id].erase(it);
-                break;
-            }
-        }
-	}
-
-	bool AreAdjacent(const SelectionPoint& left, const SelectionPoint& right, SelectionEdge &edge) const {
-        for(auto it = adj[left.id].begin(); it != adj[left.id].end(); it++) {
-            if(it->to == right.id) {
-                edge = *it;
-                return true;
-            }
-        }
-        return false;
-	}	
 
 };
 }

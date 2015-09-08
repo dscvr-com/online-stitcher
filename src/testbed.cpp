@@ -20,8 +20,6 @@ bool CompareByFilename (const string &a, const string &b) {
 
 int main(int argc, char* argv[]) {
 
-
-
     int n = argc - 1;
     shared_ptr<Pipeline> pipe(NULL);
     vector<string> files;
@@ -64,7 +62,7 @@ int main(int argc, char* argv[]) {
         image->dataRef.colorSpace = colorspace::RGB;
 
         if(i == 0) {
-            pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics, ImageSelector::ModeTruncated, false));
+            pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics, RecorderGraph::ModeTruncated, false));
 
             Pipeline::debug = true;
         }

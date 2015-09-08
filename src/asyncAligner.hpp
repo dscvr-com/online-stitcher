@@ -71,8 +71,8 @@ namespace optonaut {
 
         void Push(ImageP image) {
             if(!isInitialized) {
-                lastSensor = image->extrinsics;
-                current = image->extrinsics;
+                lastSensor = image->originalExtrinsics;
+                current = image->originalExtrinsics;
                 isInitialized = true;
                 running = true;
                 alignerReady = true;
@@ -83,21 +83,16 @@ namespace optonaut {
                 unique_lock<mutex> lock(m);
                
                 if(alignerReady) { 
-                    recentImage = ImageP(new Image);
-                    recentImage->id = image->id;
-                    recentImage->img = image->img;
-                    recentImage->extrinsics = image->extrinsics.clone();
-                    recentImage->intrinsics = image->intrinsics;
-                    recentImage->source = image->source;
+                    recentImage = ImageP(new Image(*image));
                     alignerReady = false;
-                    cout << "Pushing new data to alignment loop " << endl;
+                   // cout << "Pushing new data to alignment loop " << endl;
                     dataReady = true;
                     sem.notify_one();
                 } 
-                Mat sensorStep = lastSensor.inv() * image->extrinsics;
+                Mat sensorStep = lastSensor.inv() * image->originalExtrinsics;
                 sensorDiff = sensorDiff * sensorStep;
                 current = current * sensorStep;
-                lastSensor = image->extrinsics.clone();
+                lastSensor = image->originalExtrinsics;
                 //cout << "Update by diff: " << current << endl;
             }
         }

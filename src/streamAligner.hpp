@@ -41,7 +41,7 @@ namespace optonaut {
 
 			if(previous.size() == 0) {
 				//First!
-				rPrevious.push_back(next->extrinsics);
+				rPrevious.push_back(next->originalExtrinsics);
                 //cout << rPrevious.back() << endl;
 			} else {
 
@@ -84,9 +84,9 @@ namespace optonaut {
 
         		if(visualAnchor != -1) {
 	        		//cout << "Visual diff " << visualRVec.t() << endl;
-	        		sensorDiff = rSensorPrevious[visualAnchor].t() * (next->extrinsics);
+	        		sensorDiff = rSensorPrevious[visualAnchor].t() * (next->originalExtrinsics);
 				} else {
-	        		sensorDiff = rSensorPrevious.back().t() * (next->extrinsics);
+	        		sensorDiff = rSensorPrevious.back().t() * (next->originalExtrinsics);
 				}
 
         		//cout << "Sensor diff " << sensorRVec.t() << endl;
@@ -118,7 +118,7 @@ namespace optonaut {
 			}
 
 			previous.push_back(next);
-			rSensorPrevious.push_back(next->extrinsics.clone());
+			rSensorPrevious.push_back(next->originalExtrinsics.clone());
 
 			if(previous.size() > order) {
 				previous.pop_front();

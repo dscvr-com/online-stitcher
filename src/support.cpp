@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <string>
 #include "support.hpp"
+#include "quat.hpp"
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
 
@@ -24,13 +25,7 @@ namespace optonaut {
 		return val;
 	}
 
-	string ToString(int i) {
-		ostringstream text;
-		text << i;
-		return text.str();
-	}
-
-	void ScaleIntrinsicsToImage(Mat intrinsics, Mat image, Mat &scaled, double fupscaling) {
+	void ScaleIntrinsicsToImage(const Mat &intrinsics, const Mat &image, Mat &scaled, double fupscaling) {
 		assert(MatIs(intrinsics, 3, 3, CV_64F));
 
 		scaled = Mat::zeros(3, 3, CV_64F);
@@ -118,16 +113,59 @@ namespace optonaut {
 
 		t = rot.clone();
 	}
+    
+    void Lerp(const Mat &a, const Mat &b, const double t, Mat &out) {
+        assert(MatIs(a, 4, 4, CV_64F));
+        assert(MatIs(b, 4, 4, CV_64F));
+        out = Mat(4, 4, CV_64F);
+        
+        for(int i = 0; i < 4; i++) {
+            for(int j = 0; j < 4; j++) {
+                double av = a.at<double>(i, j);
+                double bv = b.at<double>(i, j);
+                
+                out.at<double>(i, j) = (bv - av) * t + av;
+            }
+        }
+    }
+    
+    void Slerp(const Mat &a, const Mat &b, const double t, Mat &out) {
+        //cout << a << endl;
+        //cout << b << endl;
+        assert(false); //Buggy.
+        assert(MatIs(a, 4, 4, CV_64F));
+        assert(MatIs(b, 4, 4, CV_64F));
+
+
+        Mat q(4, 1, CV_64F);
+        Mat r(4, 1, CV_64F);
+        Mat v(4, 4, CV_64F);
+        quat::FromMat(a.inv() * b, q);
+        quat::Mult(q, t, r);
+        quat::ToMat(r, v);
+        out = a * v;
+        //cout << out << endl;
+    }
 
 	double GetAngleOfRotation(const Mat &r) {
 		assert(MatIs(r, 3, 3, CV_64F));
 		double t = r.at<double>(0, 0) + r.at<double>(1, 1) + r.at<double>(2, 2);
+        if(t > 3)
+            return 0;
+        if(t < 1)
+            return M_PI * 2;
+        
 		return acos((t - 1) / 2);
 	}
-
-	double GetDistanceByDimension(const Mat &a, const Mat &b, int dim) {
+    
+    double GetAngleOfRotation(const Mat &a, const Mat &b) {
+        return GetAngleOfRotation(a.inv() * b);
+    }
+   
+    double GetDistanceByDimension(const Mat &a, const Mat &b, int dim) {
 		assert(MatIs(a, 4, 4, CV_64F));
 		assert(MatIs(b, 4, 4, CV_64F));
+        assert(dim < 3 && dim >= 0);
 		double dist = 0;
 
 	    double vdata[] = {0, 0, 1, 0};

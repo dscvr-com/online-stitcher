@@ -31,6 +31,37 @@ class VisualAligner {
 private:
 	Ptr<AKAZE> detector;
 
+    void DrawHomographyBorder(const Mat &homography, const ImageP left, const Scalar &color, Mat &target) {
+
+        std::vector<Point2f> obj_corners(4);
+        obj_corners[0] = cvPoint(0,0); 
+        obj_corners[1] = cvPoint(left->img.cols, 0);
+        obj_corners[2] = cvPoint(left->img.cols, left->img.rows); 
+        obj_corners[3] = cvPoint(0, left->img.rows);
+        std::vector<Point2f> scene_corners(4);
+
+        perspectiveTransform(obj_corners, scene_corners, homography);
+
+        Point2f offset(left->img.cols, 0);
+        line(target, scene_corners[0] + offset, scene_corners[1] + offset, color, 4);
+        line(target, scene_corners[1] + offset, scene_corners[2] + offset, color, 4);
+        line(target, scene_corners[2] + offset, scene_corners[3] + offset, color, 4);
+        line(target, scene_corners[3] + offset, scene_corners[0] + offset, color, 4);
+    }
+
+    void DrawResults(const Mat &homography, const vector<DMatch> &goodMatches, const ImageP a, const ImageP b, Mat &target) {
+  		drawMatches(a->img, a->features, b->img, b->features,
+               goodMatches, target, Scalar::all(-1), Scalar::all(-1),
+               vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+
+        DrawHomographyBorder(homography, a, Scalar(0, 255, 0), target);
+        
+        Mat estimation;
+        HomographyFromKnownParameters(a, b, estimation);
+        
+        DrawHomographyBorder(estimation, a, Scalar(0, 0, 255), target);
+    } 
+
 public:
 
 	VisualAligner() : detector(AKAZE::create()) { }
@@ -43,7 +74,21 @@ public:
 		detector->detectAndCompute(tmp, noArray(), img->features, img->descriptors);
 	}
 
-	MatchInfo *FindHomography(ImageP a, ImageP b) {
+    void HomographyFromKnownParameters(const ImageP a, const ImageP b, Mat &hom) const {
+        Mat R3(3, 3, CV_64F);
+        Mat aK3(3, 3, CV_64F);
+        Mat bK3(3, 3, CV_64F);
+        
+        From4DoubleTo3Double(b->originalExtrinsics.inv() * a->originalExtrinsics, R3);
+
+        ScaleIntrinsicsToImage(a->intrinsics, a->img, aK3);
+        ScaleIntrinsicsToImage(b->intrinsics, b->img, bK3);
+
+        hom = bK3 * R3 * aK3.inv();
+        //hom = aK3 * aR3 * bR3.inv() * bK3.inv();
+    }
+
+	MatchInfo *FindHomography(const ImageP a, const ImageP b) {
         assert(a != NULL);
         if(a->features.empty())
 			FindKeyPoints(a);
@@ -99,8 +144,6 @@ public:
         cout << "inliner ratio: " << inlinerRatio << endl;
         cout << "matchCount: " << goodMatches.size() << endl;
 
-        if(inlinerRatio < 0.40 || inlinerCount < 80)
-            return info;
 
 		info->rotations = vector<Mat>(4);
 		info->translations = vector<Mat>(4);
@@ -119,43 +162,23 @@ public:
  					nsols--;
  					i--;
  				}
-
- 				//cout << "rotation " << i << ": " << info->rotations[i] << endl;
- 				//cout << "translation " << i << ": " << info->translations[i] << endl;
- 				//cout << "normal " << i << ": " << info->normals[i] << endl;
  			}
 			info->valid = info->rotations.size() > 0;
  		}
 	
 		//debug
  		
-		Mat img_matches;
-  		drawMatches( a->img, a->features, b->img, b->features,
-               goodMatches, img_matches, Scalar::all(-1), Scalar::all(-1),
-               vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
-
-		if(info->homography.cols != 0) {
-			std::vector<Point2f> obj_corners(4);
-			obj_corners[0] = cvPoint(0,0); obj_corners[1] = cvPoint( a->img.cols, 0 );
-			obj_corners[2] = cvPoint( a->img.cols, a->img.rows ); obj_corners[3] = cvPoint( 0, a->img.rows );
-			std::vector<Point2f> scene_corners(4);
-
-			perspectiveTransform(obj_corners, scene_corners, info->homography);
-
-			//-- Draw lines between the corners (the mapped object in the scene - image_2 )
-			Point2f offset(a->img.cols, 0);
-			line( img_matches, scene_corners[0] + offset, scene_corners[1] + offset, Scalar(0, 255, 0), 4 );
-			line( img_matches, scene_corners[1] + offset, scene_corners[2] + offset, Scalar(0, 255, 0), 4 );
-			line( img_matches, scene_corners[2] + offset, scene_corners[3] + offset, Scalar(0, 255, 0), 4 );
-			line( img_matches, scene_corners[3] + offset, scene_corners[0] + offset, Scalar(0, 255, 0), 4 );
-
-			//-- Show detected matches
+	   	if(info->homography.cols != 0) {
+            Mat target; 
+            DrawResults(info->homography, goodMatches, a, b, target);
+		    imwrite("dbg/Homogpraphy" + ToString(a->id) + "_" + ToString(b->id) + "(C " + ToString(goodMatches.size()) + ", R " +ToString(inlinerRatio * 100) +  " ).jpg", target);
 		} else {
 			cout << "Debug: Homography not found." << endl;
 		}
-		imwrite( "dbg/Homogpraphy" + ToString(a->id) + "_" + ToString(b->id) + "(C " + ToString(goodMatches.size()) + ", R " +ToString(inlinerRatio * 100) +  " ).jpg", img_matches );
-		
 		//debug end
+        
+        if(inlinerRatio < 0.40 || inlinerCount < 80)
+            info->valid = false;
 		
 		return info;
 	}
