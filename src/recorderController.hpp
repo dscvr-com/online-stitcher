@@ -53,7 +53,7 @@ namespace optonaut {
         size_t lt;
         
         
-        void MoveToNextRing() {
+        void MoveToNextRing(const Mat &cur) {
             
             //Moves from center outward, toggling between top and bottom, top ring comes before bottom ring.
             int ringCount = (int)graph.targets.size();
@@ -69,12 +69,18 @@ namespace optonaut {
             currentRing = currentRing + centerRing;
             
             assert(currentRing >= 0 && currentRing < ringCount);
+            
+            MoveToClosestPoint(cur);
+        }
+        
+        void MoveToClosestPoint(const Mat &closest) {
+            graph.FindClosestPoint(closest, ballTarget, currentRing);
+            ballPosition = ballTarget.extrinsics.clone();
         }
 
     public:
         RecorderController(RecorderGraph &graph): graph(graph), isFinished(false), isInitialized(false),
             ballPosition(Mat::eye(4, 4, CV_64F)), prevDist(100), error(-1), errorVec(3, 1, CV_64F), lt(0) {
-    
         }
         
         bool IsInitialized() {
@@ -85,10 +91,7 @@ namespace optonaut {
             assert(!isInitialized);
             
             currentRing = (int)graph.targets.size() / 2;
-
-            graph.FindClosestPoint(initPosition, ballTarget, currentRing);
-            
-            ballPosition = ballTarget.extrinsics.clone();
+            MoveToClosestPoint(initPosition);
             isInitialized = true;
         }
         
@@ -106,15 +109,16 @@ namespace optonaut {
                 //If we reached a viewpoint...
                 if(viewDist < tolerance) {
                     SelectionPoint next;
-                    if(graph.GetNext(ballTarget, next)) {
+                    graph.MarkEdgeAsRecorded(prevTarget, ballTarget);
+                    if(graph.GetNextForRecording(ballTarget, next)) {
                         prevTarget = ballTarget;
                         prevDist = 100;
                         ballTarget = next;
                         cout << "Move next" << endl;
                     } else {
-                        //Ring switch or finish.
-                        isFinished = true;
-                        cout << "Finishe" << endl;
+                        //Ring switch or finish
+                        MoveToNextRing(image->extrinsics);
+                        cout << "Ring Jump" << endl;
                     }
                 }
 

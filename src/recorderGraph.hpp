@@ -30,11 +30,12 @@ namespace optonaut {
     struct SelectionEdge {
         uint32_t from;
         uint32_t to;
+        bool recorded;
         
         Mat roiCorners[4];
         Mat roiCenter;
         
-        SelectionEdge() : from(0), to(0) {
+        SelectionEdge() : from(0), to(0), recorded(false) {
             
         }
     };
@@ -64,7 +65,7 @@ namespace optonaut {
             }
         }
         
-        bool HasEdge(const SelectionPoint& left, const SelectionPoint& right, SelectionEdge &outEdge) const {
+        bool GetEdge(const SelectionPoint& left, const SelectionPoint& right, SelectionEdge &outEdge) const {
             for(auto it = adj[left.globalId].begin(); it != adj[left.globalId].end(); it++) {
                 if(it->to == right.globalId) {
                     outEdge = *it;
@@ -74,12 +75,23 @@ namespace optonaut {
             return false;
         }
         
-        bool GetNext(const SelectionPoint &current, SelectionPoint &next) const {
+        void MarkEdgeAsRecorded(const SelectionPoint& left, const SelectionPoint& right) {
+            for(auto it = adj[left.globalId].begin(); it != adj[left.globalId].end(); it++) {
+                if(it->to == right.globalId) {
+                    it->recorded = true;
+                }
+            }
+        }
+        
+        bool GetNextForRecording(const SelectionPoint &current, SelectionPoint &next) const {
             auto it = adj[current.globalId].begin();
             
-            if(adj[current.globalId].end() != it)
+            while(adj[current.globalId].end() != it)
             {
-                return GetPointById(it->to, next);
+                if(!it->recorded) {
+                    return GetPointById(it->to, next);
+                }
+                it++;
             }
             
             return false;

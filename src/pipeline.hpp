@@ -177,7 +177,8 @@ namespace optonaut {
             assert(a.image->IsLoaded());
             assert(b.image->IsLoaded());
             SelectionEdge edge;
-            assert(recorderGraph.HasEdge(a.closestPoint, b.closestPoint, edge));
+            if(!recorderGraph.GetEdge(a.closestPoint, b.closestPoint, edge))
+                return;
             
             StereoImage stereo;
             stereoConverter.CreateStereo(a, b, edge, stereo);
@@ -244,7 +245,7 @@ namespace optonaut {
                 
         bool AreAdjacent(SelectionPoint a, SelectionPoint b) {
             SelectionEdge dummy; 
-            return recorderGraph.HasEdge(a, b, dummy);
+            return recorderGraph.GetEdge(a, b, dummy);
         }
         
         SelectionInfo CurrentPoint() {
