@@ -59,17 +59,18 @@ namespace optonaut {
             int ringCount = (int)graph.targets.size();
             int centerRing = ringCount / 2;
             
-            currentRing = currentRing - centerRing;
+            int newRing = currentRing - centerRing;
             //If we are on a bottom or the center ring, move outward.
-            if(currentRing >= 0) {
-                currentRing++;
+            if(newRing >= 0) {
+                newRing++;
             }
             //Switch bottom and top, or vice versa.
-            currentRing *= -1;
-            currentRing = currentRing + centerRing;
+            newRing *= -1;
+            newRing = newRing + centerRing;
             
-            assert(currentRing >= 0 && currentRing < ringCount);
+            assert(newRing >= 0 && newRing < ringCount);
             
+            currentRing = newRing;
             MoveToClosestPoint(cur);
         }
         

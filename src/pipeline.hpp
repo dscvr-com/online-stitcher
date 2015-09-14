@@ -239,7 +239,10 @@ namespace optonaut {
                 currentBest = current;
             }
             
-            if(recordedImages == imagesToRecord)
+            //TODO: Something is wrong with the
+            //recorder state (off-by-one due to timing?).
+            //This is just a quick hack. (-1)
+            if(recordedImages == imagesToRecord - 1)
                 isFinished = true;
         }
                 
