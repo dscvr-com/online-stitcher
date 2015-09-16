@@ -117,16 +117,16 @@ namespace optonaut {
                         ExtractRotationVector(visualDiff, vv);
                         ExtractRotationVector(sensorDiff, sv);
 
-                        Mat cv = sensorDiff;
-                        cv.at<double>(1) = visualDiff.at<double>(1);
+                        Mat cv = sv;
+                        //cv.at<double>(1) = visualDiff.at<double>(1);
 
-                        Mat rz, ry, rx;
+                        Mat rz(4, 4, CV_64F), ry(4, 4, CV_64F), rx(4, 4, CV_64F);
 
-                        CreateRotationX(cv.at<double>(0), rx);                        
-                        CreateRotationY(cv.at<double>(1), ry);
-                        CreateRotationZ(cv.at<double>(2), rz);                        
+                        CreateRotationX(cv.at<double>(0, 0), rx);
+                        CreateRotationY(cv.at<double>(1, 0), ry);
+                        CreateRotationZ(cv.at<double>(2, 0), rz);
 	        		
-	        		    rPrevious.push_back(rPrevious[visualAnchor] * rx * ry * rz);
+	        		    rPrevious.push_back(rPrevious[visualAnchor] * (rx * ry * rz));
 	        		    cout << "Visual" << endl;
                     }
 
