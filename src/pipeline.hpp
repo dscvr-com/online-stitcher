@@ -270,6 +270,9 @@ namespace optonaut {
         StitchingResultP FinishAligned() {
             return Finish(aligned, false);
         }
+        StitchingResultP FinishAlignedDebug() {
+            return Finish(aligned, true);
+        }
 
         bool HasResults() {
             return lefts.size() > 0 && rights.size() > 0;

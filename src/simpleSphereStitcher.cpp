@@ -78,7 +78,8 @@ StitchingResultP RStitcher::Stitch(const std::vector<ImageP> &in, bool debug) {
         Mat warpedImage;
 
         corners[i] = warper->warp(img->img, K, camera.R, INTER_LINEAR, BORDER_CONSTANT, warpedImage);
-        img->Unload();
+        if(!debug)
+            img->Unload();
         warper->warp(mask, K, camera.R, INTER_NEAREST, BORDER_CONSTANT, warpedMask);
         mask.release();
         warpedSizes[i] = warpedImage.size();

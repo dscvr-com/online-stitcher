@@ -8,8 +8,8 @@
 
 namespace optonaut {
     
-    const int WorkingWidth = 960;
-    const int WorkingHeight = 540;
+    const int WorkingWidth = 640;
+    const int WorkingHeight = 360;
 
     namespace colorspace {
         const int RGBA = 0;

@@ -17,10 +17,7 @@ class MatchInfo {
 public:
 	bool valid;
 	Mat homography;
-
-	vector<Mat> translations;
-	vector<Mat> rotations;
-	vector<Mat> normals;
+	Mat rotation;
 	double error;
 
 	MatchInfo() : valid(false) {}
@@ -30,6 +27,8 @@ class VisualAligner {
 
 private:
 	Ptr<AKAZE> detector;
+
+    const double OutlinerTolerance = 95 * 95; //Chosen by fair jojo roll
 
     void DrawHomographyBorder(const Mat &homography, const ImageP left, const Scalar &color, Mat &target) {
 
@@ -49,15 +48,18 @@ private:
         line(target, scene_corners[3] + offset, scene_corners[0] + offset, color, 4);
     }
 
-    void DrawResults(const Mat &homography, const vector<DMatch> &goodMatches, const ImageP a, const ImageP b, Mat &target) {
+    void DrawResults(const Mat &homography, const Mat &homographyFromRot, const vector<DMatch> &goodMatches, const ImageP a, const ImageP b, Mat &target) {
   		drawMatches(a->img, a->features, b->img, b->features,
                goodMatches, target, Scalar::all(-1), Scalar::all(-1),
                vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
 
         DrawHomographyBorder(homography, a, Scalar(0, 255, 0), target);
+        DrawHomographyBorder(homographyFromRot, a, Scalar(255, 0, 0), target);
         
         Mat estimation;
-        HomographyFromKnownParameters(a, b, estimation);
+        Mat rot;
+        HomographyFromKnownParameters(a, b, estimation, rot);
+
         
         DrawHomographyBorder(estimation, a, Scalar(0, 0, 255), target);
     } 
@@ -74,19 +76,59 @@ public:
 		detector->detectAndCompute(tmp, noArray(), img->features, img->descriptors);
 	}
 
-    void HomographyFromKnownParameters(const ImageP a, const ImageP b, Mat &hom) const {
+    void HomographyFromKnownParameters(const ImageP a, const ImageP b, Mat &hom, Mat &rot) const {
         Mat R3(3, 3, CV_64F);
         Mat aK3(3, 3, CV_64F);
-        Mat bK3(3, 3, CV_64F);
+
+        rot = b->originalExtrinsics.inv() * a->originalExtrinsics;
         
-        From4DoubleTo3Double(b->originalExtrinsics.inv() * a->originalExtrinsics, R3);
+        From4DoubleTo3Double(rot, R3);
 
         ScaleIntrinsicsToImage(a->intrinsics, a->img, aK3);
-        ScaleIntrinsicsToImage(b->intrinsics, b->img, bK3);
 
-        hom = bK3 * R3 * aK3.inv();
-        //hom = aK3 * aR3 * bR3.inv() * bK3.inv();
+        HomographyFromRotation(R3, aK3, hom);
     }
+
+    void HomographyFromRotation(const Mat &rot, const Mat &k, Mat &hom) const {
+        hom = k * rot * k.inv();
+    }
+
+    bool RotationFromHomography(const ImageP a, const ImageP b, const Mat &hom, Mat &r) const {
+
+        const bool useINRA = true;
+
+        if(!useINRA) {
+            Mat aK3(3, 3, CV_64F);
+            Mat bK3(3, 3, CV_64F);
+
+            ScaleIntrinsicsToImage(a->intrinsics, a->img, aK3);
+            ScaleIntrinsicsToImage(b->intrinsics, b->img, bK3);
+
+            From3DoubleTo4Double(bK3.inv() * hom * aK3, r);
+            
+            return true;
+        } else {
+            Mat aK3(3, 3, CV_64F);
+            ScaleIntrinsicsToImage(a->intrinsics, a->img, aK3);
+            
+            vector<Mat> rotations(4);
+            vector<Mat> translations(4);
+            vector<Mat> normals(4);
+
+			int nsols = decomposeHomographyMat(hom, aK3, rotations, translations, normals);
+
+ 			for(int i = 0; i < nsols; i++) {
+
+ 				if(!ContainsNaN(rotations[i])) {
+                    From3DoubleTo4Double(rotations[i], r);
+                    return true;
+ 				}
+ 			}
+
+            cout << "Hom decomposition found no solutions" << endl;
+            return false;
+        }
+    } 
 
 	MatchInfo *FindHomography(const ImageP a, const ImageP b) {
         assert(a != NULL);
@@ -96,26 +138,42 @@ public:
 			FindKeyPoints(b);
 
 		MatchInfo* info = new MatchInfo();
+        info->valid = false;
 
         cout << "Visual Aligner receiving " << a->id << " and " << b->id << endl;
 
-		BFMatcher  matcher;
+        //Estimation from image movement. 
+        Mat estRot; 
+        Mat estHom;
+        HomographyFromKnownParameters(a, b, estHom, estRot);
+
+		BFMatcher matcher;
 		vector<vector<DMatch>> matches;
 		matcher.knnMatch(a->descriptors, b->descriptors, matches, 1);
 
-		//TODO - find "good" matches based on Dist, angle and more.
-        //Also find 'certaincy' of matches, or quality of homography. 
-        //
-        //Simply use "expeced" by sensor to exclude groups. 
 		vector<DMatch> goodMatches;
 		for(size_t i = 0; i < matches.size(); i++) {
 			if(matches[i].size() > 0) {
-				goodMatches.push_back(matches[i][0]);
+
+                std::vector<Point2f> src(1);
+                std::vector<Point2f> est(1);
+
+                src[0] = a->features[matches[i][0].queryIdx].pt;
+                Point2f dst = b->features[matches[i][0].trainIdx].pt;
+
+                perspectiveTransform(src, est, estHom);
+
+                Point2f distVec = est[0] - dst;
+                double dist = distVec.x * distVec.x + distVec.y * distVec.y;
+
+                if(dist < OutlinerTolerance) {
+				    goodMatches.push_back(matches[i][0]);
+                }
 			}
 		}
 
 		if(goodMatches.size() == 0) {
-			//cout << "Homography: no matches. " << endl;
+			cout << "Homography: no matches. " << endl;
 			return info;
 		}
 
@@ -141,44 +199,41 @@ public:
         double inlinerRatio = inlinerCount;
         inlinerRatio /= goodMatches.size();
 
-        cout << "inliner ratio: " << inlinerRatio << endl;
-        cout << "matchCount: " << goodMatches.size() << endl;
-
-
-		info->rotations = vector<Mat>(4);
-		info->translations = vector<Mat>(4);
-
 		if(info->homography.cols != 0) {	
-			Mat scaledK;
-			ScaleIntrinsicsToImage(a->intrinsics, a->img, scaledK);
-			int nsols = decomposeHomographyMat(info->homography, scaledK, info->rotations, info->translations, info->normals);
- 			//cout << "Number of solutions: " << nsols << endl;
- 			for(int i = 0; i < nsols; i++) {
-
- 				if(ContainsNaN(info->rotations[i])) {
- 					info->rotations.erase(info->rotations.begin() + i);
- 					info->translations.erase(info->translations.begin() + i);
- 					info->normals.erase(info->normals.begin() + i);
- 					nsols--;
- 					i--;
- 				}
- 			}
-			info->valid = info->rotations.size() > 0;
+            info->valid = RotationFromHomography(a, b, info->homography, info->rotation);
  		}
 	
-		//debug
- 		
-	   	if(info->homography.cols != 0) {
+	   	if(info->valid) {
+            Mat rotV(3, 1, CV_64F);
+            ExtractRotationVector(info->rotation * estRot.inv(), rotV);
+            
+            info->valid = abs(rotV.at<double>(2)) < 0.01;
+            info->valid = info->valid && inlinerRatio >= 0.8 && inlinerCount > 50;
+
+            //debug
             Mat target; 
-            DrawResults(info->homography, goodMatches, a, b, target);
-		    imwrite("dbg/Homogpraphy" + ToString(a->id) + "_" + ToString(b->id) + "(C " + ToString(goodMatches.size()) + ", R " +ToString(inlinerRatio * 100) +  " ).jpg", target);
-		} else {
-			cout << "Debug: Homography not found." << endl;
-		}
-		//debug end
+
+            Mat aK3;
+            Mat reHom, rot3(3, 3, CV_64F);
+            ScaleIntrinsicsToImage(a->intrinsics, a->img, aK3);
+            From4DoubleTo3Double(info->rotation, rot3);
+            HomographyFromRotation(rot3, aK3, reHom);
+
+            DrawResults(info->homography, reHom, goodMatches, a, b, target);
+
+            std::string filename = 
+                "dbg/Homogpraphy" + ToString(a->id) + "_" + ToString(b->id) + 
+                "(C " + ToString(goodMatches.size()) + 
+                ", R " + ToString(inlinerRatio * 100) +  
+                ", dx " + ToString(rotV.at<double>(0)) + 
+                ", dy " + ToString(rotV.at<double>(1)) + 
+                ", dz " + ToString(rotV.at<double>(2)) + 
+                ", used " + ToString(info->valid) + 
+                ").jpg";
+		    imwrite(filename, target);
+		    //debug end
         
-        if(inlinerRatio < 0.40 || inlinerCount < 80)
-            info->valid = false;
+		}
 		
 		return info;
 	}

@@ -59,9 +59,8 @@ namespace optonaut {
 	        		if(hom->valid) { //Basic validity
 
 		        		Mat rotation(4, 4, CV_64F);
-		        		From3DoubleTo4Double(hom->rotations[0], rotation);
+		        		From3DoubleTo4Double(hom->rotation, rotation);
 		        		rotation = rotation.inv();
-
 
                         if(visualAnchor == -1 || 
                             GetAngleOfRotation(rPrevious[0].t() * rPrevious[visualAnchor] * visualDiff) > 
@@ -100,18 +99,35 @@ namespace optonaut {
 	        	//CreateRotationY(0.005, offset);
 	        	//CreateRotationY(0.000, offset);
 
-        		if(visualAnchor == -1) {
+        		if(visualAnchor == -1 || GetAngleOfRotation(visualDiff * sensorDiff.inv()) > 0.5) {
+                    //Fallback to sensor. 
 	        		rPrevious.push_back(GetCurrentRotation() * sensorDiff);
-	        		//cout << "Sensor" << endl;
+	        		cout << "Sensor" << endl;
 	        	} else {
-                    if(GetAngleOfRotation(visualDiff * sensorDiff.inv()) > 0.2) {
+                    if(GetAngleOfRotation(visualDiff * sensorDiff.inv()) > 0.1) {
+                        //Filter out huge errors!
+	        		    cout << "Sensor" << endl;
 	        		    rPrevious.push_back(rPrevious[visualAnchor] * sensorDiff);
                     }
                     else 
                     {
-	        		    //If your sensor moved a lot more, discard!
-	        		    rPrevious.push_back(rPrevious[visualAnchor] * visualDiff);
-	        		    //cout << "Visual" << endl;
+                        //Combine sensor and visual data - sensor does great job for up/down/angle 
+                        Mat vv, sv;
+
+                        ExtractRotationVector(visualDiff, vv);
+                        ExtractRotationVector(sensorDiff, sv);
+
+                        Mat cv = sensorDiff;
+                        cv.at<double>(1) = visualDiff.at<double>(1);
+
+                        Mat rz, ry, rx;
+
+                        CreateRotationX(cv.at<double>(0), rx);                        
+                        CreateRotationY(cv.at<double>(1), ry);
+                        CreateRotationZ(cv.at<double>(2), rz);                        
+	        		
+	        		    rPrevious.push_back(rPrevious[visualAnchor] * rx * ry * rz);
+	        		    cout << "Visual" << endl;
                     }
 
 	        	} 

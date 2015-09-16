@@ -88,6 +88,8 @@ int main(int argc, char* argv[]) {
         cout << "No results." << endl;
     }
     if(Pipeline::debug) {
+        auto alignedDebug = pipe->FinishAlignedDebug();
+        imwrite("dbg/aligned-debug.jpg", alignedDebug->image);
         auto aligned = pipe->FinishAligned();
         imwrite("dbg/aligned.jpg", aligned->image);
     }
