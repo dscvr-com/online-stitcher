@@ -7,6 +7,7 @@
 #include "support.hpp"
 #include "aligner.hpp"
 #include "pairwiseVisualAligner.hpp"
+#include "stat.hpp"
 
 using namespace cv;
 using namespace std;
@@ -21,6 +22,7 @@ namespace optonaut {
         vector<vector<ImageP>> rings;
         ImageP last;
         Mat compassDrift;
+        deque<double> angles;
 	public:
 		RingwiseStreamAligner() : visual(PairwiseVisualAligner::ModeECCAffine), compassDrift(Mat::eye(4, 4, CV_64F)) { }
 
@@ -56,10 +58,17 @@ namespace optonaut {
             ImageP closest = NULL;
             double minDist = 100;
 
+            Mat nextRVec(3, 1, CV_64F);
+            ExtractRotationVector(next->originalExtrinsics, nextRVec);
+
             if(0 != r) {
                 for(size_t j = 0; j < rings[0].size(); j++) {
                     //TODO: Fix the metric. 
-                    double dist = GetAngleOfRotation(rings[0][j]->adjustedExtrinsics, next->originalExtrinsics);
+                    Mat imgRVec(3, 1, CV_64F);
+                    ExtractRotationVector(rings[0][j]->adjustedExtrinsics,imgRVec);
+
+                    double dist = abs(imgRVec.at<double>(1) - nextRVec.at<double>(1));
+
                     if(closest == NULL || dist < minDist) {
                         minDist = dist;
                         closest = rings[0][j];
@@ -93,11 +102,21 @@ namespace optonaut {
 
                     Mat rotY(4, 4, CV_64F);
 
+                    angles.push_back(angle);
+
                     cout << "Adjusting angle: " << angle << endl;
+                    if(angles.size() >= 50) {
+                        if(angles.size() > 50) {
+                            angles.pop_front(); 
+                        }
+                        
+                        angle = Average(angles, 1.0 / 5.0);
+                        cout << "Adjusting angle: " << angle << endl;
 
-                    CreateRotationY(angle, rotY); 
+                        CreateRotationY(angle, rotY); 
 
-                    compassDrift = rotY;
+                        compassDrift = rotY;
+                    }
                 }
             }
 
