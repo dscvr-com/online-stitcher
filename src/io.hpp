@@ -12,10 +12,11 @@
 
 namespace optonaut {
 
-    int IdFromFileName(const string &in);
+    int IdFromFileName(const std::string &in);
 	bool StringEndsWith(const std::string& a, const std::string& b);
 
 	ImageP ImageFromFile(std::string path);
+ 	bool FileExists(const std::string &fileName);
 
 	template <typename T>
 	void BufferFromStringFile(T buf[], int len, std::string file) {
@@ -26,7 +27,8 @@ namespace optonaut {
 	    }
 	}
 
-	void BufferFromBinFile(unsigned char buf[], int len, std::string file);
+	void BufferFromBinFile(unsigned char buf[], size_t len, std::string file);
+	void BufferToBinFile(unsigned char buf[], size_t len, std::string file);
 }
 
 #endif

@@ -1,5 +1,6 @@
 #include <opencv2/opencv.hpp>
 #include <math.h>
+#include <chrono>
 
 #include "image.hpp"
 #include "support.hpp"
@@ -46,32 +47,41 @@ namespace optonaut {
         //We sould calc this from buffer, overlap, fov
         const double tolerance = M_PI / 16; //DONT USE IN PRODUCTION!!!!!
         
-        //Ball Speed per frame, in radians
-        const double ballSpeed = M_PI / 80;
+        //Ball Speed per second, in radians
+        const double ballSpeed = M_PI / 2;
+        
+        size_t lt;
         
         
-        void MoveToNextRing() {
+        void MoveToNextRing(const Mat &cur) {
             
             //Moves from center outward, toggling between top and bottom, top ring comes before bottom ring.
             int ringCount = (int)graph.targets.size();
             int centerRing = ringCount / 2;
             
-            currentRing = currentRing - centerRing;
+            int newRing = currentRing - centerRing;
             //If we are on a bottom or the center ring, move outward.
-            if(currentRing >= 0) {
-                currentRing++;
+            if(newRing >= 0) {
+                newRing++;
             }
             //Switch bottom and top, or vice versa.
-            currentRing *= -1;
-            currentRing = currentRing + centerRing;
+            newRing *= -1;
+            newRing = newRing + centerRing;
             
-            assert(currentRing >= 0 && currentRing < ringCount);
+            assert(newRing >= 0 && newRing < ringCount);
+            
+            currentRing = newRing;
+            MoveToClosestPoint(cur);
+        }
+        
+        void MoveToClosestPoint(const Mat &closest) {
+            graph.FindClosestPoint(closest, ballTarget, currentRing);
+            ballPosition = ballTarget.extrinsics.clone();
         }
 
     public:
         RecorderController(RecorderGraph &graph): graph(graph), isFinished(false), isInitialized(false),
-            ballPosition(Mat::eye(4, 4, CV_64F)), prevDist(100), error(-1), errorVec(3, 1, CV_64F) {
-    
+            ballPosition(Mat::eye(4, 4, CV_64F)), prevDist(100), error(-1), errorVec(3, 1, CV_64F), lt(0) {
         }
         
         bool IsInitialized() {
@@ -82,52 +92,61 @@ namespace optonaut {
             assert(!isInitialized);
             
             currentRing = (int)graph.targets.size() / 2;
-
-            graph.FindClosestPoint(initPosition, ballTarget, currentRing);
-            
-            ballPosition = ballTarget.extrinsics.clone();
+            MoveToClosestPoint(initPosition);
             isInitialized = true;
         }
         
-        SelectionInfo Push(const ImageP image) {
+        SelectionInfo Push(const ImageP image, bool isIdle) {
             assert(isInitialized);
 
             double viewDist = GetAngleOfRotation(image->adjustedExtrinsics, ballTarget.extrinsics);
+            size_t t = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count();
             
             SelectionInfo info;
             info.closestPoint = ballTarget;
             info.image = image;
 
-            //If we reached a viewpoint...
-            if(viewDist < tolerance) {
-                SelectionPoint next;
-                if(graph.GetNext(ballTarget, next)) {
-                    prevTarget = ballTarget;
-                    prevDist = 100;
-                    ballTarget = next;
-                } else {
-                    //Ring switch or finish.
-                    isFinished = true;
+            if(!isIdle && lt != 0) {
+                //If we reached a viewpoint...
+                if(viewDist < tolerance) {
+                    SelectionPoint next;
+                    graph.MarkEdgeAsRecorded(prevTarget, ballTarget);
+                    if(graph.GetNextForRecording(ballTarget, next)) {
+                        prevTarget = ballTarget;
+                        prevDist = 100;
+                        ballTarget = next;
+                        cout << "Move next" << endl;
+                    } else {
+                        //Ring switch or finish
+                        MoveToNextRing(image->adjustedExtrinsics);
+                        cout << "Ring Jump" << endl;
+                    }
                 }
-            }
 
-            //Animate ball.
-            
-            double dist = GetAngleOfRotation(ballPosition, ballTarget.extrinsics);
-            double t = cos(dist) * ballSpeed;
-            
-            Mat newPos(4, 4, CV_64F);
-            Lerp(ballPosition, ballTarget.extrinsics, t, newPos);
-                
-            ballPosition = newPos;
+                //Animate ball.
+                double dist = GetAngleOfRotation(ballPosition, ballTarget.extrinsics);
+                //Delta time
+                double dt = (double)(t - lt) / 1000.0;
+                //Delta pos
+                double dp = cos(dist) * ballSpeed * dt;
+                Mat newPos(4, 4, CV_64F);
+                Lerp(ballPosition, ballTarget.extrinsics, dp, newPos);
+                    
+                ballPosition = newPos;
+              
+            }
             
             
             error = GetAngleOfRotation(image->adjustedExtrinsics, ballPosition);
             ExtractRotationVector(image->adjustedExtrinsics.inv() * ballPosition, errorVec);
             
             info.dist = viewDist;
-            info.isValid = viewDist < tolerance && viewDist < tolerance;
+            if(info.dist < tolerance && info.dist < prevDist) {
+                info.isValid = true;
+                prevDist = info.dist;
+            }
             
+            lt = t;
             return info;
         }
         

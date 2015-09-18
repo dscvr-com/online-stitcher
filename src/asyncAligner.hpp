@@ -6,7 +6,7 @@
 #include "image.hpp"
 #include "support.hpp"
 #include "aligner.hpp"
-#include "streamAligner.hpp"
+#include "sequenceStreamAligner.hpp"
 #include <thread>
 
 using namespace cv;
@@ -18,7 +18,7 @@ using namespace std;
 namespace optonaut {
 	class AsyncAligner : public Aligner {
 	private:
-		StreamAligner core;
+		SequenceStreamAligner core;
         ImageP recentImage;
         bool running;
         thread worker;

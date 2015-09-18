@@ -127,11 +127,11 @@ namespace optonaut {
 		return result;
 	}
 
-	void BufferFromBinFile(unsigned char buf[], int len, string file) {
+	void BufferFromBinFile(unsigned char buf[], size_t len, string file) {
 
 	    ifstream input(file, std::ios::binary);
 
-	    int i;
+	    size_t i;
 	    for(i = 0; i < len && input.good(); i++) {
 	        buf[i] = input.get();
 	    }

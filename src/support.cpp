@@ -234,6 +234,17 @@ namespace optonaut {
 		}
 		out.at<double>(3, 3) = 1;
 	}
+	
+    void From3FloatTo3Double(const Mat &in, Mat &out) {
+		assert(MatIs(in, 3, 3, CV_32F));
+
+		out = Mat::zeros(3, 3, CV_64F);
+		for(int i = 0; i < 3; i++) {
+			for(int j = 0; j < 3; j++) {
+				out.at<double>(i, j) = (double)in.at<float>(i, j);
+			}
+		}
+	}
 
 	bool ContainsNaN(const Mat &in) {
 		assert(in.type() == CV_64F);

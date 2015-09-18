@@ -1,6 +1,7 @@
 #include "image.hpp"
 #include "asyncAligner.hpp"
 #include "trivialAligner.hpp"
+#include "ringwiseStreamAligner.hpp"
 #include "monoStitcher.hpp"
 #include "recorderGraph.hpp"
 #include "recorderGraphGenerator.hpp"
@@ -39,6 +40,7 @@ namespace optonaut {
         bool previewImageAvailable;
         bool isIdle;
         bool previewEnabled;
+        bool isFinished;
         
         RecorderGraphGenerator generator;
         RecorderGraph recorderGraph;
@@ -80,6 +82,7 @@ namespace optonaut {
             previewImageAvailable(false),
             isIdle(false),
             previewEnabled(true),
+            isFinished(false),
             generator(),
             recorderGraph(generator.Generate(intrinsics, graphConfiguration)),
             controller(recorderGraph),
@@ -98,8 +101,9 @@ namespace optonaut {
             if(isAsync) {
                 aligner = shared_ptr<Aligner>(new AsyncAligner());
             } else {
-                aligner = shared_ptr<Aligner>(new StreamAligner());
+                aligner = shared_ptr<Aligner>(new RingwiseStreamAligner());
             }
+            //aligner = shared_ptr<Aligner>(new TrivialAligner());
         }
         
         void SetPreviewImageEnabled(bool enabled) {
@@ -177,7 +181,9 @@ namespace optonaut {
             assert(a.image->IsLoaded());
             assert(b.image->IsLoaded());
             SelectionEdge edge;
-            assert(recorderGraph.HasEdge(a.closestPoint, b.closestPoint, edge));
+            
+            if(!recorderGraph.GetEdge(a.closestPoint, b.closestPoint, edge))
+                return;
             
             StereoImage stereo;
             stereoConverter.CreateStereo(a, b, edge, stereo);
@@ -196,12 +202,14 @@ namespace optonaut {
         void Push(ImageP image) {
             
             image->originalExtrinsics = base * zero * image->originalExtrinsics.inv() * baseInv;
+            
             if(aligner->NeedsImageData() && !image->IsLoaded()) {
                 //If the aligner needs image data, pre-load the image.
                 image->LoadFromDataRef();
             }
             
             aligner->Push(image);
+            
             image->adjustedExtrinsics = aligner->GetCurrentRotation().clone();
 
             if(Pipeline::debug) {
@@ -215,10 +223,10 @@ namespace optonaut {
             if(!controller.IsInitialized())
                 controller.Initialize(image->adjustedExtrinsics);
             
+            SelectionInfo current = controller.Push(image, isIdle);
+            
             if(isIdle)
                 return;
-      		
-            SelectionInfo current = controller.Push(image);
             
             if(!currentBest.isValid) {
                 //Initialization. 
@@ -233,8 +241,6 @@ namespace optonaut {
                     //Ok, hit that. We can stitch.
                     if(previous.isValid) {
                         Stitch(previous, currentBest);
-                        recorderGraph.RemoveEdge(previous.closestPoint, currentBest.closestPoint);
-                        
                         recordedImages++;
                     }
                     previous = currentBest;
@@ -244,11 +250,17 @@ namespace optonaut {
                 currentBest = current;
                 
             }
+            
+            //TODO: Something is wrong with the
+            //recorder state (off-by-one due to timing?).
+            //This is just a quick hack. (-1)
+            if(recordedImages == imagesToRecord - 1)
+                isFinished = true;
         }
                 
         bool AreAdjacent(SelectionPoint a, SelectionPoint b) {
             SelectionEdge dummy; 
-            return recorderGraph.HasEdge(a, b, dummy);
+            return recorderGraph.GetEdge(a, b, dummy);
         }
         
         SelectionInfo CurrentPoint() {
@@ -260,16 +272,17 @@ namespace optonaut {
         }
 
         StitchingResultP FinishLeft() {
-            return Finish(lefts);
-        }       
+            return Finish(lefts, false);
+        }
 
         StitchingResultP FinishRight() {
-            return Finish(rights);
+            return Finish(rights, false);
         }
 
         StitchingResultP FinishAligned() {
             return Finish(aligned, false);
         }
+
         StitchingResultP FinishAlignedDebug() {
             return Finish(aligned, true);
         }
@@ -283,7 +296,7 @@ namespace optonaut {
         }
         
         bool IsFinished() {
-            return controller.IsFinished();
+            return isFinished;
         }
         
         void SetIdle(bool isIdle) {
@@ -297,8 +310,6 @@ namespace optonaut {
         uint32_t GetRecordedImagesCount() {
             return recordedImages;
         }
-        
-        
     };    
 }
 

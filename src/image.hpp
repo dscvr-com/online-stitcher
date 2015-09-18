@@ -7,7 +7,6 @@
 #define OPTONAUT_IMAGE_HEADER
 
 namespace optonaut {
-    
     const int WorkingWidth = 640;
     const int WorkingHeight = 360;
 
