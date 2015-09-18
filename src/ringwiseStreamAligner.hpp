@@ -22,7 +22,20 @@ namespace optonaut {
         vector<vector<ImageP>> rings;
         ImageP last;
         Mat compassDrift;
-        deque<double> angles;
+        vector<deque<double>> angles;
+
+        int GetRingForImage(const Mat &extrinsics) const {
+            size_t r = 0;
+
+            for(auto ring : rings) {
+                if(abs(GetDistanceY(ring[0]->adjustedExtrinsics, extrinsics)) < M_PI / 8) {
+                    break;
+                }
+                r++;
+            } 
+
+            return r;
+        }
 	public:
 		RingwiseStreamAligner() : visual(PairwiseVisualAligner::ModeECCAffine), compassDrift(Mat::eye(4, 4, CV_64F)) { }
 
@@ -39,19 +52,13 @@ namespace optonaut {
             //TODO - adjust incoming with memorized compass drift. 
             next->originalExtrinsics = /*compassDrift **/ next->originalExtrinsics;
             
-            size_t r = 0;
-
-            for(auto ring : rings) {
-                if(abs(GetDistanceY(ring[0]->adjustedExtrinsics, next->originalExtrinsics)) < M_PI / 8) {
-                    break;
-                }
-                r++;
-            } 
+            size_t r = GetRingForImage(next->originalExtrinsics);
 
             cout << "Ring " << r << endl;
 
             if(r >= rings.size()) {
                 rings.push_back(vector<ImageP>());
+                angles.push_back(deque<double>());
             }
             rings[r].push_back(next);
 
@@ -102,8 +109,9 @@ namespace optonaut {
 
                     Mat rotY(4, 4, CV_64F);
 
-                    angles.push_back(angle);
+                    angles[r].push_back(angle);
 
+                    /*
                     cout << "Adjusting angle: " << angle << endl;
                     if(angles.size() >= 50) {
                         if(angles.size() > 50) {
@@ -117,6 +125,7 @@ namespace optonaut {
 
                         compassDrift = rotY;
                     }
+                    */
                 }
             }
 
@@ -126,8 +135,23 @@ namespace optonaut {
         }
 
 		Mat GetCurrentRotation() const {
-			return compassDrift * last->originalExtrinsics;
+			return last->originalExtrinsics;
 		}
+
+        void Postprocess(vector<ImageP> imgs) const {
+            vector<Mat> avgs(angles.size()); 
+            
+            for(size_t i = 0; i < imgs.size(); i++) {
+                double a = Average(angles[i], 1.0/3.0);
+                cout << "Adjusting ring " << i << " with " << a << endl;
+                CreateRotationY(a, avgs[i]);
+            }
+
+            for(auto img : imgs) {
+                int r = GetRingForImage(img->adjustedExtrinsics);
+                img->adjustedExtrinsics = avgs[r] * img->adjustedExtrinsics;
+            }
+        };
 	};
 }
 

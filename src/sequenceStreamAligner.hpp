@@ -150,6 +150,8 @@ namespace optonaut {
 		Mat GetCurrentRotation() const {
 			return rPrevious.back();
 		}
+        
+        void Postprocess(vector<ImageP>) const { };
 	};
 }
 

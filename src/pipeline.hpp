@@ -284,6 +284,7 @@ namespace optonaut {
         }
 
         StitchingResultP FinishAlignedDebug() {
+            aligner->Postprocess(aligned);
             return Finish(aligned, true);
         }
 
