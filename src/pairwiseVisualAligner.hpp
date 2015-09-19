@@ -211,7 +211,7 @@ public:
         }
         TermCriteria termination(TermCriteria::COUNT + TermCriteria::EPS, iterations, eps);
         try {
-            findTransformECC(ga, gb, affine, warp, termination);
+            findTransformECC(ga, gb, in, warp, termination);
         } catch (Exception ex) {
             cout << "ECC couldn't correlate" << endl;
             return;
@@ -330,9 +330,9 @@ public:
         }
 
         minfo.num_inliers = inlinerCount;
-        minfo.confidence = 1;
+        minfo.confidence = 0;
+        minfo.H = info->homography;
 
-        this->matches.push_back(minfo);
 
         double inlinerRatio = inlinerCount;
         inlinerRatio /= goodMatches.size();
@@ -355,10 +355,11 @@ public:
                     }
                 }
             }
-           
-            if(info->valid) 
-                minfo.H = info->homography;
 
+            if(info->valid) {
+                minfo.confidence = 100;
+            }
+           
             //debug
             if(debug) {
                 Mat target; 
@@ -382,11 +383,13 @@ public:
             }
            
 		}
+        
+        this->matches.push_back(minfo);
     }
 
     bool RotationFromHomography(const ImageP a, const ImageP b, const Mat &hom, Mat &r) const {
 
-        const bool useINRA = false;
+        const bool useINRA = true;
 
         if(!useINRA) {
             Mat aK3(3, 3, CV_64F);
@@ -454,6 +457,7 @@ public:
             c.ppy = img->intrinsics.at<double>(1, 2);
             c.aspect = c.ppx / c.ppy;
             c.t = Mat(3, 1, CV_32F);
+            c.R = Mat(3, 3, CV_32F);
 
             From4DoubleTo3Float(img->originalExtrinsics, c.R);
 
@@ -469,8 +473,8 @@ public:
         auto adjuster = BundleAdjusterRay();
         //adjuster.setConfThresh(...); //?
         Mat refineMask = Mat::zeros(3, 3, CV_8U);
-        //Refinement mask???
         adjuster.setRefinementMask(refineMask);
+        adjuster.setTermCriteria(TermCriteria(TermCriteria::EPS | TermCriteria::COUNT, 100, 10e-2));
         if(!adjuster(features, fullMatches, cameras)) {
             cout << "Bundle Adjusting failed" << endl;
         }
@@ -479,19 +483,19 @@ public:
         vector<Mat> rmats;
          
         for (size_t i = 0; i < cameras.size(); ++i) {
+            //rmats.emplace_back(3, 3, CV_32F);
+            //From3DoubleTo3Float(cameras[i].R, rmats[i]);
             rmats.push_back(cameras[i].R.clone());
+            cout << "Discarding translation: " << cameras[i].t << endl;
         }
         waveCorrect(rmats, detail::WAVE_CORRECT_HORIZ);
-        for (size_t i = 0; i < cameras.size(); ++i) {
-            cameras[i].R = rmats[i];
-        }
 
         for(auto img : images) {
             auto it = imgToLocalId.find(img);
             if(it == imgToLocalId.end())
                 continue;
             
-            From3FloatTo4Double(cameras[it->second].R, img->adjustedExtrinsics);
+            From3FloatTo4Double(rmats[it->second], img->adjustedExtrinsics);
         }
     }
 };

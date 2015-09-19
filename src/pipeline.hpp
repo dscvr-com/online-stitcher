@@ -102,7 +102,7 @@ namespace optonaut {
             if(isAsync) {
                 aligner = shared_ptr<Aligner>(new AsyncAligner());
             } else {
-                aligner = shared_ptr<Aligner>(new BundleAligner());
+                aligner = shared_ptr<Aligner>(new RingwiseStreamAligner());
             }
             //aligner = shared_ptr<Aligner>(new TrivialAligner());
         }
@@ -278,6 +278,43 @@ namespace optonaut {
 
         StitchingResultP FinishRight() {
             return Finish(rights, false);
+            //Experimental triple stitcher
+           /* auto rings = RingwiseStreamAligner::SplitIntoRings(rights);
+
+            vector<StitchingResultP> stitchedRings;
+
+            for(size_t i = 0; i < rings.size(); i++) {
+                auto res = Finish(rings[i], false);
+                imwrite("dbg/ring_right_" + ToString(i) + ".jpg", res->image);
+                stitchedRings.push_back(res);
+        
+                const int warp = MOTION_TRANSLATION;
+                Mat affine = Mat::zeros(2, 3, CV_32F);
+                const int iterations = 1000;
+                const double eps = 1e-5;
+
+       
+                affine.at<float>(0, 0) = 1; 
+                affine.at<float>(1, 1) = 1; 
+                affine.at<float>(0, 2) = info->homography.at<double>(0, 2); 
+                affine.at<float>(1, 2) = info->homography.at<double>(1, 2); 
+                TermCriteria termination(TermCriteria::COUNT + TermCriteria::EPS, iterations, eps);
+                
+                try {
+                    findTransformECC(ga, gb, affine, warp, termination);
+                } catch (Exception ex) {
+                    cout << "ECC couldn't correlate" << endl;
+                    return;
+                }
+        
+                cout << "Found Affine: " << affine << endl;
+                info->homography = Mat::eye(3, 3, CV_64F);
+                info->homography.at<double>(0, 2) = affine.at<float>(0, 2); 
+                info->homography.at<double>(1, 2) = affine.at<float>(1, 2); 
+                info->valid = true;
+            }
+
+            return stitchedRings[0];*/
         }
 
         StitchingResultP FinishAligned() {

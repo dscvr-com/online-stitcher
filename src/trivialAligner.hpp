@@ -31,6 +31,8 @@ namespace optonaut {
         Mat GetCurrentRotation() const {
             return current;
         }
+        
+        void Postprocess(vector<ImageP>) const { };
     };
 }
 #endif

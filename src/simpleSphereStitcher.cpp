@@ -88,7 +88,6 @@ StitchingResultP RStitcher::Stitch(const std::vector<ImageP> &in, bool debug) {
         warpedMask.release();
         Image::SaveToDisk(i + imageOffset, warpedImage);
         warpedImage.release();
-
     }
 
     warper.release();

@@ -25,16 +25,7 @@ namespace optonaut {
         vector<deque<double>> angles;
 
         int GetRingForImage(const Mat &extrinsics) const {
-            size_t r = 0;
-
-            for(auto ring : rings) {
-                if(abs(GetDistanceY(ring[0]->adjustedExtrinsics, extrinsics)) < M_PI / 8) {
-                    break;
-                }
-                r++;
-            } 
-
-            return r;
+            return GetRingForImage(extrinsics, rings);
         }
 	public:
 		RingwiseStreamAligner() : visual(PairwiseVisualAligner::ModeECCAffine), compassDrift(Mat::eye(4, 4, CV_64F)) { }
@@ -45,6 +36,34 @@ namespace optonaut {
 
         void Dispose() {
 
+        }
+
+        static int GetRingForImage(const Mat &extrinsics, const vector<vector<ImageP>> &rings) {
+            size_t r = 0;
+
+            for(auto ring : rings) {
+                if(abs(GetDistanceY(ring[0]->adjustedExtrinsics, extrinsics)) < M_PI / 16) {
+                    break;
+                }
+                r++;
+            } 
+
+            return r;
+        }
+
+        static vector<vector<ImageP>> SplitIntoRings(vector<ImageP> &imgs) {
+            
+            vector<vector<ImageP>> rings;
+
+            for(auto img : imgs) {
+                size_t r = GetRingForImage(img->originalExtrinsics, rings);
+                if(r >= rings.size()) {
+                    rings.push_back(vector<ImageP>());
+                }
+                rings[r].push_back(img);
+            }
+
+            return rings;
         }
 
 		void Push(ImageP next) {
@@ -110,7 +129,7 @@ namespace optonaut {
                     ExtractRotationVector(closest->adjustedExtrinsics, rveca);
                     ExtractRotationVector(next->originalExtrinsics, rvecb);
 
-                    angle = rveca.at<double>(1) - rvecb.at<double>(1) - angle;
+                    angle = -(rveca.at<double>(1) - rvecb.at<double>(1) - angle);
 
                     Mat rotY(4, 4, CV_64F);
 
