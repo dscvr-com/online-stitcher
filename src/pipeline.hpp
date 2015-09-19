@@ -8,6 +8,7 @@
 #include "recorderController.hpp"
 #include "simpleSphereStitcher.hpp"
 #include "imageResizer.hpp"
+#include "bundleAligner.hpp"
 
 #ifndef OPTONAUT_PIPELINE_HEADER
 #define OPTONAUT_PIPELINE_HEADER
@@ -101,7 +102,7 @@ namespace optonaut {
             if(isAsync) {
                 aligner = shared_ptr<Aligner>(new AsyncAligner());
             } else {
-                aligner = shared_ptr<Aligner>(new RingwiseStreamAligner());
+                aligner = shared_ptr<Aligner>(new BundleAligner());
             }
             //aligner = shared_ptr<Aligner>(new TrivialAligner());
         }

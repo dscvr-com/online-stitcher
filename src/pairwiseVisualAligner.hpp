@@ -1,6 +1,9 @@
 #include <opencv2/features2d.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
+#include <opencv2/stitching/detail/matchers.hpp>
+#include <opencv2/stitching/detail/camera.hpp>
+#include <opencv2/stitching/detail/motion_estimators.hpp>
 
 #include "image.hpp"
 #include "support.hpp"
@@ -8,6 +11,7 @@
 
 using namespace cv;
 using namespace std;
+using namespace cv::detail;
 
 #ifndef OPTONAUT_PAIRWISE_VISUAL_ALIGNMENT_HEADER
 #define OPTONAUT_PAIRWISE_VISUAL_ALIGNMENT_HEADER
@@ -22,6 +26,7 @@ public:
 	double error;
 
 	MatchInfo() : valid(false), homography(4, 4, CV_64F), rotation(4, 4, CV_64F) {}
+
 };
 
 class PairwiseVisualAligner {
@@ -29,10 +34,20 @@ class PairwiseVisualAligner {
 private:
 	Ptr<AKAZE> detector;
 
-    const double OutlinerTolerance = 95 * 95; //Chosen by fair jojo roll
+    //TODO Make dependent of image size
+    const double OutlinerTolerance = 155 * 155; //Chosen by fair jojo roll
 
     void DrawHomographyBorder(const Mat &homography, const ImageP left, const Scalar &color, Mat &target) {
+        std::vector<Point2f> scene_corners = GetSceneCorners(left, homography);
 
+        Point2f offset(left->img.cols, 0);
+        line(target, scene_corners[0] + offset, scene_corners[1] + offset, color, 4);
+        line(target, scene_corners[1] + offset, scene_corners[2] + offset, color, 4);
+        line(target, scene_corners[2] + offset, scene_corners[3] + offset, color, 4);
+        line(target, scene_corners[3] + offset, scene_corners[0] + offset, color, 4);
+    }
+
+    vector<Point2f> GetSceneCorners(const ImageP left, const Mat &homography) {
         std::vector<Point2f> obj_corners(4);
         obj_corners[0] = cvPoint(0,0); 
         obj_corners[1] = cvPoint(left->img.cols, 0);
@@ -42,21 +57,17 @@ private:
 
         perspectiveTransform(obj_corners, scene_corners, homography);
 
-        Point2f offset(left->img.cols, 0);
-        line(target, scene_corners[0] + offset, scene_corners[1] + offset, color, 4);
-        line(target, scene_corners[1] + offset, scene_corners[2] + offset, color, 4);
-        line(target, scene_corners[2] + offset, scene_corners[3] + offset, color, 4);
-        line(target, scene_corners[3] + offset, scene_corners[0] + offset, color, 4);
+        return scene_corners;
     }
 
-    void DrawResults(const Mat &homography, const Mat &homographyFromRot, const vector<DMatch> &goodMatches, const ImageP a, const ImageP b, Mat &target) {
+    void DrawResults(const Mat &homography, const Mat &homographyFromRot, const vector<DMatch> &goodMatches, const ImageP a, const ImageFeatures &aFeatures, const ImageP b, const ImageFeatures &bFeatures, Mat &target) {
 
         //Colors: Green: Detected Homography.
         //        Red:   Estimated from Sensor.
         //        Blue:  Hmoography induced by dectected rotation. 
 
 
-  		drawMatches(a->img, a->features, b->img, b->features,
+  		drawMatches(a->img, aFeatures.keypoints, b->img, bFeatures.keypoints,
                goodMatches, target, Scalar::all(-1), Scalar::all(-1),
                vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
 
@@ -89,22 +100,70 @@ private:
     int mode;
 
     static const bool debug = true;
+
+    //Needed for bundle adj.
+    map<ImageP, size_t> imgToLocalId;
+    vector<MatchesInfo> matches;
+    vector<ImageFeatures> features;
+
+    size_t GetImageId(ImageP img) {
+        if(imgToLocalId.find(img) == imgToLocalId.end()) {
+            imgToLocalId.insert(pair<ImageP, size_t>(img, imgToLocalId.size()));
+        }
+        
+        size_t id = imgToLocalId[img];
+
+        return id;
+    }
 public:
 
     static const int ModeECCHom = 0;
     static const int ModeECCAffine = 1;
     static const int ModeFeatures = 2;
 
-	PairwiseVisualAligner(int mode = ModeECCAffine) : detector(AKAZE::create()), mode(mode) { }
+	PairwiseVisualAligner(int mode = ModeFeatures) : detector(AKAZE::create()), mode(mode) { }
 
 	void FindKeyPoints(ImageP img) {
         if(mode == ModeFeatures) {
-		    img->features.clear();
-            Mat tmp = img->img;
-            //resize(img->img, tmp, Size(img->img.cols * 0.5, img->img.rows * 0.5));
+            size_t id = GetImageId(img);
 
-		    detector->detectAndCompute(tmp, noArray(), img->features, img->descriptors);
+            assert(features.size() == id);
+
+            ImageFeatures f;
+
+            Mat tmp = img->img;
+
+            f.img_idx = id;
+            Mat *descriptors = new Mat();
+            f.img_size = img->img.size();
+
+		    detector->detectAndCompute(tmp, noArray(), f.keypoints, *descriptors);
+
+            f.descriptors = descriptors->getUMat(ACCESS_READ);
+
+            features.push_back(f);
 	    }
+    }
+
+    bool AreOverlapping(const ImageP a, const ImageP b, double minOverlap = 0.1) {
+        Mat hom, rot;
+
+        HomographyFromKnownParameters(a, b, hom, rot);
+
+        std::vector<Point2f> corners = GetSceneCorners(a, hom); 
+
+        int top = min(corners[0].x, corners[1].x); 
+        int bot = max(corners[2].x, corners[3].x); 
+        int left = min(corners[0].y, corners[3].y); 
+        int right = max(corners[1].y, corners[2].y); 
+
+        int x_overlap = max(0, min(right, b->img.cols) - max(left, 0));
+        int y_overlap = max(0, min(bot, b->img.rows) - max(top, 0));
+        int overlapArea = x_overlap * y_overlap;
+
+        cout << "Overlap area of " << a->id << " and " << b->id << ": " << overlapArea << endl;
+        
+        return overlapArea >= b->img.cols * b->img.rows * minOverlap;
     }
 
     void HomographyFromKnownParameters(const ImageP a, const ImageP b, Mat &hom, Mat &rot) const {
@@ -182,7 +241,7 @@ public:
 
             vector<DMatch> dummy;
 
-            DrawResults(info->homography, reHom, dummy, a, b, target);
+            DrawResults(info->homography, reHom, dummy, a, ImageFeatures(), b, ImageFeatures(), target);
 
             std::string filename;
             if(mode == MOTION_HOMOGRAPHY) {
@@ -201,19 +260,26 @@ public:
 
     void CorrespondenceFromFeatures(const ImageP a, const ImageP b, MatchInfo* info) {
         cout << "Visual Aligner receiving " << a->id << " and " << b->id << endl;
-        if(a->features.empty())
+        size_t aId = GetImageId(a);
+        size_t bId = GetImageId(b);
+
+        if(features.size() <= aId)
 			FindKeyPoints(a);
-		if(b->features.empty()) 
+		if(features.size() <= bId) 
 			FindKeyPoints(b);
+        
+        ImageFeatures aFeatures = features[aId];
+        ImageFeatures bFeatures = features[bId];
 
         //Estimation from image movement. 
         Mat estRot; 
         Mat estHom;
+        
         HomographyFromKnownParameters(a, b, estHom, estRot);
 
 		BFMatcher matcher;
 		vector<vector<DMatch>> matches;
-		matcher.knnMatch(a->descriptors, b->descriptors, matches, 1);
+		matcher.knnMatch(aFeatures.descriptors, bFeatures.descriptors, matches, 1);
 
 		vector<DMatch> goodMatches;
 		for(size_t i = 0; i < matches.size(); i++) {
@@ -222,8 +288,8 @@ public:
                 std::vector<Point2f> src(1);
                 std::vector<Point2f> est(1);
 
-                src[0] = a->features[matches[i][0].queryIdx].pt;
-                Point2f dst = b->features[matches[i][0].trainIdx].pt;
+                src[0] = aFeatures.keypoints[matches[i][0].queryIdx].pt;
+                Point2f dst = bFeatures.keypoints[matches[i][0].trainIdx].pt;
 
                 perspectiveTransform(src, est, estHom);
 
@@ -241,24 +307,32 @@ public:
 			return;
 		}
 
-		vector<Point2f> aFeatures;
-		vector<Point2f> bFeatures;
+		vector<Point2f> aLocalFeatures;
+		vector<Point2f> bLocalFeatures;
 
 		for(size_t i = 0; i < goodMatches.size(); i++) {
-			aFeatures.push_back(a->features[goodMatches[i].queryIdx].pt);
-			bFeatures.push_back(b->features[goodMatches[i].trainIdx].pt);
+			aLocalFeatures.push_back(aFeatures.keypoints[goodMatches[i].queryIdx].pt);
+			bLocalFeatures.push_back(bFeatures.keypoints[goodMatches[i].trainIdx].pt);
 		}
 
-        Mat mask;
+        MatchesInfo minfo;
+        minfo.src_img_idx = GetImageId(a);
+        minfo.dst_img_idx = GetImageId(b);
+        minfo.matches = goodMatches;
 
-		info->homography = findHomography(aFeatures, bFeatures, CV_RANSAC, 3, mask);
+		info->homography = findHomography(aLocalFeatures, bLocalFeatures, CV_RANSAC, 3, minfo.inliers_mask);
 
         int inlinerCount = 0;
 
-        for(int i = 0; i < mask.rows; i++) {
-            if(mask.at<uchar>(i) == 1)
+        for(size_t i = 0; i < minfo.inliers_mask.size(); i++) {
+            if(minfo.inliers_mask[i] == 1)
                 inlinerCount++;
         }
+
+        minfo.num_inliers = inlinerCount;
+        minfo.confidence = 1;
+
+        this->matches.push_back(minfo);
 
         double inlinerRatio = inlinerCount;
         inlinerRatio /= goodMatches.size();
@@ -281,7 +355,9 @@ public:
                     }
                 }
             }
-            
+           
+            if(info->valid) 
+                minfo.H = info->homography;
 
             //debug
             if(debug) {
@@ -293,7 +369,7 @@ public:
                 From4DoubleTo3Double(info->rotation, rot3);
                 HomographyFromRotation(rot3, aK3, reHom);
 
-                DrawResults(info->homography, reHom, goodMatches, a, b, target);
+                DrawResults(info->homography, reHom, goodMatches, a, aFeatures, b, bFeatures, target);
 
                 std::string filename = 
                     "dbg/Homogpraphy" + ToString(a->id) + "_" + ToString(b->id) + 
@@ -359,6 +435,65 @@ public:
 
         return info;
 	}
+
+    void RunBundleAdjustment(const vector<ImageP> &images) const {
+        assert(mode == ModeFeatures);
+    
+        vector<CameraParams> cameras(images.size());
+
+        for(auto img : images) {
+            auto it = imgToLocalId.find(img);
+            if(it == imgToLocalId.end())
+                continue;
+
+            size_t id = it->second;
+            detail::CameraParams c; 
+
+            c.focal = img->intrinsics.at<double>(0, 0);
+            c.ppx = img->intrinsics.at<double>(0, 2);
+            c.ppy = img->intrinsics.at<double>(1, 2);
+            c.aspect = c.ppx / c.ppy;
+            c.t = Mat(3, 1, CV_32F);
+
+            From4DoubleTo3Float(img->originalExtrinsics, c.R);
+
+            cameras[id] = c;
+        }
+
+        vector<MatchesInfo> fullMatches(images.size() * images.size());
+
+        for(auto match : matches) {
+            fullMatches[match.src_img_idx * images.size() + match.dst_img_idx] = match;
+        }
+
+        auto adjuster = BundleAdjusterRay();
+        //adjuster.setConfThresh(...); //?
+        Mat refineMask = Mat::zeros(3, 3, CV_8U);
+        //Refinement mask???
+        adjuster.setRefinementMask(refineMask);
+        if(!adjuster(features, fullMatches, cameras)) {
+            cout << "Bundle Adjusting failed" << endl;
+        }
+        cout << "Bundle Adjustment finished" << endl;
+
+        vector<Mat> rmats;
+         
+        for (size_t i = 0; i < cameras.size(); ++i) {
+            rmats.push_back(cameras[i].R.clone());
+        }
+        waveCorrect(rmats, detail::WAVE_CORRECT_HORIZ);
+        for (size_t i = 0; i < cameras.size(); ++i) {
+            cameras[i].R = rmats[i];
+        }
+
+        for(auto img : images) {
+            auto it = imgToLocalId.find(img);
+            if(it == imgToLocalId.end())
+                continue;
+            
+            From3FloatTo4Double(cameras[it->second].R, img->adjustedExtrinsics);
+        }
+    }
 };
 }
 

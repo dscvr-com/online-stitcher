@@ -48,9 +48,14 @@ namespace optonaut {
         }
 
 		void Push(ImageP next) {
+
+            last = next;
+
+            if(next->id % 5 != 0)
+                return;
+
             visual.FindKeyPoints(next);
             //TODO - adjust incoming with memorized compass drift. 
-            next->originalExtrinsics = /*compassDrift **/ next->originalExtrinsics;
             
             size_t r = GetRingForImage(next->originalExtrinsics);
 
@@ -129,7 +134,6 @@ namespace optonaut {
                 }
             }
 
-            last = next;
 
 
         }
@@ -141,7 +145,7 @@ namespace optonaut {
         void Postprocess(vector<ImageP> imgs) const {
             vector<Mat> avgs(angles.size()); 
             
-            for(size_t i = 0; i < imgs.size(); i++) {
+            for(size_t i = 1; i < angles.size(); i++) {
                 double a = Average(angles[i], 1.0/3.0);
                 cout << "Adjusting ring " << i << " with " << a << endl;
                 CreateRotationY(a, avgs[i]);
@@ -149,7 +153,9 @@ namespace optonaut {
 
             for(auto img : imgs) {
                 int r = GetRingForImage(img->adjustedExtrinsics);
-                img->adjustedExtrinsics = avgs[r] * img->adjustedExtrinsics;
+                if(r != 0) {
+                    img->adjustedExtrinsics = avgs[r] * img->adjustedExtrinsics;
+                }
             }
         };
 	};
