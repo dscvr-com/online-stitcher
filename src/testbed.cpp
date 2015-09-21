@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
   
     for(int i = 0; i < n; i++) {
         auto image = ImageFromFile(files[i]);
-        //image->intrinsics = iPhone6Intrinsics;
+        image->intrinsics = iPhone6Intrinsics;
         
         //Flip image accordingly to portrait. 
        // cv::flip(image->img, image->img, 0);
@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
         image->dataRef.colorSpace = colorspace::RGB;
 
         if(i == 0) {
-            pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics, RecorderGraph::ModeTruncated, false));
+            pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics, RecorderGraph::ModeAll, false));
 
             Pipeline::debug = true;
         }

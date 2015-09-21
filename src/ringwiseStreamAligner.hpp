@@ -87,15 +87,6 @@ namespace optonaut {
             visual.FindKeyPoints(next);
             size_t r = GetRingForImage(next->originalExtrinsics);
             
-            //DEBUG - Pre-adjustment
-            Mat rAdj = Mat::eye(4, 4, CV_64F);
-            if(r == 1) {
-               CreateRotationX(0.11, rAdj); 
-            } else if(r == 2) {
-               CreateRotationX(-0.11, rAdj); 
-            } 
-            next->originalExtrinsics = next->originalExtrinsics * rAdj;
-            //Pre-Adjustment end
 
             cout << "Ring " << r << endl;
 
@@ -130,7 +121,17 @@ namespace optonaut {
             }
             //lasty = lasty / 2; //exp backoff.  
             if(closest != NULL) {
+                //DEBUG - Pre-adjustment
+                /*Mat rAdj = Mat::eye(4, 4, CV_64F);
+                if(r == 1) {
+                   CreateRotationX(0.11, rAdj); 
+                } else if(r == 2) {
+                   CreateRotationX(-0.11, rAdj); 
+                } 
+                next->originalExtrinsics = next->originalExtrinsics * rAdj;*/
+                //Pre-Adjustment end
                 MatchInfo* corr = visual.FindCorrespondence(next, closest);
+                //next->originalExtrinsics = next->originalExtrinsics * rAdj.inv();
                
                 if(corr->valid) { 
                     //Extract angles
@@ -181,14 +182,14 @@ namespace optonaut {
            
             pasts.push_back(next); 
             sangles.push_back(lasty);
-            if(sangles.size() > 5) {
+            if(sangles.size() > 3) {
                 sangles.pop_front();
             }
-            if(pasts.size() > 5) {
+            if(pasts.size() > 3) {
                 pasts.pop_front();
             }
-            if(sangles.size() == 5) {
-                double avg = Average(sangles, 1.0 / 3.0);
+            if(sangles.size() == 3) {
+                double avg = Median(sangles);
                 CreateRotationY(avg, compassDrift);
                 //avg = sangles.front(); //TODO _ DEBUG _ DANGEROUS
                 //pasts.front()->adjustedExtrinsics = compassDrift * pasts.front()->originalExtrinsics;
@@ -205,9 +206,19 @@ namespace optonaut {
         }
 
         void Postprocess(vector<ImageP> imgs) const {
-            for(auto next : imgs) {
-                DrawBar(next->img, next->vtag);
-            }
+           /* for(auto next : imgs) {
+                //DrawBar(next->img, next->vtag);
+                size_t r = GetRingForImage(next->originalExtrinsics);
+                //DEBUG - Pre-adjustment
+                Mat rAdj = Mat::eye(4, 4, CV_64F);
+                if(r == 1) {
+                   CreateRotationX(0.11, rAdj); 
+                } else if(r == 2) {
+                   CreateRotationX(-0.11, rAdj); 
+                } 
+                next->adjustedExtrinsics = next->adjustedExtrinsics * rAdj;
+                //Pre-Adjustment end
+            }*/
             /*for(auto img : imgs) {
                 int r = GetRingForImage(img->adjustedExtrinsics);
                 if(r != 0) {
