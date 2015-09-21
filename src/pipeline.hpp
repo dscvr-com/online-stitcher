@@ -9,6 +9,7 @@
 #include "simpleSphereStitcher.hpp"
 #include "imageResizer.hpp"
 #include "bundleAligner.hpp"
+#include <opencv2/stitching.hpp>
 
 #ifndef OPTONAUT_PIPELINE_HEADER
 #define OPTONAUT_PIPELINE_HEADER
@@ -60,8 +61,43 @@ namespace optonaut {
         }
 
         StitchingResultP Finish(vector<ImageP> &images, bool debug = false) {
-            auto res = stitcher.Stitch(images, debug);
-            resizer.Resize(res->image);
+            auto rings = RingwiseStreamAligner::SplitIntoRings(images);
+
+            aligner->Postprocess(images);
+            //return Finish(rights, false);
+            //Experimental triple stitcher
+
+            vector<StitchingResultP> stitchedRings;
+            vector<Size> sizes;
+            vector<Point> corners;
+            
+
+            cout << "Final: Have " << ToString(rings.size()) << " rings" << endl;
+
+            Ptr<Blender> blender = Blender::createDefault(Blender::FEATHER, true);
+
+            for(size_t i = 0; i < rings.size(); i++) {
+                auto res = stitcher.Stitch(rings[i], debug);
+                stitchedRings.push_back(res);
+                sizes.push_back(res->image.size());
+                corners.push_back(res->corner);
+            }
+                
+            blender->prepare(corners, sizes);
+
+            for(size_t i = 0; i < rings.size(); i++) {
+                auto res = stitchedRings[i];
+	            Mat warpedImageAsShort;
+                res->image.convertTo(warpedImageAsShort, CV_16S);
+                assert(res->mask.type() == CV_8U);
+		        blender->feed(warpedImageAsShort, res->mask, res->corner);
+            }
+	
+            StitchingResultP res(new StitchingResult());
+	        blender->blend(res->image, res->mask);
+
+            blender.release();
+
             return res;
         }
 
@@ -104,7 +140,7 @@ namespace optonaut {
             } else {
                 aligner = shared_ptr<Aligner>(new RingwiseStreamAligner());
             }
-            aligner = shared_ptr<Aligner>(new TrivialAligner());
+            //aligner = shared_ptr<Aligner>(new TrivialAligner());
         }
         
         void SetPreviewImageEnabled(bool enabled) {
@@ -258,6 +294,10 @@ namespace optonaut {
             if(recordedImages == imagesToRecord - 1)
                 isFinished = true;
         }
+
+        void Finish() {
+            aligner->Finish();
+        }
                 
         bool AreAdjacent(SelectionPoint a, SelectionPoint b) {
             SelectionEdge dummy; 
@@ -277,47 +317,7 @@ namespace optonaut {
         }
 
         StitchingResultP FinishRight() {
-            //return Finish(rights, false);
-            //Experimental triple stitcher
-            auto rings = RingwiseStreamAligner::SplitIntoRings(rights);
-
-            vector<StitchingResultP> stitchedRings;
-
-            for(size_t i = 0; i < rings.size(); i++) {
-                auto res = Finish(rings[i], false);
-                imwrite("dbg/ring_right_" + ToString(i) + ".jpg", res->image);
-                stitchedRings.push_back(res);
-      
-
-                if(i > 0) {  
-                    const int warp = MOTION_TRANSLATION;
-                    Mat affine = Mat::zeros(2, 3, CV_32F);
-                    const int iterations = 1000;
-                    const double eps = 1e-5;
-           
-                    affine.at<float>(0, 0) = 1; 
-                    affine.at<float>(1, 1) = 1; 
-                    affine.at<float>(0, 2) = stitchedRings[0]->corner.x - res->corner.x; 
-                    affine.at<float>(1, 2) = stitchedRings[0]->corner.y - res->corner.y;
-                    float dx = affine.at<float>(0, 2); 
-                    float dy =  affine.at<float>(1, 2); 
-                    TermCriteria termination(TermCriteria::COUNT + TermCriteria::EPS, iterations, eps);
-                    cout << "ECC initial (" << dx << ", " << dy << ")" << endl; 
-                    try {
-                        findTransformECC(stitchedRings[0]->image, res->image, affine, warp, termination);
-                    } catch (Exception ex) {
-                        cout << "ECC couldn't correlate" << endl;
-                    }
-            
-                    cout << "Found Affine: " << affine << endl;
-                    dx = affine.at<float>(0, 2); 
-                    dy =  affine.at<float>(1, 2); 
-                    cout << "ECC corr (" << dx << ", " << dy << ")" << endl; 
-
-                }
-            }
-
-            return stitchedRings[0];
+            return Finish(rights, false);
         }
 
         StitchingResultP FinishAligned() {
@@ -325,7 +325,6 @@ namespace optonaut {
         }
 
         StitchingResultP FinishAlignedDebug() {
-            aligner->Postprocess(aligned);
             return Finish(aligned, true);
         }
 

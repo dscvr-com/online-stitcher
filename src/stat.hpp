@@ -26,12 +26,34 @@ namespace optonaut {
     };
     
     template <typename T>
+    static inline T Deviation(const std::deque<T> &in, float trim = 0) {
+        size_t start = in.size() * trim;
+        size_t end = in.size() * (1 - trim);
+
+        T average = Average(in, trim);
+        
+        T x = in[start] - average;
+        T value = x * x;
+
+        for(size_t i = start + 1; i < end; i++) {
+            x = in[i] - average;
+            value += x * x;
+        }
+
+        value /= (end - start);
+        
+        return sqrt(value);
+    };
+    
+    template <typename T>
     static inline T Median(const std::deque<T> &in) {
         std::vector<T> buf(in.begin(), in.end());
         std::sort(buf.begin(), buf.end());
 
         return buf[buf.size() / 2];
     };
+
+
 }
 
 #endif

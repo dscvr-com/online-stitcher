@@ -17,6 +17,7 @@ namespace optonaut {
         virtual void Dispose() = 0; 
         virtual bool NeedsImageData() = 0;
         virtual void Postprocess(std::vector<ImageP> imgs) const = 0;
+        virtual void Finish() = 0;
 	};
 }
 

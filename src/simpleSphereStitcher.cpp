@@ -20,11 +20,10 @@ void RStitcher::PrepareMatrices(const vector<ImageP> &r) {
 
 
     //Orient around first image (Correct orientation from start.)
-    Mat center = r[0]->adjustedExtrinsics.inv();
     vector<Mat> matrices(r.size());
 
     for(size_t i = 0; i <  r.size(); i++) {
-        From4DoubleTo3Float(center * r[i]->adjustedExtrinsics, matrices[i]);
+        From4DoubleTo3Float(r[i]->adjustedExtrinsics, matrices[i]);
     }
 
     //Do wave correction
@@ -66,7 +65,7 @@ StitchingResultP RStitcher::Stitch(const std::vector<ImageP> &in, bool debug) {
         Mat K; 
         Mat scaledIntrinsics;
 
-        ScaleIntrinsicsToImage(img->intrinsics, img->img, scaledIntrinsics, debug ? 10 : 1);
+        ScaleIntrinsicsToImage(img->intrinsics, img->img, scaledIntrinsics, debug ? 8 : 1);
         From3DoubleTo3Float(scaledIntrinsics, K);
 
         //Mask
@@ -132,8 +131,8 @@ StitchingResultP RStitcher::Stitch(const std::vector<ImageP> &in, bool debug) {
         res->corner.x = min(res->corner.x, corners[i].x);
         res->corner.y = min(res->corner.y, corners[i].y);
     }
-    
-    res->image.convertTo(res->image, CV_8U);
+    //TODO - put back in prduction.  
+    //res->image.convertTo(res->image, CV_8U);
 
 	return res;
 }

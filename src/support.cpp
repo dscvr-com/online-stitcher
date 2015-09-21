@@ -297,7 +297,35 @@ namespace optonaut {
 		return r;
 	}
 
+    void GetGradient(const Mat &src_gray, Mat &grad)
+    {
+        Mat grad_x, grad_y;
+        Mat abs_grad_x, abs_grad_y;
+
+        int scale = 1;
+        int delta = 0;
+        int ddepth = CV_32FC1; 
+
+        Sobel( src_gray, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT );
+        convertScaleAbs( grad_x, abs_grad_x );
+
+        Sobel( src_gray, grad_y, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT );
+        convertScaleAbs( grad_y, abs_grad_y );
+        addWeighted( abs_grad_x, 0.5, abs_grad_y, 0.5, 0, grad );
+    }
+
 	double interpolate(double x, double x1, double x2, double y1, double y2) {
 		return y1 + (y2 - y1) * (x - x1) / (x2 - x1);
 	}
+    
+
+    void DrawBar(cv::Mat &image, double val) {
+        Scalar color;
+        if(val < 0) {
+            color = Scalar(0, 255, 255);
+        } else {
+            color = Scalar(255, 0, 255);
+        }
+        cv::rectangle(image, cv::Point(0, image.rows * (0.5 - val)), cv::Point(image.cols, image.rows * 0.5), color, CV_FILLED);
+    }
 }

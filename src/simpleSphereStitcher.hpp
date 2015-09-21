@@ -6,6 +6,9 @@
 #include "image.hpp"
 #include "support.hpp"
 
+#ifndef OPTONAUT_RSTITCHER_HEADER
+#define OPTONAUT_RSTITCHER_HEADER
+
 namespace optonaut {
 struct StitchingResult {
 	cv::Mat image;
@@ -30,3 +33,5 @@ class RStitcher {
 		static void PrepareMatrices(const std::vector<ImageP> &r);
 };
 }
+
+#endif

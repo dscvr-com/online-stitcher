@@ -37,22 +37,22 @@ private:
     //TODO Make dependent of image size
     const double OutlinerTolerance = 155 * 155; //Chosen by fair jojo roll
 
-    void DrawHomographyBorder(const Mat &homography, const ImageP left, const Scalar &color, Mat &target) {
+    void DrawHomographyBorder(const Mat &homography, const Mat &left, const Scalar &color, Mat &target) {
         std::vector<Point2f> scene_corners = GetSceneCorners(left, homography);
 
-        Point2f offset(left->img.cols, 0);
+        Point2f offset(left.cols, 0);
         line(target, scene_corners[0] + offset, scene_corners[1] + offset, color, 4);
         line(target, scene_corners[1] + offset, scene_corners[2] + offset, color, 4);
         line(target, scene_corners[2] + offset, scene_corners[3] + offset, color, 4);
         line(target, scene_corners[3] + offset, scene_corners[0] + offset, color, 4);
     }
 
-    vector<Point2f> GetSceneCorners(const ImageP left, const Mat &homography) {
+    vector<Point2f> GetSceneCorners(const Mat &img, const Mat &homography) {
         std::vector<Point2f> obj_corners(4);
         obj_corners[0] = cvPoint(0,0); 
-        obj_corners[1] = cvPoint(left->img.cols, 0);
-        obj_corners[2] = cvPoint(left->img.cols, left->img.rows); 
-        obj_corners[3] = cvPoint(0, left->img.rows);
+        obj_corners[1] = cvPoint(img.cols, 0);
+        obj_corners[2] = cvPoint(img.cols, img.rows); 
+        obj_corners[3] = cvPoint(0, img.rows);
         std::vector<Point2f> scene_corners(4);
 
         perspectiveTransform(obj_corners, scene_corners, homography);
@@ -60,26 +60,23 @@ private:
         return scene_corners;
     }
 
-    void DrawResults(const Mat &homography, const Mat &homographyFromRot, const vector<DMatch> &goodMatches, const ImageP a, const ImageFeatures &aFeatures, const ImageP b, const ImageFeatures &bFeatures, Mat &target) {
+    void DrawResults(const Mat &homography, const Mat &homographyFromRot, const vector<DMatch> &goodMatches, const Mat &a, const ImageFeatures &aFeatures, const Mat &b, const ImageFeatures &bFeatures, Mat &target) {
 
         //Colors: Green: Detected Homography.
         //        Red:   Estimated from Sensor.
         //        Blue:  Hmoography induced by dectected rotation. 
 
-
-  		drawMatches(a->img, aFeatures.keypoints, b->img, bFeatures.keypoints,
+  		drawMatches(a, aFeatures.keypoints, b, bFeatures.keypoints,
                goodMatches, target, Scalar::all(-1), Scalar::all(-1),
                vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
 
         DrawHomographyBorder(homography, a, Scalar(0, 255, 0), target);
         DrawHomographyBorder(homographyFromRot, a, Scalar(255, 0, 0), target);
         
-        Mat estimation;
-        Mat rot;
-        HomographyFromKnownParameters(a, b, estimation, rot);
-
-        
-        DrawHomographyBorder(estimation, a, Scalar(0, 0, 255), target);
+        //Mat estimation;
+        //Mat rot;
+        //HomographyFromKnownParameters(a, b, estimation, rot);
+        //DrawHomographyBorder(estimation, a, Scalar(0, 0, 255), target);
     } 
 
     void StoreCorrespondence(int a, int b, const Mat &rotation) {
@@ -150,7 +147,7 @@ public:
 
         HomographyFromKnownParameters(a, b, hom, rot);
 
-        std::vector<Point2f> corners = GetSceneCorners(a, hom); 
+        std::vector<Point2f> corners = GetSceneCorners(a->img, hom); 
 
         int top = min(corners[0].x, corners[1].x); 
         int bot = max(corners[2].x, corners[3].x); 
@@ -188,46 +185,64 @@ public:
         cvtColor(a->img, ga, CV_BGR2GRAY);
         cvtColor(b->img, gb, CV_BGR2GRAY); 
 
-        const int warp = mode == ModeECCHom ? MOTION_HOMOGRAPHY : MOTION_TRANSLATION;
-        Mat affine = Mat::zeros(2, 3, CV_32F);
+        GetGradient(ga, ga);
+        GetGradient(gb, gb);
+        
         Mat hom(3, 3, CV_64F);
         Mat rot(4, 4, CV_64F);
+
+        HomographyFromKnownParameters(a, b, hom, rot);
+        
+      //  double dx = hom.at<double>(0, 2);
+      //  double dy = hom.at<double>(1, 2);
+
+       // hom.at<double>(0, 2) = 0;
+      //  hom.at<double>(1, 2) = 0;
+
+        Mat wa(ga.rows, ga.cols, CV_64F);
+        warpPerspective(ga, wa, hom, wa.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
+        
+       // hom.at<double>(0, 2) = dx;
+       // hom.at<double>(1, 2) = dy;
+
+        ga = wa;
+
+        const int warp = mode == ModeECCHom ? MOTION_HOMOGRAPHY : MOTION_TRANSLATION;
+        Mat affine = Mat::zeros(2, 3, CV_32F);
         Mat in;
 
         const int iterations = 1000;
         const double eps = 1e-5;
 
-        HomographyFromKnownParameters(a, b, info->homography, rot);
-       
         if(warp == MOTION_HOMOGRAPHY) {
             From3DoubleTo3Float(info->homography, hom); 
             in = hom;
         } else {
             affine.at<float>(0, 0) = 1; 
             affine.at<float>(1, 1) = 1; 
-            affine.at<float>(0, 2) = info->homography.at<double>(0, 2); 
-            affine.at<float>(1, 2) = info->homography.at<double>(1, 2); 
+            affine.at<float>(0, 2) = 0; //info->homography.at<double>(0, 2); 
+            affine.at<float>(1, 2) = 0; //info->homography.at<double>(1, 2); 
             in = affine;
         }
         TermCriteria termination(TermCriteria::COUNT + TermCriteria::EPS, iterations, eps);
         try {
             findTransformECC(ga, gb, in, warp, termination);
+        
+            if(warp == MOTION_HOMOGRAPHY) {
+                hom = in;
+                From3FloatTo3Double(hom, info->homography);
+                info->valid = RotationFromHomography(a, b, info->homography, info->rotation);
+            } else {
+                affine = in;
+                cout << "Found Affine: " << affine << endl;
+                info->homography = Mat::eye(3, 3, CV_64F);
+                info->homography.at<double>(0, 2) = affine.at<float>(0, 2); 
+                info->homography.at<double>(1, 2) = affine.at<float>(1, 2); 
+                info->valid = true;
+            }
         } catch (Exception ex) {
             cout << "ECC couldn't correlate" << endl;
-            return;
-        }
-        
-        if(warp == MOTION_HOMOGRAPHY) {
-            hom = in;
-            From3FloatTo3Double(hom, info->homography);
-            info->valid = RotationFromHomography(a, b, info->homography, info->rotation);
-        } else {
-            affine = in;
-            cout << "Found Affine: " << affine << endl;
-            info->homography = Mat::eye(3, 3, CV_64F);
-            info->homography.at<double>(0, 2) = affine.at<float>(0, 2); 
-            info->homography.at<double>(1, 2) = affine.at<float>(1, 2); 
-            info->valid = true;
+            info->homography = hom;
         }
 
         //debug
@@ -241,7 +256,7 @@ public:
 
             vector<DMatch> dummy;
 
-            DrawResults(info->homography, reHom, dummy, a, ImageFeatures(), b, ImageFeatures(), target);
+            DrawResults(info->homography, reHom, dummy, ga, ImageFeatures(), gb, ImageFeatures(), target);
 
             std::string filename;
             if(mode == MOTION_HOMOGRAPHY) {
@@ -252,7 +267,7 @@ public:
                 filename =  
                     "dbg/ecc_result" + ToString(a->id) + 
                     "_" + ToString(b->id) + 
-                    ", x-corr: " + ToString(affine.at<float>(0, 2)) + " .jpg";
+                    "_x-corr " + ToString(affine.at<float>(0, 2)) + " .jpg";
             }
             imwrite(filename, target);
         }
@@ -370,7 +385,7 @@ public:
                 From4DoubleTo3Double(info->rotation, rot3);
                 HomographyFromRotation(rot3, aK3, reHom);
 
-                DrawResults(info->homography, reHom, goodMatches, a, aFeatures, b, bFeatures, target);
+                DrawResults(info->homography, reHom, goodMatches, a->img, aFeatures, b->img, bFeatures, target);
 
                 std::string filename = 
                     "dbg/Homogpraphy" + ToString(a->id) + "_" + ToString(b->id) + 
@@ -426,6 +441,9 @@ public:
 
 	MatchInfo *FindCorrespondence(const ImageP a, const ImageP b) {
         assert(a != NULL);
+        assert(b != NULL);
+
+        cout << "Visual aligner receiving " << a->id << " and " << b->id << endl;
 
 		MatchInfo* info = new MatchInfo();
         info->valid = false;

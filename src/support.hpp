@@ -53,6 +53,9 @@ namespace optonaut {
 	double max4(double a, double b, double c, double d);
 	double angleAvg(double x, double y);
 	double interpolate(double x, double x1, double x2, double y1, double y2);
+
+    void DrawBar(cv::Mat &image, double val);
+    void GetGradient(const cv::Mat &src_gray, cv::Mat &grad);
 }
 
 #endif

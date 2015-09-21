@@ -33,6 +33,7 @@ namespace optonaut {
         }
         
         void Postprocess(vector<ImageP>) const { };
+        void Finish() { };
     };
 }
 #endif

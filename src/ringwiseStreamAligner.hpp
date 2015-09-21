@@ -8,6 +8,7 @@
 #include "aligner.hpp"
 #include "pairwiseVisualAligner.hpp"
 #include "stat.hpp"
+#include "simpleSphereStitcher.hpp"
 
 using namespace cv;
 using namespace std;
@@ -22,13 +23,18 @@ namespace optonaut {
         vector<vector<ImageP>> rings;
         ImageP last;
         Mat compassDrift;
-        vector<deque<double>> angles;
+        double lasty;
+        vector<deque<double>> anglesX;
+        vector<deque<double>> anglesY;
+        
+        deque<ImageP> pasts;
+        deque<double> sangles;
 
         int GetRingForImage(const Mat &extrinsics) const {
             return GetRingForImage(extrinsics, rings);
         }
 	public:
-		RingwiseStreamAligner() : visual(PairwiseVisualAligner::ModeECCAffine), compassDrift(Mat::eye(4, 4, CV_64F)) { }
+		RingwiseStreamAligner() : visual(PairwiseVisualAligner::ModeECCAffine), compassDrift(Mat::eye(4, 4, CV_64F)), lasty(0) { }
 
         bool NeedsImageData() {
             return true;
@@ -42,7 +48,7 @@ namespace optonaut {
             size_t r = 0;
 
             for(auto ring : rings) {
-                if(abs(GetDistanceY(ring[0]->adjustedExtrinsics, extrinsics)) < M_PI / 16) {
+                if(abs(GetDistanceY(ring[0]->adjustedExtrinsics, extrinsics)) < M_PI / 8) {
                     break;
                 }
                 r++;
@@ -63,6 +69,14 @@ namespace optonaut {
                 rings[r].push_back(img);
             }
 
+            for(size_t i = 0; i < rings.size(); i++) {
+                //Remove tiny rings. 
+                if(rings[i].size() < 4) {
+                    rings.erase(rings.begin() + i);
+
+                    i--;
+                }
+            }
             return rings;
         }
 
@@ -82,27 +96,24 @@ namespace optonaut {
 
             if(r >= rings.size()) {
                 rings.push_back(vector<ImageP>());
-                angles.push_back(deque<double>());
+                anglesX.push_back(deque<double>());
+                anglesY.push_back(deque<double>());
             }
             rings[r].push_back(next);
 
             ImageP closest = NULL;
             double minDist = 100;
 
-            Mat nextRVec(3, 1, CV_64F);
-            ExtractRotationVector(next->originalExtrinsics, nextRVec);
 
             if(0 != r) {
                 for(size_t j = 0; j < rings[0].size(); j++) {
-                    //TODO: Fix the metric. 
-                    Mat imgRVec(3, 1, CV_64F);
-                    ExtractRotationVector(rings[0][j]->adjustedExtrinsics,imgRVec);
-
-                    double dist = abs(imgRVec.at<double>(1) - nextRVec.at<double>(1));
+                    //TOODO: SELECT BEST IMAGE - SMTH IS WRONG 
+                    double dist = abs(GetAngleOfRotation(next->originalExtrinsics, rings[0][j]->adjustedExtrinsics));
 
                     if(closest == NULL || dist < minDist) {
                         minDist = dist;
                         closest = rings[0][j];
+                        cout << next->id << " Selecting closest: " << closest->id << " width dist: " << minDist << endl; 
                         //if(dist < M_PI / 4) {
                         //    MatchInfo* corr = visual.FindCorrespondence(next, closest);
                         //    cout << "Found " << corr->rotation << endl;
@@ -110,18 +121,26 @@ namespace optonaut {
                     } 
                 }
             }
-            
+            //lasty = lasty / 2; //exp backoff.  
             if(closest != NULL) {
                 MatchInfo* corr = visual.FindCorrespondence(next, closest);
                
                 if(corr->valid) { 
                     double dx = corr->homography.at<double>(0, 2);
+                    double dy = corr->homography.at<double>(1, 2);
                     double width = next->img.cols;
+                    double height = next->img.rows;
                     
                     cout << "dx: " << dx << ", width: " << width << endl; 
 
-                    double h = next->intrinsics.at<double>(1, 1) / (next->intrinsics.at<double>(1, 2) * 2); 
-                    double angle = asin((dx / width) / h);
+                    double hy = next->intrinsics.at<double>(1, 1) / (next->intrinsics.at<double>(1, 2) * 2); 
+                    double hx = next->intrinsics.at<double>(0, 0) / (next->intrinsics.at<double>(0, 2) * 2); 
+
+                    assert(dx <= width);
+                    assert(dy <= height);
+
+                    double angleY = asin((dx / width) / hx);
+                    double angleX = asin((dy / height) / hy);
 
                     Mat rveca(3, 1, CV_64F);
                     Mat rvecb(3, 1, CV_64F);
@@ -129,51 +148,81 @@ namespace optonaut {
                     ExtractRotationVector(closest->adjustedExtrinsics, rveca);
                     ExtractRotationVector(next->originalExtrinsics, rvecb);
 
-                    angle = -(rveca.at<double>(1) - rvecb.at<double>(1) - angle);
+                    angleX = -(rveca.at<double>(0) - rvecb.at<double>(0) - angleX);
+                    angleY = -(rveca.at<double>(1) - rvecb.at<double>(1) - angleY);
+
+                    if(angleX < -M_PI)
+                        angleX = M_PI * 2 + angleX;
+                    
+                    if(angleY < -M_PI)
+                        angleY = M_PI * 2 + angleY;
+
 
                     Mat rotY(4, 4, CV_64F);
 
-                    angles[r].push_back(angle);
+                    anglesX[r].push_back(angleX);
+                    anglesY[r].push_back(angleY);
 
-                    /*
-                    cout << "Adjusting angle: " << angle << endl;
-                    if(angles.size() >= 50) {
-                        if(angles.size() > 50) {
-                            angles.pop_front(); 
-                        }
-                        
-                        angle = Average(angles, 1.0 / 5.0);
-                        cout << "Adjusting angle: " << angle << endl;
 
-                        CreateRotationY(angle, rotY); 
+                    cout << "Pushing for correspondance x: " << angleX << ", y: " << angleY << endl;
 
-                        compassDrift = rotY;
-                    }
-                    */
+                    lasty = angleY;
                 }
             }
-
-
-
+           
+            pasts.push_back(next); 
+            sangles.push_back(lasty);
+            if(sangles.size() > 10) {
+                sangles.pop_front();
+            }
+            if(pasts.size() > 10) {
+                pasts.pop_front();
+            }
+            if(sangles.size() == 10) {
+                double avg = Average(sangles, 1.0 / 3.0);
+                CreateRotationY(avg, compassDrift);
+                pasts.front()->adjustedExtrinsics = compassDrift * pasts.front()->originalExtrinsics;
+                pasts.front()->vtag = avg;
+            }
         }
 
 		Mat GetCurrentRotation() const {
 			return last->originalExtrinsics;
 		}
 
+        void Finish() {
+
+        }
+
         void Postprocess(vector<ImageP> imgs) const {
-            vector<Mat> avgs(angles.size()); 
+            for(auto next : imgs) {
+                DrawBar(next->img, next->vtag);
+            }
+            /*for(auto img : imgs) {
+                int r = GetRingForImage(img->adjustedExtrinsics);
+                if(r != 0) {
+                    Mat rx;
+                    CreateRotationX(r == 1 ? -0.1 : 0.1, rx);
+                    img->adjustedExtrinsics = img->adjustedExtrinsics * rx;
+                }
+            }*/
+            return;
+            vector<Mat> avgsX(anglesX.size()); 
+            vector<Mat> avgsY(anglesY.size()); 
             
-            for(size_t i = 1; i < angles.size(); i++) {
-                double a = Average(angles[i], 1.0/3.0);
-                cout << "Adjusting ring " << i << " with " << a << endl;
-                CreateRotationY(a, avgs[i]);
+            for(size_t i = 1; i < anglesX.size(); i++) {
+                double ax = Average(anglesX[i], 1.0/3.0);
+                double ay = Average(anglesY[i], 1.0/3.0);
+                cout << "Adjusting ring " << i << " with x: " << ax << ", y: " << ay << endl;
+                cout << "Deviations with x: " << Deviation(anglesX[i], 1.0/3.0) << ", y: " << Deviation(anglesY[i], 1.0/3.0) << endl;
+                CreateRotationY(ay, avgsY[i]);
+                CreateRotationX(ax, avgsX[i]);
             }
 
             for(auto img : imgs) {
                 int r = GetRingForImage(img->adjustedExtrinsics);
                 if(r != 0) {
-                    img->adjustedExtrinsics = avgs[r] * img->adjustedExtrinsics;
+                    img->adjustedExtrinsics = /*avgsX[r] */ avgsY[r] * img->adjustedExtrinsics;
                 }
             }
         };
