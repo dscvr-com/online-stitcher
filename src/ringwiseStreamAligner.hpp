@@ -48,7 +48,8 @@ namespace optonaut {
             size_t r = 0;
 
             for(auto ring : rings) {
-                if(abs(GetDistanceY(ring[0]->adjustedExtrinsics, extrinsics)) < M_PI / 8) {
+                //TODO - Make ring grouping right!
+                if(abs(GetDistanceY(ring[0]->adjustedExtrinsics, extrinsics)) < M_PI / 10) {
                     break;
                 }
                 r++;
@@ -81,16 +82,20 @@ namespace optonaut {
         }
 
 		void Push(ImageP next) {
-
             last = next;
 
-            if(next->id % 5 != 0)
-                return;
-
             visual.FindKeyPoints(next);
-            //TODO - adjust incoming with memorized compass drift. 
-            
             size_t r = GetRingForImage(next->originalExtrinsics);
+            
+            //DEBUG - Pre-adjustment
+            Mat rAdj = Mat::eye(4, 4, CV_64F);
+            if(r == 1) {
+               CreateRotationX(0.11, rAdj); 
+            } else if(r == 2) {
+               CreateRotationX(-0.11, rAdj); 
+            } 
+            next->originalExtrinsics = next->originalExtrinsics * rAdj;
+            //Pre-Adjustment end
 
             cout << "Ring " << r << endl;
 
@@ -104,15 +109,17 @@ namespace optonaut {
             ImageP closest = NULL;
             double minDist = 100;
 
+            //TODO - select reference ring differently!
+            size_t tr = r > 2 ? r - 2 : 0;
 
-            if(0 != r) {
-                for(size_t j = 0; j < rings[0].size(); j++) {
+            if(tr != r) {
+                for(size_t j = 0; j < rings[tr].size(); j++) {
                     //TOODO: SELECT BEST IMAGE - SMTH IS WRONG 
                     double dist = abs(GetAngleOfRotation(next->originalExtrinsics, rings[0][j]->adjustedExtrinsics));
 
                     if(closest == NULL || dist < minDist) {
                         minDist = dist;
-                        closest = rings[0][j];
+                        closest = rings[tr][j];
                         cout << next->id << " Selecting closest: " << closest->id << " width dist: " << minDist << endl; 
                         //if(dist < M_PI / 4) {
                         //    MatchInfo* corr = visual.FindCorrespondence(next, closest);
@@ -126,6 +133,7 @@ namespace optonaut {
                 MatchInfo* corr = visual.FindCorrespondence(next, closest);
                
                 if(corr->valid) { 
+                    //Extract angles
                     double dx = corr->homography.at<double>(0, 2);
                     double dy = corr->homography.at<double>(1, 2);
                     double width = next->img.cols;
@@ -148,8 +156,9 @@ namespace optonaut {
                     ExtractRotationVector(closest->adjustedExtrinsics, rveca);
                     ExtractRotationVector(next->originalExtrinsics, rvecb);
 
-                    angleX = -(rveca.at<double>(0) - rvecb.at<double>(0) - angleX);
-                    angleY = -(rveca.at<double>(1) - rvecb.at<double>(1) - angleY);
+                    //Just reeive offset from hom essitmator. 
+                    //angleX = -(rveca.at<double>(0) - rvecb.at<double>(0) - angleX);
+                    //angleY = -(rveca.at<double>(1) - rvecb.at<double>(1) - angleY);
 
                     if(angleX < -M_PI)
                         angleX = M_PI * 2 + angleX;
@@ -162,8 +171,8 @@ namespace optonaut {
 
                     anglesX[r].push_back(angleX);
                     anglesY[r].push_back(angleY);
-
-
+                    //End extract angles
+                    
                     cout << "Pushing for correspondance x: " << angleX << ", y: " << angleY << endl;
 
                     lasty = angleY;
@@ -172,22 +181,23 @@ namespace optonaut {
            
             pasts.push_back(next); 
             sangles.push_back(lasty);
-            if(sangles.size() > 10) {
+            if(sangles.size() > 5) {
                 sangles.pop_front();
             }
-            if(pasts.size() > 10) {
+            if(pasts.size() > 5) {
                 pasts.pop_front();
             }
-            if(sangles.size() == 10) {
+            if(sangles.size() == 5) {
                 double avg = Average(sangles, 1.0 / 3.0);
                 CreateRotationY(avg, compassDrift);
-                pasts.front()->adjustedExtrinsics = compassDrift * pasts.front()->originalExtrinsics;
-                pasts.front()->vtag = avg;
+                //avg = sangles.front(); //TODO _ DEBUG _ DANGEROUS
+                //pasts.front()->adjustedExtrinsics = compassDrift * pasts.front()->originalExtrinsics;
+                next->vtag = avg;
             }
         }
 
 		Mat GetCurrentRotation() const {
-			return last->originalExtrinsics;
+			return compassDrift * last->originalExtrinsics;
 		}
 
         void Finish() {

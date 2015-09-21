@@ -21,7 +21,7 @@ private:
 	//adj[n] contains m if m is right of n
 	//Horizontal and Vertical overlap in percent. 
 	const double hOverlap = 0.8;
-	const double vOverlap = 0.1; //TODO - change back before release. 
+	const double vOverlap = 0.25; //TODO - change back before release. 
     const double hBufferRatio = 0.03;
     const double vBufferRatio = 0.1;
     

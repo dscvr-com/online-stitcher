@@ -41,10 +41,32 @@ private:
         std::vector<Point2f> scene_corners = GetSceneCorners(left, homography);
 
         Point2f offset(left.cols, 0);
-        line(target, scene_corners[0] + offset, scene_corners[1] + offset, color, 4);
-        line(target, scene_corners[1] + offset, scene_corners[2] + offset, color, 4);
-        line(target, scene_corners[2] + offset, scene_corners[3] + offset, color, 4);
-        line(target, scene_corners[3] + offset, scene_corners[0] + offset, color, 4);
+
+        for(size_t i = 0; i < scene_corners.size(); i++) {
+            scene_corners[i] += offset;
+        }
+
+        DrawPoly(target, scene_corners, color);
+    }
+
+    void DrawPoly(const Mat &target, const vector<Point2f> &corners, const Scalar color = Scalar(255, 0, 0)) {
+        
+        Point2f last = corners.back();
+
+        for(auto point : corners) {
+            line(target, last, point, color, 4);
+            last = point;
+        }
+    }
+
+    void DrawBox(const Mat &target, const Rect &roi, const Scalar color = Scalar(255, 0, 0)) {
+        std::vector<Point2f> corners;
+        corners.emplace_back(roi.x, roi.y);
+        corners.emplace_back(roi.x, roi.y + roi.height);
+        corners.emplace_back(roi.x + roi.width, roi.y + roi.height);
+        corners.emplace_back(roi.x + roi.width, roi.y);
+
+        DrawPoly(target, corners, color);
     }
 
     vector<Point2f> GetSceneCorners(const Mat &img, const Mat &homography) {
@@ -58,6 +80,17 @@ private:
         perspectiveTransform(obj_corners, scene_corners, homography);
 
         return scene_corners;
+    }
+
+    Rect GetInnerBoxForScene(const vector<Point2f> &c) {
+        assert(c.size() == 4);
+
+        double l = max(c[0].x, c[3].x);
+        double t = max(c[0].y, c[1].y);
+        double r = min(c[1].x, c[2].x);
+        double b = min(c[2].y, c[3].y);
+
+        return Rect(l, t, r - l, b - t);
     }
 
     void DrawResults(const Mat &homography, const Mat &homographyFromRot, const vector<DMatch> &goodMatches, const Mat &a, const ImageFeatures &aFeatures, const Mat &b, const ImageFeatures &bFeatures, Mat &target) {
@@ -185,30 +218,48 @@ public:
         cvtColor(a->img, ga, CV_BGR2GRAY);
         cvtColor(b->img, gb, CV_BGR2GRAY); 
 
-        GetGradient(ga, ga);
-        GetGradient(gb, gb);
+        //GetGradient(ga, ga);
+        //GetGradient(gb, gb);
         
         Mat hom(3, 3, CV_64F);
         Mat rot(4, 4, CV_64F);
 
         HomographyFromKnownParameters(a, b, hom, rot);
         
-        double dx = hom.at<double>(0, 2);
-        double dy = hom.at<double>(1, 2);
+        //double dx = hom.at<double>(0, 2);
+        //double dy = hom.at<double>(1, 2);
 
         Mat wa(ga.rows, ga.cols, CV_64F);
         warpPerspective(ga, wa, hom, wa.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
        
+        ga = wa;
         //Cut images, set homography to id.
         
-        vector<Point2f> corners = GetSceneCorners(ga, hom) {
-        hom = Mat::eye(3, 3, CV_F32);
+        vector<Point2f> corners = GetSceneCorners(ga, hom);
+        Rect roi = GetInnerBoxForScene(corners);
+        //DrawBox(ga, roi, Scalar(0x70));
+        //DrawBox(gb, roi, Scalar(0x70));
+        roi = roi & Rect(0, 0, ga.cols, ga.rows);
+        //DrawPoly(ga, corners, Scalar(0xc0));
+        //DrawPoly(gb, corners, Scalar(0xc0));
+        //DrawBox(ga, roi, Scalar(255));
+        //DrawBox(gb, roi, Scalar(255));
+        hom = Mat::eye(3, 3, CV_32F);
+        ga = ga(roi);
+        gb = gb(roi);
+
+        //If those asserts fire, we've fed the aligner two non-overlapping 
+        //images probably. SHAME!
+        if(roi.width < 1 || roi.height < 1) {
+            return;
+        }
+
+        //reduce(ga, ga, 0, CV_REDUCE_AVG);
+        //reduce(gb, gb, 0, CV_REDUCE_AVG);
 
         //hom.at<double>(0, 2) = dx;
         //
         //hom.at<double>(1, 2) = dy;
-
-        ga = wa;
 
         const int warp = mode == ModeECCHom ? MOTION_HOMOGRAPHY : MOTION_TRANSLATION;
         Mat affine = Mat::zeros(2, 3, CV_32F);
@@ -238,7 +289,7 @@ public:
             } else {
                 affine = in;
                 cout << "Found Affine: " << affine << endl;
-                info->homography = Mat::eye(3, 3, CV_64F);
+                From3FloatTo3Double(hom, info->homography);
                 info->homography.at<double>(0, 2) = affine.at<float>(0, 2); 
                 info->homography.at<double>(1, 2) = affine.at<float>(1, 2); 
                 info->valid = true;

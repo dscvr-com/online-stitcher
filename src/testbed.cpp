@@ -73,6 +73,13 @@ int main(int argc, char* argv[]) {
 
     pipe->Finish();
     
+    if(Pipeline::debug) {
+        //auto alignedDebug = pipe->FinishAlignedDebug();
+        //imwrite("dbg/aligned-debug.jpg", alignedDebug->image);
+        auto aligned = pipe->FinishAligned();
+        imwrite("dbg/aligned.jpg", aligned->image);
+    }
+    
     if(pipe->HasResults()) {
         {
             auto left = pipe->FinishLeft();
@@ -88,12 +95,6 @@ int main(int argc, char* argv[]) {
         }
     } else {
         cout << "No results." << endl;
-    }
-    if(Pipeline::debug) {
-        //auto alignedDebug = pipe->FinishAlignedDebug();
-        //imwrite("dbg/aligned-debug.jpg", alignedDebug->image);
-        auto aligned = pipe->FinishAligned();
-        imwrite("dbg/aligned.jpg", aligned->image);
     }
 
     pipe->Dispose();

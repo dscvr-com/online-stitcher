@@ -25,7 +25,7 @@ namespace optonaut {
         size_t sensor;
         size_t combined;
 	public:
-		SequenceStreamAligner(size_t order = 1) : visual(), order(order), sensor(0), combined(0) { }
+		SequenceStreamAligner(size_t order = 1) : visual(PairwiseVisualAligner::ModeECCAffine), order(order), sensor(0), combined(0) { }
 
         bool NeedsImageData() {
             return true;

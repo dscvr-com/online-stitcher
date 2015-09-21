@@ -311,7 +311,7 @@ namespace optonaut {
 
         Sobel( src_gray, grad_y, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT );
         convertScaleAbs( grad_y, abs_grad_y );
-        addWeighted( abs_grad_x, 0.5, abs_grad_y, 0.5, 0, grad );
+        addWeighted( abs_grad_x, 1, abs_grad_y, 0, 0, grad );
     }
 
 	double interpolate(double x, double x1, double x2, double y1, double y2) {
@@ -333,16 +333,16 @@ namespace optonaut {
 
         assert(points.size() > 0);
 
-        double t = pointes[0].y;
-        double b = pointes[0].y;
-        double l = pointes[0].x;
-        double r = pointes[0].x;
+        double t = points[0].y;
+        double b = points[0].y;
+        double l = points[0].x;
+        double r = points[0].x;
 
         for(auto p : points) {
-            t = min(p.y, t);
-            b = max(p.y, t);
-            l = min(p.x, t);
-            r = max(p.x, t);
+            t = min2(p.y, t);
+            b = max2(p.y, b);
+            l = min2(p.x, l);
+            r = max2(p.x, r);
         }
 
         return Rect(l, t, r - l, b - t);
