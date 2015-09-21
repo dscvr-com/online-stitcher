@@ -328,4 +328,23 @@ namespace optonaut {
         }
         cv::rectangle(image, cv::Point(0, image.rows * (0.5 - val)), cv::Point(image.cols, image.rows * 0.5), color, CV_FILLED);
     }
+    
+    Rect GetBoundingBox(const vector<Point2f> &points) {
+
+        assert(points.size() > 0);
+
+        double t = pointes[0].y;
+        double b = pointes[0].y;
+        double l = pointes[0].x;
+        double r = pointes[0].x;
+
+        for(auto p : points) {
+            t = min(p.y, t);
+            b = max(p.y, t);
+            l = min(p.x, t);
+            r = max(p.x, t);
+        }
+
+        return Rect(l, t, r - l, b - t);
+    }
 }

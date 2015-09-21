@@ -56,6 +56,8 @@ namespace optonaut {
 
     void DrawBar(cv::Mat &image, double val);
     void GetGradient(const cv::Mat &src_gray, cv::Mat &grad);
+    
+    cv::Rect GetBoundingBox(const std::vector<Point2f> &points);
 }
 
 #endif

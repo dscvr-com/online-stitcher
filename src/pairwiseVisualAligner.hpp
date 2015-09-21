@@ -193,17 +193,20 @@ public:
 
         HomographyFromKnownParameters(a, b, hom, rot);
         
-      //  double dx = hom.at<double>(0, 2);
-      //  double dy = hom.at<double>(1, 2);
-
-       // hom.at<double>(0, 2) = 0;
-      //  hom.at<double>(1, 2) = 0;
+        double dx = hom.at<double>(0, 2);
+        double dy = hom.at<double>(1, 2);
 
         Mat wa(ga.rows, ga.cols, CV_64F);
         warpPerspective(ga, wa, hom, wa.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
+       
+        //Cut images, set homography to id.
         
-       // hom.at<double>(0, 2) = dx;
-       // hom.at<double>(1, 2) = dy;
+        vector<Point2f> corners = GetSceneCorners(ga, hom) {
+        hom = Mat::eye(3, 3, CV_F32);
+
+        //hom.at<double>(0, 2) = dx;
+        //
+        //hom.at<double>(1, 2) = dy;
 
         ga = wa;
 
