@@ -14,6 +14,7 @@ using namespace std;
 #ifndef OPTONAUT_STREAM_ALIGNMENT_HEADER
 #define OPTONAUT_STREAM_ALIGNMENT_HEADER
 
+//TODO - cleanup
 namespace optonaut {
 	class SequenceStreamAligner : public Aligner {
 	private:
@@ -25,7 +26,7 @@ namespace optonaut {
         size_t sensor;
         size_t combined;
 	public:
-		SequenceStreamAligner(size_t order = 1) : visual(PairwiseVisualAligner::ModeECCAffine), order(order), sensor(0), combined(0) { }
+		SequenceStreamAligner(size_t order = 1) : visual(), order(order), sensor(0), combined(0) { }
 
         bool NeedsImageData() {
             return true;

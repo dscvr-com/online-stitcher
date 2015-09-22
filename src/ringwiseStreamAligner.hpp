@@ -6,7 +6,7 @@
 #include "image.hpp"
 #include "support.hpp"
 #include "aligner.hpp"
-#include "pairwiseVisualAligner.hpp"
+#include "pairwiseCorrelator.hpp"
 #include "stat.hpp"
 #include "simpleSphereStitcher.hpp"
 
@@ -19,7 +19,7 @@ using namespace std;
 namespace optonaut {
 	class RingwiseStreamAligner : public Aligner {
 	private:
-		PairwiseVisualAligner visual;
+		PairwiseCorrelator visual;
         vector<vector<ImageP>> rings;
         ImageP last;
         Mat compassDrift;
@@ -34,7 +34,7 @@ namespace optonaut {
             return GetRingForImage(extrinsics, rings);
         }
 	public:
-		RingwiseStreamAligner() : visual(PairwiseVisualAligner::ModeECCAffine), compassDrift(Mat::eye(4, 4, CV_64F)), lasty(0) { }
+		RingwiseStreamAligner() : visual(), compassDrift(Mat::eye(4, 4, CV_64F)), lasty(0) { }
 
         bool NeedsImageData() {
             return true;
@@ -84,7 +84,6 @@ namespace optonaut {
 		void Push(ImageP next) {
             last = next;
 
-            visual.FindKeyPoints(next);
             size_t r = GetRingForImage(next->originalExtrinsics);
             
 
@@ -130,13 +129,13 @@ namespace optonaut {
                 } 
                 next->originalExtrinsics = next->originalExtrinsics * rAdj;*/
                 //Pre-Adjustment end
-                MatchInfo* corr = visual.FindCorrespondence(next, closest);
+                CorrelationDiff corr = visual.Match(next, closest);
                 //next->originalExtrinsics = next->originalExtrinsics * rAdj.inv();
                
-                if(corr->valid) { 
+                if(corr.valid) { 
                     //Extract angles
-                    double dx = corr->homography.at<double>(0, 2);
-                    double dy = corr->homography.at<double>(1, 2);
+                    double dx = corr.offset.x;
+                    double dy = corr.offset.y;
                     double width = next->img.cols;
                     double height = next->img.rows;
                     
@@ -157,9 +156,6 @@ namespace optonaut {
                     ExtractRotationVector(closest->adjustedExtrinsics, rveca);
                     ExtractRotationVector(next->originalExtrinsics, rvecb);
 
-                    //Just reeive offset from hom essitmator. 
-                    //angleX = -(rveca.at<double>(0) - rvecb.at<double>(0) - angleX);
-                    //angleY = -(rveca.at<double>(1) - rvecb.at<double>(1) - angleY);
 
                     if(angleX < -M_PI)
                         angleX = M_PI * 2 + angleX;

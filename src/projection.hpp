@@ -71,6 +71,65 @@ namespace optonaut {
 
         HomographyFromRotation(R3, aK3, hom);
     }
+    
+    static inline bool ImagesAreOverlapping(const ImageP a, const ImageP b, double minOverlap = 0.1) {
+        Mat hom, rot;
+
+        HomographyFromImages(a, b, hom, rot);
+
+        std::vector<Point2f> corners = GetSceneCorners(a->img, hom); 
+
+        int top = min(corners[0].x, corners[1].x); 
+        int bot = max(corners[2].x, corners[3].x); 
+        int left = min(corners[0].y, corners[3].y); 
+        int right = max(corners[1].y, corners[2].y); 
+
+        int x_overlap = max(0, min(right, b->img.cols) - max(left, 0));
+        int y_overlap = max(0, min(bot, b->img.rows) - max(top, 0));
+        int overlapArea = x_overlap * y_overlap;
+
+        //cout << "Overlap area of " << a->id << " and " << b->id << ": " << overlapArea << endl;
+        
+        return overlapArea >= b->img.cols * b->img.rows * minOverlap;
+    }
+    
+    static inline bool DecomposeHomography(const ImageP a, const ImageP b, const Mat &hom, Mat &r, Mat &t, bool useINRA = true) {
+
+        if(!useINRA) {
+            Mat aK3(3, 3, CV_64F);
+            Mat bK3(3, 3, CV_64F);
+
+            ScaleIntrinsicsToImage(a->intrinsics, a->img, aK3);
+            ScaleIntrinsicsToImage(b->intrinsics, b->img, bK3);
+
+            t = Mat(3, 1, CV_64F);
+
+            From3DoubleTo4Double(bK3.inv() * hom * aK3, r);
+            
+            return true;
+        } else {
+            Mat aK3(3, 3, CV_64F);
+            ScaleIntrinsicsToImage(a->intrinsics, a->img, aK3);
+            
+            vector<Mat> rotations(4);
+            vector<Mat> translations(4);
+            vector<Mat> normals(4);
+
+			int nsols = decomposeHomographyMat(hom, aK3, rotations, translations, normals);
+
+ 			for(int i = 0; i < nsols; i++) {
+
+ 				if(!ContainsNaN(rotations[i])) {
+                    From3DoubleTo4Double(rotations[i], r);
+                    t = translations[i];
+                    return true;
+ 				}
+ 			}
+
+            return false;
+        }
+    } 
+
 }
 
 #endif

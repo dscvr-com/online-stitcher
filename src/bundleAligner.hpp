@@ -21,7 +21,7 @@ namespace optonaut {
 		PairwiseVisualAligner visual;
         vector<ImageP> images;
     public: 
-		BundleAligner() : visual(PairwiseVisualAligner::ModeFeatures) { }
+		BundleAligner() : visual() { }
 
         bool NeedsImageData() {
             return true;

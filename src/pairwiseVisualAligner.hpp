@@ -39,54 +39,6 @@ private:
     //TODO Make dependent of image size
     const double OutlinerTolerance = 155 * 155; //Chosen by fair jojo roll
 
-    void DrawHomographyBorder(const Mat &homography, const Mat &left, const Scalar &color, Mat &target) {
-        std::vector<Point2f> scene_corners = GetSceneCorners(left, homography);
-
-        Point2f offset(left.cols, 0);
-
-        for(size_t i = 0; i < scene_corners.size(); i++) {
-            scene_corners[i] += offset;
-        }
-
-        DrawPoly(target, scene_corners, color);
-    }
-
-    void DrawResults(const Mat &homography, const Mat &homographyFromRot, const vector<DMatch> &goodMatches, const Mat &a, const ImageFeatures &aFeatures, const Mat &b, const ImageFeatures &bFeatures, Mat &target) {
-
-        //Colors: Green: Detected Homography.
-        //        Red:   Estimated from Sensor.
-        //        Blue:  Hmoography induced by dectected rotation. 
-
-  		drawMatches(a, aFeatures.keypoints, b, bFeatures.keypoints,
-               goodMatches, target, Scalar::all(-1), Scalar::all(-1),
-               vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
-
-        DrawHomographyBorder(homography, a, Scalar(0, 255, 0), target);
-        DrawHomographyBorder(homographyFromRot, a, Scalar(255, 0, 0), target);
-        
-        //Mat estimation;
-        //Mat rot;
-        //HomographyFromKnownParameters(a, b, estimation, rot);
-        //DrawHomographyBorder(estimation, a, Scalar(0, 0, 255), target);
-    } 
-
-    void StoreCorrespondence(int a, int b, const Mat &rotation) {
-        std::string filename = "store/" + ToString(a) + "_" + ToString(b);
-        BufferToBinFile(rotation.data, sizeof(double) * 16, filename);
-    }
-
-    bool LoadCorrespondence(int a, int b, const Mat &rotation) {
-        std::string filename = "store/" + ToString(a) + "_" + ToString(b);
-        if(!FileExists(filename)) {
-            return false;
-        }
-        BufferFromBinFile(rotation.data, sizeof(double) * 16, filename);
-
-        return true;
-    }
-
-    int mode;
-
     static const bool debug = true;
 
     //Needed for bundle adj.
@@ -105,171 +57,35 @@ private:
     }
 public:
 
-    static const int ModeECCHom = 0;
-    static const int ModeECCAffine = 1;
-    static const int ModeFeatures = 2;
-
-	PairwiseVisualAligner(int mode = ModeFeatures) : detector(AKAZE::create()), mode(mode) { }
+	PairwiseVisualAligner() : detector(AKAZE::create()) { }
 
 	void FindKeyPoints(ImageP img) {
-        if(mode == ModeFeatures) {
-            size_t id = GetImageId(img);
+        size_t id = GetImageId(img);
 
-            assert(features.size() == id);
+        assert(features.size() == id);
 
-            ImageFeatures f;
+        ImageFeatures f;
 
-            Mat tmp = img->img;
+        Mat tmp = img->img;
 
-            f.img_idx = id;
-            Mat *descriptors = new Mat();
-            f.img_size = img->img.size();
+        f.img_idx = id;
+        Mat *descriptors = new Mat();
+        f.img_size = img->img.size();
 
-		    detector->detectAndCompute(tmp, noArray(), f.keypoints, *descriptors);
+        detector->detectAndCompute(tmp, noArray(), f.keypoints, *descriptors);
 
-            f.descriptors = descriptors->getUMat(ACCESS_READ);
+        f.descriptors = descriptors->getUMat(ACCESS_READ);
 
-            features.push_back(f);
-	    }
+        features.push_back(f);
     }
 
-    bool AreOverlapping(const ImageP a, const ImageP b, double minOverlap = 0.1) {
-        Mat hom, rot;
+	MatchInfo *FindCorrespondence(const ImageP a, const ImageP b) {
+        assert(a != NULL);
+        assert(b != NULL);
 
-        HomographyFromImages(a, b, hom, rot);
+		MatchInfo* info = new MatchInfo();
+        info->valid = false;
 
-        std::vector<Point2f> corners = GetSceneCorners(a->img, hom); 
-
-        int top = min(corners[0].x, corners[1].x); 
-        int bot = max(corners[2].x, corners[3].x); 
-        int left = min(corners[0].y, corners[3].y); 
-        int right = max(corners[1].y, corners[2].y); 
-
-        int x_overlap = max(0, min(right, b->img.cols) - max(left, 0));
-        int y_overlap = max(0, min(bot, b->img.rows) - max(top, 0));
-        int overlapArea = x_overlap * y_overlap;
-
-        cout << "Overlap area of " << a->id << " and " << b->id << ": " << overlapArea << endl;
-        
-        return overlapArea >= b->img.cols * b->img.rows * minOverlap;
-    }
-
-    void CorrespondenceFromECC(const ImageP a, const ImageP b, MatchInfo* info) {
-        Mat ga, gb;
-        cvtColor(a->img, ga, CV_BGR2GRAY);
-        cvtColor(b->img, gb, CV_BGR2GRAY); 
-
-        //GetGradient(ga, ga);
-        //GetGradient(gb, gb);
-        
-        Mat hom(3, 3, CV_64F);
-        Mat rot(4, 4, CV_64F);
-
-        HomographyFromImages(a, b, hom, rot);
-        
-        //double dx = hom.at<double>(0, 2);
-        //double dy = hom.at<double>(1, 2);
-
-        Mat wa(ga.rows, ga.cols, CV_64F);
-        warpPerspective(ga, wa, hom, wa.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
-       
-        ga = wa;
-        //Cut images, set homography to id.
-        
-        vector<Point2f> corners = GetSceneCorners(ga, hom);
-        Rect roi = GetInnerBoxForScene(corners);
-        //DrawBox(ga, roi, Scalar(0x70));
-        //DrawBox(gb, roi, Scalar(0x70));
-        roi = roi & Rect(0, 0, ga.cols, ga.rows);
-        //DrawPoly(ga, corners, Scalar(0xc0));
-        //DrawPoly(gb, corners, Scalar(0xc0));
-        //DrawBox(ga, roi, Scalar(255));
-        //DrawBox(gb, roi, Scalar(255));
-        hom = Mat::eye(3, 3, CV_32F);
-        ga = ga(roi);
-        gb = gb(roi);
-
-        //If those asserts fire, we've fed the aligner two non-overlapping 
-        //images probably. SHAME!
-        if(roi.width < 1 || roi.height < 1) {
-            return;
-        }
-
-        //reduce(ga, ga, 0, CV_REDUCE_AVG);
-        //reduce(gb, gb, 0, CV_REDUCE_AVG);
-
-        //hom.at<double>(0, 2) = dx;
-        //
-        //hom.at<double>(1, 2) = dy;
-
-        const int warp = mode == ModeECCHom ? MOTION_HOMOGRAPHY : MOTION_TRANSLATION;
-        Mat affine = Mat::zeros(2, 3, CV_32F);
-        Mat in;
-
-        const int iterations = 1000;
-        const double eps = 1e-5;
-
-        if(warp == MOTION_HOMOGRAPHY) {
-            From3DoubleTo3Float(info->homography, hom); 
-            in = hom;
-        } else {
-            affine.at<float>(0, 0) = 1; 
-            affine.at<float>(1, 1) = 1; 
-            affine.at<float>(0, 2) = 0; //info->homography.at<double>(0, 2); 
-            affine.at<float>(1, 2) = 0; //info->homography.at<double>(1, 2); 
-            in = affine;
-        }
-        TermCriteria termination(TermCriteria::COUNT + TermCriteria::EPS, iterations, eps);
-        try {
-            findTransformECC(ga, gb, in, warp, termination);
-        
-            if(warp == MOTION_HOMOGRAPHY) {
-                hom = in;
-                From3FloatTo3Double(hom, info->homography);
-                info->valid = RotationFromHomography(a, b, info->homography, info->rotation);
-            } else {
-                affine = in;
-                cout << "Found Affine: " << affine << endl;
-                From3FloatTo3Double(hom, info->homography);
-                info->homography.at<double>(0, 2) = affine.at<float>(0, 2); 
-                info->homography.at<double>(1, 2) = affine.at<float>(1, 2); 
-                info->valid = true;
-            }
-        } catch (Exception ex) {
-            cout << "ECC couldn't correlate" << endl;
-            info->homography = hom;
-        }
-
-        //debug
-        if(debug) {
-            Mat target; 
-            Mat aK3;
-            Mat reHom, rot3(3, 3, CV_64F);
-            ScaleIntrinsicsToImage(a->intrinsics, a->img, aK3);
-            From4DoubleTo3Double(info->rotation, rot3);
-            HomographyFromRotation(rot3, aK3, reHom);
-
-            vector<DMatch> dummy;
-
-            DrawResults(info->homography, reHom, dummy, ga, ImageFeatures(), gb, ImageFeatures(), target);
-
-            std::string filename;
-            if(mode == MOTION_HOMOGRAPHY) {
-                filename = 
-                    "dbg/ecc_result" + ToString(a->id) + 
-                    "_" + ToString(b->id) + ".jpg";
-            } else {
-                filename =  
-                    "dbg/ecc_result" + ToString(a->id) + 
-                    "_" + ToString(b->id) + 
-                    "_x-corr " + ToString(affine.at<float>(0, 2)) + " .jpg";
-            }
-            imwrite(filename, target);
-        }
-    }
-
-    void CorrespondenceFromFeatures(const ImageP a, const ImageP b, MatchInfo* info) {
-        cout << "Visual Aligner receiving " << a->id << " and " << b->id << endl;
         size_t aId = GetImageId(a);
         size_t bId = GetImageId(b);
 
@@ -314,7 +130,7 @@ public:
 
 		if(goodMatches.size() == 0) {
 			cout << "Homography: no matches. " << endl;
-			return;
+			return info;
 		}
 
 		vector<Point2f> aLocalFeatures;
@@ -343,12 +159,13 @@ public:
         minfo.confidence = 0;
         minfo.H = info->homography;
 
-
         double inlinerRatio = inlinerCount;
         inlinerRatio /= goodMatches.size();
 
+        Mat translation;
+
 		if(info->homography.cols != 0) {	
-            info->valid = RotationFromHomography(a, b, info->homography, info->rotation);
+            info->valid = DecomposeHomography(a, b, info->homography, info->rotation, translation);
  		}
 	
 	   	if(info->valid) {
@@ -380,7 +197,7 @@ public:
                 From4DoubleTo3Double(info->rotation, rot3);
                 HomographyFromRotation(rot3, aK3, reHom);
 
-                DrawResults(info->homography, reHom, goodMatches, a->img, aFeatures, b->img, bFeatures, target);
+                DrawMatchingResults(info->homography, reHom, goodMatches, a->img, aFeatures, b->img, bFeatures, target);
 
                 std::string filename = 
                     "dbg/Homogpraphy" + ToString(a->id) + "_" + ToString(b->id) + 
@@ -391,70 +208,14 @@ public:
                     ").jpg";
                 imwrite(filename, target);
             }
-           
 		}
         
         this->matches.push_back(minfo);
-    }
-
-    bool RotationFromHomography(const ImageP a, const ImageP b, const Mat &hom, Mat &r) const {
-
-        const bool useINRA = true;
-
-        if(!useINRA) {
-            Mat aK3(3, 3, CV_64F);
-            Mat bK3(3, 3, CV_64F);
-
-            ScaleIntrinsicsToImage(a->intrinsics, a->img, aK3);
-            ScaleIntrinsicsToImage(b->intrinsics, b->img, bK3);
-
-            From3DoubleTo4Double(bK3.inv() * hom * aK3, r);
-            
-            return true;
-        } else {
-            Mat aK3(3, 3, CV_64F);
-            ScaleIntrinsicsToImage(a->intrinsics, a->img, aK3);
-            
-            vector<Mat> rotations(4);
-            vector<Mat> translations(4);
-            vector<Mat> normals(4);
-
-			int nsols = decomposeHomographyMat(hom, aK3, rotations, translations, normals);
-
- 			for(int i = 0; i < nsols; i++) {
-
- 				if(!ContainsNaN(rotations[i])) {
-                    From3DoubleTo4Double(rotations[i], r);
-                    return true;
- 				}
- 			}
-
-            cout << "Hom decomposition found no solutions" << endl;
-            return false;
-        }
-    } 
-
-	MatchInfo *FindCorrespondence(const ImageP a, const ImageP b) {
-        assert(a != NULL);
-        assert(b != NULL);
-
-        cout << "Visual aligner receiving " << a->id << " and " << b->id << endl;
-
-		MatchInfo* info = new MatchInfo();
-        info->valid = false;
-
-        if(mode != ModeFeatures) {
-            CorrespondenceFromECC(a, b, info);
-        } else {
-            CorrespondenceFromFeatures(a, b, info);
-        }
 
         return info;
-	}
+    }
 
     void RunBundleAdjustment(const vector<ImageP> &images) const {
-        assert(mode == ModeFeatures);
-    
         vector<CameraParams> cameras(images.size());
 
         for(auto img : images) {
