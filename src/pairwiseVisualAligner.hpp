@@ -8,6 +8,8 @@
 #include "image.hpp"
 #include "support.hpp"
 #include "io.hpp"
+#include "projection.hpp"
+#include "drawing.hpp"
 
 using namespace cv;
 using namespace std;
@@ -47,50 +49,6 @@ private:
         }
 
         DrawPoly(target, scene_corners, color);
-    }
-
-    void DrawPoly(const Mat &target, const vector<Point2f> &corners, const Scalar color = Scalar(255, 0, 0)) {
-        
-        Point2f last = corners.back();
-
-        for(auto point : corners) {
-            line(target, last, point, color, 4);
-            last = point;
-        }
-    }
-
-    void DrawBox(const Mat &target, const Rect &roi, const Scalar color = Scalar(255, 0, 0)) {
-        std::vector<Point2f> corners;
-        corners.emplace_back(roi.x, roi.y);
-        corners.emplace_back(roi.x, roi.y + roi.height);
-        corners.emplace_back(roi.x + roi.width, roi.y + roi.height);
-        corners.emplace_back(roi.x + roi.width, roi.y);
-
-        DrawPoly(target, corners, color);
-    }
-
-    vector<Point2f> GetSceneCorners(const Mat &img, const Mat &homography) {
-        std::vector<Point2f> obj_corners(4);
-        obj_corners[0] = cvPoint(0,0); 
-        obj_corners[1] = cvPoint(img.cols, 0);
-        obj_corners[2] = cvPoint(img.cols, img.rows); 
-        obj_corners[3] = cvPoint(0, img.rows);
-        std::vector<Point2f> scene_corners(4);
-
-        perspectiveTransform(obj_corners, scene_corners, homography);
-
-        return scene_corners;
-    }
-
-    Rect GetInnerBoxForScene(const vector<Point2f> &c) {
-        assert(c.size() == 4);
-
-        double l = max(c[0].x, c[3].x);
-        double t = max(c[0].y, c[1].y);
-        double r = min(c[1].x, c[2].x);
-        double b = min(c[2].y, c[3].y);
-
-        return Rect(l, t, r - l, b - t);
     }
 
     void DrawResults(const Mat &homography, const Mat &homographyFromRot, const vector<DMatch> &goodMatches, const Mat &a, const ImageFeatures &aFeatures, const Mat &b, const ImageFeatures &bFeatures, Mat &target) {
@@ -178,7 +136,7 @@ public:
     bool AreOverlapping(const ImageP a, const ImageP b, double minOverlap = 0.1) {
         Mat hom, rot;
 
-        HomographyFromKnownParameters(a, b, hom, rot);
+        HomographyFromImages(a, b, hom, rot);
 
         std::vector<Point2f> corners = GetSceneCorners(a->img, hom); 
 
@@ -196,23 +154,6 @@ public:
         return overlapArea >= b->img.cols * b->img.rows * minOverlap;
     }
 
-    void HomographyFromKnownParameters(const ImageP a, const ImageP b, Mat &hom, Mat &rot) const {
-        Mat R3(3, 3, CV_64F);
-        Mat aK3(3, 3, CV_64F);
-
-        rot = b->originalExtrinsics.inv() * a->originalExtrinsics;
-        
-        From4DoubleTo3Double(rot, R3);
-
-        ScaleIntrinsicsToImage(a->intrinsics, a->img, aK3);
-
-        HomographyFromRotation(R3, aK3, hom);
-    }
-
-    void HomographyFromRotation(const Mat &rot, const Mat &k, Mat &hom) const {
-        hom = k * rot * k.inv();
-    }
-
     void CorrespondenceFromECC(const ImageP a, const ImageP b, MatchInfo* info) {
         Mat ga, gb;
         cvtColor(a->img, ga, CV_BGR2GRAY);
@@ -224,7 +165,7 @@ public:
         Mat hom(3, 3, CV_64F);
         Mat rot(4, 4, CV_64F);
 
-        HomographyFromKnownParameters(a, b, hom, rot);
+        HomographyFromImages(a, b, hom, rot);
         
         //double dx = hom.at<double>(0, 2);
         //double dy = hom.at<double>(1, 2);
@@ -344,7 +285,7 @@ public:
         Mat estRot; 
         Mat estHom;
         
-        HomographyFromKnownParameters(a, b, estHom, estRot);
+        HomographyFromImages(a, b, estHom, estRot);
 
 		BFMatcher matcher;
 		vector<vector<DMatch>> matches;

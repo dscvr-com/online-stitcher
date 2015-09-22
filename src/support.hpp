@@ -54,10 +54,7 @@ namespace optonaut {
 	double angleAvg(double x, double y);
 	double interpolate(double x, double x1, double x2, double y1, double y2);
 
-    void DrawBar(cv::Mat &image, double val);
     void GetGradient(const cv::Mat &src_gray, cv::Mat &grad);
-    
-    cv::Rect GetBoundingBox(const std::vector<cv::Point2f> &points);
 }
 
 #endif

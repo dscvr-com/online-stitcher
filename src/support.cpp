@@ -319,32 +319,4 @@ namespace optonaut {
 	}
     
 
-    void DrawBar(cv::Mat &image, double val) {
-        Scalar color;
-        if(val < 0) {
-            color = Scalar(0, 255, 255);
-        } else {
-            color = Scalar(255, 0, 255);
-        }
-        cv::rectangle(image, cv::Point(0, image.rows * (0.5 - val)), cv::Point(image.cols, image.rows * 0.5), color, CV_FILLED);
-    }
-    
-    Rect GetBoundingBox(const vector<Point2f> &points) {
-
-        assert(points.size() > 0);
-
-        double t = points[0].y;
-        double b = points[0].y;
-        double l = points[0].x;
-        double r = points[0].x;
-
-        for(auto p : points) {
-            t = min2(p.y, t);
-            b = max2(p.y, b);
-            l = min2(p.x, l);
-            r = max2(p.x, r);
-        }
-
-        return Rect(l, t, r - l, b - t);
-    }
 }
