@@ -55,6 +55,8 @@ namespace optonaut {
         blender->blend(res->image, res->mask);
 
         blender.release();
+        
+        res->image.convertTo(res->image, CV_8U);
 
         return res;
     }

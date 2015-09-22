@@ -131,8 +131,8 @@ StitchingResultP RStitcher::Stitch(const std::vector<ImageP> &in, bool debug) {
         res->corner.x = min(res->corner.x, corners[i].x);
         res->corner.y = min(res->corner.y, corners[i].y);
     }
-    //TODO - put back in prduction.  
-    //res->image.convertTo(res->image, CV_8U);
+    
+    res->image.convertTo(res->image, CV_8U);
 
 	return res;
 }
