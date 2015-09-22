@@ -8,7 +8,6 @@
 #include "recorderController.hpp"
 #include "ringwiseStitcher.hpp"
 #include "imageResizer.hpp"
-#include <opencv2/stitching.hpp>
 
 #ifndef OPTONAUT_PIPELINE_HEADER
 #define OPTONAUT_PIPELINE_HEADER
