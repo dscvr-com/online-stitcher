@@ -99,7 +99,7 @@ namespace optonaut {
             zero = zeroWithoutBase;
 
             if(isAsync) {
-                aligner = shared_ptr<Aligner>(new AsyncAligner());
+                aligner = shared_ptr<Aligner>(new AsyncAligner(recorderGraph));
             } else {
                 aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph));
             }

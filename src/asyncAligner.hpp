@@ -6,7 +6,7 @@
 #include "image.hpp"
 #include "support.hpp"
 #include "aligner.hpp"
-#include "sequenceStreamAligner.hpp"
+#include "ringwiseStreamAligner.hpp"
 #include <thread>
 
 using namespace cv;
@@ -18,7 +18,7 @@ using namespace std;
 namespace optonaut {
 	class AsyncAligner : public Aligner {
 	private:
-		SequenceStreamAligner core;
+		RingwiseStreamAligner core;
         ImageP recentImage;
         bool running;
         thread worker;
@@ -63,7 +63,7 @@ namespace optonaut {
         }
 
 	public:
-		AsyncAligner() : core(), running(true), sensorDiff(Mat::eye(4, 4, CV_64F)), isInitialized(false), alignerReady(true) { }
+		AsyncAligner(RecorderGraph &graph) : core(graph), running(true), sensorDiff(Mat::eye(4, 4, CV_64F)), isInitialized(false), alignerReady(true) { }
        
         bool NeedsImageData() {
             return alignerReady;

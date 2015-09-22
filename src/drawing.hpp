@@ -1,6 +1,8 @@
 #include <algorithm>
 #include <string>
+#include <opencv2/features2d.hpp>
 #include <opencv2/opencv.hpp>
+#include <opencv2/stitching/detail/matchers.hpp>
 
 #ifndef OPTONAUT_DRAWING_DEBUG_HEADER
 #define OPTONAUT_DRAWING_DEBUG_HEADER
@@ -72,8 +74,7 @@ namespace optonaut {
         //Mat rot;
         //HomographyFromKnownParameters(a, b, estimation, rot);
         //DrawHomographyBorder(estimation, a, Scalar(0, 0, 255), target);
-    } 
-
+    }
 }
 
 #endif

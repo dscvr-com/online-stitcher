@@ -45,7 +45,7 @@ namespace optonaut {
         
         //Tolerance, measured on sphere, for hits.
         //We sould calc this from buffer, overlap, fov
-        const double tolerance = M_PI / 10; //TODO _ CHANGE BACK! 
+        const double tolerance = M_PI / 50; //TODO _ CHANGE BACK!
         
         //Ball Speed per second, in radians
         const double ballSpeed = M_PI / 2;
