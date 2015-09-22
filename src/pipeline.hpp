@@ -103,7 +103,7 @@ namespace optonaut {
             } else {
                 aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph));
             }
-            aligner = shared_ptr<Aligner>(new TrivialAligner());
+            //aligner = shared_ptr<Aligner>(new TrivialAligner());
         }
         
         void SetPreviewImageEnabled(bool enabled) {

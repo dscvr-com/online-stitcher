@@ -151,11 +151,11 @@ namespace optonaut {
             size_t c = targets.size() / 2;
 
             if(ring == c) {
-                return c;
+                return ring;
             } else if(ring > c) {
-                return c - 1;
+                return ring - 1;
             } else {
-                return c + 1;
+                return ring + 1;
             }
         }
         

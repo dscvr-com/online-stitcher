@@ -73,14 +73,17 @@ namespace optonaut {
             if(ring == -1)
                 return; //No ring x(
 
+            rings[ring].push_back(next);
             size_t target = graph.GetParentRing(ring);
+
+            cout << "Target " << target << endl;
             
             ImageP closest = NULL;
             double minDist = 100;
 
             if((int)target != ring) {
                 for(size_t j = 0; j < rings[target].size(); j++) {
-                    double dist = abs(GetAngleOfRotation(next->originalExtrinsics, rings[0][j]->adjustedExtrinsics));
+                    double dist = abs(GetAngleOfRotation(next->originalExtrinsics, rings[target][j]->adjustedExtrinsics));
 
                     if(closest == NULL || dist < minDist) {
                         minDist = dist;
@@ -88,8 +91,11 @@ namespace optonaut {
                     } 
                 }
             }
+
+            cout << "Closest " << closest << endl;
             
             if(closest != NULL) {
+                cout << "Correlating " << next->id << " and " << closest->id << endl;
                 CorrelationDiff corr = visual.Match(next, closest);
                
                 if(corr.valid) { 
