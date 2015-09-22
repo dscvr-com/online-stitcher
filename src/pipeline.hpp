@@ -60,7 +60,7 @@ namespace optonaut {
             rights.push_back(right);
         }
 
-        StitchingResultP Finish(vector<ImageP> &images, bool debug = false) {
+        StitchingResultP Finish(vector<ImageP> &images, bool debug = false, string debugName = "") {
             auto rings = RingwiseStreamAligner::SplitIntoRings(images);
 
             aligner->Postprocess(images);
@@ -91,6 +91,10 @@ namespace optonaut {
                 res->image.convertTo(warpedImageAsShort, CV_16S);
                 assert(res->mask.type() == CV_8U);
 		        blender->feed(warpedImageAsShort, res->mask, res->corner);
+
+                if(debugName != "") {
+                    imwrite("dbg/ring_" + debugName + ToString(i) + ".jpg",  res->image); 
+                }
             }
 	
             StitchingResultP res(new StitchingResult());
@@ -321,7 +325,7 @@ namespace optonaut {
         }
 
         StitchingResultP FinishAligned() {
-            return Finish(aligned, false);
+            return Finish(aligned, false, "aligned");
         }
 
         StitchingResultP FinishAlignedDebug() {
