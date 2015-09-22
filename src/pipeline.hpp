@@ -61,31 +61,36 @@ namespace optonaut {
         }
 
         StitchingResultP Finish(vector<ImageP> &images, bool debug = false, string debugName = "") {
-            auto rings = RingwiseStreamAligner::SplitIntoRings(images);
+            auto rings = RingwiseStreamAligner(recorderGraph).SplitIntoRings(images);
 
             aligner->Postprocess(images);
             //return Finish(rights, false);
             //Experimental triple stitcher
 
-            vector<StitchingResultP> stitchedRings;
-            vector<Size> sizes;
-            vector<Point> corners;
+            vector<StitchingResultP> stitchedRings(rings.size());
+            vector<Size> sizes(rings.size());
+            vector<Point> corners(rings.size());
             
-
             cout << "Final: Have " << ToString(rings.size()) << " rings" << endl;
 
             Ptr<Blender> blender = Blender::createDefault(Blender::FEATHER, true);
 
             for(size_t i = 0; i < rings.size(); i++) {
+                if(rings[i].size() == 0) 
+                    continue;
+
                 auto res = stitcher.Stitch(rings[i], debug);
-                stitchedRings.push_back(res);
-                sizes.push_back(res->image.size());
-                corners.push_back(res->corner);
+                stitchedRings[i] = res;
+                sizes[i] = res->image.size();
+                corners[i] = res->corner;
             }
                 
             blender->prepare(corners, sizes);
 
             for(size_t i = 0; i < rings.size(); i++) {
+                if(rings[i].size() == 0) 
+                    continue;
+
                 auto res = stitchedRings[i];
 	            Mat warpedImageAsShort;
                 res->image.convertTo(warpedImageAsShort, CV_16S);
@@ -142,7 +147,7 @@ namespace optonaut {
             if(isAsync) {
                 aligner = shared_ptr<Aligner>(new AsyncAligner());
             } else {
-                aligner = shared_ptr<Aligner>(new RingwiseStreamAligner());
+                aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph));
             }
 //            aligner = shared_ptr<Aligner>(new TrivialAligner());
         }

@@ -117,8 +117,6 @@ namespace optonaut {
         double FindClosestPoint(const Mat &extrinscs, SelectionPoint &point, const int ringId = -1) const {
             double bestDist = -1;
             Mat eInv = extrinscs.inv();
-            Mat zCorr;
-            CreateRotationZ(M_PI / 2, zCorr);
             
             for(auto ring : targets) {
                 if(ring.size() == 0 || (ringId != -1 && ringId != (int)ring[0].ringId))
@@ -136,6 +134,29 @@ namespace optonaut {
             }
             
             return bestDist;
+        }
+
+        int FindAssociatedRing(const Mat &extrinsics, const double tolerance = M_PI / 16) {
+            assert(targets.size() > 0);
+
+            SelectionPoint pt;
+            if(FindClosestPoint(extrinsics, pt) <= tolerance) {
+                return pt.ringId;
+            }
+
+            return -1;
+        }
+
+        size_t GetParentRing(size_t ring) {
+            size_t c = targets.size() / 2;
+
+            if(ring == c) {
+                return c;
+            } else if(ring > c) {
+                return c - 1;
+            } else {
+                return c + 1;
+            }
         }
         
         uint32_t Size() {

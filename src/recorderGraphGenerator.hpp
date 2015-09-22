@@ -31,7 +31,7 @@ private:
         Mat hRot;
         Mat vRot;
         
-        cout << hAngle << ", " << vAngle << endl;
+        //cout << hAngle << ", " << vAngle << endl;
         
         CreateRotationY(hAngle, hRot);
         CreateRotationX(vAngle, vRot);

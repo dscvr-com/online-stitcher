@@ -14,7 +14,7 @@ using namespace std;
 #ifndef OPTONAUT_STREAM_ALIGNMENT_HEADER
 #define OPTONAUT_STREAM_ALIGNMENT_HEADER
 
-//TODO - cleanup
+//TODO - cleanup or throw away entirely. 
 namespace optonaut {
 	class SequenceStreamAligner : public Aligner {
 	private:

@@ -167,6 +167,8 @@ public:
 		if(info->homography.cols != 0) {	
             info->valid = DecomposeHomography(a, b, info->homography, info->rotation, translation);
  		}
+
+        //TODO There is some kind of REPROJ technique to check the error here. 
 	
 	   	if(info->valid) {
 
