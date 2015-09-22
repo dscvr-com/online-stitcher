@@ -8,7 +8,6 @@
 #include "recorderController.hpp"
 #include "simpleSphereStitcher.hpp"
 #include "imageResizer.hpp"
-#include "bundleAligner.hpp"
 #include <opencv2/stitching.hpp>
 
 #ifndef OPTONAUT_PIPELINE_HEADER
@@ -68,8 +67,8 @@ namespace optonaut {
             //Experimental triple stitcher
 
             vector<StitchingResultP> stitchedRings(rings.size());
-            vector<Size> sizes(rings.size());
-            vector<Point> corners(rings.size());
+            vector<cv::Size> sizes(rings.size());
+            vector<cv::Point> corners(rings.size());
             
             cout << "Final: Have " << ToString(rings.size()) << " rings" << endl;
 
@@ -149,7 +148,7 @@ namespace optonaut {
             } else {
                 aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph));
             }
-//            aligner = shared_ptr<Aligner>(new TrivialAligner());
+            aligner = shared_ptr<Aligner>(new TrivialAligner());
         }
         
         void SetPreviewImageEnabled(bool enabled) {

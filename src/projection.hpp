@@ -22,7 +22,7 @@ namespace optonaut {
         return scene_corners;
     }
 
-    static inline Rect GetBoundingBox(const vector<Point2f> &points) {
+    static inline cv::Rect GetBoundingBox(const vector<Point2f> &points) {
         assert(points.size() > 0);
 
         double t = points[0].y;
@@ -37,10 +37,10 @@ namespace optonaut {
             r = max2(p.x, r);
         }
 
-        return Rect(l, t, r - l, b - t);
+        return cv::Rect(l, t, r - l, b - t);
     }
     
-    static inline Rect GetInnerBoxForScene(const vector<Point2f> &c) {
+    static inline cv::Rect GetInnerBoxForScene(const vector<Point2f> &c) {
         assert(c.size() == 4);
 
         double l = max(c[0].x, c[3].x);
@@ -48,7 +48,7 @@ namespace optonaut {
         double r = min(c[1].x, c[2].x);
         double b = min(c[2].y, c[3].y);
 
-        return Rect(l, t, r - l, b - t);
+        return cv::Rect(l, t, r - l, b - t);
     }
     
     static inline void HomographyFromRotation(const Mat &rot, const Mat &k, Mat &hom) {

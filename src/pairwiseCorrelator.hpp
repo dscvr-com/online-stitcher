@@ -3,7 +3,6 @@
 
 #include "image.hpp"
 #include "support.hpp"
-#include "io.hpp"
 #include "projection.hpp"
 #include "drawing.hpp"
 
@@ -59,14 +58,14 @@ public:
         
         //Cut images, set homography to id.
         vector<Point2f> corners = GetSceneCorners(ga, hom);
-        Rect roi = GetInnerBoxForScene(corners);
+        cv::Rect roi = GetInnerBoxForScene(corners);
         
         if(debug) {
             DrawBox(ga, roi, Scalar(0x70));
             DrawBox(gb, roi, Scalar(0x70));
         }
 
-        roi = roi & Rect(0, 0, ga.cols, ga.rows);
+        roi = roi & cv::Rect(0, 0, ga.cols, ga.rows);
         
         if(debug) {
             DrawPoly(ga, corners, Scalar(0xc0));

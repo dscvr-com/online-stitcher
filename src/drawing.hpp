@@ -21,7 +21,7 @@ namespace optonaut {
         }
     }
 
-    static inline void DrawBox(const Mat &target, const Rect &roi, const Scalar color = Scalar(255, 0, 0)) {
+    static inline void DrawBox(const Mat &target, const cv::Rect &roi, const Scalar color = Scalar(255, 0, 0)) {
         std::vector<Point2f> corners;
         corners.emplace_back(roi.x, roi.y);
         corners.emplace_back(roi.x, roi.y + roi.height);

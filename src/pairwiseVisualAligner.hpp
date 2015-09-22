@@ -7,7 +7,6 @@
 
 #include "image.hpp"
 #include "support.hpp"
-#include "io.hpp"
 #include "projection.hpp"
 #include "drawing.hpp"
 
