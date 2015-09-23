@@ -34,7 +34,6 @@ public:
 
         const bool useGradient = false;
         const bool useReduce = false;
-        const bool debug = false;
 
         CorrelationDiff result;
         Mat ga, gb;
@@ -81,7 +80,7 @@ public:
         //If those asserts fire, we've fed the aligner two non-overlapping 
         //images probably. SHAME!
         if(roi.width < 1 || roi.height < 1) {
-            assert(false);
+            return result;
         }
 
         if(useReduce) {
@@ -115,7 +114,7 @@ public:
 
             vector<DMatch> dummy;
 
-            DrawMatchingResults(hom, eye, eye, ga, ImageFeatures(), gb, ImageFeatures(), target);
+            DrawMatchingResults(hom, eye, dummy, ga, ImageFeatures(), gb, ImageFeatures(), target);
             std::string filename =  
                     "dbg/ecc_result" + ToString(a->id) + 
                     "_" + ToString(b->id) + 

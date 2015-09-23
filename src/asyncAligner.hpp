@@ -47,6 +47,8 @@ namespace optonaut {
                     recentImage = this->recentImage;    
                 }
 
+                dataReady = false;
+
                 if(recentImage == NULL)
                     continue;
 
@@ -110,8 +112,8 @@ namespace optonaut {
             return current;
         }
         
-        void Postprocess(vector<ImageP>) const { };
-        void Finish() { };
+        void Postprocess(vector<ImageP> imgs) const { core.Postprocess(imgs); };
+        void Finish() { core.Finish(); };
     };
 }
 #endif

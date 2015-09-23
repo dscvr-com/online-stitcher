@@ -12,6 +12,7 @@
 using namespace std;
 using namespace cv;
 using namespace optonaut;
+using namespace std::chrono;
 
 
 bool CompareByFilename (const string &a, const string &b) {
@@ -19,6 +20,8 @@ bool CompareByFilename (const string &a, const string &b) {
 }
 
 int main(int argc, char* argv[]) {
+
+    static const bool isAsync = false;
 
     int n = argc - 1;
     shared_ptr<Pipeline> pipe(NULL);
@@ -30,8 +33,10 @@ int main(int argc, char* argv[]) {
     }
 
     sort(files.begin(), files.end(), CompareByFilename);
-  
+ 
+
     for(int i = 0; i < n; i++) {
+        auto lt = system_clock::now();
         auto image = ImageFromFile(files[i]);
         
         image->intrinsics = iPhone6Intrinsics;
@@ -48,13 +53,21 @@ int main(int argc, char* argv[]) {
         image->dataRef.colorSpace = colorspace::RGB;
 
         if(i == 0) {
-            pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics, RecorderGraph::ModeAll, false));
+            pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics, RecorderGraph::ModeAll, isAsync));
 
             Pipeline::debug = true;
         }
 
         pipe->Push(image);
         tmpMat.release();
+
+        if(isAsync) {
+            auto now = system_clock::now(); 
+            auto diff = now - lt;
+            auto sleep = 30ms - diff;
+            cout << "Sleeping for " << duration_cast<microseconds>(sleep).count() << endl;
+            this_thread::sleep_for(sleep);
+        }
     }
 
     pipe->Finish();

@@ -94,7 +94,7 @@ namespace optonaut {
 
             cout << "Closest " << closest << endl;
             
-            if(closest != NULL) {
+            if(closest != NULL && next->id % 10 == 0) {
                 cout << "Correlating " << next->id << " and " << closest->id << endl;
                 CorrelationDiff corr = visual.Match(next, closest);
                
@@ -166,8 +166,10 @@ namespace optonaut {
 
         }
 
-        void Postprocess(vector<ImageP>) const {
-        
+        void Postprocess(vector<ImageP> imgs) const {
+            for(auto img : imgs) {
+                DrawBar(img->img, img->vtag);
+            }
         }
 	};
 }

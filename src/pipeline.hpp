@@ -7,7 +7,6 @@
 #include "recorderGraphGenerator.hpp"
 #include "recorderController.hpp"
 #include "ringwiseStitcher.hpp"
-#include "imageResizer.hpp"
 
 #include <chrono>
 
@@ -28,7 +27,6 @@ namespace optonaut {
         SelectionInfo previous;
         SelectionInfo currentBest;
         
-        ImageResizer resizer;
         ImageP previewImage;
         MonoStitcher stereoConverter;
         
@@ -77,10 +75,10 @@ namespace optonaut {
         static string version;
 
         static bool debug;
+        static const int stretch = 10;
         
         Pipeline(Mat base, Mat zeroWithoutBase, Mat intrinsics, int graphConfiguration = RecorderGraph::ModeAll, bool isAsync = true) :
             base(base),
-            resizer(graphConfiguration),
             previewImageAvailable(false),
             isIdle(false),
             previewEnabled(true),
@@ -105,7 +103,7 @@ namespace optonaut {
             } else {
                 aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph));
             }
-            aligner = shared_ptr<Aligner>(new TrivialAligner());
+            //aligner = shared_ptr<Aligner>(new TrivialAligner());
         }
         
         void SetPreviewImageEnabled(bool enabled) {
@@ -205,7 +203,7 @@ namespace optonaut {
         void Push(ImageP image) {
             
             auto now = std::chrono::system_clock::now();
-            std::cout << "dt=" << std::chrono::duration_cast<std::chrono::microseconds>(lt - now).count() << " mms" << std::endl;
+            std::cout << "dt=" << std::chrono::duration_cast<std::chrono::microseconds>(now - lt).count() << " mms" << std::endl;
             
             lt = now;
             
@@ -220,7 +218,7 @@ namespace optonaut {
             
             image->adjustedExtrinsics = aligner->GetCurrentRotation().clone();
 
-            if(Pipeline::debug) {
+            if(Pipeline::debug && image->id % stretch == 0) {
                 if(!image->IsLoaded())
                     image->LoadFromDataRef();
                 aligned.push_back(image);
