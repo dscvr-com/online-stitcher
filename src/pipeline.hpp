@@ -9,6 +9,8 @@
 #include "ringwiseStitcher.hpp"
 #include "imageResizer.hpp"
 
+#include <chrono>
+
 #ifndef OPTONAUT_PIPELINE_HEADER
 #define OPTONAUT_PIPELINE_HEADER
 
@@ -103,7 +105,7 @@ namespace optonaut {
             } else {
                 aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph));
             }
-            //aligner = shared_ptr<Aligner>(new TrivialAligner());
+            aligner = shared_ptr<Aligner>(new TrivialAligner());
         }
         
         void SetPreviewImageEnabled(bool enabled) {
@@ -198,8 +200,14 @@ namespace optonaut {
             PushRight(stereo.B);
         }
         
-        //In: Image with sensor sampled parameters attached.
+        std::chrono::time_point<std::chrono::system_clock> lt = std::chrono::system_clock::now();
+        
         void Push(ImageP image) {
+            
+            auto now = std::chrono::system_clock::now();
+            std::cout << "dt=" << std::chrono::duration_cast<std::chrono::microseconds>(lt - now).count() << " mms" << std::endl;
+            
+            lt = now;
             
             image->originalExtrinsics = base * zero * image->originalExtrinsics.inv() * baseInv;
             
