@@ -76,7 +76,6 @@ namespace optonaut {
                 return; //No ring x(
            
             if(graph.HasChildRing(ring)) { 
-                assert(ring == 2);
                 //Select keyframes based on selection points...
                 if(rings[ring].size() < 1 || abs(GetAngleOfRotation(rings[ring].back()->originalExtrinsics, last->originalExtrinsics)) > keyframeThreshold) {
                     rings[ring].push_back(next);

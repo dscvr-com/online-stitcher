@@ -21,7 +21,7 @@ private:
 	//adj[n] contains m if m is right of n
 	//Horizontal and Vertical overlap in percent. 
 	const double hOverlap = 0.9;
-	const double vOverlap = 0.2;
+	const double vOverlap = 0.3;
     const double hBufferRatio = 0.03;
     const double vBufferRatio = 0.1;
     
@@ -80,7 +80,7 @@ public:
 	
         double vStart = maxVFov * vOverlap;
         
-		vFov = (M_PI) / vCount;
+		vFov = (M_PI - 2 * vStart) / vCount;
 
 		uint32_t id = 0;
 
@@ -92,7 +92,7 @@ public:
 		for(uint32_t i = 0; i < vCount; i++) {
 
             //Vertical center, bottom and top of ring
-			double vCenter = i * vFov + vFov / 2.0 - M_PI / 2.0;
+			double vCenter = i * vFov + vFov / 2.0 - M_PI / 2.0 + vStart;
             double vTop = vCenter - vFov / 2.0;
             double vBot = vCenter + vFov / 2.0;
 
@@ -108,8 +108,9 @@ public:
 			res.targets.push_back(vector<SelectionPoint>());
                 
             if(mode == RecorderGraph::ModeAll
-                || (mode == RecorderGraph::ModeCenter && i == vCount / 2)
-                || (mode == RecorderGraph::ModeTruncated && i != vCount - 1 && i != 0)) {
+               || (mode == RecorderGraph::ModeCenter && i == vCount / 2)
+               || (mode == RecorderGraph::ModeNoBot && i != 0)
+               || (mode == RecorderGraph::ModeTruncated && i != vCount - 1 && i != 0)) {
                     
                 for(uint32_t j = 0; j < hCount; j++) {
                         

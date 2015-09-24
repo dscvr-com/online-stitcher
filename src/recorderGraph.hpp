@@ -47,6 +47,7 @@ namespace optonaut {
         static const int ModeAll = 0;
         static const int ModeCenter = 1;
         static const int ModeTruncated = 2;
+        static const int ModeNoBot = 3;
         
         vector<vector<SelectionEdge>> adj;
         vector<vector<SelectionPoint>> targets;
