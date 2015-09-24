@@ -38,6 +38,7 @@ namespace optonaut {
         Mat ballPosition;
         SelectionPoint next;
         SelectionPoint current;
+        bool currentDone;
         double bestDist;
         
         double error;
@@ -45,7 +46,7 @@ namespace optonaut {
         
         //Tolerance, measured on sphere, for hits.
         //We sould calc this from buffer, overlap, fov
-        const double tolerance = M_PI / 16; //TODO CHANGE FOR RELEASE 
+        const double tolerance = M_PI / 32; //TODO CHANGE FOR RELEASE
         
         void MoveToNextRing(const Mat &cur) {
             
@@ -89,6 +90,7 @@ namespace optonaut {
             currentRing = (int)graph.targets.size() / 2;
             MoveToClosestPoint(initPosition);
             current = next;
+            currentDone = false;
             isInitialized = true;
         }
         
@@ -106,7 +108,7 @@ namespace optonaut {
             } else {
                 distNext = distCurrent;
             }
-            if(distCurrent < distNext) {
+            if(distCurrent < distNext || !currentDone) {
                 info.dist = distCurrent;
                 info.closestPoint = current;
                 error = distCurrent;
@@ -115,9 +117,17 @@ namespace optonaut {
                 info.closestPoint = next;
                 error = distNext;
                 bestDist = info.dist;
-                current = next;
+                if(current.globalId != next.globalId) {
+                    current = next;
+                    currentDone = false;
+                }
             }
-
+            
+            if(!currentDone) {
+                ballPosition = current.extrinsics.clone();
+            } else {
+                ballPosition = next.extrinsics.clone();
+            }
             ExtractRotationVector(image->adjustedExtrinsics.inv() * current.extrinsics, errorVec);
 
             if(isIdle)
@@ -126,6 +136,7 @@ namespace optonaut {
             if(info.dist < tolerance && info.dist < bestDist) {
                 bestDist = info.dist;
                 info.isValid = true;
+                currentDone = true;
             }
            
             //If we are close enough, and we are closert to next than
@@ -135,7 +146,6 @@ namespace optonaut {
                 if(graph.GetNextForRecording(next, newNext)) {
                     graph.MarkEdgeAsRecorded(next, newNext);
                     next = newNext;
-                    ballPosition = next.extrinsics.clone();
                 } else {
                     MoveToNextRing(image->adjustedExtrinsics);
                 }

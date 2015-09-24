@@ -214,7 +214,7 @@ public:
                     " .jpg";
             if(useReduce) {
                 cvtColor(corr, corr, CV_GRAY2BGR);
-                corr.copyTo(target(Rect((target.cols - corr.cols) / 2, corr.rows, corr.cols, corr.rows))); 
+                corr.copyTo(target(cv::Rect((target.cols - corr.cols) / 2, corr.rows, corr.cols, corr.rows)));
                 //cvtColor(ca, ca, CV_GRAY2BGR);
                 //ca.copyTo(target(Rect(0, 0, ca.cols, ca.rows))); 
                 //cvtColor(cb, cb, CV_GRAY2BGR);

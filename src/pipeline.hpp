@@ -257,10 +257,7 @@ namespace optonaut {
                 
             }
             
-            //TODO: Something is wrong with the
-            //recorder state (off-by-one due to timing?).
-            //This is just a quick hack. (-1)
-            if(recordedImages == imagesToRecord - 1)
+            if(recordedImages == imagesToRecord)
                 isFinished = true;
         }
 
