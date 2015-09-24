@@ -15,7 +15,7 @@ using namespace cv::detail;
 
 namespace optonaut {
 
-    static const bool resizeOutput = true;
+    static const bool resizeOutput = false;
     static const int w = 4096;
     static const int h = 4096;
 

@@ -36,22 +36,16 @@ namespace optonaut {
         bool isInitialized;
         
         Mat ballPosition;
-        SelectionPoint ballTarget;
-        SelectionPoint prevTarget;
-        double prevDist;
+        SelectionPoint next;
+        SelectionPoint current;
+        double bestDist;
         
         double error;
         Mat errorVec;
         
         //Tolerance, measured on sphere, for hits.
         //We sould calc this from buffer, overlap, fov
-        const double tolerance = M_PI / 50; 
-        
-        //Ball Speed per second, in radians
-        const double ballSpeed = M_PI / 2;
-        
-        size_t lt;
-        
+        const double tolerance = M_PI / 16; //TODO CHANGE FOR RELEASE 
         
         void MoveToNextRing(const Mat &cur) {
             
@@ -75,14 +69,15 @@ namespace optonaut {
         }
         
         void MoveToClosestPoint(const Mat &closest) {
-            graph.FindClosestPoint(closest, ballTarget, currentRing);
-            ballPosition = ballTarget.extrinsics.clone();
+            graph.FindClosestPoint(closest, next, currentRing);
+            ballPosition = next.extrinsics.clone();
         }
 
     public:
-        RecorderController(RecorderGraph &graph): graph(graph), isFinished(false), isInitialized(false),
-            ballPosition(Mat::eye(4, 4, CV_64F)), prevDist(100), error(-1), errorVec(3, 1, CV_64F), lt(0) {
-        }
+        RecorderController(RecorderGraph &graph): 
+            graph(graph), isFinished(false), isInitialized(false),
+            ballPosition(Mat::eye(4, 4, CV_64F)), bestDist(1000), 
+            error(-1), errorVec(3, 1, CV_64F) { }
         
         bool IsInitialized() {
             return isInitialized;
@@ -93,60 +88,59 @@ namespace optonaut {
             
             currentRing = (int)graph.targets.size() / 2;
             MoveToClosestPoint(initPosition);
+            current = next;
             isInitialized = true;
         }
         
         SelectionInfo Push(const ImageP image, bool isIdle) {
             assert(isInitialized);
 
-            double viewDist = GetAngleOfRotation(image->adjustedExtrinsics, ballTarget.extrinsics);
-            size_t t = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count();
-            
             SelectionInfo info;
-            info.closestPoint = ballTarget;
             info.image = image;
+            
+            double distCurrent = GetAngleOfRotation(image->adjustedExtrinsics, current.extrinsics);
+            double distNext = 1000;
 
-            if(!isIdle && lt != 0) {
-                //If we reached a viewpoint...
-                if(viewDist < tolerance) {
-                    SelectionPoint next;
-                    graph.MarkEdgeAsRecorded(prevTarget, ballTarget);
-                    if(graph.GetNextForRecording(ballTarget, next)) {
-                        prevTarget = ballTarget;
-                        prevDist = 100;
-                        ballTarget = next;
-                        cout << "Move next" << endl;
-                    } else {
-                        //Ring switch or finish
-                        MoveToNextRing(image->adjustedExtrinsics);
-                        cout << "Ring Jump" << endl;
-                    }
-                }
-
-                //Animate ball.
-                double dist = GetAngleOfRotation(ballPosition, ballTarget.extrinsics);
-                //Delta time
-                double dt = (double)(t - lt) / 1000.0;
-                //Delta pos
-                double dp = cos(dist) * ballSpeed * dt;
-                Mat newPos(4, 4, CV_64F);
-                Lerp(ballPosition, ballTarget.extrinsics, dp, newPos);
-                    
-                ballPosition = newPos;
-              
+            if(current.globalId != next.globalId) {
+                distNext = GetAngleOfRotation(image->adjustedExtrinsics, next.extrinsics);
+            } else {
+                distNext = distCurrent;
             }
-            
-            
-            error = GetAngleOfRotation(image->adjustedExtrinsics, ballPosition);
-            ExtractRotationVector(image->adjustedExtrinsics.inv() * ballPosition, errorVec);
-            
-            info.dist = viewDist;
-            if(info.dist < tolerance && info.dist < prevDist) {
+            if(distCurrent < distNext) {
+                info.dist = distCurrent;
+                info.closestPoint = current;
+                error = distCurrent;
+            } else {
+                info.dist = distNext;
+                info.closestPoint = next;
+                error = distNext;
+                bestDist = info.dist;
+                current = next;
+            }
+
+            ExtractRotationVector(image->adjustedExtrinsics.inv() * current.extrinsics, errorVec);
+
+            if(isIdle)
+                return info;
+                
+            if(info.dist < tolerance && info.dist < bestDist) {
+                bestDist = info.dist;
                 info.isValid = true;
-                prevDist = info.dist;
+            }
+           
+            //If we are close enough, and we are closert to next than
+            //to current (e.g. current is next), go one step forward.  
+            if(distNext < tolerance && next.globalId == current.globalId) {
+                SelectionPoint newNext;
+                if(graph.GetNextForRecording(next, newNext)) {
+                    graph.MarkEdgeAsRecorded(next, newNext);
+                    next = newNext;
+                    ballPosition = next.extrinsics.clone();
+                } else {
+                    MoveToNextRing(image->adjustedExtrinsics);
+                }
             }
             
-            lt = t;
             return info;
         }
         

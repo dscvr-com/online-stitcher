@@ -297,7 +297,7 @@ namespace optonaut {
 		return r;
 	}
 
-    void GetGradient(const Mat &src_gray, Mat &grad)
+    void GetGradient(const Mat &src_gray, Mat &grad, double wx, double wy)
     {
         Mat grad_x, grad_y;
         Mat abs_grad_x, abs_grad_y;
@@ -306,12 +306,12 @@ namespace optonaut {
         int delta = 0;
         int ddepth = CV_32FC1; 
 
-        Sobel( src_gray, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT );
-        convertScaleAbs( grad_x, abs_grad_x );
+        Sobel(src_gray, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT);
+        convertScaleAbs(grad_x, abs_grad_x);
 
-        Sobel( src_gray, grad_y, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT );
-        convertScaleAbs( grad_y, abs_grad_y );
-        addWeighted( abs_grad_x, 1, abs_grad_y, 0, 0, grad );
+        Sobel(src_gray, grad_y, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT);
+        convertScaleAbs(grad_y, abs_grad_y);
+        addWeighted(abs_grad_x, wx, abs_grad_y, wy, 0, grad);
     }
 
 	double interpolate(double x, double x1, double x2, double y1, double y2) {

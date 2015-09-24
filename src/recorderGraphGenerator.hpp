@@ -20,7 +20,7 @@ class RecorderGraphGenerator {
 private:
 	//adj[n] contains m if m is right of n
 	//Horizontal and Vertical overlap in percent. 
-	const double hOverlap = 0.95;
+	const double hOverlap = 0.95; //Change back to 0.95 TODO
 	const double vOverlap = 0.2;
     const double hBufferRatio = 0.03;
     const double vBufferRatio = 0.1;

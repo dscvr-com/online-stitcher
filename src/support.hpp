@@ -54,7 +54,7 @@ namespace optonaut {
 	double angleAvg(double x, double y);
 	double interpolate(double x, double x1, double x2, double y1, double y2);
 
-    void GetGradient(const cv::Mat &src_gray, cv::Mat &grad);
+    void GetGradient(const cv::Mat &src_gray, cv::Mat &grad, double wx = 0.5, double wy = 0.5);
 }
 
 #endif

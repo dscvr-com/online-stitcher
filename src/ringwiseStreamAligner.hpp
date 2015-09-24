@@ -68,7 +68,7 @@ namespace optonaut {
             last = next;
 
             int ring = graph.FindAssociatedRing(next->originalExtrinsics);
-            cout << "Ring " << ring << endl;
+           // cout << "Ring " << ring << endl;
 
             if(ring == -1)
                 return; //No ring x(
@@ -76,14 +76,14 @@ namespace optonaut {
             rings[ring].push_back(next);
             size_t target = graph.GetParentRing(ring);
 
-            cout << "Target " << target << endl;
+           // cout << "Target " << target << endl;
             
             ImageP closest = NULL;
             double minDist = 100;
 
             if((int)target != ring) {
                 for(size_t j = 0; j < rings[target].size(); j++) {
-                    double dist = abs(GetAngleOfRotation(next->originalExtrinsics, rings[target][j]->adjustedExtrinsics));
+                    double dist = abs(GetAngleOfRotation(compassDrift * next->originalExtrinsics, rings[target][j]->adjustedExtrinsics));
 
                     if(closest == NULL || dist < minDist) {
                         minDist = dist;
@@ -92,10 +92,10 @@ namespace optonaut {
                 }
             }
 
-            cout << "Closest " << closest << endl;
+            //cout << "Closest " << closest << endl;
             
-            if(closest != NULL && next->id % 10 == 0) {
-                cout << "Correlating " << next->id << " and " << closest->id << endl;
+            if(closest != NULL /*&& next->id % 10 == 0*/) {
+                //cout << "Correlating " << next->id << " and " << closest->id << endl;
                 CorrelationDiff corr = visual.Match(next, closest);
                
                 if(corr.valid) { 
@@ -105,7 +105,7 @@ namespace optonaut {
                     double width = next->img.cols;
                     double height = next->img.rows;
                     
-                    cout << "dx: " << dx << ", width: " << width << endl; 
+                    //cout << "dx: " << dx << ", width: " << width << endl; 
 
                     double hy = next->intrinsics.at<double>(1, 1) / (next->intrinsics.at<double>(1, 2) * 2); 
                     double hx = next->intrinsics.at<double>(0, 0) / (next->intrinsics.at<double>(0, 2) * 2); 
@@ -122,6 +122,7 @@ namespace optonaut {
                     ExtractRotationVector(closest->adjustedExtrinsics, rveca);
                     ExtractRotationVector(next->originalExtrinsics, rvecb);
 
+                    angleX += GetDistanceY(next->originalExtrinsics, closest->adjustedExtrinsics);
 
                     if(angleX < -M_PI)
                         angleX = M_PI * 2 + angleX;
@@ -132,7 +133,7 @@ namespace optonaut {
                     Mat rotY(4, 4, CV_64F);
 
                     //End extract angles
-                    cout << "Pushing for correspondance x: " << angleX << ", y: " << angleY << endl;
+                    //cout << "Pushing for correspondance x: " << angleX << ", y: " << angleY << endl;
 
                     lasty = angleY;
                     lastx = angleX;
@@ -142,18 +143,21 @@ namespace optonaut {
             pasts.push_back(next); 
             sangles.push_back(lasty);
 
-            if(sangles.size() > 3) {
+            static const int order = 5;
+
+            if(sangles.size() > order) {
                 sangles.pop_front();
             }
-            if(pasts.size() > 3) {
+            if(pasts.size() > order) {
                 pasts.pop_front();
             }
-            if(sangles.size() == 3) {
-                double avg = Median(sangles);
+            if(sangles.size() == order) {
+                double avg = Average(sangles, 1.0 / 5.0);
                 CreateRotationY(avg, compassDrift);
-
-                //Timelapse here.
                 
+                //Timelapse here.
+                //pasts.front()->adjustedExtrinsics = compassDrift * pasts.front()->originalExtrinsics;
+                //pasts.front()->vtag = avg;
                 next->vtag = avg;
             }
         }
@@ -168,7 +172,7 @@ namespace optonaut {
 
         void Postprocess(vector<ImageP> imgs) const {
             for(auto img : imgs) {
-                DrawBar(img->img, img->vtag);
+                //DrawBar(img->img, img->vtag);
             }
         }
 	};
