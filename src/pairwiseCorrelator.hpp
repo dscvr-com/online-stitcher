@@ -28,7 +28,7 @@ public:
 class PairwiseCorrelator {
 
 private:
-    static const bool debug = false;
+    static const bool debug = true;
     static const bool drawDebugBorders = false;
 
     void ReduceForCorrelation(const Mat &in, Mat &out) {

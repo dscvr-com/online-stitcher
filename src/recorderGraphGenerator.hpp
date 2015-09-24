@@ -80,7 +80,7 @@ public:
 	
         double vStart = maxVFov * vOverlap;
         
-		vFov = (M_PI - 4 * vStart) / vCount;
+		vFov = (M_PI) / vCount;
 
 		uint32_t id = 0;
 
@@ -92,7 +92,7 @@ public:
 		for(uint32_t i = 0; i < vCount; i++) {
 
             //Vertical center, bottom and top of ring
-			double vCenter = i * vFov + vFov / 2.0 - M_PI / 2.0 + vStart;
+			double vCenter = i * vFov + vFov / 2.0 - M_PI / 2.0;
             double vTop = vCenter - vFov / 2.0;
             double vBot = vCenter + vFov / 2.0;
 
