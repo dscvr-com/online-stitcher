@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
         image->dataRef.colorSpace = colorspace::RGB;
 
         if(i == 0) {
-            pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics, RecorderGraph::ModeAll, isAsync));
+            pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics, RecorderGraph::ModeTruncated, isAsync));
 
             Pipeline::debug = true;
         }

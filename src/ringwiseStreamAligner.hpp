@@ -28,6 +28,8 @@ namespace optonaut {
        
         double lasty;
         double lastx;
+
+        static constexpr double keyframeThreshold = M_PI / 64; 
         
         deque<ImageP> pasts;
         deque<double> sangles;
@@ -72,8 +74,14 @@ namespace optonaut {
 
             if(ring == -1)
                 return; //No ring x(
-
-            rings[ring].push_back(next);
+           
+            if(graph.HasChildRing(ring)) { 
+                assert(ring == 2);
+                if(rings[ring].size() < 1 || abs(GetAngleOfRotation(rings[ring].back()->originalExtrinsics, last->originalExtrinsics)) > keyframeThreshold) {
+                    rings[ring].push_back(next);
+                    cout << "Keyframe into ring " << ring << endl;
+                }
+            }
             size_t target = graph.GetParentRing(ring);
 
            // cout << "Target " << target << endl;

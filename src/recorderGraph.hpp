@@ -147,6 +147,23 @@ namespace optonaut {
             return -1;
         }
 
+        size_t GetChildRing(size_t ring) {
+            size_t c = targets.size() / 2;
+
+            if(ring == c) {
+                return ring;
+            } else if(ring > c) {
+                return ring + 1;
+            } else {
+                return ring - 1;
+            }
+        }
+
+        bool HasChildRing(size_t ring) {
+            size_t c = GetChildRing(ring);
+            return targets[c].size() > 0;
+        }
+
         size_t GetParentRing(size_t ring) {
             size_t c = targets.size() / 2;
 
