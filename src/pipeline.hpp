@@ -98,11 +98,7 @@ namespace optonaut {
             baseInv = base.inv();
             zero = zeroWithoutBase;
 
-            if(isAsync) {
-                aligner = shared_ptr<Aligner>(new AsyncAligner(recorderGraph));
-            } else {
-                aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph));
-            }
+            aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph, isAsync));
             //aligner = shared_ptr<Aligner>(new TrivialAligner());
         }
         

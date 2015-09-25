@@ -10,6 +10,7 @@
 #include "stat.hpp"
 #include "simpleSphereStitcher.hpp"
 #include "recorderGraph.hpp"
+#include "asyncStreamWrapper.hpp"
 
 using namespace cv;
 using namespace std;
@@ -20,28 +21,33 @@ using namespace std;
 namespace optonaut {
 	class RingwiseStreamAligner : public Aligner {
 	private:
+        typedef AsyncStream<ImageP, int> Worker; 
         RecorderGraph &graph;
 		PairwiseCorrelator visual;
         vector<vector<ImageP>> rings;
         ImageP last;
         Mat compassDrift;
+        shared_ptr<Worker> worker;
        
         double lasty;
-        double lastx;
 
         static constexpr double keyframeThreshold = M_PI / 64; 
         
         deque<ImageP> pasts;
         deque<double> sangles;
+
+        const bool async;
 	public:
-		RingwiseStreamAligner(RecorderGraph &graph) : 
+		RingwiseStreamAligner(RecorderGraph &graph, const bool async = true) : 
             graph(graph), 
             visual(), 
             rings(graph.GetRings().size()), 
             compassDrift(Mat::eye(4, 4, CV_64F)), 
             lasty(0),
-            lastx(0) 
-        { }
+            async(async)
+        { 
+            worker = shared_ptr<Worker>(new Worker(alignOp));
+        }
 
         bool NeedsImageData() {
             return true; 
@@ -65,6 +71,58 @@ namespace optonaut {
             return rings;
         }
 
+        function<int(ImageP)> alignOp = [&] (ImageP next) -> int {
+
+            int ring = graph.FindAssociatedRing(next->originalExtrinsics);
+            size_t target = graph.GetParentRing(ring);
+                
+            ImageP closest = NULL;
+            double minDist = 100;
+
+            Mat search = compassDrift * next->originalExtrinsics;
+
+            for(size_t j = 0; j < rings[target].size(); j++) {
+                double dist = abs(GetAngleOfRotation(search, rings[target][j]->adjustedExtrinsics));
+
+                if(closest == NULL || dist < minDist) {
+                    minDist = dist;
+                    closest = rings[target][j];
+                } 
+            }
+
+            
+            if(closest != NULL) {
+                CorrelationDiff corr = visual.Match(next, closest);
+               
+                if(corr.valid) { 
+                    double dx = corr.offset.x;
+                    double width = next->img.cols;
+                    
+                    //cout << "dx: " << dx << ", width: " << width << endl; 
+
+                    double hx = next->intrinsics.at<double>(0, 0) / (next->intrinsics.at<double>(0, 2) * 2); 
+
+                    assert(dx <= width);
+
+                    double angleY = asin((dx / width) / hx);
+
+                    //Todo: Don't we have to include the diff between image/keyframe
+                    //in this calculation. 
+                    //(ej): No, we don't. The correlator includes the diff in 
+                    //the projection calculation, the diff is exlusive 
+                    //the previous compass drift. 
+                    //angleY += GetDistanceY(search, closest->adjustedExtrinsics);
+                    
+                    while(angleY < -M_PI)
+                        angleY = M_PI * 2 + angleY;
+                    
+                    lasty = angleY;
+                }
+            }
+
+            return lasty;
+        };
+
 		void Push(ImageP next) {
             
             last = next;
@@ -82,72 +140,19 @@ namespace optonaut {
                     cout << "Keyframe into ring " << ring << endl;
                 }
             }
+
             size_t target = graph.GetParentRing(ring);
 
            // cout << "Target " << target << endl;
-            
-            ImageP closest = NULL;
-            double minDist = 100;
 
             if((int)target != ring) {
-                for(size_t j = 0; j < rings[target].size(); j++) {
-                    double dist = abs(GetAngleOfRotation(compassDrift * next->originalExtrinsics, rings[target][j]->adjustedExtrinsics));
-
-                    if(closest == NULL || dist < minDist) {
-                        minDist = dist;
-                        closest = rings[target][j];
-                    } 
+                if(async) {
+                    worker->Push(next);
+                } else {
+                    alignOp(next);
                 }
             }
 
-            //cout << "Closest " << closest << endl;
-            
-            if(closest != NULL /*&& next->id % 10 == 0*/) {
-                //cout << "Correlating " << next->id << " and " << closest->id << endl;
-                CorrelationDiff corr = visual.Match(next, closest);
-               
-                if(corr.valid) { 
-                    //Extract angles
-                    double dx = corr.offset.x;
-                    double dy = corr.offset.y;
-                    double width = next->img.cols;
-                    double height = next->img.rows;
-                    
-                    //cout << "dx: " << dx << ", width: " << width << endl; 
-
-                    double hy = next->intrinsics.at<double>(1, 1) / (next->intrinsics.at<double>(1, 2) * 2); 
-                    double hx = next->intrinsics.at<double>(0, 0) / (next->intrinsics.at<double>(0, 2) * 2); 
-
-                    assert(dx <= width);
-                    assert(dy <= height);
-
-                    double angleY = asin((dx / width) / hx);
-                    double angleX = asin((dy / height) / hy);
-
-                    Mat rveca(3, 1, CV_64F);
-                    Mat rvecb(3, 1, CV_64F);
-                    Mat ror(4, 4, CV_64F);
-                    ExtractRotationVector(closest->adjustedExtrinsics, rveca);
-                    ExtractRotationVector(next->originalExtrinsics, rvecb);
-
-                    angleX += GetDistanceY(next->originalExtrinsics, closest->adjustedExtrinsics);
-
-                    if(angleX < -M_PI)
-                        angleX = M_PI * 2 + angleX;
-                    
-                    if(angleY < -M_PI)
-                        angleY = M_PI * 2 + angleY;
-
-                    Mat rotY(4, 4, CV_64F);
-
-                    //End extract angles
-                    //cout << "Pushing for correspondance x: " << angleX << ", y: " << angleY << endl;
-
-                    lasty = angleY;
-                    lastx = angleX;
-                }
-            }
-           
             pasts.push_back(next); 
             sangles.push_back(lasty);
 
@@ -163,9 +168,6 @@ namespace optonaut {
                 double avg = Average(sangles, 1.0 / 5.0);
                 CreateRotationY(avg, compassDrift);
                 
-                //Timelapse here.
-                //pasts.front()->adjustedExtrinsics = compassDrift * pasts.front()->originalExtrinsics;
-                //pasts.front()->vtag = avg;
                 next->vtag = avg;
             }
         }
@@ -175,7 +177,10 @@ namespace optonaut {
 		}
 
         void Finish() {
-
+            if(async) {
+                worker->Dispose();
+                worker = NULL;
+            }
         }
 
         void Postprocess(vector<ImageP> imgs) const {
