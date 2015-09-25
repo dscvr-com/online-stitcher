@@ -46,7 +46,7 @@ namespace optonaut {
         
         //Tolerance, measured on sphere, for hits.
         //We sould calc this from buffer, overlap, fov
-        const double tolerance = M_PI / 16; //TODO CHANGE FOR RELEASE
+        const double tolerance = M_PI / 32; //TODO CHANGE FOR RELEASE
         
         void MoveToNextRing(const Mat &cur) {
             
@@ -133,7 +133,7 @@ namespace optonaut {
             if(isIdle)
                 return info;
                 
-            if(info.dist < tolerance && info.dist < bestDist) {
+            if(info.dist < tolerance && info.dist <= bestDist) {
                 bestDist = info.dist;
                 info.isValid = true;
                 currentDone = true;
