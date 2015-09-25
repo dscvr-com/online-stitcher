@@ -73,15 +73,13 @@ public:
         cout << "V-FOV: " << (maxVFov * 180 / M_PI) << endl;
         cout << "Ratio: " << (sin(maxVFov) / sin(maxHFov)) << endl;
 
-        uint32_t vCount, hCenterCount, vStart, vBuffer;
+        uint32_t vCount = ceil(M_PI / vFov);
+        double vStart, vBuffer;
         uint32_t id = 0;
-       
-        hCenterCount = ceil(2 * M_PI / hFov);
+        uint32_t hCenterCount = ceil(2 * M_PI / hFov);
 
         if(mode != RecorderGraph::ModeTruncated) {
             //Configuration for Mode::All, Mode::Center
-            vCount = ceil(M_PI / vFov);
-
             vStart = maxVFov * vOverlap;
             
             vFov = (M_PI - 2 * vStart) / vCount;
@@ -91,9 +89,9 @@ public:
             //Configuration for Mode::Truncated
             //Optimize for 3 rings. 
             
-            vCount = 3; //Always use 3 rings.
-            //vFov stays the same.  
-            vStart = vFov * 1.5; 
+            vCount = vCount - 2; //Always skip out two rings.
+            //vFov stays the same.
+            vStart = (M_PI - (vFov * 3)) / 2;
             vBuffer = vFov * vBufferRatio;
         }
 
@@ -121,10 +119,9 @@ public:
 
 			res.targets.push_back(vector<SelectionPoint>());
                 
-            if(mode == RecorderGraph::ModeAll
+            if(mode == RecorderGraph::ModeAll || mode == RecorderGraph::ModeTruncated
                || (mode == RecorderGraph::ModeCenter && i == vCount / 2)
-               || (mode == RecorderGraph::ModeNoBot && i != 0)
-               || (mode == RecorderGraph::ModeTruncated && i != vCount - 1 && i != 0)) {
+               || (mode == RecorderGraph::ModeNoBot && i != 0)) {
                     
                 for(uint32_t j = 0; j < hCount; j++) {
                         

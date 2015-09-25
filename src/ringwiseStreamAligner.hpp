@@ -79,7 +79,7 @@ namespace optonaut {
             ImageP closest = NULL;
             double minDist = 100;
 
-            Mat search = compassDrift * next->originalExtrinsics;
+            Mat search = next->originalExtrinsics;
 
             for(size_t j = 0; j < rings[target].size(); j++) {
                 double dist = abs(GetAngleOfRotation(search, rings[target][j]->adjustedExtrinsics));
