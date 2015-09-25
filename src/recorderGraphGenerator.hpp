@@ -21,9 +21,9 @@ private:
 	//adj[n] contains m if m is right of n
 	//Horizontal and Vertical overlap in percent. 
 	const double hOverlap = 0.9;
-	const double vOverlap = 0.3;
-    const double hBufferRatio = 0.03;
-    const double vBufferRatio = 0.1;
+	const double vOverlap = 0.2;
+    const double hBufferRatio = 2;
+    const double vBufferRatio = 0.05;
     
     Mat intrinsics;
 
@@ -68,21 +68,34 @@ public:
         double maxVFov = GetVerticalFov(intrinsics); 
 		double hFov = maxHFov * (1.0 - hOverlap);
 		double vFov = maxVFov * (1.0 - vOverlap);
-        double vBuffer = maxVFov * vBufferRatio;
-        double hBuffer = maxVFov * hBufferRatio;
 
         cout << "H-FOV: " << (maxHFov * 180 / M_PI) << endl;
         cout << "V-FOV: " << (maxVFov * 180 / M_PI) << endl;
         cout << "Ratio: " << (sin(maxVFov) / sin(maxHFov)) << endl;
 
-		uint32_t vCount = ceil(M_PI / vFov);
-		uint32_t hCenterCount = ceil(2 * M_PI / hFov);
-	
-        double vStart = maxVFov * vOverlap;
-        
-		vFov = (M_PI - 2 * vStart) / vCount;
+        uint32_t vCount, hCenterCount, vStart, vBuffer;
+        uint32_t id = 0;
+       
+        hCenterCount = ceil(2 * M_PI / hFov);
 
-		uint32_t id = 0;
+        if(mode != RecorderGraph::ModeTruncated) {
+            //Configuration for Mode::All, Mode::Center
+            vCount = ceil(M_PI / vFov);
+
+            vStart = maxVFov * vOverlap;
+            
+            vFov = (M_PI - 2 * vStart) / vCount;
+            vBuffer = vFov * vBufferRatio;
+
+        } else {
+            //Configuration for Mode::Truncated
+            //Optimize for 3 rings. 
+            
+            vCount = 3; //Always use 3 rings.
+            //vFov stays the same.  
+            vStart = vFov * 1.5; 
+            vBuffer = vFov * vBufferRatio;
+        }
 
         if(vCount % 2 == 0 && mode == RecorderGraph::ModeCenter) {
             cout << "Center mode not possible with even number of rings." << endl;
@@ -98,6 +111,7 @@ public:
 
 			uint32_t hCount = hCenterCount * cos(vCenter);
 			hFov = M_PI * 2 / hCount;
+            double hBuffer = hFov * hBufferRatio;
 
 			uint32_t firstId = 0;
             double hLeft = 0;

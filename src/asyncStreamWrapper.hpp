@@ -49,7 +49,7 @@ namespace optonaut {
         }
 
 	public:
-		AsyncStream(function<OutType(InType)> core) : core(core), running(true), isInitialized(false), workerReady(true) { }
+		AsyncStream(function<OutType(InType)> core) : core(core), running(false), isInitialized(false), workerReady(true) { }
        
         void Push(InType in) {
             if(!isInitialized) {
@@ -81,7 +81,9 @@ namespace optonaut {
         }
 
         void Dispose() {
-            assert(running);
+            if(!running)
+                return;
+
             running = false;
             {
                 unique_lock<mutex> lock(m);

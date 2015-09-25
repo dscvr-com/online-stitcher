@@ -35,23 +35,20 @@ Rect CornersToRoi(const vector<Point2f> &corners) {
     return roi;
 }
 
-void GetCorners(vector<Point2f> &corners, const SelectionEdge &target, const Mat &intrinsics, int width, int height) {
+void GetCorners(vector<Point2f> &corners, const SelectionEdge &target, const Mat, int width, int height) {
     
-    double maxHFov = GetHorizontalFov(intrinsics);
-    double maxVFov = GetVerticalFov(intrinsics); 
 	Mat I = Mat::eye(4, 4, CV_64F);
 
     for(int i = 0; i < 4; i++) { 
        
         //Todo: Don't we need some offset here?  
 
-        
         Mat rot = target.roiCenter.inv() * target.roiCorners[i];
         
         //cout << "Rot " << i << " " << rot << endl;
         
-	    corners[i].x = -tan(GetDistanceByDimension(I, rot, 0)) / tan(maxHFov) + 0.5;
-	    corners[i].y = -tan(GetDistanceByDimension(I, rot, 1)) / tan(maxVFov) + 0.5;
+	    corners[i].x = -tan(GetDistanceByDimension(I, rot, 0)) + 0.5;
+	    corners[i].y = -tan(GetDistanceByDimension(I, rot, 1)) + 0.5;
        
         corners[i].x *= width;
         corners[i].y *= height;
@@ -61,6 +58,9 @@ void GetCorners(vector<Point2f> &corners, const SelectionEdge &target, const Mat
 }
 
 void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, const SelectionEdge &target, StereoImage &stereo) {
+
+    const static bool debug = false;
+
     Mat k;
     stereo.valid = false;
 
@@ -119,24 +119,23 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
 
 	warpPerspective(a.image->img, resA, transA, resA.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
 	warpPerspective(b.image->img, resB, transB, resB.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
-    /*
-    for(size_t i = 0; i < cornersA.size(); i++) {
-        line(resA, cornersA[i], cornersA[(i + 1) % cornersA.size()], Scalar(0, 0, 255), 3);
-        line(resB, cornersB[i], cornersB[(i + 1) % cornersB.size()], Scalar(0, 0, 255), 3);
-    }
+    
+    if(debug) {
+        for(size_t i = 0; i < cornersA.size(); i++) {
+            line(resA, cornersA[i], cornersA[(i + 1) % cornersA.size()], Scalar(0, 0, 255), 3);
+            line(resB, cornersB[i], cornersB[(i + 1) % cornersB.size()], Scalar(0, 0, 255), 3);
+        }
 
-	imwrite("dbg/warped_" + ToString(a.image->id) + "A.jpg", resA);
-	imwrite("dbg/warped_" + ToString(a.image->id) + "B.jpg", resB);
-*/
+        imwrite("dbg/warped_" + ToString(a.image->id) + "A.jpg", resA);
+        imwrite("dbg/warped_" + ToString(a.image->id) + "B.jpg", resB);
+    }
 	Mat rvec(4, 1, CV_64F);
 	ExtractRotationVector(rot, rvec);
 
     stereo.A->img = resA(CornersToRoi(cornersA));
     stereo.B->img = resB(CornersToRoi(cornersB));
 
-	//cout << "Diff for " << a->id << " " << rvec.t() << endl;
-
-	Mat newKA(3, 3, CV_64F);
+	Mat newKA = Mat::eye(3, 3, CV_64F);
  	newKA.at<double>(0, 0) = aIntrinsics.at<double>(0, 0);
  	newKA.at<double>(1, 1) = aIntrinsics.at<double>(1, 1);
  	newKA.at<double>(0, 2) = stereo.A->img.cols / 2.0f;
@@ -146,8 +145,6 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
 	stereo.A->adjustedExtrinsics = target.roiCenter;
 	stereo.A->originalExtrinsics = target.roiCenter;
 	stereo.A->id = a.image->id;
-
-    //Todo: Focal len not correct. 
 
 	Mat newKB = Mat::eye(3, 3, CV_64F);
  	newKB.at<double>(0, 0) = bIntrinsics.at<double>(0, 0);
