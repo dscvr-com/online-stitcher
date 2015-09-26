@@ -100,6 +100,7 @@ namespace optonaut {
 
             aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph, isAsync));
             //aligner = shared_ptr<Aligner>(new TrivialAligner());
+            stitcher = RingwiseStitcher(4096, 4096);
         }
         
         void SetPreviewImageEnabled(bool enabled) {

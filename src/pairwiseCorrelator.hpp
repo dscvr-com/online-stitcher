@@ -6,6 +6,7 @@
 #include "projection.hpp"
 #include "drawing.hpp"
 #include "stat.hpp"
+#include "correlation.hpp"
 
 using namespace cv;
 using namespace std;
@@ -31,77 +32,6 @@ private:
     static const bool debug = true;
     static const bool drawDebugBorders = false;
 
-    void ReduceForCorrelation(const Mat &in, Mat &out) {
-        vector<size_t> reduced(in.cols);
-        size_t max = 1;
-
-        for(int i = 0; i < in.cols; i++) {
-            reduced[i] = 0;
-            for(int j = 0; j < in.rows; j++) {
-                reduced[i] += in.at<uchar>(j, i);
-            }
-            if(max < reduced[i]) {
-                max = reduced[i];
-            }
-        }
-        
-        out = Mat(10, in.cols, CV_8U);
-        for(int i = 0; i < in.cols; i++) {
-            uchar val = (reduced[i]) / in.rows;
-            for(int j = 0; j < 10; j++) {
-                out.at<uchar>(j, i) = val;
-            }
-        }
-    }
-
-    double ShittyCorrelation(const Mat &a, const Mat &b, Mat &corr, int &cx) {
-        double best = -1;
-       
-        assert(a.rows == b.rows);
-        
-        int w = a.cols;
-        const double window = 0.5;
-        deque<double> cv(w * 2 * window + 1);
-        unsigned char *ad = (unsigned char*)(a.data);
-        unsigned char *bd = (unsigned char*)(b.data);
-
-        for(int i = -w * window; i < w * window; i++) {
-          
-            double cur = 0;
-            for(int j = 0; j < w; j++) {
-                int xa = j;
-                int xb = j + i;
-
-                if(xb > 0 && xb < w) {
-                    for(int q = 0; q < a.rows; q += 4) { 
-                        //Correlation
-                        cur += (double)ad[q * a.cols + xa] * (double)bd[q * b.cols + xb];
-                        //cur += (a.at<uchar>(q, xa)) * (int)(b.at<uchar>(q, xb));
-                        //Shitty Norm 
-                        //cur += abs((int)a.at<uchar>(0, xa) - (int)b.at<uchar>(0, xb));
-                    }
-                }
-           }
-           cur = cur / (w - abs(i)) / (a.rows / 4);
-           cv[i + w * window] = cur;
-           if(cur > best) {
-               best = cur;
-               cx = i;
-           }
-       }
-       if(debug) {
-            corr = Mat(10, w * 2 * window + 1, CV_8U);
-            for(int j = 0; j < w; j++) {
-                for(int i = 0; i < 10; i++) {
-                    corr.at<uchar>(i, j) = cv[j] * 255.0 / best;
-                }
-            }
-       }
-
-        double var = Deviation(cv);
-        
-        return var;
-    }
 public:
 
     CorrelationDiff Match(const ImageP a, const ImageP b) {
@@ -174,7 +104,7 @@ public:
             //ReduceForCorrelation(ga, ca);
             //ReduceForCorrelation(gb, cb);
             int dx; 
-            var = ShittyCorrelation(ga, gb, corr, dx);
+            var = CorrelateX(ga, gb, 0.5, dx, corr, debug);
             result.offset = Point2f(dx, 0);
             result.valid = var > 50;
             //ga = ca;

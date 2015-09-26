@@ -50,6 +50,16 @@ namespace optonaut {
         
         void MoveToNextRing(const Mat &cur) {
             
+            int ringCount = (int)graph.targets.size();
+            int newRing = GetNextRing(); 
+            
+            assert(newRing >= 0 && newRing < ringCount);
+            
+            currentRing = newRing;
+            MoveToClosestPoint(cur);
+        }
+
+        int GetNextRing() {
             //Moves from center outward, toggling between top and bottom, top ring comes before bottom ring.
             int ringCount = (int)graph.targets.size();
             int centerRing = ringCount / 2;
@@ -62,11 +72,8 @@ namespace optonaut {
             //Switch bottom and top, or vice versa.
             newRing *= -1;
             newRing = newRing + centerRing;
-            
-            assert(newRing >= 0 && newRing < ringCount);
-            
-            currentRing = newRing;
-            MoveToClosestPoint(cur);
+
+            return newRing;
         }
         
         void MoveToClosestPoint(const Mat &closest) {
@@ -147,7 +154,12 @@ namespace optonaut {
                     graph.MarkEdgeAsRecorded(next, newNext);
                     next = newNext;
                 } else {
-                    MoveToNextRing(image->adjustedExtrinsics);
+                    int nextRing = GetNextRing();
+                    if(nextRing < 0 || nextRing >= (int)graph.targets.size()) {
+                        cout << "Push after finish warning." << endl;
+                    } else {
+                        MoveToNextRing(image->adjustedExtrinsics);
+                    }
                 }
             }
             
