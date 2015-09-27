@@ -292,6 +292,7 @@ namespace optonaut {
                         if(firstOfRing.closestPoint.ringId != currentBest.closestPoint.ringId) { 
                             Stitch(previous, firstOfRing, true);
                             firstOfRing = currentBest;
+                            previous.isValid = false; //We reached a new ring. Invalidate prev.
                         }
                     }
                     
@@ -312,10 +313,12 @@ namespace optonaut {
         }
 
         void Finish() {
-            Stitch(previous, currentBest);
-                
+            if(previous.isValid) {
+                Stitch(previous, currentBest);
+                exposure.FindGains();
+            }
+            
             aligner->Finish();
-            exposure.FindGains();
             //exposure.PrintCorrespondence();
         }
                 

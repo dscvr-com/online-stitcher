@@ -101,15 +101,15 @@ namespace optonaut {
                     maxId = max(maxId, adj.first);
                 }
                 
-                vector<size_t> remap(maxId);
-                vector<size_t> invmap;
+                vector<int> remap(maxId);
+                vector<int> invmap;
                 
                 for(auto &adj : relations.GetEdges()) {
                     remap[adj.first] = invmap.size();
                     invmap.push_back(adj.first);
                 }
 
-                size_t n = invmap.size();
+                int n = (int)invmap.size();
                 
                 double alpha = 0.1;
                 double beta = 10;
@@ -140,6 +140,8 @@ namespace optonaut {
                 }
 
                 solve(A, b, gains);
+                
+                assert(invmap.size() == n);
 
                 for (size_t i = 0; i < n; ++i) {
                     this->gains[invmap[i]] = gains.at<double>(i, 0);
