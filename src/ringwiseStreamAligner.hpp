@@ -194,6 +194,7 @@ namespace optonaut {
                 worker->Dispose();
                 worker = NULL;
             }
+            rings.clear();
         }
 
         void Postprocess(vector<ImageP> imgs) const {

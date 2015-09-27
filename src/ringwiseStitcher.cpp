@@ -56,7 +56,7 @@ namespace optonaut {
         }
     }
 
-    StitchingResultP RingwiseStitcher::Stitch(vector<vector<ImageP>> &rings, ExposureCompensator &exposure, bool debug, string debugName) {
+    StitchingResultP RingwiseStitcher::Stitch(vector<vector<ImageP>> &rings, ExposureCompensator &exposure, double ev, bool debug, string debugName) {
 
         RStitcher stitcher;
 
@@ -72,7 +72,7 @@ namespace optonaut {
             if(rings[i].size() == 0) 
                 continue;
 
-            auto res = stitcher.Stitch(rings[i], exposure, debug);
+            auto res = stitcher.Stitch(rings[i], exposure, ev, debug);
             stitchedRings.push_back(res);
             sizes.push_back(res->image.size());
             corners.push_back(res->corner);
@@ -80,10 +80,11 @@ namespace optonaut {
             if(margin == -1 || margin > res->corner.y) {
                 margin = res->corner.y;
             }
-            
+
             if(debugName != "") {
-                imwrite("dbg/ring_" + debugName + ToString(i) + ".jpg",  res->image); 
-                imwrite("dbg/mask_" + debugName + ToString(i) + ".jpg",  res->mask); 
+
+                imwrite("dbg/ring_" + debugName + ToString(i) + "_ev_" + ToString(ev) + ".jpg",  res->image); 
+
             }
         }
 
@@ -101,6 +102,8 @@ namespace optonaut {
             blender->feed(warpedImageAsShort, res->mask, corners[i]);
         }
 
+        stitchedRings.clear();
+
         StitchingResultP res(new StitchingResult());
         blender->blend(res->image, res->mask);
 
@@ -109,24 +112,31 @@ namespace optonaut {
         res->image.convertTo(res->image, CV_8U);
 
         if(resizeOutput) {
-            Mat canvas(w, h, CV_8UC3);
-            Mat maskCanvas(w, h, CV_8U);
-            canvas.setTo(Scalar::all(0));
 
             int ih = (res->image.rows) * h / (res->image.rows + 2 * margin);
-
-            Mat resizedImage(w, ih, CV_8UC3);
-            Mat resizedMask(w, ih, CV_8U);
-            resize(res->image, resizedImage, cv::Size(w, ih));
-            resize(res->mask, resizedMask, cv::Size(w, ih));
             int x = (h - ih) / 2;
 
-            resizedImage.copyTo(canvas.rowRange(x, x + ih));
-            resizedMask.copyTo(maskCanvas.rowRange(x, x + ih));
-
+            static const bool needMask = false;
+            
+            {
+                Mat canvas(w, h, CV_8UC3);
+                canvas.setTo(Scalar::all(0));
+                Mat resizedImage(w, ih, CV_8UC3);
+                resize(res->image, resizedImage, cv::Size(w, ih));
+                resizedImage.copyTo(canvas.rowRange(x, x + ih));
+                res->image = canvas;
+            }
+            if(needMask) {
+                Mat maskCanvas(w, h, CV_8U);
+                maskCanvas.setTo(Scalar::all(0));
+                Mat resizedMask(w, ih, CV_8U);
+                resize(res->mask, resizedMask, cv::Size(w, ih));
+                resizedMask.copyTo(maskCanvas.rowRange(x, x + ih));
+                res->mask = maskCanvas;
+            } else {
+                res->mask = Mat(0, 0, CV_8UC1);
+            }
             //TODO - Also copy mask
-            res->image = canvas;
-            res->mask = maskCanvas;
         }
 
         return res;

@@ -53,6 +53,8 @@ namespace optonaut {
 
         void LoadFromDisk(bool removeFile = true);
 
+        static void ClearAllFromDisk();
+
         void Unload() {
             img.release();
         }

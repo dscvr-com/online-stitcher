@@ -24,7 +24,7 @@ namespace optonaut {
             RingwiseStitcher(int width, int height) : resizeOutput(true), w(width), h(height) { }
             RingwiseStitcher() : resizeOutput(false) {  }
 
-            StitchingResultP Stitch(std::vector<std::vector<ImageP>> &rings, ExposureCompensator &exposure, bool debug = false, std::string debugName = ""); 
+            StitchingResultP Stitch(std::vector<std::vector<ImageP>> &rings, ExposureCompensator &exposure, double ev = 0, bool debug = false, std::string debugName = ""); 
 
     };
 }

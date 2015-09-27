@@ -64,7 +64,28 @@ namespace optonaut {
         StitchingResultP Finish(vector<ImageP> &images, bool debug = false, string debugName = "") {
             aligner->Postprocess(images);
             auto rings = RingwiseStreamAligner::SplitIntoRings(images, recorderGraph);
-            return stitcher.Stitch(rings, exposure, debug, debugName);
+            
+            StitchingResultP res;
+            //Change the following line for HDR. 
+            vector<double> evs = { 0.4 };
+            vector<Mat> hdrs;
+            
+            for(size_t i = 0; i < evs.size(); i++) {
+                auto lres = stitcher.Stitch(rings, exposure, evs[i], debug, debugName);
+                if(i == 0) {
+                    res = lres;
+                }
+                
+                hdrs.push_back(lres->image);
+            }
+            if(hdrs.size() > 1) {
+                Mat fusion;
+                Ptr<MergeMertens> merge = createMergeMertens();
+                merge->process(hdrs, fusion);
+
+                fusion.convertTo(res->image, CV_8U, 255);
+            }
+            return res;
         }
 
 
@@ -177,7 +198,7 @@ namespace optonaut {
                 previewImageAvailable = true;
             }
         }
-        
+
         void Stitch(const SelectionInfo &a, const SelectionInfo &b, bool discard = false) {
             assert(a.image->IsLoaded());
             assert(b.image->IsLoaded());
@@ -282,7 +303,7 @@ namespace optonaut {
         void Finish() {
             aligner->Finish();
             exposure.FindGains();
-            exposure.PrintCorrespondence();
+            //exposure.PrintCorrespondence();
         }
                 
         bool AreAdjacent(SelectionPoint a, SelectionPoint b) {

@@ -30,7 +30,7 @@ public:
 class PairwiseCorrelator {
 
 private:
-    static const bool debug = true;
+    static const bool debug = false;
 public:
     PairwiseCorrelator(ExposureCompensator&) { }
 
