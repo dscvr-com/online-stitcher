@@ -226,12 +226,16 @@ namespace optonaut {
         
         std::chrono::time_point<std::chrono::system_clock> lt = std::chrono::system_clock::now();
         
+        static const bool measureTime = true;
+        
         void Push(ImageP image) {
             
-            auto now = std::chrono::system_clock::now();
-            std::cout << "dt=" << std::chrono::duration_cast<std::chrono::microseconds>(now - lt).count() << " mms" << std::endl;
+            if(measureTime) {
+                auto now = std::chrono::system_clock::now();
+                std::cout << "dt=" << std::chrono::duration_cast<std::chrono::microseconds>(now - lt).count() << " mms" << std::endl;
             
-            lt = now;
+                lt = now;
+            }
             
             image->originalExtrinsics = base * zero * image->originalExtrinsics.inv() * baseInv;
             
