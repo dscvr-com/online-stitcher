@@ -8,6 +8,7 @@
 
 #include "image.hpp"
 #include "recorderController.hpp"
+#include "exposureCompensator.hpp"
 
 #ifndef OPTONAUT_MONO_STITCH_HEADER
 #define OPTONAUT_MONO_STITCH_HEADER
@@ -28,8 +29,10 @@ namespace optonaut {
 	};
 
     class MonoStitcher {
+        private: 
         public:
-        void CreateStereo(const SelectionInfo &a, const SelectionInfo &b, const SelectionEdge &target, StereoImage &stereo);
+            MonoStitcher() { }
+            void CreateStereo(const SelectionInfo &a, const SelectionInfo &b, const SelectionEdge &target, StereoImage &stereo);
     };
 }
 

@@ -155,7 +155,7 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
 	stereo.B->intrinsics = newKB;
 	stereo.B->adjustedExtrinsics = target.roiCenter;
 	stereo.B->originalExtrinsics = target.roiCenter;
-	stereo.B->id = a.image->id + 100000;
+	stereo.B->id = b.image->id;
 
 	stereo.extrinsics = target.roiCenter;
 

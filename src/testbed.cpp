@@ -21,7 +21,7 @@ bool CompareByFilename (const string &a, const string &b) {
 
 int main(int argc, char* argv[]) {
 
-    static const bool isAsync = true;
+    static const bool isAsync = false;
 
     int n = argc - 1;
     shared_ptr<Pipeline> pipe(NULL);

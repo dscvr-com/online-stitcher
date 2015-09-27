@@ -34,7 +34,7 @@ void RStitcher::PrepareMatrices(const vector<ImageP> &r) {
     }
 }
 
-StitchingResultP RStitcher::Stitch(const std::vector<ImageP> &in, bool debug) {
+StitchingResultP RStitcher::Stitch(const std::vector<ImageP> &in, ExposureCompensator &exposure, bool debug) {
 
     const int maskOffset = 20000;
     const int imageOffset = 30000;
@@ -67,6 +67,9 @@ StitchingResultP RStitcher::Stitch(const std::vector<ImageP> &in, bool debug) {
 
         ScaleIntrinsicsToImage(img->intrinsics, img->img, scaledIntrinsics, debug ? 8 : 1);
         From3DoubleTo3Float(scaledIntrinsics, K);
+
+        //Exposure compensate (Could move after warping?)
+        exposure.Apply(img->img, img->id);
 
         //Mask
         Mat mask(img->img.rows, img->img.cols, CV_8U);

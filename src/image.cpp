@@ -50,8 +50,15 @@ namespace optonaut {
     }
 
    string Image::GetFilePath(size_t id) {
-       
-        return Pipeline::tempDirectory + ToString(id) + ".bmp";
+        string idstr = ToString((void*)id);
+
+        idstr = idstr.substr(2);
+
+        for(size_t i = 0; i < sizeof(size_t) * 2 - idstr.size(); i++) {
+            idstr = "0" + idstr;
+        }
+
+        return Pipeline::tempDirectory + idstr + ".bmp";
     }
         
 
@@ -67,12 +74,13 @@ namespace optonaut {
     void Image::SaveToDisk() {
         assert(IsLoaded());
         //cout << "Saving image " << id << ", width: " << img.cols << ", height: " << img.rows << endl;
-        Image::SaveToDisk(id, img);
+        Image::SaveToDisk((size_t)this, img);
         Unload();
     }
 
     void Image::LoadFromDisk(bool removeFile) {
         assert(!IsLoaded());
+        size_t id = (size_t)this;
         Image::LoadFromDisk(id, img);
         //cout << "Loading image " << id << ", width: " << img.cols << ", height: " << img.rows << endl;
         if(removeFile) { 

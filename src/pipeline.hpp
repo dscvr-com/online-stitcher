@@ -23,9 +23,12 @@ namespace optonaut {
         Mat baseInv;
         Mat zero;
 
-        shared_ptr<Aligner> aligner;
+        shared_ptr<RingwiseStreamAligner> aligner;
         SelectionInfo previous;
         SelectionInfo currentBest;
+        SelectionInfo firstOfRing;
+
+        ExposureCompensator exposure;
         
         ImageP previewImage;
         MonoStitcher stereoConverter;
@@ -60,8 +63,8 @@ namespace optonaut {
 
         StitchingResultP Finish(vector<ImageP> &images, bool debug = false, string debugName = "") {
             aligner->Postprocess(images);
-            auto rings = RingwiseStreamAligner(recorderGraph).SplitIntoRings(images);
-            return stitcher.Stitch(rings, debug, debugName);
+            auto rings = RingwiseStreamAligner::SplitIntoRings(images, recorderGraph);
+            return stitcher.Stitch(rings, exposure, debug, debugName);
         }
 
 
@@ -79,6 +82,7 @@ namespace optonaut {
         
         Pipeline(Mat base, Mat zeroWithoutBase, Mat intrinsics, int graphConfiguration = RecorderGraph::ModeAll, bool isAsync = true) :
             base(base),
+            stereoConverter(),
             previewImageAvailable(false),
             isIdle(false),
             previewEnabled(true),
@@ -89,17 +93,17 @@ namespace optonaut {
             imagesToRecord(recorderGraph.Size()),
             recordedImages(0)
         {
+            baseInv = base.inv();
+            zero = zeroWithoutBase;
+
             cout << "Initializing Optonaut Pipe." << endl;
             
             cout << "Base: " << base << endl;
             cout << "BaseInv: " << baseInv << endl;
             cout << "Zero: " << zero << endl;
         
-            baseInv = base.inv();
-            zero = zeroWithoutBase;
+            aligner = shared_ptr<RingwiseStreamAligner>(new RingwiseStreamAligner(recorderGraph, exposure, isAsync));
 
-            aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph, isAsync));
-            //aligner = shared_ptr<Aligner>(new TrivialAligner());
             stitcher = RingwiseStitcher(4096, 4096);
         }
         
@@ -174,25 +178,29 @@ namespace optonaut {
             }
         }
         
-        void Stitch(const SelectionInfo &a, const SelectionInfo &b) {
+        void Stitch(const SelectionInfo &a, const SelectionInfo &b, bool discard = false) {
             assert(a.image->IsLoaded());
             assert(b.image->IsLoaded());
             SelectionEdge edge;
             
+            exposure.Register(a.image, b.image);
+
             if(!recorderGraph.GetEdge(a.closestPoint, b.closestPoint, edge))
                 return;
-            
+           
             StereoImage stereo;
             stereoConverter.CreateStereo(a, b, edge, stereo);
 
             assert(stereo.valid);
-            
-            CapturePreviewImage(stereo.A);
-            
-            stereo.A->SaveToDisk();
-            stereo.B->SaveToDisk();
-            PushLeft(stereo.A);
-            PushRight(stereo.B);
+
+            if(!discard) {
+                CapturePreviewImage(stereo.A);
+                
+                stereo.A->SaveToDisk();
+                stereo.B->SaveToDisk();
+                PushLeft(stereo.A);
+                PushRight(stereo.B);
+            }
         }
         
         std::chrono::time_point<std::chrono::system_clock> lt = std::chrono::system_clock::now();
@@ -241,25 +249,40 @@ namespace optonaut {
                     image->LoadFromDataRef();
                 
                 if(current.closestPoint.globalId != currentBest.closestPoint.globalId) {
+                    aligner->AddKeyframe(currentBest.image);
                     //Ok, hit that. We can stitch.
                     if(previous.isValid) {
                         Stitch(previous, currentBest);
                         recordedImages++;
                     }
+                    if(!firstOfRing.isValid) {
+                        firstOfRing = currentBest;
+                    } else {
+                        if(firstOfRing.closestPoint.ringId != currentBest.closestPoint.ringId) { 
+                            Stitch(previous, firstOfRing, true);
+                            firstOfRing = currentBest;
+                        }
+                    }
+                    
+                    ImageP closestKeyframe = aligner->GetClosestKeyframe(currentBest.image->adjustedExtrinsics);
+                    if(closestKeyframe != NULL) {
+                        exposure.Register(currentBest.image, closestKeyframe);
+                    }
                     previous = currentBest;
-                    
-                    
                 }
                 currentBest = current;
-                
             }
             
-            if(recordedImages == imagesToRecord)
+            if(recordedImages == imagesToRecord) {
                 isFinished = true;
+                Stitch(currentBest, firstOfRing, true);
+            }
         }
 
         void Finish() {
             aligner->Finish();
+            exposure.FindGains();
+            exposure.PrintCorrespondence();
         }
                 
         bool AreAdjacent(SelectionPoint a, SelectionPoint b) {
@@ -276,11 +299,11 @@ namespace optonaut {
         }
 
         StitchingResultP FinishLeft() {
-            return Finish(lefts, false);
+            return Finish(lefts, false, "left");
         }
 
         StitchingResultP FinishRight() {
-            return Finish(rights, false);
+            return Finish(rights, false, "right");
         }
 
         StitchingResultP FinishAligned() {

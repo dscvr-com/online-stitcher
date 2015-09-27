@@ -5,7 +5,8 @@
 #include "image.hpp"
 #include "support.hpp"
 #include "aligner.hpp"
-#include "ringwiseStreamAligner.hpp"
+#include "recorderGraph.hpp"
+#include "SequenceStreamAligner.hpp"
 #include "asyncStreamWrapper.hpp"
 
 using namespace cv;
@@ -18,10 +19,10 @@ namespace optonaut {
 	
     class AsyncAlignerCore {    
         private: 
-        RingwiseStreamAligner core;
+        SequenceStreamAligner core;
         public:
         
-        AsyncAlignerCore(RecorderGraph &graph) : core(graph) { }
+        AsyncAlignerCore(RecorderGraph) : core() { }
 
         Mat operator()(ImageP in) {
             core.Push(in);

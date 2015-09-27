@@ -56,7 +56,7 @@ namespace optonaut {
         }
     }
 
-    StitchingResultP RingwiseStitcher::Stitch(vector<vector<ImageP>> &rings, bool debug, string debugName) {
+    StitchingResultP RingwiseStitcher::Stitch(vector<vector<ImageP>> &rings, ExposureCompensator &exposure, bool debug, string debugName) {
 
         RStitcher stitcher;
 
@@ -72,7 +72,7 @@ namespace optonaut {
             if(rings[i].size() == 0) 
                 continue;
 
-            auto res = stitcher.Stitch(rings[i], debug);
+            auto res = stitcher.Stitch(rings[i], exposure, debug);
             stitchedRings.push_back(res);
             sizes.push_back(res->image.size());
             corners.push_back(res->corner);
@@ -83,6 +83,7 @@ namespace optonaut {
             
             if(debugName != "") {
                 imwrite("dbg/ring_" + debugName + ToString(i) + ".jpg",  res->image); 
+                imwrite("dbg/mask_" + debugName + ToString(i) + ".jpg",  res->mask); 
             }
         }
 

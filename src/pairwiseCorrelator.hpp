@@ -7,6 +7,7 @@
 #include "drawing.hpp"
 #include "stat.hpp"
 #include "correlation.hpp"
+#include "exposureCompensator.hpp"
 
 using namespace cv;
 using namespace std;
@@ -30,9 +31,8 @@ class PairwiseCorrelator {
 
 private:
     static const bool debug = true;
-    static const bool drawDebugBorders = false;
-
 public:
+    PairwiseCorrelator(ExposureCompensator&) { }
 
     CorrelationDiff Match(const ImageP a, const ImageP b) {
 
@@ -40,9 +40,11 @@ public:
 
         const bool useGradient = false;
         const bool useReduce = true;
-
+        
         CorrelationDiff result;
+
         Mat ga, gb;
+
         cvtColor(a->img, ga, CV_BGR2GRAY);
         cvtColor(b->img, gb, CV_BGR2GRAY); 
 
@@ -50,48 +52,15 @@ public:
             Mat fa, fb;
             fa = ga;
             fb = gb;
-            //double rad = 15;
-            //medianBlur(ga, fa, rad);
-            //medianBlur(gb, fb, rad);
             GetGradient(fa, ga, 1, 0);
             GetGradient(fb, gb, 1, 0);
         }
-
-        Mat hom(3, 3, CV_64F);
-        Mat rot(4, 4, CV_64F);
-
-        HomographyFromImages(a, b, hom, rot);
         
-        Mat wa(ga.rows, ga.cols, CV_64F);
-        warpPerspective(ga, wa, hom, wa.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
-       
-        ga = wa;
+        GetOverlappingRegion(a, b, ga, gb, ga, gb);
         
-        //Cut images, set homography to id.
-        vector<Point2f> corners = GetSceneCorners(ga, hom);
-        cv::Rect roi = GetInnerBoxForScene(corners);
-        
-        if(drawDebugBorders) {
-            DrawBox(ga, roi, Scalar(0x70));
-            DrawBox(gb, roi, Scalar(0x70));
-        }
-
-        roi = roi & cv::Rect(0, 0, ga.cols, ga.rows);
-        
-        if(drawDebugBorders) {
-            DrawPoly(ga, corners, Scalar(0xc0));
-            DrawPoly(gb, corners, Scalar(0xc0));
-            DrawBox(ga, roi, Scalar(255));
-            DrawBox(gb, roi, Scalar(255));
-        }
-
-        hom = Mat::eye(3, 3, CV_32F);
-        ga = ga(roi);
-        gb = gb(roi);
-
         //If those asserts fire, we've fed the aligner two non-overlapping 
         //images probably. SHAME!
-        if(roi.width < 1 || roi.height < 1) {
+        if(ga.cols < 1 || ga.rows < 1) {
             return result;
         }
         

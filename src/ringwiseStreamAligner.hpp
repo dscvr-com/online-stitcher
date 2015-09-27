@@ -11,6 +11,7 @@
 #include "simpleSphereStitcher.hpp"
 #include "recorderGraph.hpp"
 #include "asyncStreamWrapper.hpp"
+#include "exposureCompensator.hpp"
 
 using namespace cv;
 using namespace std;
@@ -38,9 +39,9 @@ namespace optonaut {
 
         const bool async;
 	public:
-		RingwiseStreamAligner(RecorderGraph &graph, const bool async = true) : 
+		RingwiseStreamAligner(RecorderGraph &graph, ExposureCompensator &exposure, const bool async = true) : 
             graph(graph), 
-            visual(), 
+            visual(exposure),
             rings(graph.GetRings().size()), 
             compassDrift(Mat::eye(4, 4, CV_64F)), 
             lasty(0),
@@ -56,8 +57,33 @@ namespace optonaut {
         void Dispose() {
 
         }
-
+        
         vector<vector<ImageP>> SplitIntoRings(vector<ImageP> &imgs) const {
+            return SplitIntoRings(imgs, graph);
+        }
+
+        ImageP GetClosestKeyframe(const Mat &search) {
+
+            int ring = graph.FindAssociatedRing(search);
+
+            size_t target = graph.GetParentRing(ring);
+                
+            ImageP closest = NULL;
+            double minDist = 100;
+
+            for(size_t j = 0; j < rings[target].size(); j++) {
+                double dist = abs(GetAngleOfRotation(search, rings[target][j]->adjustedExtrinsics));
+
+                if(closest == NULL || dist < minDist) {
+                    minDist = dist;
+                    closest = rings[target][j];
+                } 
+            }
+
+            return closest;
+        }
+
+        static vector<vector<ImageP>> SplitIntoRings(vector<ImageP> &imgs, RecorderGraph &graph) {
             
             vector<vector<ImageP>> rings(graph.GetRings().size());
 
@@ -73,23 +99,7 @@ namespace optonaut {
 
         function<int(ImageP)> alignOp = [&] (ImageP next) -> int {
 
-            int ring = graph.FindAssociatedRing(next->originalExtrinsics);
-            size_t target = graph.GetParentRing(ring);
-                
-            ImageP closest = NULL;
-            double minDist = 100;
-
-            Mat search = next->originalExtrinsics;
-
-            for(size_t j = 0; j < rings[target].size(); j++) {
-                double dist = abs(GetAngleOfRotation(search, rings[target][j]->adjustedExtrinsics));
-
-                if(closest == NULL || dist < minDist) {
-                    minDist = dist;
-                    closest = rings[target][j];
-                } 
-            }
-
+            ImageP closest = GetClosestKeyframe(next->originalExtrinsics);
             
             if(closest != NULL) {
                 CorrelationDiff corr = visual.Match(next, closest);
@@ -123,23 +133,26 @@ namespace optonaut {
             return lasty;
         };
 
+        void AddKeyframe(ImageP next) {
+            int ring = graph.FindAssociatedRing(next->originalExtrinsics);
+            
+            if(ring == -1)
+                return; //No ring x(
+           
+            if(graph.HasChildRing(ring)) { 
+                rings[ring].push_back(next);
+            }
+
+        }
+
 		void Push(ImageP next) {
             
             last = next;
 
             int ring = graph.FindAssociatedRing(next->originalExtrinsics);
            // cout << "Ring " << ring << endl;
-
             if(ring == -1)
-                return; //No ring x(
-           
-            if(graph.HasChildRing(ring)) { 
-                //Select keyframes based on selection points...
-                if(rings[ring].size() < 1 || abs(GetAngleOfRotation(rings[ring].back()->originalExtrinsics, last->originalExtrinsics)) > keyframeThreshold) {
-                    rings[ring].push_back(next);
-                    cout << "Keyframe into ring " << ring << endl;
-                }
-            }
+                return;
 
             size_t target = graph.GetParentRing(ring);
 

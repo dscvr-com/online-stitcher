@@ -129,8 +129,25 @@ namespace optonaut {
             return false;
         }
     } 
+  
+    static inline void GetOverlappingRegion(const ImageP a, const ImageP b, const Mat &ai, const Mat &bi, Mat &overlapA, Mat &overlapB) {
+        Mat hom(3, 3, CV_64F);
+        Mat rot(4, 4, CV_64F);
 
+        HomographyFromImages(a, b, hom, rot);
+        
+        Mat wa;
+        warpPerspective(ai, wa, hom, ai.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
+       
+        //Cut images, set homography to id.
+        vector<Point2f> corners = GetSceneCorners(ai, hom);
+        cv::Rect roi = GetInnerBoxForScene(corners);
+        
+        roi = roi & cv::Rect(0, 0, bi.cols, bi.rows);
+        
+        overlapA = wa(roi);
+        overlapB = bi(roi);
+    }
 }
-
 #endif
 
