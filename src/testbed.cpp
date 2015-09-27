@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
             auto now = system_clock::now(); 
             auto diff = now - lt;
             auto sleep = 30ms - diff;
-            cout << "Sleeping for " << duration_cast<microseconds>(sleep).count() << endl;
+            //cout << "Sleeping for " << duration_cast<microseconds>(sleep).count() << endl;
             this_thread::sleep_for(sleep);
         }
     }

@@ -143,7 +143,7 @@ namespace optonaut {
 
                 for (size_t i = 0; i < n; ++i) {
                     this->gains[invmap[i]] = gains.at<double>(i, 0);
-                    cout << invmap[i] << " gain: " << gains.at<double>(i, 0) << endl;
+                    //cout << invmap[i] << " gain: " << gains.at<double>(i, 0) << endl;
                 }
 
             }

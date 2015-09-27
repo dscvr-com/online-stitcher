@@ -46,7 +46,7 @@ namespace optonaut {
 
                 dyCache.push_back(dy);
 
-                cout << "V-Correlate: " << dy << endl;
+                //cout << "V-Correlate: " << dy << endl;
             }
         }
 
@@ -136,7 +136,6 @@ namespace optonaut {
             } else {
                 res->mask = Mat(0, 0, CV_8UC1);
             }
-            //TODO - Also copy mask
         }
 
         return res;

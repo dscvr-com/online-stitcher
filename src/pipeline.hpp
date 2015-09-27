@@ -200,6 +200,7 @@ namespace optonaut {
         }
 
         void Stitch(const SelectionInfo &a, const SelectionInfo &b, bool discard = false) {
+            cout << "stitching " << a.image->id << " and " << b.image->id << endl;
             assert(a.image->IsLoaded());
             assert(b.image->IsLoaded());
             SelectionEdge edge;
@@ -226,7 +227,7 @@ namespace optonaut {
         
         std::chrono::time_point<std::chrono::system_clock> lt = std::chrono::system_clock::now();
         
-        static const bool measureTime = true;
+        static const bool measureTime = false;
         
         void Push(ImageP image) {
             
@@ -272,13 +273,18 @@ namespace optonaut {
             if(current.isValid) {
                 if(!image->IsLoaded())
                     image->LoadFromDataRef();
+
+                cout << "valid " << current.image->id << endl;
                 
                 if(current.closestPoint.globalId != currentBest.closestPoint.globalId) {
+                    
                     aligner->AddKeyframe(currentBest.image);
                     //Ok, hit that. We can stitch.
                     if(previous.isValid) {
                         Stitch(previous, currentBest);
                         recordedImages++;
+                
+                        cout << "recorded: " << recordedImages << "/" << imagesToRecord << endl;
                     }
                     if(!firstOfRing.isValid) {
                         firstOfRing = currentBest;
@@ -299,12 +305,15 @@ namespace optonaut {
             }
             
             if(recordedImages == imagesToRecord) {
+                cout << "Finished" << endl;
                 isFinished = true;
                 Stitch(currentBest, firstOfRing, true);
             }
         }
 
         void Finish() {
+            Stitch(previous, currentBest);
+                
             aligner->Finish();
             exposure.FindGains();
             //exposure.PrintCorrespondence();
@@ -324,11 +333,11 @@ namespace optonaut {
         }
 
         StitchingResultP FinishLeft() {
-            return Finish(lefts, false, "left");
+            return Finish(lefts, false);
         }
 
         StitchingResultP FinishRight() {
-            return Finish(rights, false, "right");
+            return Finish(rights, false);
         }
 
         StitchingResultP FinishAligned() {
