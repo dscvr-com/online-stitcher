@@ -313,6 +313,7 @@ namespace optonaut {
         }
 
         void Finish() {
+            isFinished = true;
             if(previous.isValid) {
                 Stitch(previous, currentBest);
                 exposure.FindGains();
