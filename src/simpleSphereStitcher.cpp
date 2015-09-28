@@ -94,7 +94,7 @@ StitchingResultP RStitcher::Stitch(const std::vector<ImageP> &in, ExposureCompen
 
     //Blending
     Ptr<Blender> blender;
-	blender = Blender::createDefault(blendMode, true);
+	blender = Blender::createDefault(blendMode, false);
     blender->prepare(corners, warpedSizes);
 
     for(size_t i = 0; i < n; i++) {

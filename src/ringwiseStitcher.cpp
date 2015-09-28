@@ -63,8 +63,9 @@ namespace optonaut {
         vector<StitchingResultP> stitchedRings;
         vector<cv::Size> sizes;
         vector<cv::Point> corners;
-        
-        Ptr<Blender> blender = Blender::createDefault(Blender::FEATHER, true);
+       
+        FeatherBlender* pblender = new FeatherBlender(0.01f); 
+        Ptr<Blender> blender = Ptr<Blender>(pblender);
 
         int margin = -1; //Size_t max
 
@@ -99,6 +100,10 @@ namespace optonaut {
             Mat warpedImageAsShort;
             res->image.convertTo(warpedImageAsShort, CV_16S);
             assert(res->mask.type() == CV_8U);
+
+            res->mask(Rect(0, 0, res->mask.cols, 1)).setTo(Scalar::all(0));
+            res->mask(Rect(0, res->mask.rows - 1, res->mask.cols, 1)).setTo(Scalar::all(0));
+
             blender->feed(warpedImageAsShort, res->mask, corners[i]);
         }
 

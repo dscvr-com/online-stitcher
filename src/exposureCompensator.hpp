@@ -109,7 +109,7 @@ namespace optonaut {
                     invmap.push_back(adj.first);
                 }
 
-                int n = (int)invmap.size();
+                size_t n = invmap.size();
                 
                 double alpha = 0.1;
                 double beta = 10;
