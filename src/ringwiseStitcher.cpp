@@ -117,7 +117,8 @@ namespace optonaut {
         res->image.convertTo(res->image, CV_8U);
         //Opencv somehow messes up the first collumn while blending.
         //Throw it away. 
-        res->image = res->image(cv::Rect(1, 0, res->image.cols - 1, res->image.rows));
+        res->image = res->image(cv::Rect(1, 0, res->image.cols - 2, res->image.rows));
+        res->mask = res->mask(cv::Rect(1, 0, res->mask.cols - 2, res->mask.rows));
 
         if(resizeOutput) {
 

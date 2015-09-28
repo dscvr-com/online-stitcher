@@ -169,7 +169,7 @@ namespace optonaut {
             pasts.push_back(next); 
             sangles.push_back(lasty);
 
-            static const int order = 30;
+            static const int order = 100;
 
             if(sangles.size() > order) {
                 sangles.pop_front();
