@@ -82,6 +82,9 @@ StitchingResultP RStitcher::Stitch(const std::vector<ImageP> &in, ExposureCompen
         warper->warp(mask, K, camera.R, INTER_NEAREST, BORDER_CONSTANT, warpedMask);
         mask.release();
         warpedSizes[i] = warpedImage.size();
+            
+        warpedMask(Rect(0, 0, 1, warpedMask.rows)).setTo(Scalar::all(0));
+        warpedMask(Rect(warpedMask.cols - 1, 0, 1, warpedMask.rows)).setTo(Scalar::all(0));
 
         Image::SaveToDisk(i + maskOffset, warpedMask);
         warpedMask.release();
