@@ -295,7 +295,7 @@ namespace optonaut {
                         firstOfRing = currentBest;
                     } else {
                         if(firstOfRing.closestPoint.ringId != currentBest.closestPoint.ringId) { 
-                            Stitch(previous, firstOfRing, true);
+                            Stitch(previous, firstOfRing);
                             firstOfRing = currentBest;
                             previous.isValid = false; //We reached a new ring. Invalidate prev.
                         }
@@ -313,14 +313,14 @@ namespace optonaut {
             if(recordedImages == imagesToRecord) {
                 cout << "Finished" << endl;
                 isFinished = true;
-                Stitch(currentBest, firstOfRing, true);
+                Stitch(previous, currentBest);
+                Stitch(currentBest, firstOfRing);
             }
         }
 
         void Finish() {
             isFinished = true;
             if(previous.isValid) {
-                Stitch(previous, currentBest);
                 exposure.FindGains();
             }
             
