@@ -231,6 +231,11 @@ namespace optonaut {
         
         void Push(ImageP image) {
             
+            if(isFinished) {
+                cout << "Push after finish warning - this could be a racing condition" << endl;
+                return;
+            }
+            
             if(measureTime) {
                 auto now = std::chrono::system_clock::now();
                 std::cout << "dt=" << std::chrono::duration_cast<std::chrono::microseconds>(now - lt).count() << " mms" << std::endl;
