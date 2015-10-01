@@ -79,6 +79,10 @@ namespace optonaut {
         OutType Result() {
             return outData;
         }
+        
+        bool IsRunning() {
+            return running;
+        }
 
         void Dispose() {
             if(!running)

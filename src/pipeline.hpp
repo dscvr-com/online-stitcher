@@ -187,6 +187,7 @@ namespace optonaut {
         }
 
         void Dispose() {
+            cout << "Pipeline Dispose called by " << std::this_thread::get_id();
             aligner->Dispose();
         }
         
@@ -230,6 +231,7 @@ namespace optonaut {
         static const bool measureTime = false;
         
         void Push(ImageP image) {
+            cout << "Pipeline Push called by " << std::this_thread::get_id();
             
             if(isFinished) {
                 cout << "Push after finish warning - this could be a racing condition" << endl;
@@ -319,6 +321,7 @@ namespace optonaut {
         }
 
         void Finish() {
+            cout << "Pipeline Finish called by " << std::this_thread::get_id();
             isFinished = true;
             if(previous.isValid) {
                 exposure.FindGains();
