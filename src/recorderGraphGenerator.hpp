@@ -77,21 +77,33 @@ public:
         double vStart, vBuffer;
         uint32_t id = 0;
         uint32_t hCenterCount = ceil(2 * M_PI / hFov);
+        
+        //TODO: Wrong assumptions.
+        //This actually builds the recorder graph from the bottom. 
 
-        if(mode != RecorderGraph::ModeTruncated) {
-            //Configuration for Mode::All, Mode::Center
+        if(mode == RecorderGraph::ModeTruncated) {
+           //Configuration for ModeTruncated
+           //Optimize for 3 rings.
+           
+           vCount = vCount - 2; //Always skip out two rings.
+           //vFov stays the same.
+           vStart = (M_PI - (vFov * 3)) / 2;
+           vBuffer = vFov * vBufferRatio;
+            
+        }
+        else if(mode == RecorderGraph::ModeNoBot) {
+            //Configuration for ModeNoBot
+            vCount = vCount - 1;
+            vStart = (M_PI - (vFov * 4)) / 2;
+            vBuffer = vFov * vBufferRatio;
+            
+        } else if(mode == RecorderGraph::ModeCenter) {
+            assert(true); //Not implemented and probably not needed any more.
+        } else {
+            //Configuration for ModeAll
             vStart = maxVFov * vOverlap;
             
             vFov = (M_PI - 2 * vStart) / vCount;
-            vBuffer = vFov * vBufferRatio;
-
-        } else {
-            //Configuration for Mode::Truncated
-            //Optimize for 3 rings. 
-            
-            vCount = vCount - 2; //Always skip out two rings.
-            //vFov stays the same.
-            vStart = (M_PI - (vFov * 3)) / 2;
             vBuffer = vFov * vBufferRatio;
         }
 
@@ -118,53 +130,49 @@ public:
             SelectionEdge edge;
 
 			res.targets.push_back(vector<SelectionPoint>());
-                
-            if(mode == RecorderGraph::ModeAll || mode == RecorderGraph::ModeTruncated
-               || (mode == RecorderGraph::ModeCenter && i == vCount / 2)
-               || (mode == RecorderGraph::ModeNoBot && i != 0)) {
                     
-                for(uint32_t j = 0; j < hCount; j++) {
-                        
-                    hLeft = j * hFov;
-                    hCenter = hLeft + hFov / 2;
-                    hRight = hLeft + hFov;
-
-                    SelectionPoint p;
-                    p.globalId = id;
-                    GeoToRot(hLeft, vCenter, p.extrinsics);
-                    p.enabled = true;
-                    p.ringId = i;
-                    p.localId = j;
+            for(uint32_t j = 0; j < hCount; j++) {
                 
-                    res.adj.push_back(vector<SelectionEdge>());
-
-                    SelectionEdge edge; 
-                    edge.from = id;
-                    edge.to = id + 1;
-                    edge.roiCenter = p.extrinsics;
-                    GeoToRot(hCenter, vCenter, edge.roiCenter);
-                    GeoToRot(hLeft - hBuffer, vTop - vBuffer, edge.roiCorners[0]);
-                    GeoToRot(hRight + hBuffer, vTop - vBuffer, edge.roiCorners[1]);
-                    GeoToRot(hRight + hBuffer, vBot + vBuffer, edge.roiCorners[2]);
-                    GeoToRot(hLeft - hBuffer, vBot + vBuffer, edge.roiCorners[3]);
-
-                    if(j == 0) {
-                        //Remember Id of first one. 
-                        firstId = id;
-                    }
-
-                    if(j != hCount - 1) {
-                        res.adj[id].push_back(edge);
-                    } else {
-                        //Loop last one back to first one.
-                        edge.to = firstId;
-                        res.adj[id].push_back(edge);
-                    } 
-                    res.targets[i].push_back(p);
-                    
-                    id++;
+                hLeft = j * hFov;
+                hCenter = hLeft + hFov / 2;
+                hRight = hLeft + hFov;
+                
+                SelectionPoint p;
+                p.globalId = id;
+                GeoToRot(hLeft, vCenter, p.extrinsics);
+                p.enabled = true;
+                p.ringId = i;
+                p.localId = j;
+                
+                res.adj.push_back(vector<SelectionEdge>());
+                
+                SelectionEdge edge;
+                edge.from = id;
+                edge.to = id + 1;
+                edge.roiCenter = p.extrinsics;
+                GeoToRot(hCenter, vCenter, edge.roiCenter);
+                GeoToRot(hLeft - hBuffer, vTop - vBuffer, edge.roiCorners[0]);
+                GeoToRot(hRight + hBuffer, vTop - vBuffer, edge.roiCorners[1]);
+                GeoToRot(hRight + hBuffer, vBot + vBuffer, edge.roiCorners[2]);
+                GeoToRot(hLeft - hBuffer, vBot + vBuffer, edge.roiCorners[3]);
+                
+                if(j == 0) {
+                    //Remember Id of first one.
+                    firstId = id;
                 }
-			}
+                
+                if(j != hCount - 1) {
+                    res.adj[id].push_back(edge);
+                } else {
+                    //Loop last one back to first one.
+                    edge.to = firstId;
+                    res.adj[id].push_back(edge);
+                }
+                res.targets[i].push_back(p);
+                
+                id++;
+            }
+            
 		}
 
         /*for(size_t i = 0; i < adj.size(); i++) {
