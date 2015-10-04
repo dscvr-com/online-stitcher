@@ -79,7 +79,7 @@ namespace optonaut {
 
 		result->id = ParseInt(root->Attribute("id"));
 		assert(MatrixFromXml(root->FirstChildElement("intrinsics")->FirstChildElement("matrix"), result->intrinsics) == 3);
-		assert(MatrixFromXml(root->FirstChildElement("extrinsics")->FirstChildElement("matrix"), result->extrinsics) == 4);
+		assert(MatrixFromXml(root->FirstChildElement("extrinsics")->FirstChildElement("matrix"), result->originalExtrinsics) == 4);
  	}
 
  	void ParseJson(string path, ImageP result) {
@@ -92,10 +92,9 @@ namespace optonaut {
 		
 		result->id = doc["id"].GetInt();
 		assert(MatrixFromJson(doc["intrinsics"], result->intrinsics) == 3);
-		assert(MatrixFromJson(doc["extrinsics"], result->extrinsics) == 4);
-		result->extrinsics = result->extrinsics;
+		assert(MatrixFromJson(doc["extrinsics"], result->originalExtrinsics) == 4);
 		
-		fclose(fileRef);
+        fclose(fileRef);
  	}
 
  	bool FileExists(const string &fileName)
@@ -128,11 +127,11 @@ namespace optonaut {
 		return result;
 	}
 
-	void BufferFromBinFile(unsigned char buf[], int len, string file) {
+	void BufferFromBinFile(unsigned char buf[], size_t len, string file) {
 
 	    ifstream input(file, std::ios::binary);
 
-	    int i;
+	    size_t i;
 	    for(i = 0; i < len && input.good(); i++) {
 	        buf[i] = input.get();
 	    }

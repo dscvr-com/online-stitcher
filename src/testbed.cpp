@@ -12,6 +12,7 @@
 using namespace std;
 using namespace cv;
 using namespace optonaut;
+using namespace std::chrono;
 
 
 bool CompareByFilename (const string &a, const string &b) {
@@ -20,7 +21,7 @@ bool CompareByFilename (const string &a, const string &b) {
 
 int main(int argc, char* argv[]) {
 
-
+    static const bool isAsync = true;
 
     int n = argc - 1;
     shared_ptr<Pipeline> pipe(NULL);
@@ -32,26 +33,14 @@ int main(int argc, char* argv[]) {
     }
 
     sort(files.begin(), files.end(), CompareByFilename);
-  
+ 
+
     for(int i = 0; i < n; i++) {
+        auto lt = system_clock::now();
         auto image = ImageFromFile(files[i]);
-        //image->intrinsics = iPhone6Intrinsics;
         
-        //Flip image accordingly to portrait. 
-       // cv::flip(image->img, image->img, 0);
-       // image->img = image->img.t();
-
-        //Print out selector points.
-        /*RStitcher stitcher; 
-        stitcher.blendMode = cv::detail::Blender::FEATHER;
+        image->intrinsics = iPhone6Intrinsics;
         
-        ImageSelector selector(image->intrinsics, ImageSelector::ModeAll);
-        
-        auto res = stitcher.Stitch(selector.GenerateDebugImages());
-        imwrite("dbg/points.jpg", res->image);
-        
-        return 0;*/
-
         //Create stack-local ref to mat. Clear image mat.
         //This is to simulate hard memory management.
         Mat tmpMat = image->img;
@@ -64,12 +53,24 @@ int main(int argc, char* argv[]) {
         image->dataRef.colorSpace = colorspace::RGB;
 
         if(i == 0) {
-            pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics, ImageSelector::ModeTruncated, true));
+            pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics, RecorderGraph::ModeTruncated, isAsync));
+
+            Pipeline::debug = true;
         }
 
         pipe->Push(image);
         tmpMat.release();
+
+        if(isAsync) {
+            auto now = system_clock::now(); 
+            auto diff = now - lt;
+            auto sleep = 30ms - diff;
+            //cout << "Sleeping for " << duration_cast<microseconds>(sleep).count() << endl;
+            this_thread::sleep_for(sleep);
+        }
     }
+
+    pipe->Finish();
     
     if(pipe->HasResults()) {
         {
@@ -87,7 +88,14 @@ int main(int argc, char* argv[]) {
     } else {
         cout << "No results." << endl;
     }
-
+    
+    if(Pipeline::debug) {
+        //auto alignedDebug = pipe->FinishAlignedDebug();
+        //imwrite("dbg/aligned-debug.jpg", alignedDebug->image);
+        auto aligned = pipe->FinishAligned();
+        imwrite("dbg/aligned.jpg", aligned->image);
+    }
+    
     pipe->Dispose();
 
     return 0;

@@ -4,7 +4,11 @@
 #include <memory>
 
 #include "image.hpp"
+#include "exposureCompensator.hpp"
 #include "support.hpp"
+
+#ifndef OPTONAUT_RSTITCHER_HEADER
+#define OPTONAUT_RSTITCHER_HEADER
 
 namespace optonaut {
 struct StitchingResult {
@@ -26,7 +30,9 @@ class RStitcher {
 		float warperScale = 800;
         int blendMode = -1;
 
-		StitchingResultP Stitch(const std::vector<ImageP> &images, bool debug = false);
+		StitchingResultP Stitch(const std::vector<ImageP> &images, ExposureCompensator &exposure, double ev = 0, bool debug = false);
 		static void PrepareMatrices(const std::vector<ImageP> &r);
 };
 }
+
+#endif

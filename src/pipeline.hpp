@@ -1,22 +1,19 @@
 #include "image.hpp"
 #include "asyncAligner.hpp"
+#include "trivialAligner.hpp"
+#include "ringwiseStreamAligner.hpp"
 #include "monoStitcher.hpp"
-#include "imageSelector.hpp"
-#include "simpleSphereStitcher.hpp"
-#include "imageResizer.hpp"
+#include "recorderGraph.hpp"
+#include "recorderGraphGenerator.hpp"
+#include "recorderController.hpp"
+#include "ringwiseStitcher.hpp"
+
+#include <chrono>
 
 #ifndef OPTONAUT_PIPELINE_HEADER
 #define OPTONAUT_PIPELINE_HEADER
 
 namespace optonaut {
-    
-    struct PipelineState {
-        bool isOnRing;
-        
-        PipelineState() : isOnRing(false) {
-            
-        }
-    };
     
     class Pipeline {
 
@@ -26,25 +23,36 @@ namespace optonaut {
         Mat baseInv;
         Mat zero;
 
-        shared_ptr<Aligner> aligner;
-        ImageSelector selector; 
+        shared_ptr<RingwiseStreamAligner> aligner;
         SelectionInfo previous;
         SelectionInfo currentBest;
-        ImageResizer resizer;
-        PipelineState state;
+        SelectionInfo firstOfRing;
+
+        ExposureCompensator exposure;
+        
         ImageP previewImage;
-        Mat lastPosition; //TODO: This variable is dirty. Replace with aligner. 
-
         MonoStitcher stereoConverter;
-
+        
         vector<ImageP> lefts;
-        vector<ImageP> rights; 
+        vector<ImageP> rights;
 
-        RStitcher leftStitcher;
-        RStitcher rightStitcher;
+        vector<ImageP> aligned; 
+
+        RingwiseStitcher stitcher;
 
         bool previewImageAvailable;
+        bool isIdle;
+        bool previewEnabled;
+        bool isFinished;
+        
+        RecorderGraphGenerator generator;
+        RecorderGraph recorderGraph;
+        RecorderController controller;
+        
+        uint32_t imagesToRecord;
+        uint32_t recordedImages;
 
+        
         void PushLeft(ImageP left) {
             lefts.push_back(left);
         }
@@ -53,9 +61,30 @@ namespace optonaut {
             rights.push_back(right);
         }
 
-        StitchingResultP Finish(vector<ImageP> &images) {
-            auto res = leftStitcher.Stitch(images, false);
-            resizer.Resize(res->image);
+        StitchingResultP Finish(vector<ImageP> &images, bool debug = false, string debugName = "") {
+            aligner->Postprocess(images);
+            auto rings = RingwiseStreamAligner::SplitIntoRings(images, recorderGraph);
+            
+            StitchingResultP res;
+            //Change the following line for HDR. 
+            vector<double> evs = { 0.4 };
+            vector<Mat> hdrs;
+            
+            for(size_t i = 0; i < evs.size(); i++) {
+                auto lres = stitcher.Stitch(rings, exposure, evs[i], debug, debugName);
+                if(i == 0) {
+                    res = lres;
+                }
+                
+                hdrs.push_back(lres->image);
+            }
+            if(hdrs.size() > 1) {
+                Mat fusion;
+                Ptr<MergeMertens> merge = createMergeMertens();
+                merge->process(hdrs, fusion);
+
+                fusion.convertTo(res->image, CV_8U, 255);
+            }
             return res;
         }
 
@@ -68,28 +97,55 @@ namespace optonaut {
 
         static string tempDirectory;
         static string version;
+
+        static bool debug;
+        static const int stretch = 10;
         
-        Pipeline(Mat base, Mat zeroWithoutBase, Mat intrinsics, int selectorConfiguration = ImageSelector::ModeAll, bool isAsync = true) :
+        Pipeline(Mat base, Mat zeroWithoutBase, Mat intrinsics, int graphConfiguration = RecorderGraph::ModeAll, bool isAsync = true) :
             base(base),
-            selector(intrinsics, selectorConfiguration),
-            resizer(selectorConfiguration),
-            previewImageAvailable(false)
+            stereoConverter(),
+            previewImageAvailable(false),
+            isIdle(false),
+            previewEnabled(true),
+            isFinished(false),
+            generator(),
+            recorderGraph(generator.Generate(intrinsics, graphConfiguration)),
+            controller(recorderGraph),
+            imagesToRecord(recorderGraph.Size()),
+            recordedImages(0)
         {
             baseInv = base.inv();
             zero = zeroWithoutBase;
-            lastPosition = Mat::eye(4, 4, CV_64F);
 
-
-            if(isAsync) {
-                aligner = shared_ptr<Aligner>(new AsyncAligner());
-            } else {
-                aligner = shared_ptr<Aligner>(new StreamAligner());
-            }
             cout << "Initializing Optonaut Pipe." << endl;
             
             cout << "Base: " << base << endl;
             cout << "BaseInv: " << baseInv << endl;
             cout << "Zero: " << zero << endl;
+        
+            aligner = shared_ptr<RingwiseStreamAligner>(new RingwiseStreamAligner(recorderGraph, exposure, isAsync));
+
+            stitcher = RingwiseStitcher(4096, 4096);
+        }
+        
+        void SetPreviewImageEnabled(bool enabled) {
+            previewEnabled = enabled;
+        }
+        
+        Mat ConvertFromStitcher(const Mat &in) const {
+            return (zero.inv() * baseInv * in * base).inv();
+        }
+        
+        Mat GetBallPosition() const {
+            return ConvertFromStitcher(controller.GetBallPosition());
+        }
+        
+        double GetDistanceToBall() const {
+            return controller.GetError();
+        }
+        
+        const Mat &GetAngularDistanceToBall() const {
+            return controller.GetErrorVector();
         }
 
         //Methods already coordinates in input base. 
@@ -98,19 +154,19 @@ namespace optonaut {
         }
 
         Mat GetCurrentRotation() const {
-            return (zero.inv() * baseInv * lastPosition * base).inv();
+            return ConvertFromStitcher(aligner->GetCurrentRotation());
         }
 
         vector<SelectionPoint> GetSelectionPoints() const {
             vector<SelectionPoint> converted;
-            for(auto ring : selector.GetRings())
+            for(auto ring : recorderGraph.GetRings())
                 for(auto point : ring) {
                     SelectionPoint n;
-                    n.id = point.id;
+                    n.globalId = point.globalId;
                     n.ringId = point.ringId;
                     n.localId = point.localId;
                     n.enabled = point.enabled;
-                    n.extrinsics = (zero.inv() * baseInv * point.extrinsics * base).inv();
+                    n.extrinsics = ConvertFromStitcher(point.extrinsics);
                     
                     converted.push_back(n);
             }
@@ -127,112 +183,157 @@ namespace optonaut {
         }
         
         Mat GetPreviewRotation() {
-            return (zero.inv() * baseInv * GetPreviewImage()->extrinsics * base).inv();
+            return ConvertFromStitcher(GetPreviewImage()->adjustedExtrinsics);
         }
 
         void Dispose() {
-            //aligner->Dispose();
+            cout << "Pipeline Dispose called by " << std::this_thread::get_id();
+            aligner->Dispose();
         }
         
-        //In: Image with sensor sampled parameters attached.
-        void Push(ImageP image) {
-            
-            image->extrinsics = base * zero * image->extrinsics.inv() * baseInv;
-            lastPosition = image->extrinsics.clone();
-            //if(aligner->NeedsImageData() && !image->IsLoaded()) {
-            //    //If the aligner needs image data, pre-load the image. 
-            //    image->LoadFromDataRef();
-            //}
-            //
-            //aligner->Push(image);
-            //image->extrinsics = aligner->GetCurrentRotation().clone();
-
-            //Todo - lock to ring. 
-            SelectionInfo current = selector.FindClosestSelectionPoint(image);
-
-            //cout << "image " << image->id << " closest to " << current.closestPoint.id << ", dist: " << current.dist << ", ring: " << current.closestPoint.ringId << endl;
-
-            previewImageAvailable = false;
-      		
-            //Remember the closest match for the currently closest point.
-            //If we change our closest point, merge the two closest matches
-            //for the two past points. 
-            
-            //cout << "Pushing image: " << image->id << endl;
-            if(current.isValid) {
+        void CapturePreviewImage(const ImageP img) {
+            if(previewEnabled) {
+                previewImage = ImageP(new Image(*img));
+                previewImage->img = img->img.clone();
                 
-                state.isOnRing = true;
+                previewImageAvailable = true;
+            }
+        }
 
-                //cout << "Image valid: " << current.closestPoint.id << endl;
+        void Stitch(const SelectionInfo &a, const SelectionInfo &b, bool discard = false) {
+            cout << "stitching " << a.image->id << " and " << b.image->id << endl;
+            assert(a.image->IsLoaded());
+            assert(b.image->IsLoaded());
+            SelectionEdge edge;
+            
+            exposure.Register(a.image, b.image);
 
-                if(currentBest.isValid && currentBest.closestPoint.id == current.closestPoint.id) {
-                    if(currentBest.dist > current.dist) {
-                        //Better match for current.
-                        currentBest = current;
-                        
+            if(!recorderGraph.GetEdge(a.closestPoint, b.closestPoint, edge))
+                return;
+           
+            StereoImage stereo;
+            stereoConverter.CreateStereo(a, b, edge, stereo);
 
-                        if(!currentBest.image->IsLoaded())
-                            currentBest.image->LoadFromDataRef(); //Need to get image contents now. 
-                        //cout << "Better match" << endl;
-                    } 
-                } else {
-                    //New current point - if we can, merge
-                    
-                    //cout << "New Point" << endl;
-                    if(previous.isValid && currentBest.isValid) {
-                        SelectionEdge edge; 
-                        if(selector.AreAdjacent(
-                                    previous.closestPoint, 
-                                    currentBest.closestPoint, edge)) {
+            assert(stereo.valid);
 
-                            assert(previous.image->IsLoaded());
-                            assert(currentBest.image->IsLoaded());
-
-
-                            StereoTarget target;
-                            target.center = edge.roiCenter;
-
-                            for(int i = 0; i < 4; i++) {
-                                target.corners[i] = edge.roiCorners[i];
-                            }
-                            
-                            StereoImageP stereo = stereoConverter.CreateStereo(previous, currentBest, target);
-                            
-                            if(stereo->valid) {
-                                //cout << "Doing stereo" << endl;
-                                
-                                previewImage = ImageP(new Image(*stereo->A));
-                                previewImage->img = stereo->A->img.clone();
-                                
-                                stereo->A->SaveToDisk();
-                                stereo->B->SaveToDisk();
-                                PushLeft(stereo->A);
-                                PushRight(stereo->B);
-
-                                previewImageAvailable = true;
-                            }
-                        } else {
-                            //cout << "Images not adjacent" << endl;
-                        }
-                        selector.DisableAdjacency(previous.closestPoint, currentBest.closestPoint);
-                    }
-        
-                    previous = currentBest;
-                    currentBest = current;
-                    
-                    if(!currentBest.image->IsLoaded())
-                        currentBest.image->LoadFromDataRef();
-                }
+            if(!discard) {
+                CapturePreviewImage(stereo.A);
+                
+                stereo.A->SaveToDisk();
+                stereo.B->SaveToDisk();
+                PushLeft(stereo.A);
+                PushRight(stereo.B);
             }
         }
         
-        PipelineState GetState() {
-            return state;
-        }
+        std::chrono::time_point<std::chrono::system_clock> lt = std::chrono::system_clock::now();
         
+        static const bool measureTime = false;
+        
+        void Push(ImageP image) {
+            cout << "Pipeline Push called by " << std::this_thread::get_id();
+            
+            if(isFinished) {
+                cout << "Push after finish warning - this could be a racing condition" << endl;
+                return;
+            }
+            
+            if(measureTime) {
+                auto now = std::chrono::system_clock::now();
+                std::cout << "dt=" << std::chrono::duration_cast<std::chrono::microseconds>(now - lt).count() << " mms" << std::endl;
+            
+                lt = now;
+            }
+            
+            image->originalExtrinsics = base * zero * image->originalExtrinsics.inv() * baseInv;
+            
+            if(aligner->NeedsImageData() && !image->IsLoaded()) {
+                //If the aligner needs image data, pre-load the image.
+                image->LoadFromDataRef();
+            }
+            
+            aligner->Push(image);
+            
+            image->adjustedExtrinsics = aligner->GetCurrentRotation().clone();
+
+            if(Pipeline::debug && image->id % stretch == 0) {
+                if(!image->IsLoaded())
+                    image->LoadFromDataRef();
+                aligned.push_back(image);
+            }
+
+            previewImageAvailable = false;
+            
+            if(!controller.IsInitialized())
+                controller.Initialize(image->adjustedExtrinsics);
+            
+            SelectionInfo current = controller.Push(image, isIdle);
+            
+            if(isIdle)
+                return;
+            
+            if(!currentBest.isValid) {
+                //Initialization. 
+                currentBest = current;
+            }
+            
+            if(current.isValid) {
+                if(!image->IsLoaded())
+                    image->LoadFromDataRef();
+
+                cout << "valid " << current.image->id << endl;
+                
+                if(current.closestPoint.globalId != currentBest.closestPoint.globalId) {
+                    
+                    aligner->AddKeyframe(currentBest.image);
+                    //Ok, hit that. We can stitch.
+                    if(previous.isValid) {
+                        Stitch(previous, currentBest);
+                        recordedImages++;
+                
+                        cout << "recorded: " << recordedImages << "/" << imagesToRecord << endl;
+                    }
+                    if(!firstOfRing.isValid) {
+                        firstOfRing = currentBest;
+                    } else {
+                        if(firstOfRing.closestPoint.ringId != currentBest.closestPoint.ringId) { 
+                            Stitch(previous, firstOfRing);
+                            firstOfRing = currentBest;
+                            previous.isValid = false; //We reached a new ring. Invalidate prev.
+                        }
+                    }
+                    
+                    ImageP closestKeyframe = aligner->GetClosestKeyframe(currentBest.image->adjustedExtrinsics);
+                    if(closestKeyframe != NULL) {
+                        exposure.Register(currentBest.image, closestKeyframe);
+                    }
+                    previous = currentBest;
+                }
+                currentBest = current;
+            }
+            
+            if(recordedImages == imagesToRecord) {
+                cout << "Finished" << endl;
+                isFinished = true;
+                Stitch(previous, currentBest);
+                Stitch(currentBest, firstOfRing);
+            }
+        }
+
+        void Finish() {
+            cout << "Pipeline Finish called by " << std::this_thread::get_id();
+            isFinished = true;
+            if(previous.isValid) {
+                exposure.FindGains();
+            }
+            
+            aligner->Finish();
+            //exposure.PrintCorrespondence();
+        }
+                
         bool AreAdjacent(SelectionPoint a, SelectionPoint b) {
             SelectionEdge dummy; 
-            return selector.AreAdjacent(a, b, dummy);
+            return recorderGraph.GetEdge(a, b, dummy);
         }
         
         SelectionInfo CurrentPoint() {
@@ -244,15 +345,43 @@ namespace optonaut {
         }
 
         StitchingResultP FinishLeft() {
-            return Finish(lefts);
-        }       
+            return Finish(lefts, false);
+        }
 
         StitchingResultP FinishRight() {
-            return Finish(rights);
+            return Finish(rights, false);
+        }
+
+        StitchingResultP FinishAligned() {
+            return Finish(aligned, false);
+        }
+
+        StitchingResultP FinishAlignedDebug() {
+            return Finish(aligned, true);
         }
 
         bool HasResults() {
             return lefts.size() > 0 && rights.size() > 0;
+        }
+        
+        bool IsIdle() {
+            return isIdle;
+        }
+        
+        bool IsFinished() {
+            return isFinished;
+        }
+        
+        void SetIdle(bool isIdle) {
+            this->isIdle = isIdle;
+        }
+        
+        uint32_t GetImagesToRecordCount() {
+            return imagesToRecord;
+        }
+        
+        uint32_t GetRecordedImagesCount() {
+            return recordedImages;
         }
     };    
 }

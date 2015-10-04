@@ -49,29 +49,38 @@ namespace optonaut {
         
     }
 
-   string Image::GetFilePath(int id) {
-        return Pipeline::tempDirectory + ToString(id) + ".bmp";
+   string Image::GetFilePath(size_t id) {
+        string idstr = ToString((void*)id);
+
+        idstr = idstr.substr(2);
+
+        for(size_t i = 0; i < sizeof(size_t) * 2 - idstr.size(); i++) {
+            idstr = "0" + idstr;
+        }
+
+        return Pipeline::tempDirectory + idstr + ".bmp";
     }
         
 
-   void Image::LoadFromDisk(int id, cv::Mat &img, int loadFlags) {
+   void Image::LoadFromDisk(size_t id, cv::Mat &img, int loadFlags) {
         img = imread(GetFilePath(id), loadFlags);
         assert(img.cols != 0 && img.rows != 0);
    }
         
-   void Image::SaveToDisk(int id, cv::Mat &img) {
+   void Image::SaveToDisk(size_t id, cv::Mat &img) {
         imwrite(GetFilePath(id), img); 
    }
     
     void Image::SaveToDisk() {
         assert(IsLoaded());
         //cout << "Saving image " << id << ", width: " << img.cols << ", height: " << img.rows << endl;
-        Image::SaveToDisk(id, img);
+        Image::SaveToDisk((size_t)this, img);
         Unload();
     }
 
     void Image::LoadFromDisk(bool removeFile) {
         assert(!IsLoaded());
+        size_t id = (size_t)this;
         Image::LoadFromDisk(id, img);
         //cout << "Loading image " << id << ", width: " << img.cols << ", height: " << img.rows << endl;
         if(removeFile) { 

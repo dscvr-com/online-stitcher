@@ -11,9 +11,15 @@ namespace optonaut {
 
     int ParseInt(const std::string &data);
 	int ParseInt(const char* data);
-	std::string ToString(int i);
+    
+    template <typename T>
+    std::string ToString(T i) {
+        std::ostringstream text;
+        text << i;
+        return text.str();
+    }
 
-	void ScaleIntrinsicsToImage(cv::Mat intrinsics, cv::Mat image, cv::Mat &scaled, double fupscaling = 1);
+	void ScaleIntrinsicsToImage(const cv::Mat &intrinsics, const cv::Mat &image, cv::Mat &scaled, double fupscaling = 1);
 
 	double GetHorizontalFov(const cv::Mat &intrinsics);
     double GetVerticalFov(const cv::Mat &intrinsics);
@@ -21,10 +27,14 @@ namespace optonaut {
 
 	void ExtractRotationVector(const cv::Mat &r, cv::Mat &vec);
 	double GetAngleOfRotation(const cv::Mat &r);
+    double GetAngleOfRotation(const cv::Mat &a, const cv::Mat &b);
 	void CreateRotationZ(double radians, cv::Mat &out);
 	void CreateRotationX(double radians, cv::Mat &out);
-	void CreateRotationY(double radians, cv::Mat &out);
-
+    void CreateRotationY(double radians, cv::Mat &out);
+    
+    void Lerp(const cv::Mat &a, const cv::Mat &b, const double t, cv::Mat &out);
+    void Slerp(const cv::Mat &a, const cv::Mat &b, const double t, cv::Mat &out);
+    
 	double GetDistanceByDimension(const cv::Mat &a, const cv::Mat &b, int dim);
 	double GetDistanceX(const cv::Mat &a, const cv::Mat &b);
 	double GetDistanceY(const cv::Mat &a, const cv::Mat &b);
@@ -32,6 +42,7 @@ namespace optonaut {
 	void From4DoubleTo3Float(const cv::Mat &in, cv::Mat &out);
 	void From3DoubleTo3Float(const cv::Mat &in, cv::Mat &out);
 	void From3FloatTo4Double(const cv::Mat &in, cv::Mat &out);
+	void From3FloatTo3Double(const cv::Mat &in, cv::Mat &out);
 	void From3DoubleTo4Double(const cv::Mat &in, cv::Mat &out);
 	void From4DoubleTo3Double(const cv::Mat &in, cv::Mat &out);
 	bool ContainsNaN(const cv::Mat &in);
@@ -42,6 +53,8 @@ namespace optonaut {
 	double max4(double a, double b, double c, double d);
 	double angleAvg(double x, double y);
 	double interpolate(double x, double x1, double x2, double y1, double y2);
+
+    void GetGradient(const cv::Mat &src_gray, cv::Mat &grad, double wx = 0.5, double wy = 0.5);
 }
 
 #endif

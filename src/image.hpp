@@ -7,9 +7,8 @@
 #define OPTONAUT_IMAGE_HEADER
 
 namespace optonaut {
-    
-    const int WorkingWidth = 960;
-    const int WorkingHeight = 540;
+    const int WorkingWidth = 640;
+    const int WorkingHeight = 360;
 
     namespace colorspace {
         const int RGBA = 0;
@@ -34,15 +33,14 @@ namespace optonaut {
 	struct Image {
 		cv::Mat img;
         ImageRef dataRef;
-		cv::Mat extrinsics;
+		cv::Mat originalExtrinsics;
+        cv::Mat adjustedExtrinsics;
 		cv::Mat intrinsics; 
 		int id;
 		std::string source;
+        double vtag;
 
-		std::vector<cv::KeyPoint> features;
-		cv::Mat descriptors;
-
-        Image()  : img(0, 0, CV_8UC3), extrinsics(4, 4, CV_64F), intrinsics(3, 3, CV_64F), source("Unknown") {
+        Image()  : img(0, 0, CV_8UC3), originalExtrinsics(4, 4, CV_64F), adjustedExtrinsics(4, 4, CV_64F), intrinsics(3, 3, CV_64F), source("Unknown"), vtag(0) {
         };
 
         bool IsLoaded() {
@@ -55,15 +53,17 @@ namespace optonaut {
 
         void LoadFromDisk(bool removeFile = true);
 
+        static void ClearAllFromDisk();
+
         void Unload() {
             img.release();
         }
          
-        static std::string GetFilePath(int id);
+        static std::string GetFilePath(size_t id);
 
-        static void LoadFromDisk(int id, cv::Mat &img, int loadFlags = CV_LOAD_IMAGE_COLOR);
+        static void LoadFromDisk(size_t id, cv::Mat &img, int loadFlags = CV_LOAD_IMAGE_COLOR);
         
-        static void SaveToDisk(int id, cv::Mat &img);
+        static void SaveToDisk(size_t id, cv::Mat &img);
 	};
     
     typedef std::shared_ptr<Image> ImageP;
