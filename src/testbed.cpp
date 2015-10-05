@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
         auto lt = system_clock::now();
         auto image = ImageFromFile(files[i]);
         
-        image->intrinsics = iPhone6Intrinsics;
+        image->intrinsics = iPhone5Intrinsics;
         
         //Create stack-local ref to mat. Clear image mat.
         //This is to simulate hard memory management.
