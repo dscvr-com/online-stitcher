@@ -9,6 +9,8 @@
 #include "ringwiseStitcher.hpp"
 #include "support.hpp"
 #include "correlation.hpp"
+#include "static_timer.hpp"
+
 
 using namespace std;
 using namespace cv;
@@ -58,6 +60,7 @@ namespace optonaut {
 
     StitchingResultP RingwiseStitcher::Stitch(vector<vector<ImageP>> &rings, ExposureCompensator &exposure, double ev, bool debug, string debugName) {
 
+        STimer::Tick("StitchStart");
         RStitcher stitcher;
 
         vector<StitchingResultP> stitchedRings;
@@ -87,12 +90,14 @@ namespace optonaut {
                 imwrite("dbg/ring_" + debugName + ToString(i) + "_ev_" + ToString(ev) + ".jpg",  res->image); 
 
             }
+            STimer::Tick("Ring Finished");
         }
 
         assert(margin != -1);
             
         AdjustCorners(stitchedRings, corners);
         
+        STimer::Tick("Corner Adjusting Finished");
         blender->prepare(corners, sizes);
 
         for(size_t i = 0; i < stitchedRings.size(); i++) {
@@ -108,6 +113,7 @@ namespace optonaut {
         }
 
         stitchedRings.clear();
+        STimer::Tick("FinalStitching Finished");
 
         StitchingResultP res(new StitchingResult());
         blender->blend(res->image, res->mask);
@@ -147,6 +153,7 @@ namespace optonaut {
                 res->mask = Mat(0, 0, CV_8UC1);
             }
         }
+        STimer::Tick("Resize Finished");
 
         return res;
     }

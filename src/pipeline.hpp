@@ -8,6 +8,8 @@
 #include "recorderController.hpp"
 #include "ringwiseStitcher.hpp"
 
+#include "static_timer.hpp"
+
 #include <chrono>
 
 #ifndef OPTONAUT_PIPELINE_HEADER
@@ -62,6 +64,8 @@ namespace optonaut {
         }
 
         StitchingResultP Finish(vector<ImageP> &images, bool debug = false, string debugName = "") {
+            
+
             aligner->Postprocess(images);
             auto rings = RingwiseStreamAligner::SplitIntoRings(images, recorderGraph);
             
@@ -230,7 +234,7 @@ namespace optonaut {
         static const bool measureTime = false;
         
         void Push(ImageP image) {
-            
+
             if(isFinished) {
                 cout << "Push after finish warning - this could be a racing condition" << endl;
                 return;

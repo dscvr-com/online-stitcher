@@ -7,6 +7,7 @@
 //
 
 #include "pipeline.hpp"
+#include "static_timer.hpp"
 
 using namespace cv;
 using namespace std;
