@@ -67,7 +67,7 @@ public:
 
         Mat tmp = img->img;
 
-        f.img_idx = id;
+        f.img_idx = (int)id;
         Mat *descriptors = new Mat();
         f.img_size = img->img.size();
 
@@ -141,8 +141,8 @@ public:
 		}
 
         MatchesInfo minfo;
-        minfo.src_img_idx = GetImageId(a);
-        minfo.dst_img_idx = GetImageId(b);
+        minfo.src_img_idx = (int)GetImageId(a);
+        minfo.dst_img_idx = (int)GetImageId(b);
         minfo.matches = goodMatches;
 
 		info->homography = findHomography(aLocalFeatures, bLocalFeatures, CV_RANSAC, 3, minfo.inliers_mask);

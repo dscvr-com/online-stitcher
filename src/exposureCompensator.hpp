@@ -105,11 +105,11 @@ namespace optonaut {
                 vector<int> invmap;
                 
                 for(auto &adj : relations.GetEdges()) {
-                    remap[adj.first] = invmap.size();
-                    invmap.push_back(adj.first);
+                    remap[adj.first] = (int)invmap.size();
+                    invmap.push_back((int)adj.first);
                 }
 
-                size_t n = invmap.size();
+                int n = (int)invmap.size();
                 
                 double alpha = 0.1;
                 double beta = 10;
@@ -129,8 +129,8 @@ namespace optonaut {
                 Mat b = Mat::zeros(n, 1, CV_64F);
                 Mat gains = Mat(n, 1, CV_64F);
 
-                for(size_t i = 0; i < n; ++i) {
-                    for(size_t j = 0; j < n; ++j) {
+                for(int i = 0; i < n; ++i) {
+                    for(int j = 0; j < n; ++j) {
                         b.at<double>(i, 0) += beta * N.at<double>(i, j);
                         A.at<double>(i, i) += beta * N.at<double>(i, j);
                         if (j == i) continue;
@@ -143,7 +143,7 @@ namespace optonaut {
                 
                 assert(invmap.size() == n);
 
-                for (size_t i = 0; i < n; ++i) {
+                for (int i = 0; i < n; ++i) {
                     this->gains[invmap[i]] = gains.at<double>(i, 0);
                     //cout << invmap[i] << " gain: " << gains.at<double>(i, 0) << endl;
                 }

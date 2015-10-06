@@ -55,7 +55,12 @@ namespace optonaut {
         }
 
         void Dispose() {
-
+            if(async) {
+                assert(!worker->IsRunning());
+                worker = NULL;
+            }
+            
+            rings.clear();
         }
         
         vector<vector<ImageP>> SplitIntoRings(vector<ImageP> &imgs) const {
@@ -65,8 +70,13 @@ namespace optonaut {
         ImageP GetClosestKeyframe(const Mat &search) {
 
             int ring = graph.FindAssociatedRing(search);
+            
+            if(ring == -1)
+                return ImageP(NULL);
 
-            size_t target = graph.GetParentRing(ring);
+            int target = graph.GetParentRing(ring);
+            
+            assert(target != -1);
                 
             ImageP closest = NULL;
             double minDist = 100;
@@ -192,7 +202,6 @@ namespace optonaut {
         void Finish() {
             if(async) {
                 worker->Dispose();
-                worker = NULL;
             }
             rings.clear();
         }

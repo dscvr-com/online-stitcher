@@ -191,6 +191,7 @@ namespace optonaut {
         }
 
         void Dispose() {
+            cout << "Pipeline Dispose called by " << std::this_thread::get_id();
             aligner->Dispose();
         }
         
@@ -235,6 +236,8 @@ namespace optonaut {
         
         void Push(ImageP image) {
 
+            //cout << "Pipeline Push called by " << std::this_thread::get_id();
+            
             if(isFinished) {
                 cout << "Push after finish warning - this could be a racing condition" << endl;
                 return;
@@ -299,7 +302,7 @@ namespace optonaut {
                         firstOfRing = currentBest;
                     } else {
                         if(firstOfRing.closestPoint.ringId != currentBest.closestPoint.ringId) { 
-                            Stitch(previous, firstOfRing, true);
+                            Stitch(previous, firstOfRing);
                             firstOfRing = currentBest;
                             previous.isValid = false; //We reached a new ring. Invalidate prev.
                         }
@@ -317,14 +320,15 @@ namespace optonaut {
             if(recordedImages == imagesToRecord) {
                 cout << "Finished" << endl;
                 isFinished = true;
-                Stitch(currentBest, firstOfRing, true);
+                Stitch(previous, currentBest);
+                Stitch(currentBest, firstOfRing);
             }
         }
 
         void Finish() {
+            cout << "Pipeline Finish called by " << std::this_thread::get_id();
             isFinished = true;
             if(previous.isValid) {
-                Stitch(previous, currentBest);
                 exposure.FindGains();
             }
             
