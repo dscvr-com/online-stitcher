@@ -48,22 +48,10 @@ namespace optonaut {
         }
 
         void LoadFromDataRef(bool copy = true);
-    
-        void SaveToDisk();
-
-        void LoadFromDisk(bool removeFile = true);
-
-        static void ClearAllFromDisk();
 
         void Unload() {
             img.release();
         }
-         
-        static std::string GetFilePath(size_t id);
-
-        static void LoadFromDisk(size_t id, cv::Mat &img, int loadFlags = CV_LOAD_IMAGE_COLOR);
-        
-        static void SaveToDisk(size_t id, cv::Mat &img);
 	};
     
     typedef std::shared_ptr<Image> ImageP;

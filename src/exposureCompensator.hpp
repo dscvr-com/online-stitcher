@@ -25,7 +25,19 @@ namespace optonaut {
             map<size_t, double> gains;
         public:
             ExposureCompensator() { }
+            ExposureCompensator(ExposureCompensator &ref) {
+                SetGains(ref.GetGains());
+            }
+        
+            void SetGains(map<size_t, double> gains)
+            {
+                this->gains = gains;
+            }
 
+            map<size_t, double>& GetGains() {
+                return gains;
+            }
+        
             void Register(ImageP a, ImageP b) {
                 Mat ga, gb;
                 GetOverlappingRegion(a, b, a->img, b->img, ga, gb);

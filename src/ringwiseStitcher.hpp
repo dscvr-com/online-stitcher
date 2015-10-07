@@ -17,14 +17,22 @@ namespace optonaut {
             bool resizeOutput = true;
             int w = 4096;
             int h = 4096;
-            std::vector<int> dyCache; 
+            std::vector<int> dyCache;
+            std::vector<std::vector<ImageP>> rings;
+            ExposureCompensator exposure;
+            double ev;
             
             void AdjustCorners(std::vector<StitchingResultP> &rings, std::vector<cv::Point> &corners);
+            void Checkpoint();
         public:
             RingwiseStitcher(int width, int height) : resizeOutput(true), w(width), h(height) { }
             RingwiseStitcher() : resizeOutput(false) {  }
-
-            StitchingResultP Stitch(std::vector<std::vector<ImageP>> &rings, ExposureCompensator &exposure, double ev = 0, bool debug = false, std::string debugName = ""); 
+        
+            void InitializeForStitching(std::vector<std::vector<ImageP>> &rings, ExposureCompensator &exposure, double ev = 0);
+            bool HasCheckpoint();
+            void InitializeFromCheckpoint();
+            void RemoveCheckpoint();
+            StitchingResultP Stitch(bool debug = false, std::string debugName = "");
 
     };
 }

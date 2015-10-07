@@ -7,6 +7,7 @@
 #include "recorderGraphGenerator.hpp"
 #include "recorderController.hpp"
 #include "ringwiseStitcher.hpp"
+#include "checkpointStore.hpp"
 
 #include "static_timer.hpp"
 
@@ -29,6 +30,9 @@ namespace optonaut {
         SelectionInfo previous;
         SelectionInfo currentBest;
         SelectionInfo firstOfRing;
+        
+        CheckpointStore leftStore;
+        CheckpointStore rightStore;
 
         ExposureCompensator exposure;
         
@@ -75,7 +79,8 @@ namespace optonaut {
             vector<Mat> hdrs;
             
             for(size_t i = 0; i < evs.size(); i++) {
-                auto lres = stitcher.Stitch(rings, exposure, evs[i], debug, debugName);
+                stitcher.InitializeForStitching(rings, exposure, evs[i]);
+                auto lres = stitcher.Stitch(debug, debugName);
                 if(i == 0) {
                     res = lres;
                 }
@@ -105,7 +110,7 @@ namespace optonaut {
         static bool debug;
         static const int stretch = 10;
         
-        Pipeline(Mat base, Mat zeroWithoutBase, Mat intrinsics, int graphConfiguration = RecorderGraph::ModeAll, bool isAsync = true) :
+        Pipeline(Mat base, Mat zeroWithoutBase, Mat intrinsics, string storePath, int graphConfiguration = RecorderGraph::ModeAll, bool isAsync = true) :
             base(base),
             stereoConverter(),
             previewImageAvailable(false),
@@ -116,7 +121,10 @@ namespace optonaut {
             recorderGraph(generator.Generate(intrinsics, graphConfiguration)),
             controller(recorderGraph),
             imagesToRecord(recorderGraph.Size()),
-            recordedImages(0)
+            recordedImages(0),
+            stitcher(4096, 4096),
+            leftStore(storePath + "left/"),
+            rightStore(storePath + "right/"),
         {
             baseInv = base.inv();
             zero = zeroWithoutBase;
@@ -128,8 +136,6 @@ namespace optonaut {
             cout << "Zero: " << zero << endl;
         
             aligner = shared_ptr<RingwiseStreamAligner>(new RingwiseStreamAligner(recorderGraph, exposure, isAsync));
-
-            stitcher = RingwiseStitcher(4096, 4096);
         }
         
         void SetPreviewImageEnabled(bool enabled) {
@@ -223,8 +229,12 @@ namespace optonaut {
             if(!discard) {
                 CapturePreviewImage(stereo.A);
                 
-                stereo.A->SaveToDisk();
-                stereo.B->SaveToDisk();
+                leftStore.SaveRawImage(stereo.A);
+                rightStore.SaveRawImage(stereo.B);
+                
+                stereo.A->Unload();
+                stereo.B->Unload();
+                
                 PushLeft(stereo.A);
                 PushRight(stereo.B);
             }

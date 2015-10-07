@@ -32,8 +32,8 @@ namespace optonaut {
                 const int warp = MOTION_TRANSLATION;
                 Mat affine = Mat::eye(2, 3, CV_32F);
 
-                const int iterations = 1000;
-                const double eps = 1e-5;
+                const int iterations = 100;
+                const double eps = 1e-3;
 
                 int dy = corners[i - 1].y - corners[i].y;
                 affine.at<float>(1, 2) = dy;
@@ -57,8 +57,38 @@ namespace optonaut {
             rings[i]->corner = corners[i];
         }
     }
+    
+    void RingwiseStitcher::InitializeForStitching(std::vector<std::vector<ImageP>> &rings, ExposureCompensator &exposure, double ev) {
+        
+        assert(!HasCheckpoint());
+        
+        this->rings = rings;
+        this->exposure.SetGains(exposure.GetGains());
+        this->ev = ev;
+        this->dyCache = vector<int>();
+        
+        Checkpoint();
+    }
+    
+    bool RingwiseStitcher::HasCheckpoint() {
+        return false;
+    }
+    
+    void RingwiseStitcher::Checkpoint() {
+        
+    }
+    
+    void RingwiseStitcher::InitializeFromCheckpoint(){
+        assert(HasCheckpoint());
+    }
+    
+    void RingwiseStitcher::RemoveCheckpoint() {
+        assert(HasCheckpoint());
+    }
+    
+    StitchingResultP Stitch(bool debug = false, std::string debugName = "");
 
-    StitchingResultP RingwiseStitcher::Stitch(vector<vector<ImageP>> &rings, ExposureCompensator &exposure, double ev, bool debug, string debugName) {
+    StitchingResultP RingwiseStitcher::Stitch(bool debug, string debugName) {
 
         STimer::Tick("StitchStart");
         RStitcher stitcher;

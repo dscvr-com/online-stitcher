@@ -15,7 +15,8 @@ namespace optonaut {
     int IdFromFileName(const std::string &in);
 	bool StringEndsWith(const std::string& a, const std::string& b);
 
-	ImageP ImageFromFile(std::string path);
+    ImageP ImageFromFile(std::string path, bool shallow = true);
+    void ImageToFile(ImageP image, const std::string &path) {
  	bool FileExists(const std::string &fileName);
 
 	template <typename T>

@@ -4,7 +4,6 @@
 #include <opencv2/opencv.hpp>
 #include <fstream>
 
-#include "lib/tinyxml2/tinyxml2.h"
 #include "lib/rapidjson/document.h"
 #include "lib/rapidjson/filereadstream.h"
 #include "support.hpp"
@@ -12,7 +11,6 @@
 
 using namespace cv;
 using namespace std;
-using namespace tinyxml2;
 using namespace rapidjson;
 
 namespace optonaut {
@@ -31,34 +29,15 @@ namespace optonaut {
         }
     }
 
-	int MatrixFromXml(XMLElement* node, Mat &out) {
-		int size;
-		istringstream(node->Attribute("size")) >> size;
-
-		assert(size == 9 || size == 16);
-		int dim = size == 9 ? 3 : 4;
-
-		out = Mat(dim, dim, CV_64F);
-
-		for(int i = 0; i < dim; i++) {
-			for(int j = 0; j < dim; j++) {
-				ostringstream name;
-				name << "m" << i << j;
-				istringstream text(node->FirstChildElement(name.str().c_str())->GetText());
-				text >> out.at<double>(i, j);
-			}
-		}
-
-		return dim;
-	}
-
-	int MatrixFromJson(Value& matrix, Mat &out) {
+	int MatrixFromJson(const Value& matrix, Mat &out) {
 		assert(matrix.IsArray());
 
 		int size = matrix.Size();
 
-		assert(size == 9 || size == 16);
-		int dim = size == 9 ? 3 : 4;
+        int dim = sqrt(size);
+        
+        //Check for quadratical matrix.
+        assert(size == dim * dim);
 
 		out = Mat(dim, dim, CV_64F);
 
@@ -70,63 +49,119 @@ namespace optonaut {
 
 		return dim;
 	}
+    
+    int MatrixToJson(const Mat &in, Value& out, Document::AllocatorType& allocator) {
+        assert(in.cols == in.rows); //Only square matrices supported.
+        
+        int dim = in.cols;
+        
+        for(int i = 0; i < dim; i++) {
+            for(int j = 0; j < dim; j++) {
+                out.PushBack(in.at<double>(i, j), allocator);
+            }
+        }
+        
+        return dim;
+    }
+    
+    char buffer[65536];
+    FILE* fileRef = NULL;
+    
+    void OpenJsonDocument(Document &doc, const string &path, const string &flags) {
+        assert(fileRef == NULL);
+        FILE* fileRef = fopen(path.c_str(), flags.c_str());
+        if(fileRef == NULL) {
+            cout << "Unable to open data file " << path << endl;
+            assert(false);
+        }
+        
+        FileReadStream file(fileRef, buffer, sizeof(buffer));
+        doc.ParseStream<0>(file);
+    }
+    
+    void CloseJsonDocument() {
+        assert(fileRef != NULL);
+        fclose(fileRef);
+        fileRef = NULL;
+    }
 
- 	void ParseXml(string path, ImageP result) {
-		XMLDocument doc;
-		doc.LoadFile(path.c_str());
-
-		XMLElement* root = doc.FirstChildElement("imageParameters");
-
-		result->id = ParseInt(root->Attribute("id"));
-		assert(MatrixFromXml(root->FirstChildElement("intrinsics")->FirstChildElement("matrix"), result->intrinsics) == 3);
-		assert(MatrixFromXml(root->FirstChildElement("extrinsics")->FirstChildElement("matrix"), result->originalExtrinsics) == 4);
- 	}
-
- 	void ParseJson(string path, ImageP result) {
-		FILE* fileRef = fopen(path.c_str(), "rb");
-		assert(fileRef != NULL);
-		char buffer[65536];
-		FileReadStream file(fileRef, buffer, sizeof(buffer));
-		Document doc;
-		doc.ParseStream<0>(file);
-		
+ 	void ParseImageInfoFile(const string &path, ImageP result) {
+        Document doc;
+        
+        OpenJsonDocument(doc, path, "rb");
+        
 		result->id = doc["id"].GetInt();
 		assert(MatrixFromJson(doc["intrinsics"], result->intrinsics) == 3);
-		assert(MatrixFromJson(doc["extrinsics"], result->originalExtrinsics) == 4);
+        if(doc.HasMember("originalExtrinsics")) {
+            assert(MatrixFromJson(doc["originalExtrinsics"],
+                                  result->originalExtrinsics) == 4);
+            assert(MatrixFromJson(doc["adjustedExtrinsics"],
+                                  result->adjustedExtrinsics) == 4);
+        } else {
+            assert(MatrixFromJson(doc["extrinsics"], result->adjustedExtrinsics) == 4);
+        }
 		
-        fclose(fileRef);
+        CloseJsonDocument();
  	}
+    
+    void WriteImageInfoFile(const string &path, ImageP result) {
+        Document doc;
+        Document::AllocatorType &allocator = doc.GetAllocator();
+        
+        OpenJsonDocument(doc, path, "wx");
+        
+        doc.AddMember("id", result->id, allocator);
+        MatrixToJson(result->intrinsics,
+                     doc.AddMember("intrinsics", kArrayType, allocator),
+                     allocator);
+        MatrixToJson(result->adjustedExtrinsics,
+                     doc.AddMember("adjustedExtrinsics", kArrayType, allocator),
+                     allocator);
+        MatrixToJson(result->originalExtrinsics,
+                     doc.AddMember("originalExtrinsics", kArrayType, allocator),
+                     allocator);
+        
+        CloseJsonDocument();
+    }
 
  	bool FileExists(const string &fileName)
 	{
 	    std::ifstream infile(fileName);
 	    return infile.good();
 	}
+    
+    string GetDataFilePath(const string &imagePath) {
+        assert(StringEndsWith(imagePath, ".jpg") || StringEndsWith(imagePath, ".bmp"));
+        
+        string pathWithoutExtensions = imagePath.substr(0, imagePath.length() - 4);
+        string jsonPath = pathWithoutExtensions + ".json";
+        
+        return jsonPath;
+    }
+    
+    void ImageToFile(ImageP image, const string &path) {
+        string jsonPath = GetDataFilePath(path);
+        
+        WriteImageInfoFile(jsonPath, image);
+        
+        imwrite(path, image->img);
+    }
 
-	ImageP ImageFromFile(string path) {
-		assert(StringEndsWith(path, "jpg") || StringEndsWith(path, "JPG"));
+    ImageP ImageFromFile(const string &path, bool shallow) {
+        string jsonPath = GetDataFilePath(path);
 		
 		ImageP result(new Image());
-		result->img = imread(path);
-
+        
+        if(!shallow) {
+            result->img = imread(path);
+        }
 		result->source = path;
 
-		string pathWithoutExtensions = path.substr(0, path.length() - 4);
-		string xmlPath = pathWithoutExtensions + ".xml";
-		string jsonPath = pathWithoutExtensions + ".json";
-
-		if(FileExists(xmlPath)) {
-			ParseXml(xmlPath, result);
-		} else if(FileExists(jsonPath)) {
-			ParseJson(jsonPath, result);
-		} else {
-			cout << "Unable to open parameter file for " << path << endl;
-			assert(false);
-		}
+        ParseImageInfoFile(jsonPath, result);
 
 		return result;
 	}
-
+    
 	void BufferFromBinFile(unsigned char buf[], size_t len, string file) {
 
 	    ifstream input(file, std::ios::binary);
