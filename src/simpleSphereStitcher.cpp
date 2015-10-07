@@ -8,7 +8,7 @@
 #include "simpleSphereStitcher.hpp"
 #include "support.hpp"
 #include "simpleSeamer.hpp"
-#include "thresholdSeamer.hpp"
+#include "checkpointStore.hpp"
 
 using namespace std;
 using namespace cv;
@@ -58,8 +58,10 @@ StitchingResultP RStitcher::Stitch(const std::vector<ImageP> &in, ExposureCompen
         
         //Camera
         ImageP img = in[i];
-        if(!img->IsLoaded())
-            img->LoadFromDisk(false);
+        if(!img->IsLoaded()) {
+            store.LoadRawImageData(img);
+        }
+        
         cv::detail::CameraParams camera;
         From4DoubleTo3Float(img->adjustedExtrinsics, camera.R);
         Mat K; 
@@ -86,6 +88,7 @@ StitchingResultP RStitcher::Stitch(const std::vector<ImageP> &in, ExposureCompen
         warpedMask(Rect(0, 0, 1, warpedMask.rows)).setTo(Scalar::all(0));
         warpedMask(Rect(warpedMask.cols - 1, 0, 1, warpedMask.rows)).setTo(Scalar::all(0));
 
+        
         Image::SaveToDisk(i + maskOffset, warpedMask);
         warpedMask.release();
         Image::SaveToDisk(i + imageOffset, warpedImage);

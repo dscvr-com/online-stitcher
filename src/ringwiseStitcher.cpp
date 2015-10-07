@@ -91,7 +91,7 @@ namespace optonaut {
     StitchingResultP RingwiseStitcher::Stitch(bool debug, string debugName) {
 
         STimer::Tick("StitchStart");
-        RStitcher stitcher;
+        RStitcher stitcher(store);
 
         vector<StitchingResultP> stitchedRings;
         vector<cv::Size> sizes;

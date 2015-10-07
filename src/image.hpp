@@ -40,8 +40,8 @@ namespace optonaut {
 		std::string source;
         double vtag;
 
-        Image()  : img(0, 0, CV_8UC3), originalExtrinsics(4, 4, CV_64F), adjustedExtrinsics(4, 4, CV_64F), intrinsics(3, 3, CV_64F), source("Unknown"), vtag(0) {
-        };
+        Image() : img(0, 0, CV_8UC3), originalExtrinsics(4, 4, CV_64F), adjustedExtrinsics(4, 4, CV_64F), intrinsics(3, 3, CV_64F), source("Unknown"), vtag(0) {
+        }
 
         bool IsLoaded() {
             return img.cols != 0 && img.rows != 0;

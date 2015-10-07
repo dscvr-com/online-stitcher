@@ -7,6 +7,7 @@
 #include "support.hpp"
 #include "simpleSphereStitcher.hpp"
 #include "exposureCompensator.hpp"
+#include "checkpointStore.hpp"
 
 #ifndef OPTONAUT_RINGWISE_STITCHER_HEADER
 #define OPTONAUT_RINGWISE_STITCHER_HEADER
@@ -20,13 +21,14 @@ namespace optonaut {
             std::vector<int> dyCache;
             std::vector<std::vector<ImageP>> rings;
             ExposureCompensator exposure;
+            CheckpointStore &store;
             double ev;
             
             void AdjustCorners(std::vector<StitchingResultP> &rings, std::vector<cv::Point> &corners);
             void Checkpoint();
         public:
-            RingwiseStitcher(int width, int height) : resizeOutput(true), w(width), h(height) { }
-            RingwiseStitcher() : resizeOutput(false) {  }
+            RingwiseStitcher(int width, int height, CheckpointStore &store) : resizeOutput(true), w(width), h(height), store(store) { }
+            RingwiseStitcher(CheckpointStore &store) : resizeOutput(false), store(store) {  }
         
             void InitializeForStitching(std::vector<std::vector<ImageP>> &rings, ExposureCompensator &exposure, double ev = 0);
             bool HasCheckpoint();

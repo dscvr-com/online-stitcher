@@ -34,12 +34,16 @@ namespace optonaut {
             c++;
         }
         
+        void LoadRawImageData(ImageP image) {
+            
+        }
+        
         vector<ImageP> LoadShallowRawImages() {
             vector<ImageP> images;
             
             DIR *dir;
             struct dirent *ent;
-            if ((dir = opendir (rawImagesPath)) != NULL) {
+            if ((dir = opendir (rawImagesPath.c_str())) != NULL) {
                 while ((ent = readdir (dir)) != NULL) {
                     string name = ent->d_name;
                     

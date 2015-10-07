@@ -4,7 +4,6 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
 
-#include "lib/tinyxml2/tinyxml2.h"
 #include "image.hpp"
 
 #ifndef OPTONAUT_IO_HEADER
@@ -16,7 +15,7 @@ namespace optonaut {
 	bool StringEndsWith(const std::string& a, const std::string& b);
 
     ImageP ImageFromFile(std::string path, bool shallow = true);
-    void ImageToFile(ImageP image, const std::string &path) {
+    void ImageToFile(ImageP image, const std::string &path);
  	bool FileExists(const std::string &fileName);
 
 	template <typename T>

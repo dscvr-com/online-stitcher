@@ -124,7 +124,7 @@ namespace optonaut {
             recordedImages(0),
             stitcher(4096, 4096),
             leftStore(storePath + "left/"),
-            rightStore(storePath + "right/"),
+            rightStore(storePath + "right/")
         {
             baseInv = base.inv();
             zero = zeroWithoutBase;
