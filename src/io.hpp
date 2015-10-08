@@ -5,6 +5,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "image.hpp"
+#include "inputImage.hpp"
 
 #ifndef OPTONAUT_IO_HEADER
 #define OPTONAUT_IO_HEADER
@@ -14,8 +15,8 @@ namespace optonaut {
     int IdFromFileName(const std::string &in);
 	bool StringEndsWith(const std::string& a, const std::string& b);
 
-    ImageP ImageFromFile(std::string path, bool shallow = true);
-    void ImageToFile(ImageP image, const std::string &path);
+    InputImageP InputImageFromFile(const std::string &path, bool shallow = true);
+    void InputImageToFile(const InputImageP image, const std::string &path);
  	bool FileExists(const std::string &fileName);
 
 	template <typename T>

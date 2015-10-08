@@ -15,7 +15,7 @@ using namespace cv::detail;
 
 namespace optonaut {
     
-void RStitcher::PrepareMatrices(const vector<ImageP> &r) {
+void RStitcher::PrepareMatrices(const vector<InputImageP> &r) {
 
     //Orient around first image (Correct orientation from start.)
     vector<Mat> matrices(r.size());
@@ -32,7 +32,7 @@ void RStitcher::PrepareMatrices(const vector<ImageP> &r) {
     }
 }
 
-StitchingResultP RStitcher::Stitch(const std::vector<ImageP> &in, ExposureCompensator &exposure, double ev, bool debug) {
+StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, ExposureCompensator &exposure, double ev, bool debug, const std::string&) {
 
     //const int maskOffset = 20000;
     //const int imageOffset = 30000;
@@ -55,9 +55,9 @@ StitchingResultP RStitcher::Stitch(const std::vector<ImageP> &in, ExposureCompen
     for(size_t i = 0; i < n; i++) {
         
         //Camera
-        ImageP img = in[i];
-        if(!img->IsLoaded()) {
-            store.LoadRawImageData(img);
+        InputImageP img = in[i];
+        if(!img->image.IsLoaded()) {
+            img->image.Load();
         }
         
         cv::detail::CameraParams camera;
@@ -65,20 +65,20 @@ StitchingResultP RStitcher::Stitch(const std::vector<ImageP> &in, ExposureCompen
         Mat K; 
         Mat scaledIntrinsics;
 
-        ScaleIntrinsicsToImage(img->intrinsics, img->img, scaledIntrinsics, debug ? 8 : 1);
+        ScaleIntrinsicsToImage(img->intrinsics, img->image, scaledIntrinsics, debug ? 8 : 1);
         From3DoubleTo3Float(scaledIntrinsics, K);
 
         //Mask
-        Mat mask(img->img.rows, img->img.cols, CV_8U);
+        Mat mask(img->image.rows, img->image.cols, CV_8U);
         mask.setTo(Scalar::all(255));
 
         //Warping
         Mat warpedMask;
         Mat warpedImage;
 
-        corners[i] = warper->warp(img->img, K, camera.R, INTER_LINEAR, BORDER_CONSTANT, warpedImage);
+        corners[i] = warper->warp(img->image.data, K, camera.R, INTER_LINEAR, BORDER_CONSTANT, warpedImage);
         if(!debug)
-            img->Unload();
+            img->image.Unload();
         warper->warp(mask, K, camera.R, INTER_NEAREST, BORDER_CONSTANT, warpedMask);
         mask.release();
         warpedSizes[i] = warpedImage.size();
@@ -127,7 +127,7 @@ StitchingResultP RStitcher::Stitch(const std::vector<ImageP> &in, ExposureCompen
     cout << "Start blending" << endl;
 
 	StitchingResultP res(new StitchingResult());
-	blender->blend(res->image, res->mask);
+	blender->blend(res->image.data, res->mask.data);
 
     blender.release();
 
@@ -142,7 +142,7 @@ StitchingResultP RStitcher::Stitch(const std::vector<ImageP> &in, ExposureCompen
         res->corner.y = min(res->corner.y, corners[i].y);
     }
     
-    res->image.convertTo(res->image, CV_8U);
+    res->image.data.convertTo(res->image.data, CV_8U);
 
 	return res;
 }

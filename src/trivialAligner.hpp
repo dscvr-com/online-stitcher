@@ -20,7 +20,7 @@ namespace optonaut {
             return false;
         }
         
-        void Push(ImageP image) {
+        void Push(InputImageP image) {
             current = image->originalExtrinsics.clone();
         }
         
@@ -32,7 +32,7 @@ namespace optonaut {
             return current;
         }
         
-        void Postprocess(vector<ImageP>) const { };
+        void Postprocess(vector<InputImageP>) const { };
         void Finish() { };
     };
 }

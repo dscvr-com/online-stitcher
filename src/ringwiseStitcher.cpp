@@ -23,8 +23,8 @@ namespace optonaut {
         //dyCache. 
         if(dyCache.size() == 0) {
             for(size_t i = 1; i < rings.size(); i++) {
-                Mat &a = rings[i - 1]->image;
-                Mat &b = rings[i]->image;
+                const Mat &a = rings[i - 1]->image.data;
+                const Mat &b = rings[i]->image.data;
                 Mat ca, cb;
                 
                 cvtColor(a, ca, CV_BGR2GRAY);
@@ -59,7 +59,7 @@ namespace optonaut {
         }
     }
     
-    void RingwiseStitcher::InitializeForStitching(std::vector<std::vector<ImageP>> &rings, ExposureCompensator &exposure, double ev) {
+    void RingwiseStitcher::InitializeForStitching(std::vector<std::vector<InputImageP>> &rings, ExposureCompensator &exposure, double ev) {
         
         assert(!HasCheckpoint());
         
@@ -89,12 +89,12 @@ namespace optonaut {
     
     StitchingResultP Stitch(bool debug = false, std::string debugName = "");
     
-    StitchingResultP RingwiseStitcher::StitchRing(const vector<ImageP> &ring, bool debug, const string &debugName) {
+    StitchingResultP RingwiseStitcher::StitchRing(const vector<InputImageP> &ring, bool debug, const string &debugName) {
         
         //TODO: Do not stitch if there is a file available
         RStitcher stitcher(store);
         
-        return stitcher.Stitch(ring, exposure, ev, debug);
+        return stitcher.Stitch(ring, exposure, ev, debug, debugName);
     }
 
     StitchingResultP RingwiseStitcher::Stitch(bool debug, const string &debugName) {
@@ -128,7 +128,7 @@ namespace optonaut {
 
             if(debugName != "") {
 
-                imwrite("dbg/ring_" + debugName + ToString(i) + "_ev_" + ToString(ev) + ".jpg",  res->image); 
+                imwrite("dbg/ring_" + debugName + ToString(i) + "_ev_" + ToString(ev) + ".jpg",  res->image.data); 
 
             }
             STimer::Tick("Ring Finished");
@@ -144,29 +144,29 @@ namespace optonaut {
         for(size_t i = 0; i < stitchedRings.size(); i++) {
             auto res = stitchedRings[i];
             Mat warpedImageAsShort;
-            res->image.convertTo(warpedImageAsShort, CV_16S);
+            res->image.data.convertTo(warpedImageAsShort, CV_16S);
             assert(res->mask.type() == CV_8U);
 
-            res->mask(Rect(0, 0, res->mask.cols, 1)).setTo(Scalar::all(0));
-            res->mask(Rect(0, res->mask.rows - 1, res->mask.cols, 1)).setTo(Scalar::all(0));
+            res->mask.data(Rect(0, 0, res->mask.cols, 1)).setTo(Scalar::all(0));
+            res->mask.data(Rect(0, res->mask.rows - 1, res->mask.cols, 1)).setTo(Scalar::all(0));
 
-            blender->feed(warpedImageAsShort, res->mask, corners[i]);
+            blender->feed(warpedImageAsShort, res->mask.data, corners[i]);
         }
 
         stitchedRings.clear();
         STimer::Tick("FinalStitching Finished");
 
         StitchingResultP res(new StitchingResult());
-        blender->blend(res->image, res->mask);
+        blender->blend(res->image.data, res->mask.data);
 
         blender.release();
         
-        res->image.convertTo(res->image, CV_8U);
+        res->image.data.convertTo(res->image.data, CV_8U);
         //Opencv somehow messes up the first few collumn while blending.
         //Throw it away. 
         const int trim = 6;
-        res->image = res->image(cv::Rect(trim, 0, res->image.cols - trim * 2, res->image.rows));
-        res->mask = res->mask(cv::Rect(trim, 0, res->mask.cols - trim * 2, res->mask.rows));
+        res->image = Image(res->image.data(cv::Rect(trim, 0, res->image.cols - trim * 2, res->image.rows)));
+        res->mask = Image(res->mask.data(cv::Rect(trim, 0, res->mask.cols - trim * 2, res->mask.rows)));
 
         if(resizeOutput) {
 
@@ -179,19 +179,19 @@ namespace optonaut {
                 Mat canvas(w, h, CV_8UC3);
                 canvas.setTo(Scalar::all(0));
                 Mat resizedImage(w, ih, CV_8UC3);
-                resize(res->image, resizedImage, cv::Size(w, ih));
+                resize(res->image.data, resizedImage, cv::Size(w, ih));
                 resizedImage.copyTo(canvas.rowRange(x, x + ih));
-                res->image = canvas;
+                res->image = Image(canvas);
             }
             if(needMask) {
                 Mat maskCanvas(w, h, CV_8U);
                 maskCanvas.setTo(Scalar::all(0));
                 Mat resizedMask(w, ih, CV_8U);
-                resize(res->mask, resizedMask, cv::Size(w, ih));
+                resize(res->mask.data, resizedMask, cv::Size(w, ih));
                 resizedMask.copyTo(maskCanvas.rowRange(x, x + ih));
-                res->mask = maskCanvas;
+                res->mask = Image(maskCanvas);
             } else {
-                res->mask = Mat(0, 0, CV_8UC1);
+                res->mask = Image(Mat(0, 0, CV_8UC1));
             }
         }
         STimer::Tick("Resize Finished");

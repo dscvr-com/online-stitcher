@@ -64,8 +64,8 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
     Mat k;
     stereo.valid = false;
 
-	assert(a.image->img.cols == b.image->img.cols);
-	assert(a.image->img.rows == b.image->img.rows);
+	assert(a.image->image.cols == b.image->image.cols);
+	assert(a.image->image.rows == b.image->image.rows);
 
 	//cout << "AR: " << a->extrinsics << endl;
 	//cout << "BR: " << b->extrinsics << endl;
@@ -95,8 +95,8 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
 	Mat aIntrinsics;
 	Mat bIntrinsics;
 
-	ScaleIntrinsicsToImage(a.image->intrinsics, a.image->img, aIntrinsics); 
-	ScaleIntrinsicsToImage(b.image->intrinsics, b.image->img, bIntrinsics);
+	ScaleIntrinsicsToImage(a.image->intrinsics, a.image->image, aIntrinsics); 
+	ScaleIntrinsicsToImage(b.image->intrinsics, b.image->image, bIntrinsics);
 
     Mat aOffset;
     From4DoubleTo3Double(a.image->adjustedExtrinsics.inv() * a.closestPoint.extrinsics, aOffset);
@@ -107,18 +107,21 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
 	Mat transA = aIntrinsics * aOffset.inv() * rotN.inv() * aIntrinsics.inv();
 	Mat transB = bIntrinsics * bOffset.inv() * rotN * bIntrinsics.inv();
 
-	Mat resA(a.image->img.rows, a.image->img.cols, CV_32F);
-	Mat resB(b.image->img.rows, b.image->img.cols, CV_32F);
+	Mat resA(a.image->image.rows, a.image->image.cols, CV_32F);
+	Mat resB(b.image->image.rows, b.image->image.cols, CV_32F);
 
 	Mat I = Mat::eye(4, 4, CV_64F);
 	vector<Point2f> cornersA(4);
 	vector<Point2f> cornersB(4);
        
-    GetCorners(cornersA, target, aIntrinsics, a.image->img.cols, a.image->img.rows);
-    GetCorners(cornersB, target, bIntrinsics, b.image->img.cols, a.image->img.rows);
+    GetCorners(cornersA, target, aIntrinsics, a.image->image.cols, a.image->image.rows);
+    GetCorners(cornersB, target, bIntrinsics, b.image->image.cols, a.image->image.rows);
 
-	warpPerspective(a.image->img, resA, transA, resA.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
-	warpPerspective(b.image->img, resB, transB, resB.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
+    assert(a.image->image.IsLoaded());
+    assert(b.image->image.IsLoaded());
+
+	warpPerspective(a.image->image.data, resA, transA, resA.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
+	warpPerspective(b.image->image.data, resB, transB, resB.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
     
     if(debug) {
         for(size_t i = 0; i < cornersA.size(); i++) {
@@ -132,14 +135,14 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
 	Mat rvec(4, 1, CV_64F);
 	ExtractRotationVector(rot, rvec);
 
-    stereo.A->img = resA(CornersToRoi(cornersA));
-    stereo.B->img = resB(CornersToRoi(cornersB));
+    stereo.A->image = Image(resA(CornersToRoi(cornersA)));
+    stereo.B->image = Image(resB(CornersToRoi(cornersB)));
 
 	Mat newKA = Mat::eye(3, 3, CV_64F);
  	newKA.at<double>(0, 0) = aIntrinsics.at<double>(0, 0);
  	newKA.at<double>(1, 1) = aIntrinsics.at<double>(1, 1);
- 	newKA.at<double>(0, 2) = stereo.A->img.cols / 2.0f;
- 	newKA.at<double>(1, 2) = stereo.B->img.rows / 2.0f;
+ 	newKA.at<double>(0, 2) = stereo.A->image.cols / 2.0f;
+ 	newKA.at<double>(1, 2) = stereo.B->image.rows / 2.0f;
 
 	stereo.A->intrinsics = newKA;
 	stereo.A->adjustedExtrinsics = target.roiCenter;
@@ -149,8 +152,8 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
 	Mat newKB = Mat::eye(3, 3, CV_64F);
  	newKB.at<double>(0, 0) = bIntrinsics.at<double>(0, 0);
  	newKB.at<double>(1, 1) = bIntrinsics.at<double>(1, 1);
- 	newKB.at<double>(0, 2) = stereo.B->img.cols / 2.0f;
- 	newKB.at<double>(1, 2) = stereo.B->img.rows / 2.0f;
+ 	newKB.at<double>(0, 2) = stereo.B->image.cols / 2.0f;
+ 	newKB.at<double>(1, 2) = stereo.B->image.rows / 2.0f;
 
 	stereo.B->intrinsics = newKB;
 	stereo.B->adjustedExtrinsics = target.roiCenter;

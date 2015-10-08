@@ -19,7 +19,7 @@ namespace optonaut {
 	class SequenceStreamAligner : public Aligner {
 	private:
 		PairwiseVisualAligner visual;
-		deque<ImageP> previous;
+		deque<InputImageP> previous;
 		deque<Mat> rPrevious;
 		deque<Mat> rSensorPrevious;
 		size_t order;
@@ -36,7 +36,7 @@ namespace optonaut {
             cout << "Stream aligner finished. Sensor: " << sensor << ", Combined: " << combined << endl;
         }
 
-		void Push(ImageP next) {
+		void Push(InputImageP next) {
 
             if(next->id % 20 == 0)
                 cout << "Stream aligner receiving: " << next->id << endl;
@@ -152,7 +152,7 @@ namespace optonaut {
 			return rPrevious.back();
 		}
         
-        void Postprocess(vector<ImageP>) const { };
+        void Postprocess(vector<InputImageP>) const { };
         void Finish() { };
 	};
 }

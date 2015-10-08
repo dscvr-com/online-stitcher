@@ -38,9 +38,9 @@ namespace optonaut {
                 return gains;
             }
         
-            void Register(ImageP a, ImageP b) {
+            void Register(InputImageP a, InputImageP b) {
                 Mat ga, gb;
-                GetOverlappingRegion(a, b, a->img, b->img, ga, gb);
+                GetOverlappingRegion(a, b, a->image, b->image, ga, gb);
                 
                 if(ga.cols < 1 || ga.rows < 1) {
                     return;
@@ -153,7 +153,7 @@ namespace optonaut {
 
                 solve(A, b, gains);
                 
-                assert(invmap.size() == n);
+                assert((int)invmap.size() == n);
 
                 for (int i = 0; i < n; ++i) {
                     this->gains[invmap[i]] = gains.at<double>(i, 0);

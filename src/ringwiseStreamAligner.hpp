@@ -22,11 +22,11 @@ using namespace std;
 namespace optonaut {
 	class RingwiseStreamAligner : public Aligner {
 	private:
-        typedef AsyncStream<ImageP, int> Worker; 
+        typedef AsyncStream<InputImageP, int> Worker; 
         RecorderGraph &graph;
 		PairwiseCorrelator visual;
-        vector<vector<ImageP>> rings;
-        ImageP last;
+        vector<vector<InputImageP>> rings;
+        InputImageP last;
         Mat compassDrift;
         shared_ptr<Worker> worker;
        
@@ -34,7 +34,7 @@ namespace optonaut {
 
         static constexpr double keyframeThreshold = M_PI / 64; 
         
-        deque<ImageP> pasts;
+        deque<InputImageP> pasts;
         deque<double> sangles;
 
         const bool async;
@@ -63,22 +63,22 @@ namespace optonaut {
             rings.clear();
         }
         
-        vector<vector<ImageP>> SplitIntoRings(vector<ImageP> &imgs) const {
+        vector<vector<InputImageP>> SplitIntoRings(vector<InputImageP> &imgs) const {
             return SplitIntoRings(imgs, graph);
         }
 
-        ImageP GetClosestKeyframe(const Mat &search) {
+        InputImageP GetClosestKeyframe(const Mat &search) {
 
             int ring = graph.FindAssociatedRing(search);
             
             if(ring == -1)
-                return ImageP(NULL);
+                return InputImageP(NULL);
 
             int target = graph.GetParentRing(ring);
             
             assert(target != -1);
                 
-            ImageP closest = NULL;
+            InputImageP closest = NULL;
             double minDist = 100;
 
             for(size_t j = 0; j < rings[target].size(); j++) {
@@ -93,9 +93,9 @@ namespace optonaut {
             return closest;
         }
 
-        static vector<vector<ImageP>> SplitIntoRings(vector<ImageP> &imgs, RecorderGraph &graph) {
+        static vector<vector<InputImageP>> SplitIntoRings(vector<InputImageP> &imgs, RecorderGraph &graph) {
             
-            vector<vector<ImageP>> rings(graph.GetRings().size());
+            vector<vector<InputImageP>> rings(graph.GetRings().size());
 
             for(auto img : imgs) {
                 int r = graph.FindAssociatedRing(img->originalExtrinsics);
@@ -107,16 +107,16 @@ namespace optonaut {
             return rings;
         }
 
-        function<int(ImageP)> alignOp = [&] (ImageP next) -> int {
+        function<int(InputImageP)> alignOp = [&] (InputImageP next) -> int {
 
-            ImageP closest = GetClosestKeyframe(next->originalExtrinsics);
+            InputImageP closest = GetClosestKeyframe(next->originalExtrinsics);
             
             if(closest != NULL) {
                 CorrelationDiff corr = visual.Match(next, closest);
                
                 if(corr.valid) { 
                     double dx = corr.offset.x;
-                    double width = next->img.cols;
+                    double width = next->image.cols;
                     
                     //cout << "dx: " << dx << ", width: " << width << endl; 
 
@@ -143,7 +143,7 @@ namespace optonaut {
             return lasty;
         };
 
-        void AddKeyframe(ImageP next) {
+        void AddKeyframe(InputImageP next) {
             int ring = graph.FindAssociatedRing(next->originalExtrinsics);
             
             if(ring == -1)
@@ -155,7 +155,7 @@ namespace optonaut {
 
         }
 
-		void Push(ImageP next) {
+		void Push(InputImageP next) {
             
             last = next;
 
@@ -206,7 +206,7 @@ namespace optonaut {
             rings.clear();
         }
 
-        void Postprocess(vector<ImageP> imgs) const {
+        void Postprocess(vector<InputImageP> imgs) const {
             for(auto img : imgs) {
                 //DrawBar(img->img, img->vtag);
             }

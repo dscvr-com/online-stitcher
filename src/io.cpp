@@ -8,6 +8,7 @@
 #include "lib/rapidjson/filereadstream.h"
 #include "support.hpp"
 #include "image.hpp"
+#include "inputImage.hpp"
 
 using namespace cv;
 using namespace std;
@@ -139,33 +140,30 @@ namespace optonaut {
         return jsonPath;
     }
     
-    void InputImageToFile(ImageP image, const string &path) {
+    void InputImageToFile(InputImageP image, const string &path) {
         string jsonPath = GetDataFilePath(path);
         
-        WriteImageInfoFile(jsonPath, image);
+        WriteInputImageInfoFile(jsonPath, image);
         
-        imwrite(path, image->image->data);
+        imwrite(path, image->image.data);
     }
+    
 
     InputImageP InputImageFromFile(const string &path, bool shallow) {
         string jsonPath = GetDataFilePath(path);
 		
-		ImageP result(new Image());
+		InputImageP result(new InputImage());
         
-		result->image->source = path;
+		result->image.source = path;
         if(!shallow) {
-            LoadImageData(result->image);
+            result->image.Load();
         }
 
-        ParseImageInfoFile(jsonPath, result);
+        ParseInputImageInfoFile(jsonPath, result);
 
 		return result;
 	}
 
-    void LoadImageData(Image &image) {
-        image->data = imread(image.source);
-    }
-    
 	void BufferFromBinFile(unsigned char buf[], size_t len, string file) {
 
 	    ifstream input(file, std::ios::binary);

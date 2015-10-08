@@ -4,6 +4,7 @@
 #include "quat.hpp"
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
+#include "image.hpp"
 
 using namespace cv;
 using namespace std;
@@ -25,7 +26,7 @@ namespace optonaut {
 		return val;
 	}
 
-	void ScaleIntrinsicsToImage(const Mat &intrinsics, const Mat &image, Mat &scaled, double fupscaling) {
+	void ScaleIntrinsicsToImage(const Mat &intrinsics, const Image &image, Mat &scaled, double fupscaling) {
 		assert(MatIs(intrinsics, 3, 3, CV_64F));
 
 		scaled = Mat::zeros(3, 3, CV_64F);

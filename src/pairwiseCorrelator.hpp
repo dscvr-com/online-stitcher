@@ -34,7 +34,7 @@ private:
 public:
     PairwiseCorrelator(ExposureCompensator&) { }
 
-    CorrelationDiff Match(const ImageP a, const ImageP b) {
+    CorrelationDiff Match(const InputImageP a, const InputImageP b) {
 
         cout << "Correlation Invoke" << endl;
 
@@ -45,8 +45,8 @@ public:
 
         Mat ga, gb;
 
-        cvtColor(a->img, ga, CV_BGR2GRAY);
-        cvtColor(b->img, gb, CV_BGR2GRAY); 
+        cvtColor(a->image.data, ga, CV_BGR2GRAY);
+        cvtColor(b->image.data, gb, CV_BGR2GRAY); 
 
         if(useGradient || useReduce) {
             Mat fa, fb;

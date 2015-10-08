@@ -24,8 +24,8 @@ class RStitcher {
 
         RStitcher(CheckpointStore &store) : store(store) { }
 
-		StitchingResultP Stitch(const std::vector<ImageP> &images, ExposureCompensator &exposure, double ev = 0, bool debug = false);
-		static void PrepareMatrices(const std::vector<ImageP> &r);
+		StitchingResultP Stitch(const std::vector<InputImageP> &images, ExposureCompensator &exposure, double ev = 0, bool debug = false, const std::string &debugName = "");
+		static void PrepareMatrices(const std::vector<InputImageP> &r);
 };
 }
 

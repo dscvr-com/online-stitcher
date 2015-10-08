@@ -36,13 +36,12 @@ namespace optonaut {
 
         ExposureCompensator exposure;
         
-        ImageP previewImage;
         MonoStitcher stereoConverter;
         
-        vector<ImageP> lefts;
-        vector<ImageP> rights;
+        vector<InputImageP> lefts;
+        vector<InputImageP> rights;
 
-        vector<ImageP> aligned; 
+        vector<InputImageP> aligned; 
 
         RingwiseStitcher leftStitcher;
         RingwiseStitcher rightStitcher;
@@ -60,11 +59,11 @@ namespace optonaut {
         uint32_t recordedImages;
 
         
-        void PushLeft(ImageP left) {
+        void PushLeft(InputImageP left) {
             lefts.push_back(left);
         }
 
-        void PushRight(ImageP right) {
+        void PushRight(InputImageP right) {
             rights.push_back(right);
         }
 
@@ -74,26 +73,10 @@ namespace optonaut {
             auto rings = RingwiseStreamAligner::SplitIntoRings(images, recorderGraph);
             
             StitchingResultP res;
-            //Change the following line for HDR. 
-            vector<double> evs = { 0.4 };
-            vector<Mat> hdrs;
             
-            for(size_t i = 0; i < evs.size(); i++) {
-                stitcher.InitializeForStitching(rings, exposure, evs[i]);
-                auto lres = stitcher.Stitch(debug, debugName);
-                if(i == 0) {
-                    res = lres;
-                }
-                
-                hdrs.push_back(lres->image);
-            }
-            if(hdrs.size() > 1) {
-                Mat fusion;
-                Ptr<MergeMertens> merge = createMergeMertens();
-                merge->process(hdrs, fusion);
+            stitcher.InitializeForStitching(rings, exposure, 0.4);
+            res = stitcher.Stitch(debug, debugName);
 
-                fusion.convertTo(res->image, CV_8U, 255);
-            }
             return res;
         }
 
@@ -112,7 +95,11 @@ namespace optonaut {
         
         Pipeline(Mat base, Mat zeroWithoutBase, Mat intrinsics, string storePath, int graphConfiguration = RecorderGraph::ModeAll, bool isAsync = true) :
             base(base),
+            leftStore(storePath + "left/"),
+            rightStore(storePath + "right/"),
             stereoConverter(),
+            leftStitcher(4096, 4096, leftStore),
+            rightStitcher(4096, 4096, rightStore),
             previewImageAvailable(false),
             isIdle(false),
             previewEnabled(true),
@@ -121,11 +108,7 @@ namespace optonaut {
             recorderGraph(generator.Generate(intrinsics, graphConfiguration)),
             controller(recorderGraph),
             imagesToRecord(recorderGraph.Size()),
-            recordedImages(0),
-            leftStitcher(4096, 4096, leftStore),
-            rightStitcher(4096, 4096, rightStore),
-            leftStore(storePath + "left/"),
-            rightStore(storePath + "right/")
+            recordedImages(0)
         {
             baseInv = base.inv();
             zero = zeroWithoutBase;
@@ -189,28 +172,11 @@ namespace optonaut {
             return previewImageAvailable; 
         }
 
-        ImageP GetPreviewImage() const {
-            return previewImage;
-        }
-        
-        Mat GetPreviewRotation() {
-            return ConvertFromStitcher(GetPreviewImage()->adjustedExtrinsics);
-        }
-
         void Dispose() {
             cout << "Pipeline Dispose called by " << std::this_thread::get_id();
             aligner->Dispose();
         }
         
-        void CapturePreviewImage(const ImageP img) {
-            if(previewEnabled) {
-                previewImage = ImageP(new Image(*img));
-                previewImage->img = img->img.clone();
-                
-                previewImageAvailable = true;
-            }
-        }
-
         void Stitch(const SelectionInfo &a, const SelectionInfo &b, bool discard = false) {
             cout << "stitching " << a.image->id << " and " << b.image->id << endl;
             assert(a.image->IsLoaded());
@@ -228,13 +194,11 @@ namespace optonaut {
             assert(stereo.valid);
 
             if(!discard) {
-                CapturePreviewImage(stereo.A);
+                leftStore.SaveRectifiedImage(stereo.A);
+                rightStore.SaveRectifiedImage(stereo.B);
                 
-                leftStore.SaveRawImage(stereo.A);
-                rightStore.SaveRawImage(stereo.B);
-                
-                stereo.A->Unload();
-                stereo.B->Unload();
+                stereo.A->image.Unload();
+                stereo.B->image.Unload();
                 
                 PushLeft(stereo.A);
                 PushRight(stereo.B);
@@ -245,7 +209,7 @@ namespace optonaut {
         
         static const bool measureTime = false;
         
-        void Push(ImageP image) {
+        void Push(InputImageP image) {
 
             //cout << "Pipeline Push called by " << std::this_thread::get_id();
             
@@ -319,7 +283,7 @@ namespace optonaut {
                         }
                     }
                     
-                    ImageP closestKeyframe = aligner->GetClosestKeyframe(currentBest.image->adjustedExtrinsics);
+                    InputImageP closestKeyframe = aligner->GetClosestKeyframe(currentBest.image->adjustedExtrinsics);
                     if(closestKeyframe != NULL) {
                         exposure.Register(currentBest.image, closestKeyframe);
                     }

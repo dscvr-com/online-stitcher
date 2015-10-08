@@ -28,29 +28,25 @@ namespace optonaut {
             rawImagesPath(basePath + "raw_images/"),
             c(0) { }
         
-        void SaveRawImage(ImageP image) {
+        void SaveRectifiedImage(InputImageP image) {
             string path = rawImagesPath + ToString(c) + ".bmp";
             
-            ImageToFile(image, path);
+            InputImageToFile(image, path);
+            image->image.source = path;
             
             c++;
         }
         
-        //Loads an a mat for an unloaded ImageP
-        void LoadRawImageData(ImageP image) {
-            
-        }
+        //void SaveRing(StitchingResultP ring, int idx) {
+        //    
+        //}
         
-        void SaveRing(StitchingResultP ring, int idx) {
-            
-        }
+        //void LoadRing(StitchingResultP ring, int idx) {
+        //    
+        //}
         
-        void LoadRing(StitchingResultP ring, int idx) {
-            
-        }
-        
-        vector<ImageP> LoadShallowRawImages() {
-            vector<ImageP> images;
+        vector<InputImageP> LoadShallowRectifiedImages() {
+            vector<InputImageP> images;
             
             DIR *dir;
             struct dirent *ent;
@@ -59,7 +55,7 @@ namespace optonaut {
                     string name = ent->d_name;
                     
                     if(StringEndsWith(name, defaultExtension)) {
-                        images.push_back(ImageFromFile(name));
+                        images.push_back(InputImageFromFile(name));
                     }
                     
                 }
@@ -70,22 +66,6 @@ namespace optonaut {
             }
             
             return images;
-        }
-
-       void LoadFromDisk(size_t id, cv::Mat &img, int loadFlags) {
-            img = imread(GetFilePath(id), loadFlags);
-            assert(img.cols != 0 && img.rows != 0);
-       }
-            
-       void SaveToDisk(size_t id, cv::Mat &img) {
-            imwrite(GetFilePath(id), img); 
-       }
-        
-        void SaveToDisk() {
-            assert(IsLoaded());
-            //cout << "Saving image " << id << ", width: " << img.cols << ", height: " << img.rows << endl;
-            Image::SaveToDisk((size_t)this, img);
-            Unload();
         }
     };
 }

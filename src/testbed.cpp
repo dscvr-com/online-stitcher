@@ -43,9 +43,9 @@ int main(int argc, char* argv[]) {
         
         //Create stack-local ref to mat. Clear image mat.
         //This is to simulate hard memory management.
-        Mat tmpMat = image->img;
+        Mat tmpMat = image->image.data;
         
-        image->img = Mat(0, 0, CV_8UC3);
+        image->image = Image(Mat(0, 0, CV_8UC3));
         
         image->dataRef.data = tmpMat.data;
         image->dataRef.width = tmpMat.cols;
@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
         image->dataRef.colorSpace = colorspace::RGB;
 
         if(i == 0) {
-            pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics, RecorderGraph::ModeTruncated, isAsync));
+            pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics, "tmp/", RecorderGraph::ModeTruncated, isAsync));
 
             Pipeline::debug = true;
         }
@@ -75,15 +75,15 @@ int main(int argc, char* argv[]) {
     if(pipe->HasResults()) {
         {
             auto left = pipe->FinishLeft();
-            imwrite("dbg/left.jpg", left->image);
-            left->image.release();  
-            left->mask.release();  
+            imwrite("dbg/left.jpg", left->image.data);
+            left->image.Unload();  
+            left->mask.Unload();  
         }
         {
             auto right = pipe->FinishRight();
-            imwrite("dbg/right.jpg", right->image);    
-            right->image.release();  
-            right->mask.release();  
+            imwrite("dbg/right.jpg", right->image.data);    
+            right->image.Unload();  
+            right->mask.Unload();  
         }
     } else {
         cout << "No results." << endl;
@@ -93,7 +93,7 @@ int main(int argc, char* argv[]) {
         //auto alignedDebug = pipe->FinishAlignedDebug();
         //imwrite("dbg/aligned-debug.jpg", alignedDebug->image);
         auto aligned = pipe->FinishAligned();
-        imwrite("dbg/aligned.jpg", aligned->image);
+        imwrite("dbg/aligned.jpg", aligned->image.data);
     }
     
     pipe->Dispose();

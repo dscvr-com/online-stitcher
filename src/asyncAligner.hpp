@@ -24,12 +24,12 @@ namespace optonaut {
         
         AsyncAlignerCore(RecorderGraph) : core() { }
 
-        Mat operator()(ImageP in) {
+        Mat operator()(InputImageP in) {
             core.Push(in);
             return core.GetCurrentRotation().clone();
         }
         
-        void Postprocess(vector<ImageP> imgs) const { core.Postprocess(imgs); };
+        void Postprocess(vector<InputImageP> imgs) const { core.Postprocess(imgs); };
         
         void Finish() { core.Finish(); };
     };
@@ -37,7 +37,7 @@ namespace optonaut {
 	class AsyncAligner : public Aligner {
 	private:
         AsyncAlignerCore core;
-        AsyncStream<ImageP, Mat> worker;
+        AsyncStream<InputImageP, Mat> worker;
 
         Mat sensorDiff;
         Mat lastSensor;
@@ -52,7 +52,7 @@ namespace optonaut {
             return worker.Finished();
         }
 
-        void Push(ImageP image) {
+        void Push(InputImageP image) {
             if(!isInitialized) {
                 lastSensor = image->originalExtrinsics;
                 current = image->originalExtrinsics;
@@ -82,7 +82,7 @@ namespace optonaut {
             return current;
         }
         
-        void Postprocess(vector<ImageP> imgs) const { core.Postprocess(imgs); };
+        void Postprocess(vector<InputImageP> imgs) const { core.Postprocess(imgs); };
         void Finish() { core.Finish(); };
     };
 }

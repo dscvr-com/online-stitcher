@@ -18,7 +18,7 @@ namespace optonaut {
 
     struct SelectionInfo {
         SelectionPoint closestPoint;
-        ImageP image;
+        InputImageP image;
         double dist;
         bool isValid;
         
@@ -101,7 +101,7 @@ namespace optonaut {
             isInitialized = true;
         }
         
-        SelectionInfo Push(const ImageP image, bool isIdle) {
+        SelectionInfo Push(const InputImageP image, bool isIdle) {
             assert(isInitialized);
 
             SelectionInfo info;
@@ -183,7 +183,7 @@ namespace optonaut {
             return errorVec;
         }
         
-        const SelectionInfo FindClosestPoint(const ImageP &image, const int ringId = -1) const {
+        const SelectionInfo FindClosestPoint(const InputImageP &image, const int ringId = -1) const {
             assert(isInitialized);
             
             SelectionInfo info;

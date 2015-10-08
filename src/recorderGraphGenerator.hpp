@@ -1,7 +1,7 @@
 #include <opencv2/opencv.hpp>
 #include <math.h>
 
-#include "image.hpp"
+#include "inputImage.hpp"
 #include "support.hpp"
 #include "recorderGraph.hpp"
 
@@ -39,19 +39,19 @@ private:
         res = hRot * vRot;
     }
     
-    ImageP CreateDebugImage(Mat pos, double scale, Scalar color) const {
-        ImageP d(new Image());
+    InputImageP CreateDebugImage(Mat pos, double scale, Scalar color) const {
+        InputImageP d(new InputImage());
         
         d->originalExtrinsics = pos;
         d->adjustedExtrinsics = pos;
         d->intrinsics = intrinsics.clone();
         d->intrinsics.at<double>(0, 2) *= scale;
         d->intrinsics.at<double>(1, 2) *= scale;
-        d->img = Mat::zeros(240, 320, CV_8UC3);
+        d->image = Image(Mat::zeros(240, 320, CV_8UC3));
         d->id = 0;
         
-        line(d->img, Point2f(0, 0), Point2f(320, 240), color, 4);
-        line(d->img, Point2f(320, 0), Point2f(0, 240), color, 4);
+        line(d->image.data, Point2f(0, 0), Point2f(320, 240), color, 4);
+        line(d->image.data, Point2f(320, 0), Point2f(0, 240), color, 4);
         
         return d;
     }
@@ -184,8 +184,8 @@ public:
         return res;
 	}
 
-    vector<ImageP> GenerateDebugImages(RecorderGraph &graph) const {
-		vector<ImageP> images;
+    vector<InputImageP> GenerateDebugImages(RecorderGraph &graph) const {
+		vector<InputImageP> images;
 
 		for(auto ring : graph.targets) {
 			for(auto t : ring) {
