@@ -6,6 +6,7 @@
 #include "io.hpp"
 #include "support.hpp"
 #include "dirent.h"
+#include "image.hpp"
 
 #ifndef OPTONAUT_CHECKPOINT_HEADER
 #define OPTONAUT_CHECKPOINT_HEADER
@@ -34,7 +35,16 @@ namespace optonaut {
             c++;
         }
         
+        //Loads an a mat for an unloaded ImageP
         void LoadRawImageData(ImageP image) {
+            
+        }
+        
+        void SaveRing(StitchingResultP ring, int idx) {
+            
+        }
+        
+        void LoadRing(StitchingResultP ring, int idx) {
             
         }
         

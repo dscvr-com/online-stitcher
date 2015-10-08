@@ -44,7 +44,8 @@ namespace optonaut {
 
         vector<ImageP> aligned; 
 
-        RingwiseStitcher stitcher;
+        RingwiseStitcher leftStitcher;
+        RingwiseStitcher rightStitcher;
 
         bool previewImageAvailable;
         bool isIdle;
@@ -67,7 +68,7 @@ namespace optonaut {
             rights.push_back(right);
         }
 
-        StitchingResultP Finish(vector<ImageP> &images, bool debug = false, string debugName = "") {
+        StitchingResultP Finish(vector<ImageP> &images, RingwiseStitcher &stitcher, bool debug = false, string debugName = "") {
             
 
             aligner->Postprocess(images);
@@ -122,7 +123,8 @@ namespace optonaut {
             controller(recorderGraph),
             imagesToRecord(recorderGraph.Size()),
             recordedImages(0),
-            stitcher(4096, 4096),
+            leftStitcher(4096, 4096, leftStore),
+            rightStitcher(4096, 4096, rightStore),
             leftStore(storePath + "left/"),
             rightStore(storePath + "right/")
         {
@@ -360,19 +362,22 @@ namespace optonaut {
         }
 
         StitchingResultP FinishLeft() {
-            return Finish(lefts, false);
+            return Finish(lefts, leftStitcher, false);
         }
 
         StitchingResultP FinishRight() {
-            return Finish(rights, false);
+            return Finish(rights, rightStitcher, false);
         }
 
         StitchingResultP FinishAligned() {
-            return Finish(aligned, false);
+            //Todo - Intro a debugStitcher instance with a dummyStore inside.
+            //return Finish(aligned, false);
+            return NULL;
         }
 
         StitchingResultP FinishAlignedDebug() {
-            return Finish(aligned, true);
+            //return Finish(aligned, true);
+            return NULL;
         }
 
         bool HasResults() {

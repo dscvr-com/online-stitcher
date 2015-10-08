@@ -29,6 +29,17 @@ namespace optonaut {
             height = 0;
         }
     };
+    
+    struct StitchingResult {
+        cv::Mat image;
+        cv::Mat mask;
+        std::vector<cv::Point> corners;
+        std::vector<cv::Size> sizes;
+        //Most top-right corner.
+        cv::Point corner;
+    };
+    
+    typedef std::shared_ptr<StitchingResult> StitchingResultP;
 
 	struct Image {
 		cv::Mat img;

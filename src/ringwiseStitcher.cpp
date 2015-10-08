@@ -75,7 +75,7 @@ namespace optonaut {
     }
     
     void RingwiseStitcher::Checkpoint() {
-        
+        //TODO Save rings and adjusted corners.
     }
     
     void RingwiseStitcher::InitializeFromCheckpoint(){
@@ -87,11 +87,18 @@ namespace optonaut {
     }
     
     StitchingResultP Stitch(bool debug = false, std::string debugName = "");
+    
+    StitchingResultP RingwiseStitcher::StitchRing(const vector<ImageP> &ring, bool debug, const string &debugName) {
+        
+        //TODO: Do not stitch if there is a file available
+        RStitcher stitcher(store);
+        
+        return stitcher.Stitch(ring, exposure, ev, debug);
+    }
 
-    StitchingResultP RingwiseStitcher::Stitch(bool debug, string debugName) {
+    StitchingResultP RingwiseStitcher::Stitch(bool debug, const string &debugName) {
 
         STimer::Tick("StitchStart");
-        RStitcher stitcher(store);
 
         vector<StitchingResultP> stitchedRings;
         vector<cv::Size> sizes;
@@ -101,12 +108,15 @@ namespace optonaut {
         Ptr<Blender> blender = Ptr<Blender>(pblender);
 
         int margin = -1; //Size_t max
+        
+        //TODO: find a way to recreate ring map
 
         for(size_t i = 0; i < rings.size(); i++) {
             if(rings[i].size() == 0) 
                 continue;
-
-            auto res = stitcher.Stitch(rings[i], exposure, ev, debug);
+            
+            auto res = StitchRing(rings[i], debug, debugName);
+            
             stitchedRings.push_back(res);
             sizes.push_back(res->image.size());
             corners.push_back(res->corner);
