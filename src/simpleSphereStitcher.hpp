@@ -12,16 +12,6 @@
 #define OPTONAUT_RSTITCHER_HEADER
 
 namespace optonaut {
-struct StitchingResult {
-	cv::Mat image;
-	cv::Mat mask;
-	std::vector<cv::Point> corners;
-	std::vector<cv::Size> sizes;
-	//Most top-right corner.
-	cv::Point corner;
-};
-
-typedef std::shared_ptr<StitchingResult> StitchingResultP;
 
 //Fast pure R-Matrix based stitcher
 class RStitcher {
@@ -31,7 +21,7 @@ class RStitcher {
 		float warperScale = 800;
         int blendMode = -1;
         CheckpointStore &store;
-    
+
         RStitcher(CheckpointStore &store) : store(store) { }
 
 		StitchingResultP Stitch(const std::vector<ImageP> &images, ExposureCompensator &exposure, double ev = 0, bool debug = false);

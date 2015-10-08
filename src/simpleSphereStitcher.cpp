@@ -8,7 +8,6 @@
 #include "simpleSphereStitcher.hpp"
 #include "support.hpp"
 #include "simpleSeamer.hpp"
-#include "checkpointStore.hpp"
 
 using namespace std;
 using namespace cv;
@@ -17,7 +16,6 @@ using namespace cv::detail;
 namespace optonaut {
     
 void RStitcher::PrepareMatrices(const vector<ImageP> &r) {
-
 
     //Orient around first image (Correct orientation from start.)
     vector<Mat> matrices(r.size());
@@ -36,8 +34,8 @@ void RStitcher::PrepareMatrices(const vector<ImageP> &r) {
 
 StitchingResultP RStitcher::Stitch(const std::vector<ImageP> &in, ExposureCompensator &exposure, double ev, bool debug) {
 
-    const int maskOffset = 20000;
-    const int imageOffset = 30000;
+    //const int maskOffset = 20000;
+    //const int imageOffset = 30000;
 
     //This is needed because xcode does not like the CV stitching header.
     //So we can't initialize this constant in the header. 
@@ -88,11 +86,11 @@ StitchingResultP RStitcher::Stitch(const std::vector<ImageP> &in, ExposureCompen
         warpedMask(Rect(0, 0, 1, warpedMask.rows)).setTo(Scalar::all(0));
         warpedMask(Rect(warpedMask.cols - 1, 0, 1, warpedMask.rows)).setTo(Scalar::all(0));
 
-        
-        Image::SaveToDisk(i + maskOffset, warpedMask);
-        warpedMask.release();
-        Image::SaveToDisk(i + imageOffset, warpedImage);
-        warpedImage.release();
+        //Todo - if mem performance is shit, enable paging here.
+        //Image::SaveToDisk(i + maskOffset, warpedMask);
+        //warpedMask.release();
+        //Image::SaveToDisk(i + imageOffset, warpedImage);
+        //warpedImage.release();
     }
 
     warper.release();
@@ -106,9 +104,10 @@ StitchingResultP RStitcher::Stitch(const std::vector<ImageP> &in, ExposureCompen
     for(size_t i = 0; i < n; i++) {
         Mat warpedMask;
         Mat warpedImage;
-
-        Image::LoadFromDisk(i + maskOffset, warpedMask, CV_LOAD_IMAGE_GRAYSCALE);
-        Image::LoadFromDisk(i + imageOffset, warpedImage);
+        
+        //Todo - if mem performance is shit, enable paging here.
+        //Image::LoadFromDisk(i + maskOffset, warpedMask, CV_LOAD_IMAGE_GRAYSCALE);
+        //Image::LoadFromDisk(i + imageOffset, warpedImage);
 
 	    Mat warpedImageAsShort;
         
