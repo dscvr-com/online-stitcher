@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
 
     for(int i = 0; i < n; i++) {
         auto lt = system_clock::now();
-        auto image = ImageFromFile(files[i]);
+        auto image = InputImageFromFile(files[i]);
         
         image->intrinsics = iPhone5Intrinsics;
         

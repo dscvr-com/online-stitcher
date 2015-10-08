@@ -60,6 +60,22 @@ namespace optonaut {
             
             return images;
         }
+
+       void LoadFromDisk(size_t id, cv::Mat &img, int loadFlags) {
+            img = imread(GetFilePath(id), loadFlags);
+            assert(img.cols != 0 && img.rows != 0);
+       }
+            
+       void SaveToDisk(size_t id, cv::Mat &img) {
+            imwrite(GetFilePath(id), img); 
+       }
+        
+        void SaveToDisk() {
+            assert(IsLoaded());
+            //cout << "Saving image " << id << ", width: " << img.cols << ", height: " << img.rows << endl;
+            Image::SaveToDisk((size_t)this, img);
+            Unload();
+        }
     };
 }
 

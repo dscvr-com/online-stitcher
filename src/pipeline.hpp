@@ -67,7 +67,7 @@ namespace optonaut {
             rights.push_back(right);
         }
 
-        StitchingResultP Finish(vector<ImageP> &images, bool debug = false, string debugName = "") {
+        StitchingResultP Finish(vector<InputImageP> &images, bool debug = false, string debugName = "") {
             
 
             aligner->Postprocess(images);

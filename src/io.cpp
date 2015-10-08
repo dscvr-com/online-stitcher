@@ -85,7 +85,7 @@ namespace optonaut {
         fileRef = NULL;
     }
 
- 	void ParseImageInfoFile(const string &path, ImageP result) {
+ 	void ParseInputImageInfoFile(const string &path, InputImageP result) {
         Document doc;
         
         OpenJsonDocument(doc, path, "rb");
@@ -104,7 +104,7 @@ namespace optonaut {
         CloseJsonDocument();
  	}
     
-    void WriteImageInfoFile(const string &path, ImageP result) {
+    void WriteInputImageInfoFile(const string &path, InputImageP result) {
         Document doc;
         Document::AllocatorType &allocator = doc.GetAllocator();
         
@@ -139,28 +139,32 @@ namespace optonaut {
         return jsonPath;
     }
     
-    void ImageToFile(ImageP image, const string &path) {
+    void InputImageToFile(ImageP image, const string &path) {
         string jsonPath = GetDataFilePath(path);
         
         WriteImageInfoFile(jsonPath, image);
         
-        imwrite(path, image->img);
+        imwrite(path, image->image->data);
     }
 
-    ImageP ImageFromFile(const string &path, bool shallow) {
+    InputImageP InputImageFromFile(const string &path, bool shallow) {
         string jsonPath = GetDataFilePath(path);
 		
 		ImageP result(new Image());
         
+		result->image->source = path;
         if(!shallow) {
-            result->img = imread(path);
+            LoadImageData(result->image);
         }
-		result->source = path;
 
         ParseImageInfoFile(jsonPath, result);
 
 		return result;
 	}
+
+    void LoadImageData(Image &image) {
+        image->data = imread(image.source);
+    }
     
 	void BufferFromBinFile(unsigned char buf[], size_t len, string file) {
 
