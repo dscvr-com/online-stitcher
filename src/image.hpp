@@ -9,10 +9,12 @@
 namespace optonaut {
 	
      class Image {
+
         private:
 		cv::Mat data_;
         int cols_;
         int rows_;
+
         public:
 		const cv::Mat &data;
 	    std::string source;
@@ -53,14 +55,12 @@ namespace optonaut {
 
         void Unload() {
             data_.release();
-            cols_ = 0;
-            rows_ = 0;
         }
 
-        void Load() {
+        void Load(int flags = cv::IMREAD_COLOR) {
             assert(source != "");
 
-            data_ = cv::imread(source);
+            data_ = cv::imread(source, flags);
             cols_ = data.cols;
             rows_ = data.rows;
 

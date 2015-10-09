@@ -34,9 +34,6 @@ void RStitcher::PrepareMatrices(const vector<InputImageP> &r) {
 
 StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, ExposureCompensator &exposure, double ev, bool debug, const std::string&) {
 
-    //const int maskOffset = 20000;
-    //const int imageOffset = 30000;
-
     //This is needed because xcode does not like the CV stitching header.
     //So we can't initialize this constant in the header. 
     if(blendMode == -1) {
@@ -48,6 +45,11 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, ExposureC
 
 	vector<Point> corners(n);
 	vector<Size> warpedSizes(n);
+    vector<Image> masks;
+    vector<Image> images;
+    masks.reserve(n);
+    images.reserve(n);
+   
     
     Ptr<WarperCreator> warperFactory = new cv::SphericalWarper();
     Ptr<RotationWarper> warper = warperFactory->create(static_cast<float>(warperScale)); 
@@ -86,11 +88,14 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, ExposureC
         warpedMask(Rect(0, 0, 1, warpedMask.rows)).setTo(Scalar::all(0));
         warpedMask(Rect(warpedMask.cols - 1, 0, 1, warpedMask.rows)).setTo(Scalar::all(0));
 
-        //Todo - if mem performance is shit, enable paging here.
-        //Image::SaveToDisk(i + maskOffset, warpedMask);
-        //warpedMask.release();
-        //Image::SaveToDisk(i + imageOffset, warpedImage);
-        //warpedImage.release();
+        masks.emplace_back(warpedMask);
+        images.emplace_back(warpedImage);
+
+        store.SaveStitcherTemporaryImage(masks.back());
+        store.SaveStitcherTemporaryImage(images.back());
+
+        masks.back().Unload();
+        images.back().Unload();
     }
 
     warper.release();
@@ -102,13 +107,13 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, ExposureC
     blender->prepare(corners, warpedSizes);
 
     for(size_t i = 0; i < n; i++) {
-        Mat warpedMask;
-        Mat warpedImage;
         
-        //Todo - if mem performance is shit, enable paging here.
-        //Image::LoadFromDisk(i + maskOffset, warpedMask, CV_LOAD_IMAGE_GRAYSCALE);
-        //Image::LoadFromDisk(i + imageOffset, warpedImage);
+        masks[i].Load(IMREAD_GRAYSCALE);
+        images[i].Load();
 
+        const Mat &warpedMask = masks[i].data;
+        const Mat &warpedImage = images[i].data;
+        
 	    Mat warpedImageAsShort;
         
         warpedImage.convertTo(warpedImageAsShort, CV_16S);
@@ -118,21 +123,24 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, ExposureC
 
 		blender->feed(warpedImageAsShort, warpedMask, corners[i]);
 
-        warpedMask.release();
-        warpedImage.release();
         warpedImageAsShort.release();
-
+        images[i].Unload();
+        masks[i].Unload();
     }
 
     cout << "Start blending" << endl;
 
 	StitchingResultP res(new StitchingResult());
-	blender->blend(res->image.data, res->mask.data);
+    {
+        Mat resImage, resMask;
+        blender->blend(resImage, resMask);
 
+        resImage.convertTo(resImage, CV_8U);
+
+        res->image = Image(resImage);
+        res->mask = Image(resMask);
+    }
     blender.release();
-
-    res->corners = corners;
-    res->sizes = warpedSizes;
 
     res->corner.x = corners[0].x;
     res->corner.y = corners[0].y;
@@ -141,8 +149,6 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, ExposureC
         res->corner.x = min(res->corner.x, corners[i].x);
         res->corner.y = min(res->corner.y, corners[i].y);
     }
-    
-    res->image.data.convertTo(res->image.data, CV_8U);
 
 	return res;
 }

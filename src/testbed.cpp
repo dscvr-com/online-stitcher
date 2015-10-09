@@ -20,28 +20,15 @@ bool CompareByFilename (const string &a, const string &b) {
     return IdFromFileName(a) < IdFromFileName(b);
 }
 
-int main(int argc, char* argv[]) {
+void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &rightStore) {
 
     static const bool isAsync = true;
+    shared_ptr<Recorder> recorder(NULL);
 
-    int n = argc - 1;
-    shared_ptr<Recorder> pipe(NULL);
-    CheckpointStore leftStore("tmp/left/");
-    CheckpointStore rightStore("tmp/right/");
-    vector<string> files;
-
-    for(int i = 0; i < n; i++) {
-        string imageName(argv[i + 1]);
-        files.push_back(imageName);
-    }
-
-    sort(files.begin(), files.end(), CompareByFilename);
-
-
-    for(int i = 0; i < n; i++) {
+    for(size_t i = 0; i < files.size(); i++) {
         auto lt = system_clock::now();
-        auto image = InputImageFromFile(files[i]);
-        
+        auto image = InputImageFromFile(files[i], false);
+            
         image->intrinsics = iPhone5Intrinsics;
         
         //Create stack-local ref to mat. Clear image mat.
@@ -56,10 +43,10 @@ int main(int argc, char* argv[]) {
         image->dataRef.colorSpace = colorspace::RGB;
 
         if(i == 0) {
-            pipe = shared_ptr<Recorder>(new Recorder(Recorder::iosBase, Recorder::iosZero, image->intrinsics, leftStore, rightStore, RecorderGraph::ModeTruncated, isAsync));
+            recorder = shared_ptr<Recorder>(new Recorder(Recorder::iosBase, Recorder::iosZero, image->intrinsics, leftStore, rightStore, RecorderGraph::ModeTruncated, isAsync));
         }
 
-        pipe->Push(image);
+        recorder->Push(image);
         tmpMat.release();
 
         if(isAsync) {
@@ -71,9 +58,33 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    pipe->Finish();
-    pipe->Dispose();
-    
+    recorder->Finish();
+    recorder->Dispose();
+}
+
+int main(int argc, char** argv) {
+    CheckpointStore leftStore("tmp/left/");
+    CheckpointStore rightStore("tmp/right/");
+
+    int n = argc - 1;
+    vector<string> files;
+
+    for(int i = 0; i < n; i++) {
+        string imageName(argv[i + 1]);
+        files.push_back(imageName);
+    }
+
+    sort(files.begin(), files.end(), CompareByFilename);
+
+    if(!leftStore.HasUnstitchedRecording()) {
+        Record(files, leftStore, rightStore);
+    }
+
+    if(!leftStore.HasUnstitchedRecording()) {
+        cout << "No results." << endl;
+        return 0;
+    }
+
     {
         Stitcher leftStitcher(leftStore);
         auto left = leftStitcher.Finish(false, "dbg/left");
@@ -88,6 +99,9 @@ int main(int argc, char* argv[]) {
         right->image.Unload();  
         right->mask.Unload();  
     }
+
+    leftStore.Clear();
+    rightStore.Clear();
     
     return 0;
 }

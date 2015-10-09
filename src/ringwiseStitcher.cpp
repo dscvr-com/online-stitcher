@@ -22,9 +22,12 @@ namespace optonaut {
     void RingwiseStitcher::AdjustCorners(std::vector<StitchingResultP> &rings, std::vector<cv::Point> &corners) {
         //dyCache. 
         if(dyCache.size() == 0) {
+            rings[0]->image.Load();
+            Mat a = rings[0]->image.data;
             for(size_t i = 1; i < rings.size(); i++) {
-                const Mat &a = rings[i - 1]->image.data;
-                const Mat &b = rings[i]->image.data;
+                
+                rings[i]->image.Load();
+                Mat b = rings[i]->image.data;
                 Mat ca, cb;
                 
                 cvtColor(a, ca, CV_BGR2GRAY);
@@ -48,9 +51,11 @@ namespace optonaut {
                 }
 
                 dyCache.push_back(dy);
-
-                //cout << "V-Correlate: " << dy << endl;
+                
+                a = b;
+                rings[i - 1]->image.Unload();
             }
+            rings.back()->image.Load();
         }
 
         for(size_t i = 1; i < rings.size(); i++) {
@@ -72,9 +77,17 @@ namespace optonaut {
     StitchingResultP RingwiseStitcher::StitchRing(const vector<InputImageP> &ring, bool debug, const string &debugName) {
         
         //TODO: Do not stitch if there is a file available
-        RStitcher stitcher;
+        RStitcher stitcher(store);
         
-        return stitcher.Stitch(ring, exposure, ev, debug, debugName);
+        auto res = stitcher.Stitch(ring, exposure, ev, debug, debugName);
+
+        store.SaveStitcherTemporaryImage(res->image);
+        store.SaveStitcherTemporaryImage(res->mask);
+
+        res->image.Unload();
+        res->mask.Unload();
+
+        return res;
     }
 
     StitchingResultP RingwiseStitcher::Stitch(bool debug, const string &debugName) {
@@ -88,10 +101,8 @@ namespace optonaut {
         FeatherBlender* pblender = new FeatherBlender(0.01f); 
         Ptr<Blender> blender = Ptr<Blender>(pblender);
 
-        int margin = -1; //Size_t max
+        int margin = -1; 
         
-        //TODO: find a way to recreate ring map
-
         for(size_t i = 0; i < rings.size(); i++) {
             if(rings[i].size() == 0) 
                 continue;
@@ -107,8 +118,9 @@ namespace optonaut {
             }
 
             if(debugName != "") {
-
+                 res->image.Load();
                 imwrite(debugName + "_ring_" + ToString(i) + "_ev_" + ToString(ev) + ".jpg",  res->image.data); 
+                 res->image.Unload();
 
             }
             STimer::Tick("Ring Finished");
@@ -123,25 +135,38 @@ namespace optonaut {
 
         for(size_t i = 0; i < stitchedRings.size(); i++) {
             auto res = stitchedRings[i];
+            res->image.Load();
+            res->mask.Load(IMREAD_GRAYSCALE);
+
             Mat warpedImageAsShort;
             res->image.data.convertTo(warpedImageAsShort, CV_16S);
+
             assert(res->mask.type() == CV_8U);
 
+            //Set one pixel of the mask to black on the edges to enable blending. 
             res->mask.data(Rect(0, 0, res->mask.cols, 1)).setTo(Scalar::all(0));
             res->mask.data(Rect(0, res->mask.rows - 1, res->mask.cols, 1)).setTo(Scalar::all(0));
 
             blender->feed(warpedImageAsShort, res->mask.data, corners[i]);
+
+            res->image.Unload();
+            res->mask.Unload();
+            warpedImageAsShort.release();
         }
 
         stitchedRings.clear();
         STimer::Tick("FinalStitching Finished");
 
         StitchingResultP res(new StitchingResult());
-        blender->blend(res->image.data, res->mask.data);
-
+        {
+            Mat imageRes, maskRes;
+            blender->blend(imageRes, maskRes);
+            imageRes.convertTo(imageRes, CV_8U);
+            res->image = Image(imageRes);
+            res->mask = Image(maskRes);
+        }
         blender.release();
         
-        res->image.data.convertTo(res->image.data, CV_8U);
         //Opencv somehow messes up the first few collumn while blending.
         //Throw it away. 
         const int trim = 6;

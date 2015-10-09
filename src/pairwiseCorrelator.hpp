@@ -36,8 +36,6 @@ public:
 
     CorrelationDiff Match(const InputImageP a, const InputImageP b) {
 
-        cout << "Correlation Invoke" << endl;
-
         const bool useGradient = false;
         const bool useReduce = true;
         

@@ -13,6 +13,9 @@
 namespace optonaut {
 
     int IdFromFileName(const std::string &in);
+    void CreateDirectories(const std::string &path);
+    void DeleteDirectories(const std::string &path);
+    bool IsDirectory(const string &path);
 	bool StringEndsWith(const std::string& a, const std::string& b);
 
     InputImageP InputImageFromFile(const std::string &path, bool shallow = true);
@@ -37,6 +40,7 @@ namespace optonaut {
     void SaveRingMap(const std::vector<std::vector<InputImageP>> &rings, const std::string &path);
     std::vector<std::vector<size_t>> LoadRingMap(const std::string &path);
     std::vector<InputImageP> LoadAllImagesFromDirectory(const std::string &path, const std::string &extension);
+    void SaveImage(Image &image, const std::string &path);
 
 }
 

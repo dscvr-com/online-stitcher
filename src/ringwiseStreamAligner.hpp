@@ -56,7 +56,9 @@ namespace optonaut {
 
         void Dispose() {
             if(async) {
-                assert(!worker->IsRunning());
+                if(worker->IsRunning()) {
+                    worker->Dispose();
+                }
                 worker = NULL;
             }
             

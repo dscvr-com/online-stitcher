@@ -23,6 +23,7 @@ namespace optonaut {
             std::vector<int> dyCache;
             std::vector<std::vector<InputImageP>> rings;
             ExposureCompensator exposure;
+            CheckpointStore &store;
             double ev;
             
             void AdjustCorners(
@@ -35,10 +36,11 @@ namespace optonaut {
                     bool debug, 
                     const std::string &debugName);
         public:
-            RingwiseStitcher(int width, int height) : 
-                resizeOutput(true), w(width), h(height) { }
+            RingwiseStitcher(int width, int height, CheckpointStore &store) : 
+                resizeOutput(true), w(width), h(height), store(store) { }
 
-            RingwiseStitcher() : resizeOutput(false), w(0), h(0) { }
+            RingwiseStitcher(CheckpointStore &store) : 
+                resizeOutput(false), w(0), h(0), store(store) { }
 
             void InitializeForStitching(
                     std::vector<std::vector<InputImageP>> &rings, 

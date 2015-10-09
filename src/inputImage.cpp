@@ -20,12 +20,20 @@ namespace optonaut {
         bool isExpectingPortrait = IsPortrait(intrinsics);
         
         if(dataRef.colorSpace == colorspace::RGBA) {
-            cv::cvtColor(cv::Mat(dataRef.height, dataRef.width, CV_8UC4, dataRef.data), image.data, cv::COLOR_RGBA2RGB);
+            
+            cv::cvtColor(
+                    cv::Mat(dataRef.height, dataRef.width, CV_8UC4, dataRef.data), 
+                    image.data, 
+                    cv::COLOR_RGBA2RGB);
+
         } else if (dataRef.colorSpace == colorspace::RGB) {
-            image = Image(cv::Mat(dataRef.height, dataRef.width, CV_8UC3, dataRef.data));
+            
+            image = Image(
+                    cv::Mat(dataRef.height, dataRef.width, CV_8UC3, dataRef.data));
             if(copy) {
                 image = Image(image.data.clone());
             }
+
         } else {
             assert(false);
         }

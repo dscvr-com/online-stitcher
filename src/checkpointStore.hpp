@@ -20,6 +20,7 @@ namespace optonaut {
     private:
         const string basePath;
         const string rawImagesPath;
+        const string stitcherDumpPath;
         const string ringMapPath;
         const string exposureMapPath;
         const string defaultExtension = ".bmp";
@@ -28,6 +29,7 @@ namespace optonaut {
         CheckpointStore(string basePath) :
             basePath(basePath),
             rawImagesPath(basePath + "raw_images/"),
+            stitcherDumpPath(basePath + "dump/"),
             ringMapPath(basePath + "rings.json"),
             exposureMapPath(basePath + "exposure.json"),
             c(0) { }
@@ -37,7 +39,13 @@ namespace optonaut {
             
             InputImageToFile(image, path);
             image->image.source = path;
-            
+        }
+        
+        void SaveStitcherTemporaryImage(Image &image) {
+            string path = stitcherDumpPath + ToString(c) + ".bmp";
+           
+            SaveImage(image, path);
+
             c++;
         }
         
@@ -65,6 +73,14 @@ namespace optonaut {
 
             exposure.SetGains(LoadExposureMap(exposureMapPath));
         }
+
+        void Clear() {
+            DeleteDirectories(basePath);
+        }
+
+        bool HasUnstitchedRecording() {
+            return IsDirectory(rawImagesPath);
+        } 
         
     };
 }

@@ -14,9 +14,16 @@
 #include "inputImage.hpp"
 #include "dirent.h"
 
+//Will this work on IOS? q.q
+#include <sys/stat.h> 
+#include <sys/types.h>
+#include <errno.h> 
+
 using namespace cv;
 using namespace std;
 using namespace rapidjson;
+
+//NOTE: All directories given as params have to end with a slash. 
 
 namespace optonaut {
 
@@ -25,6 +32,110 @@ namespace optonaut {
 	    return std::equal(a.begin() + a.size() - b.size(), a.end(), b.begin());
 	}
 
+    string GetDirectoryName(const string &dir) {
+        size_t last = dir.find_last_of("/"); 
+
+        if(last == string::npos)
+            return "";
+        else
+            return dir.substr(0, last);
+    }
+
+    bool IsDirectory(const string &path) {
+        struct stat info;
+
+        if(stat(path.c_str(), &info) != 0)
+            return false;
+        else if(info.st_mode & S_IFDIR) 
+            return true;
+    
+        return false;
+    }
+
+    // Please kill me. 
+    void _mkdir(const char *dir) {
+        char tmp[512];
+        char *p = NULL;
+        size_t len;
+
+        snprintf(tmp, sizeof(tmp),"%s",dir);
+        len = strlen(tmp);
+        if(tmp[len - 1] == '/')
+            tmp[len - 1] = 0;
+        for(p = tmp + 1; *p; p++)
+        if(*p == '/') {
+            *p = 0;
+            mkdir(tmp, S_IRWXU);
+            *p = '/';
+        }
+        mkdir(tmp, S_IRWXU);
+    }
+
+    // Plase kill me too.
+    int remove_directory(const char *path) {
+        DIR *d = opendir(path);
+        size_t path_len = strlen(path);
+        int r = -1;
+
+        if (d) {
+            struct dirent *p;
+
+            r = 0;
+
+            while (!r && (p=readdir(d))) {
+                int r2 = -1;
+                char *buf;
+                size_t len;
+
+                /* Skip the names "." and ".." as we don't want to recurse on them. */
+                if (!strcmp(p->d_name, ".") || !strcmp(p->d_name, "..")) {
+                    continue;
+                }
+
+                len = path_len + strlen(p->d_name) + 2; 
+                buf = (char*)malloc(len);
+
+                if (buf) {
+                    struct stat statbuf;
+
+                    snprintf(buf, len, "%s/%s", path, p->d_name);
+
+                    if (!stat(buf, &statbuf)) {
+                        if (S_ISDIR(statbuf.st_mode)) {
+                            r2 = remove_directory(buf);
+                        }
+                        else {
+                            r2 = unlink(buf);
+                        }
+                    }
+                    free(buf);
+                }
+                r = r2;
+            }
+            closedir(d);
+        }
+
+        if (!r) {
+            r = rmdir(path);
+        }
+
+        return r;
+    }
+
+    void CreateDirectories(const string &path) {
+        string dir = GetDirectoryName(path);
+
+        if(dir == "")
+            return;
+
+       assert(path.length() < 512);
+       _mkdir(dir.c_str());
+    }
+
+    void DeleteDirectories(const string &path) {
+        remove_directory(path.c_str());
+    } 
+
     int IdFromFileName(const string &in) {
         size_t l = in.find_last_of("/");
         if(l == string::npos) {
@@ -32,6 +143,12 @@ namespace optonaut {
         } else {
             return ParseInt(in.substr(l + 1, in.length() - 5 - l));
         }
+    }
+    
+    void SaveImage(Image &image, const std::string &path) {
+        CreateDirectories(path);
+        imwrite(path, image.data);
+        image.source = path;
     }
 
 	int MatrixFromJson(const Value& matrix, Mat &out) {
@@ -50,13 +167,14 @@ namespace optonaut {
 			for(int j = 0; j < dim; j++) {
 				out.at<double>(i, j) = matrix[i * dim + j].GetDouble();
 			}
-		}		
+		}
 
 		return dim;
 	}
     
     int MatrixToJson(const Mat &in, Value& out, Document::AllocatorType& allocator) {
         assert(in.cols == in.rows); //Only square matrices supported.
+        out.SetArray();
         
         int dim = in.cols;
         
@@ -70,11 +188,11 @@ namespace optonaut {
     }
     
     void ReadJsonDocument(Document &doc, const string &path) {
+        
         char buffer[65536];
-
         FILE* fileRef = fopen(path.c_str(), "r");
         if(fileRef == NULL) {
-            cout << "Unable to open data file " << path << endl;
+            cout << "Unable to read data file " << path << endl;
             assert(false);
         }
         
@@ -84,7 +202,14 @@ namespace optonaut {
     }
     
     void WriteJsonDocument(Document &doc, const string &path) {
-        FILE* fileRef = fopen(path.c_str(), "w+"); 
+
+        CreateDirectories(path);
+
+        FILE* fileRef = fopen(path.c_str(), "w+");
+        if(fileRef == NULL) {
+            cout << "Unable to write data file " << path << endl;
+            assert(false);
+        }
         char buffer[65536];
         FileWriteStream os(fileRef, buffer, sizeof(buffer));
         Writer<FileWriteStream> writer(os);
@@ -105,26 +230,39 @@ namespace optonaut {
             assert(MatrixFromJson(doc["adjustedExtrinsics"],
                                   result->adjustedExtrinsics) == 4);
         } else {
-            assert(MatrixFromJson(doc["extrinsics"], result->adjustedExtrinsics) == 4);
+            assert(MatrixFromJson(doc["extrinsics"], result->originalExtrinsics) == 4);
+            result->adjustedExtrinsics = result->originalExtrinsics;
         }
  	}
     
     void WriteInputImageInfoFile(const string &path, InputImageP result) {
+        
+        CreateDirectories(path);
+
         Document doc;
         Document::AllocatorType &allocator = doc.GetAllocator();
-        
-        ReadJsonDocument(doc, path);
-        
+        doc.SetObject();
         doc.AddMember("id", result->id, allocator);
+
+        Value intrinsics; 
         MatrixToJson(result->intrinsics,
-                     doc.AddMember("intrinsics", kArrayType, allocator),
+                     intrinsics,
                      allocator);
+        doc.AddMember("intrinsics", intrinsics, allocator);
+
+        Value adjustedExtrinsics; 
         MatrixToJson(result->adjustedExtrinsics,
-                     doc.AddMember("adjustedExtrinsics", kArrayType, allocator),
+                     adjustedExtrinsics,
                      allocator);
+        doc.AddMember("adjustedExtrinsics", adjustedExtrinsics, allocator);
+
+        Value originalExtrinsics; 
         MatrixToJson(result->originalExtrinsics,
-                     doc.AddMember("originalExtrinsics", kArrayType, allocator),
+                     originalExtrinsics,
                      allocator);
+        doc.AddMember("originalExtrinsics", originalExtrinsics, allocator);
+
+        WriteJsonDocument(doc, path);
     }
 
  	bool FileExists(const string &fileName) {
@@ -188,16 +326,19 @@ namespace optonaut {
         Document::AllocatorType &allocator = doc.GetAllocator();
         
         Value jExposure(kArrayType);
+        jExposure.SetArray();
 
         for(auto &e : exposure) {
             Value je(kObjectType);
+            je.SetObject();
 
             je.AddMember("id", (uint64_t)e.first, allocator);
             je.AddMember("e", e.second, allocator);
 
             jExposure.PushBack(je, allocator);
         }
-
+        
+        doc.SetObject();
         doc.AddMember("exposure", jExposure, allocator);
 
         WriteJsonDocument(doc, path);
@@ -213,7 +354,7 @@ namespace optonaut {
         Value &jExposure = doc["exposure"];
 
         for(SizeType i = 0; i < jExposure.Size(); i++) {
-            exposure.at(jExposure[i]["id"].GetUint64()) = 
+            exposure[(size_t)(jExposure[i]["id"].GetUint64())] = 
                 jExposure[i]["e"].GetDouble();
         }
 
@@ -225,9 +366,11 @@ namespace optonaut {
         Document::AllocatorType &allocator = doc.GetAllocator();
         
         Value jRings(kArrayType);
+        jRings.SetArray();
 
         for(auto &ring : rings) {
             Value jRing(kArrayType);
+            jRing.SetArray();
 
             for(auto &img : ring) {
                 jRing.PushBack(img->id, allocator);
@@ -235,7 +378,7 @@ namespace optonaut {
 
             jRings.PushBack(jRing, allocator);
         }
-
+        doc.SetObject();
         doc.AddMember("rings", jRings, allocator);
 
         WriteJsonDocument(doc, path);
@@ -271,7 +414,7 @@ namespace optonaut {
                 string name = ent->d_name;
                 
                 if(StringEndsWith(name, extension)) {
-                    images.push_back(InputImageFromFile(name, true));
+                    images.push_back(InputImageFromFile(path + name, true));
                 }
                 
             }

@@ -21,13 +21,16 @@ namespace optonaut {
     class Stitcher {
 
     private:    
-        RingwiseStitcher core;
         CheckpointStore store;
-
+        RingwiseStitcher core;
     public:
 
         Stitcher(CheckpointStore &store) :
-            store(store) {
+            store(store), core(store) {
+        }
+        
+        Stitcher(int width, int height, CheckpointStore &store) :
+            store(store), core(width, height, store) {
         }
 
         StitchingResultP Finish(bool debug = false, string debugName = "") {

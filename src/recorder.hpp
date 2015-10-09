@@ -50,7 +50,7 @@ namespace optonaut {
         
         uint32_t imagesToRecord;
         uint32_t recordedImages;
-        
+
     public:
 
         static Mat androidBase;
@@ -78,11 +78,11 @@ namespace optonaut {
             baseInv = base.inv();
             zero = zeroWithoutBase;
 
-            cout << "Initializing Optonaut Pipe." << endl;
+            //cout << "Initializing Optonaut Pipe." << endl;
             
-            cout << "Base: " << base << endl;
-            cout << "BaseInv: " << baseInv << endl;
-            cout << "Zero: " << zero << endl;
+            //cout << "Base: " << base << endl;
+            //cout << "BaseInv: " << baseInv << endl;
+            //cout << "Zero: " << zero << endl;
         
             aligner = shared_ptr<RingwiseStreamAligner>(new RingwiseStreamAligner(recorderGraph, exposure, isAsync));
         }
@@ -91,7 +91,7 @@ namespace optonaut {
             return (zero.inv() * baseInv * in * base).inv();
         }
        
-       //TODO: Rename all ball methods.  
+        //TODO: Rename all ball methods.  
         Mat GetBallPosition() const {
             return ConvertFromStitcher(controller.GetBallPosition());
         }
@@ -131,13 +131,11 @@ namespace optonaut {
         }
 
         void Dispose() {
-            //TODO: Replace couts by actual asserts. 
-            cout << "Pipeline Dispose called by " << std::this_thread::get_id();
+            //cout << "Pipeline Dispose called by " << std::this_thread::get_id() << endl;
             aligner->Dispose();
         }
         
         void Stitch(const SelectionInfo &a, const SelectionInfo &b, bool discard = false) {
-            cout << "stitching " << a.image->id << " and " << b.image->id << endl;
             assert(a.image->IsLoaded());
             assert(b.image->IsLoaded());
             SelectionEdge edge;
@@ -164,14 +162,15 @@ namespace optonaut {
             }
         }
         
-        std::chrono::time_point<std::chrono::system_clock> lt = std::chrono::system_clock::now();
+        std::chrono::time_point<std::chrono::system_clock> lt = 
+                std::chrono::system_clock::now();
         
         static const bool measureTime = false;
         
         void Push(InputImageP image) {
 
-            //cout << "Pipeline Push called by " << std::this_thread::get_id();
-            
+            //cout << "Pipeline Push called by " << std::this_thread::get_id() << endl;
+
             if(isFinished) {
                 cout << "Push after finish warning - this could be a racing condition" << endl;
                 return;
@@ -212,8 +211,6 @@ namespace optonaut {
                 if(!image->IsLoaded())
                     image->LoadFromDataRef();
 
-                cout << "valid " << current.image->id << endl;
-                
                 if(current.closestPoint.globalId != currentBest.closestPoint.globalId) {
                     
                     aligner->AddKeyframe(currentBest.image);
@@ -221,8 +218,6 @@ namespace optonaut {
                     if(previous.isValid) {
                         Stitch(previous, currentBest);
                         recordedImages++;
-                
-                        cout << "recorded: " << recordedImages << "/" << imagesToRecord << endl;
                     }
                     if(!firstOfRing.isValid) {
                         firstOfRing = currentBest;
@@ -244,7 +239,6 @@ namespace optonaut {
             }
             
             if(recordedImages == imagesToRecord) {
-                cout << "Finished" << endl;
                 isFinished = true;
                 Stitch(previous, currentBest);
                 Stitch(currentBest, firstOfRing);
@@ -252,21 +246,28 @@ namespace optonaut {
         }
 
         void Finish() {
-            cout << "Pipeline Finish called by " << std::this_thread::get_id();
+            //cout << "Pipeline Finish called by " << std::this_thread::get_id() << endl;
             isFinished = true;
 
-            if(previous.isValid) {
-                exposure.FindGains();
-            }
-            
             aligner->Finish();
-            aligner->Postprocess(leftImages);
-            aligner->Postprocess(rightImages);
            
-            vector<vector<InputImageP>> rightRings = aligner->SplitIntoRings(rightImages);
-            vector<vector<InputImageP>> leftRings = aligner->SplitIntoRings(leftImages);
-            leftStore.SaveStitcherInput(leftRings, exposure); 
-            rightStore.SaveStitcherInput(rightRings, exposure); 
+            if(HasResults()) {
+                if(previous.isValid) {
+                    exposure.FindGains();
+                }
+               
+                aligner->Postprocess(leftImages);
+                aligner->Postprocess(rightImages);
+               
+                vector<vector<InputImageP>> rightRings = aligner->SplitIntoRings(rightImages);
+                vector<vector<InputImageP>> leftRings = aligner->SplitIntoRings(leftImages);
+                leftStore.SaveStitcherInput(leftRings, exposure); 
+                rightStore.SaveStitcherInput(rightRings, exposure); 
+            }
+        }
+
+        bool HasResults() {
+            return leftImages.size() > 0;
         }
                 
         bool AreAdjacent(SelectionPoint a, SelectionPoint b) {
