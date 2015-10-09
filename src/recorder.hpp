@@ -1,4 +1,4 @@
-#include "image.hpp"
+#include "inputImage.hpp"
 #include "asyncAligner.hpp"
 #include "trivialAligner.hpp"
 #include "ringwiseStreamAligner.hpp"
@@ -261,8 +261,8 @@ namespace optonaut {
                
                 vector<vector<InputImageP>> rightRings = aligner->SplitIntoRings(rightImages);
                 vector<vector<InputImageP>> leftRings = aligner->SplitIntoRings(leftImages);
-                leftStore.SaveStitcherInput(leftRings, exposure); 
-                rightStore.SaveStitcherInput(rightRings, exposure); 
+                leftStore.SaveStitcherInput(leftRings, exposure.GetGains());
+                rightStore.SaveStitcherInput(rightRings, exposure.GetGains()); 
             }
         }
 

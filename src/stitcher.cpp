@@ -19,25 +19,25 @@
 namespace optonaut {
     
     class Stitcher {
-
-    private:    
+        
+    private:
         CheckpointStore &store;
         RingwiseStitcher core;
     public:
-
+        
         Stitcher(CheckpointStore &store) :
-            store(store), core(store) {
+        store(store), core(store) {
         }
         
         Stitcher(int width, int height, CheckpointStore &store) :
-            store(store), core(width, height, store) {
+        store(store), core(width, height, store) {
         }
-
+        
         StitchingResultP Finish(bool debug = false, string debugName = "") {
             vector<vector<InputImageP>> rings;
             ExposureCompensator exposure;
             map<size_t, double> gains;
-
+            
             store.LoadStitcherInput(rings, gains);
             
             exposure.SetGains(gains);
@@ -46,7 +46,7 @@ namespace optonaut {
             
             core.InitializeForStitching(rings, exposure, 0.4);
             res = core.Stitch(debug, debugName);
-
+            
             return res;
         }
     };    

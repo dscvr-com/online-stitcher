@@ -139,7 +139,7 @@ namespace optonaut {
         HomographyFromImages(a, b, hom, rot);
         
         Mat wa;
-        warpPerspective(ai.data, wa, hom, Size(ai.cols, ai.rows), INTER_LINEAR, BORDER_CONSTANT, 0);
+        warpPerspective(ai.data, wa, hom, cv::Size(ai.cols, ai.rows), INTER_LINEAR, BORDER_CONSTANT, 0);
        
         //Cut images, set homography to id.
         vector<Point2f> corners = GetSceneCorners(ai, hom);

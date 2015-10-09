@@ -74,7 +74,7 @@ public:
         cout << "Ratio: " << (sin(maxVFov) / sin(maxHFov)) << endl;
 
         uint32_t vCount = ceil(M_PI / vFov);
-        double vStart, vBuffer;
+        double vStart = 0, vBuffer = 0;
         uint32_t id = 0;
         uint32_t hCenterCount = ceil(2 * M_PI / hFov);
         

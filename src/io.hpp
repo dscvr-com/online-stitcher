@@ -15,7 +15,7 @@ namespace optonaut {
     int IdFromFileName(const std::string &in);
     void CreateDirectories(const std::string &path);
     void DeleteDirectories(const std::string &path);
-    bool IsDirectory(const string &path);
+    bool IsDirectory(const std::string &path);
 	bool StringEndsWith(const std::string& a, const std::string& b);
 
     InputImageP InputImageFromFile(const std::string &path, bool shallow = true);
