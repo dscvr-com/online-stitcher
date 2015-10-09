@@ -6,7 +6,8 @@
 #include <opencv2/stitching/detail/blenders.hpp>
 
 #include "intrinsics.hpp"
-#include "pipeline.hpp"
+#include "recorder.hpp"
+#include "stitcher.hpp"
 #include "io.hpp"
 
 using namespace std;
@@ -24,7 +25,9 @@ int main(int argc, char* argv[]) {
     static const bool isAsync = true;
 
     int n = argc - 1;
-    shared_ptr<Pipeline> pipe(NULL);
+    shared_ptr<Recorder> pipe(NULL);
+    CheckpointStore leftStore("tmp/left/");
+    CheckpointStore rightStore("tmp/right/");
     vector<string> files;
 
     for(int i = 0; i < n; i++) {
@@ -33,7 +36,7 @@ int main(int argc, char* argv[]) {
     }
 
     sort(files.begin(), files.end(), CompareByFilename);
- 
+
 
     for(int i = 0; i < n; i++) {
         auto lt = system_clock::now();
@@ -53,9 +56,7 @@ int main(int argc, char* argv[]) {
         image->dataRef.colorSpace = colorspace::RGB;
 
         if(i == 0) {
-            pipe = shared_ptr<Pipeline>(new Pipeline(Pipeline::iosBase, Pipeline::iosZero, image->intrinsics, "tmp/", RecorderGraph::ModeTruncated, isAsync));
-
-            Pipeline::debug = true;
+            pipe = shared_ptr<Recorder>(new Recorder(Recorder::iosBase, Recorder::iosZero, image->intrinsics, leftStore, rightStore, RecorderGraph::ModeTruncated, isAsync));
         }
 
         pipe->Push(image);
@@ -71,32 +72,22 @@ int main(int argc, char* argv[]) {
     }
 
     pipe->Finish();
-    
-    if(pipe->HasResults()) {
-        {
-            auto left = pipe->FinishLeft();
-            imwrite("dbg/left.jpg", left->image.data);
-            left->image.Unload();  
-            left->mask.Unload();  
-        }
-        {
-            auto right = pipe->FinishRight();
-            imwrite("dbg/right.jpg", right->image.data);    
-            right->image.Unload();  
-            right->mask.Unload();  
-        }
-    } else {
-        cout << "No results." << endl;
-    }
-    
-    if(Pipeline::debug) {
-        //auto alignedDebug = pipe->FinishAlignedDebug();
-        //imwrite("dbg/aligned-debug.jpg", alignedDebug->image);
-        auto aligned = pipe->FinishAligned();
-        imwrite("dbg/aligned.jpg", aligned->image.data);
-    }
-    
     pipe->Dispose();
-
+    
+    {
+        Stitcher leftStitcher(leftStore);
+        auto left = leftStitcher.Finish(false, "dbg/left");
+        imwrite("dbg/left.jpg", left->image.data);
+        left->image.Unload();  
+        left->mask.Unload();  
+    }
+    {
+        Stitcher rightStitcher(leftStore);
+        auto right = rightStitcher.Finish(false, "dbg/right");
+        imwrite("dbg/right.jpg", right->image.data);    
+        right->image.Unload();  
+        right->mask.Unload();  
+    }
+    
     return 0;
 }

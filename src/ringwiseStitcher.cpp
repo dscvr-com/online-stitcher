@@ -61,30 +61,10 @@ namespace optonaut {
     
     void RingwiseStitcher::InitializeForStitching(std::vector<std::vector<InputImageP>> &rings, ExposureCompensator &exposure, double ev) {
         
-        assert(!HasCheckpoint());
-        
         this->rings = rings;
         this->exposure.SetGains(exposure.GetGains());
         this->ev = ev;
         this->dyCache = vector<int>();
-        
-        Checkpoint();
-    }
-    
-    bool RingwiseStitcher::HasCheckpoint() {
-        return false;
-    }
-    
-    void RingwiseStitcher::Checkpoint() {
-        //TODO Save rings and adjusted corners.
-    }
-    
-    void RingwiseStitcher::InitializeFromCheckpoint(){
-        assert(HasCheckpoint());
-    }
-    
-    void RingwiseStitcher::RemoveCheckpoint() {
-        assert(HasCheckpoint());
     }
     
     StitchingResultP Stitch(bool debug = false, std::string debugName = "");
@@ -92,7 +72,7 @@ namespace optonaut {
     StitchingResultP RingwiseStitcher::StitchRing(const vector<InputImageP> &ring, bool debug, const string &debugName) {
         
         //TODO: Do not stitch if there is a file available
-        RStitcher stitcher(store);
+        RStitcher stitcher;
         
         return stitcher.Stitch(ring, exposure, ev, debug, debugName);
     }
@@ -128,7 +108,7 @@ namespace optonaut {
 
             if(debugName != "") {
 
-                imwrite("dbg/ring_" + debugName + ToString(i) + "_ev_" + ToString(ev) + ".jpg",  res->image.data); 
+                imwrite(debugName + "_ring_" + ToString(i) + "_ev_" + ToString(ev) + ".jpg",  res->image.data); 
 
             }
             STimer::Tick("Ring Finished");

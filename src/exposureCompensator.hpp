@@ -34,7 +34,7 @@ namespace optonaut {
                 this->gains = gains;
             }
 
-            map<size_t, double>& GetGains() {
+            const map<size_t, double>& GetGains() const {
                 return gains;
             }
         

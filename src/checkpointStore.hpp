@@ -20,16 +20,20 @@ namespace optonaut {
     private:
         const string basePath;
         const string rawImagesPath;
+        const string ringMapPath;
+        const string exposureMapPath;
         const string defaultExtension = ".bmp";
         int c;
     public:
         CheckpointStore(string basePath) :
             basePath(basePath),
             rawImagesPath(basePath + "raw_images/"),
+            ringMapPath(basePath + "rings.json"),
+            exposureMapPath(basePath + "exposure.json"),
             c(0) { }
         
         void SaveRectifiedImage(InputImageP image) {
-            string path = rawImagesPath + ToString(c) + ".bmp";
+            string path = rawImagesPath + ToString(image->id) + ".bmp";
             
             InputImageToFile(image, path);
             image->image.source = path;
@@ -37,36 +41,31 @@ namespace optonaut {
             c++;
         }
         
-        //void SaveRing(StitchingResultP ring, int idx) {
-        //    
-        //}
-        
-        //void LoadRing(StitchingResultP ring, int idx) {
-        //    
-        //}
-        
-        vector<InputImageP> LoadShallowRectifiedImages() {
-            vector<InputImageP> images;
-            
-            DIR *dir;
-            struct dirent *ent;
-            if ((dir = opendir (rawImagesPath.c_str())) != NULL) {
-                while ((ent = readdir (dir)) != NULL) {
-                    string name = ent->d_name;
-                    
-                    if(StringEndsWith(name, defaultExtension)) {
-                        images.push_back(InputImageFromFile(name));
-                    }
-                    
-                }
-                closedir (dir);
-            } else {
-                //Could not open dir.
-                assert(false);
-            }
-            
-            return images;
+        void SaveStitcherInput(const vector<vector<InputImageP>> &rings, const ExposureCompensator &exposure) {
+           SaveRingMap(rings, ringMapPath);
+           SaveExposureMap(exposure.GetGains(), exposureMapPath);
         }
+
+        void LoadStitcherInput(vector<vector<InputImageP>> &rings, ExposureCompensator &exposure) {
+            rings.clear();
+            vector<InputImageP> images = LoadAllImagesFromDirectory(rawImagesPath, defaultExtension);
+            vector<vector<size_t>> ringmap = LoadRingMap(ringMapPath);
+            
+            for(auto &r : ringmap) {
+                vector<InputImageP> ring;
+                for(auto &id : r) {
+                    for(auto &image : images) {
+                        if((size_t)image->id == id) {
+                            ring.push_back(image);
+                        }
+                    }
+                }
+                rings.push_back(ring); 
+            }
+
+            exposure.SetGains(LoadExposureMap(exposureMapPath));
+        }
+        
     };
 }
 

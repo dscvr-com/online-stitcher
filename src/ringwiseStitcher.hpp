@@ -23,21 +23,30 @@ namespace optonaut {
             std::vector<int> dyCache;
             std::vector<std::vector<InputImageP>> rings;
             ExposureCompensator exposure;
-            CheckpointStore &store;
             double ev;
             
-            void AdjustCorners(std::vector<StitchingResultP> &rings, std::vector<cv::Point> &corners);
-            void Checkpoint();
-            StitchingResultP StitchRing(const std::vector<InputImageP> &ring, bool debug, const std::string &debugName);
-        public:
-            RingwiseStitcher(int width, int height, CheckpointStore &store) : resizeOutput(true), w(width), h(height), store(store) { }
-            RingwiseStitcher(CheckpointStore &store) : resizeOutput(false), store(store) {  }
+            void AdjustCorners(
+                    std::vector<StitchingResultP> &rings, 
+                    std::vector<cv::Point> &corners);
 
-            void InitializeForStitching(std::vector<std::vector<InputImageP>> &rings, ExposureCompensator &exposure, double ev = 0);
-            bool HasCheckpoint();
-            void InitializeFromCheckpoint();
-            void RemoveCheckpoint();
-            StitchingResultP Stitch(bool debug = false, const std::string &debugName = "");
+            void Checkpoint();
+            StitchingResultP StitchRing(
+                    const std::vector<InputImageP> &ring, 
+                    bool debug, 
+                    const std::string &debugName);
+        public:
+            RingwiseStitcher(int width, int height) : 
+                resizeOutput(true), w(width), h(height) { }
+
+            RingwiseStitcher() : resizeOutput(false), w(0), h(0) { }
+
+            void InitializeForStitching(
+                    std::vector<std::vector<InputImageP>> &rings, 
+                    ExposureCompensator &exposure, double ev = 0);
+            
+            StitchingResultP Stitch(
+                    bool debug = false,
+                    const std::string &debugName = "");
 
     };
 }

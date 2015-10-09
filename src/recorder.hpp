@@ -13,12 +13,12 @@
 
 #include <chrono>
 
-#ifndef OPTONAUT_PIPELINE_HEADER
-#define OPTONAUT_PIPELINE_HEADER
+#ifndef OPTONAUT_RECORDER_HEADER
+#define OPTONAUT_RECORDER_HEADER
 
 namespace optonaut {
     
-    class Pipeline {
+    class Recorder {
 
     private: 
 
@@ -33,22 +33,15 @@ namespace optonaut {
         
         CheckpointStore leftStore;
         CheckpointStore rightStore;
+        
+        vector<InputImageP> leftImages;
+        vector<InputImageP> rightImages;
 
         ExposureCompensator exposure;
         
         MonoStitcher stereoConverter;
-        
-        vector<InputImageP> lefts;
-        vector<InputImageP> rights;
 
-        vector<InputImageP> aligned; 
-
-        RingwiseStitcher leftStitcher;
-        RingwiseStitcher rightStitcher;
-
-        bool previewImageAvailable;
         bool isIdle;
-        bool previewEnabled;
         bool isFinished;
         
         RecorderGraphGenerator generator;
@@ -57,30 +50,7 @@ namespace optonaut {
         
         uint32_t imagesToRecord;
         uint32_t recordedImages;
-
         
-        void PushLeft(InputImageP left) {
-            lefts.push_back(left);
-        }
-
-        void PushRight(InputImageP right) {
-            rights.push_back(right);
-        }
-
-        StitchingResultP Finish(vector<InputImageP> &images, RingwiseStitcher &stitcher, bool debug = false, string debugName = "") {
-
-            aligner->Postprocess(images);
-            auto rings = RingwiseStreamAligner::SplitIntoRings(images, recorderGraph);
-            
-            StitchingResultP res;
-            
-            stitcher.InitializeForStitching(rings, exposure, 0.4);
-            res = stitcher.Stitch(debug, debugName);
-
-            return res;
-        }
-
-
     public:
 
         static Mat androidBase;
@@ -90,19 +60,14 @@ namespace optonaut {
         static string tempDirectory;
         static string version;
 
-        static bool debug;
         static const int stretch = 10;
         
-        Pipeline(Mat base, Mat zeroWithoutBase, Mat intrinsics, string storePath, int graphConfiguration = RecorderGraph::ModeAll, bool isAsync = true) :
+        Recorder(Mat base, Mat zeroWithoutBase, Mat intrinsics, CheckpointStore &leftStore, CheckpointStore &rightStore, int graphConfiguration = RecorderGraph::ModeAll, bool isAsync = true) :
             base(base),
-            leftStore(storePath + "left/"),
-            rightStore(storePath + "right/"),
+            leftStore(leftStore),
+            rightStore(rightStore),
             stereoConverter(),
-            leftStitcher(4096, 4096, leftStore),
-            rightStitcher(4096, 4096, rightStore),
-            previewImageAvailable(false),
             isIdle(false),
-            previewEnabled(true),
             isFinished(false),
             generator(),
             recorderGraph(generator.Generate(intrinsics, graphConfiguration)),
@@ -122,14 +87,11 @@ namespace optonaut {
             aligner = shared_ptr<RingwiseStreamAligner>(new RingwiseStreamAligner(recorderGraph, exposure, isAsync));
         }
         
-        void SetPreviewImageEnabled(bool enabled) {
-            previewEnabled = enabled;
-        }
-        
         Mat ConvertFromStitcher(const Mat &in) const {
             return (zero.inv() * baseInv * in * base).inv();
         }
-        
+       
+       //TODO: Rename all ball methods.  
         Mat GetBallPosition() const {
             return ConvertFromStitcher(controller.GetBallPosition());
         }
@@ -168,11 +130,8 @@ namespace optonaut {
             return converted;
         }
 
-        bool IsPreviewImageAvailable() const {
-            return previewImageAvailable; 
-        }
-
         void Dispose() {
+            //TODO: Replace couts by actual asserts. 
             cout << "Pipeline Dispose called by " << std::this_thread::get_id();
             aligner->Dispose();
         }
@@ -199,9 +158,9 @@ namespace optonaut {
                 
                 stereo.A->image.Unload();
                 stereo.B->image.Unload();
-                
-                PushLeft(stereo.A);
-                PushRight(stereo.B);
+
+                leftImages.push_back(stereo.A);
+                rightImages.push_back(stereo.B);
             }
         }
         
@@ -236,14 +195,6 @@ namespace optonaut {
             
             image->adjustedExtrinsics = aligner->GetCurrentRotation().clone();
 
-            if(Pipeline::debug && image->id % stretch == 0) {
-                if(!image->IsLoaded())
-                    image->LoadFromDataRef();
-                aligned.push_back(image);
-            }
-
-            previewImageAvailable = false;
-            
             if(!controller.IsInitialized())
                 controller.Initialize(image->adjustedExtrinsics);
             
@@ -303,12 +254,19 @@ namespace optonaut {
         void Finish() {
             cout << "Pipeline Finish called by " << std::this_thread::get_id();
             isFinished = true;
+
             if(previous.isValid) {
                 exposure.FindGains();
             }
             
             aligner->Finish();
-            //exposure.PrintCorrespondence();
+            aligner->Postprocess(leftImages);
+            aligner->Postprocess(rightImages);
+           
+            vector<vector<InputImageP>> rightRings = aligner->SplitIntoRings(rightImages);
+            vector<vector<InputImageP>> leftRings = aligner->SplitIntoRings(leftImages);
+            leftStore.SaveStitcherInput(leftRings, exposure); 
+            rightStore.SaveStitcherInput(rightRings, exposure); 
         }
                 
         bool AreAdjacent(SelectionPoint a, SelectionPoint b) {
@@ -324,29 +282,6 @@ namespace optonaut {
             return previous;
         }
 
-        StitchingResultP FinishLeft() {
-            return Finish(lefts, leftStitcher, false);
-        }
-
-        StitchingResultP FinishRight() {
-            return Finish(rights, rightStitcher, false);
-        }
-
-        StitchingResultP FinishAligned() {
-            //Todo - Intro a debugStitcher instance with a dummyStore inside.
-            //return Finish(aligned, false);
-            return NULL;
-        }
-
-        StitchingResultP FinishAlignedDebug() {
-            //return Finish(aligned, true);
-            return NULL;
-        }
-
-        bool HasResults() {
-            return lefts.size() > 0 && rights.size() > 0;
-        }
-        
         bool IsIdle() {
             return isIdle;
         }

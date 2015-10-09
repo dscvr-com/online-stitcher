@@ -30,6 +30,14 @@ namespace optonaut {
 
 	void BufferFromBinFile(unsigned char buf[], size_t len, std::string file);
 	void BufferToBinFile(unsigned char buf[], size_t len, std::string file);
+    
+    void SaveExposureMap(const std::map<size_t, double> &exposure, const std::string &path);
+    std::map<size_t, double> LoadExposureMap(const std::string &path);
+    
+    void SaveRingMap(const std::vector<std::vector<InputImageP>> &rings, const std::string &path);
+    std::vector<std::vector<size_t>> LoadRingMap(const std::string &path);
+    std::vector<InputImageP> LoadAllImagesFromDirectory(const std::string &path, const std::string &extension);
+
 }
 
 #endif

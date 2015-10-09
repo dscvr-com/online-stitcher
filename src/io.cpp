@@ -6,9 +6,13 @@
 
 #include "lib/rapidjson/document.h"
 #include "lib/rapidjson/filereadstream.h"
+#include "lib/rapidjson/filewritestream.h"
+#include "lib/rapidjson/reader.h"
+#include "lib/rapidjson/writer.h"
 #include "support.hpp"
 #include "image.hpp"
 #include "inputImage.hpp"
+#include "dirent.h"
 
 using namespace cv;
 using namespace std;
@@ -65,12 +69,10 @@ namespace optonaut {
         return dim;
     }
     
-    char buffer[65536];
-    FILE* fileRef = NULL;
-    
-    void OpenJsonDocument(Document &doc, const string &path, const string &flags) {
-        assert(fileRef == NULL);
-        FILE* fileRef = fopen(path.c_str(), flags.c_str());
+    void ReadJsonDocument(Document &doc, const string &path) {
+        char buffer[65536];
+
+        FILE* fileRef = fopen(path.c_str(), "r");
         if(fileRef == NULL) {
             cout << "Unable to open data file " << path << endl;
             assert(false);
@@ -78,18 +80,22 @@ namespace optonaut {
         
         FileReadStream file(fileRef, buffer, sizeof(buffer));
         doc.ParseStream<0>(file);
+        fclose(fileRef);
     }
     
-    void CloseJsonDocument() {
-        assert(fileRef != NULL);
+    void WriteJsonDocument(Document &doc, const string &path) {
+        FILE* fileRef = fopen(path.c_str(), "w+"); 
+        char buffer[65536];
+        FileWriteStream os(fileRef, buffer, sizeof(buffer));
+        Writer<FileWriteStream> writer(os);
+        doc.Accept(writer);
         fclose(fileRef);
-        fileRef = NULL;
     }
 
  	void ParseInputImageInfoFile(const string &path, InputImageP result) {
         Document doc;
         
-        OpenJsonDocument(doc, path, "rb");
+        ReadJsonDocument(doc, path);
         
 		result->id = doc["id"].GetInt();
 		assert(MatrixFromJson(doc["intrinsics"], result->intrinsics) == 3);
@@ -101,15 +107,13 @@ namespace optonaut {
         } else {
             assert(MatrixFromJson(doc["extrinsics"], result->adjustedExtrinsics) == 4);
         }
-		
-        CloseJsonDocument();
  	}
     
     void WriteInputImageInfoFile(const string &path, InputImageP result) {
         Document doc;
         Document::AllocatorType &allocator = doc.GetAllocator();
         
-        OpenJsonDocument(doc, path, "wx");
+        ReadJsonDocument(doc, path);
         
         doc.AddMember("id", result->id, allocator);
         MatrixToJson(result->intrinsics,
@@ -121,12 +125,9 @@ namespace optonaut {
         MatrixToJson(result->originalExtrinsics,
                      doc.AddMember("originalExtrinsics", kArrayType, allocator),
                      allocator);
-        
-        CloseJsonDocument();
     }
 
- 	bool FileExists(const string &fileName)
-	{
+ 	bool FileExists(const string &fileName) {
 	    std::ifstream infile(fileName);
 	    return infile.good();
 	}
@@ -164,7 +165,7 @@ namespace optonaut {
 		return result;
 	}
 
-	void BufferFromBinFile(unsigned char buf[], size_t len, string file) {
+	void BufferFromBinFile(unsigned char buf[], size_t len, const string &file) {
 
 	    ifstream input(file, std::ios::binary);
 
@@ -175,10 +176,111 @@ namespace optonaut {
 	    assert(i == len);
 	}
 
-	void BufferToBinFile(unsigned char buf[], size_t len, string file) {
+	void BufferToBinFile(unsigned char buf[], size_t len, const string &file) {
 	    FILE* d;
 		d = fopen(file.c_str(), "w");
 		fwrite(buf, 1, len, d);
 		fclose(d);
 	}
+
+    void SaveExposureMap(const std::map<size_t, double> &exposure, const string &path) {
+        Document doc;
+        Document::AllocatorType &allocator = doc.GetAllocator();
+        
+        Value jExposure(kArrayType);
+
+        for(auto &e : exposure) {
+            Value je(kObjectType);
+
+            je.AddMember("id", (uint64_t)e.first, allocator);
+            je.AddMember("e", e.second, allocator);
+
+            jExposure.PushBack(je, allocator);
+        }
+
+        doc.AddMember("exposure", jExposure, allocator);
+
+        WriteJsonDocument(doc, path);
+    }
+
+    std::map<size_t, double> LoadExposureMap(const string &path) {
+        Document doc;
+
+        std::map<size_t, double> exposure;
+    
+        ReadJsonDocument(doc, path);
+
+        Value &jExposure = doc["exposure"];
+
+        for(SizeType i = 0; i < jExposure.Size(); i++) {
+            exposure.at(jExposure[i]["id"].GetUint64()) = 
+                jExposure[i]["e"].GetDouble();
+        }
+
+        return exposure;
+    }
+
+    void SaveRingMap(const vector<vector<InputImageP>> &rings, const string &path) {
+        Document doc;
+        Document::AllocatorType &allocator = doc.GetAllocator();
+        
+        Value jRings(kArrayType);
+
+        for(auto &ring : rings) {
+            Value jRing(kArrayType);
+
+            for(auto &img : ring) {
+                jRing.PushBack(img->id, allocator);
+            }
+
+            jRings.PushBack(jRing, allocator);
+        }
+
+        doc.AddMember("rings", jRings, allocator);
+
+        WriteJsonDocument(doc, path);
+    }
+
+    vector<vector<size_t>> LoadRingMap(const string &path) {
+        Document doc;
+
+        vector<vector<size_t>> rings;
+    
+        ReadJsonDocument(doc, path);
+
+        Value &jRings = doc["rings"];
+
+        for(SizeType i = 0; i < jRings.Size(); i++) {
+            vector<size_t> ring;
+            for(SizeType j = 0; j < jRings[i].Size(); j++) {
+                ring.push_back(jRings[i][j].GetUint64());
+            }
+            rings.push_back(ring);
+        }
+
+        return rings;
+    }
+        
+    vector<InputImageP> LoadAllImagesFromDirectory(const string &path, const string &extension) {
+        vector<InputImageP> images;
+        
+        DIR *dir;
+        struct dirent *ent;
+        if((dir = opendir(path.c_str())) != NULL) {
+            while((ent = readdir(dir)) != NULL) {
+                string name = ent->d_name;
+                
+                if(StringEndsWith(name, extension)) {
+                    images.push_back(InputImageFromFile(name, true));
+                }
+                
+            }
+            closedir(dir);
+        } else {
+            //Could not open dir.
+            assert(false);
+        }
+        
+        return images;
+    }
 }
