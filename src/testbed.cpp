@@ -66,6 +66,8 @@ int main(int argc, char** argv) {
     CheckpointStore leftStore("tmp/left/");
     CheckpointStore rightStore("tmp/right/");
 
+    cout << "Starting." << endl;
+
     int n = argc - 1;
     vector<string> files;
 
@@ -77,6 +79,7 @@ int main(int argc, char** argv) {
     sort(files.begin(), files.end(), CompareByFilename);
 
     if(!leftStore.HasUnstitchedRecording()) {
+        cout << "Recording." << endl;
         Record(files, leftStore, rightStore);
     }
 
@@ -84,24 +87,34 @@ int main(int argc, char** argv) {
         cout << "No results." << endl;
         return 0;
     }
+    
+    cout << "Create callbacks." << endl;
+
+    ProgressCallback progress([](float progress) -> bool {
+                cout << (int)(progress * 100) << "%" << endl;
+                return true;
+            });
+    ProgressCallbackAccumulator callbacks(progress, {0.5, 0.5});
 
     {
+        cout << "Start left stitcher." << endl;
         Stitcher leftStitcher(leftStore);
-        auto left = leftStitcher.Finish(false, "dbg/left");
+        auto left = leftStitcher.Finish(callbacks.At(0), false, "dbg/left");
         imwrite("dbg/left.jpg", left->image.data);
         left->image.Unload();  
         left->mask.Unload();  
     }
     {
-        Stitcher rightStitcher(leftStore);
-        auto right = rightStitcher.Finish(false, "dbg/right");
+        cout << "Start right stitcher." << endl;
+        Stitcher rightStitcher(rightStore);
+        auto right = rightStitcher.Finish(callbacks.At(1), false, "dbg/right");
         imwrite("dbg/right.jpg", right->image.data);    
         right->image.Unload();  
         right->mask.Unload();  
     }
 
-    leftStore.Clear();
-    rightStore.Clear();
+    //leftStore.Clear();
+    //rightStore.Clear();
     
     return 0;
 }

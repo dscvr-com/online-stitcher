@@ -60,7 +60,8 @@ namespace optonaut {
         void Load(int flags = cv::IMREAD_COLOR) {
             assert(source != "");
 
-            data_ = cv::imread(source, flags);
+            cv::Mat n = cv::imread(source, flags);
+            std::swap(data_, n);
             cols_ = data.cols;
             rows_ = data.rows;
 

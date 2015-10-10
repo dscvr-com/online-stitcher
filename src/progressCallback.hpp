@@ -41,7 +41,7 @@ namespace optonaut {
         ProgressCallbackAccumulator(ProgressCallback &parent, std::vector<float> weights) : count (weights.size()), parent(parent), weights(weights) {
             callbacks.reserve(count);
             for (size_t i = 0; i < count; i++) {
-                callbacks.emplace_back([&](float progress) -> bool {
+                callbacks.emplace_back([&](float) -> bool {
                     return updateAndCall();
                 });
             }

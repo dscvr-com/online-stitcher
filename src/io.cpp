@@ -349,7 +349,8 @@ namespace optonaut {
         StitchingResultP res(new StitchingResult());
         
         ParseStitchingResultInfoFile(infoFilePath, res);
-        
+        res->image = Image(Mat(0, 0, CV_8UC3)); 
+        res->mask = Image(Mat(0, 0, CV_8UC3)); 
         res->image.source = imagePath;
         res->mask.source = maskPath;
 
@@ -375,14 +376,13 @@ namespace optonaut {
     std::vector<T> LoadListGeneric(const std::string &path) {
         Document doc;
         ReadJsonDocument(doc, path);
-        Document::AllocatorType &allocator = doc.GetAllocator();
-        
         
         assert(doc.IsArray());
         size_t size = doc.Size();
         vector<T> res;
         
         for(size_t i = 0; i < size; i++) {
+            //Haha, lol. As if this will go trough the typecheck. 
             res.push_back(doc[i]);
         }
         

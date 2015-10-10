@@ -32,7 +32,7 @@ void RStitcher::PrepareMatrices(const vector<InputImageP> &r) {
     }
 }
 
-StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, ExposureCompensator &exposure, ProgressCallback &progress, double ev, bool debug, const std::string&) {
+StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const ExposureCompensator &exposure, ProgressCallback &progress, double ev, bool debug, const std::string&) {
 
     //This is needed because xcode does not like the CV stitching header.
     //So we can't initialize this constant in the header. 

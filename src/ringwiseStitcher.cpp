@@ -56,7 +56,7 @@ namespace optonaut {
                 a = b;
                 rings[i - 1]->image.Unload();
             }
-            rings.back()->image.Load();
+            rings.back()->image.Unload();
         }
         
         progress(1);
@@ -75,15 +75,17 @@ namespace optonaut {
         this->dyCache = vector<int>();
     }
     
-    StitchingResultP RingwiseStitcher::StitchRing(const vector<InputImageP> &ring, ProgressCallback &progress, int ringId, bool debug, const string &debugName) {
+    StitchingResultP RingwiseStitcher::StitchRing(const vector<InputImageP> &ring, ProgressCallback &progress, int ringId, bool debug, const string &debugName) const {
         
+        cout << "Attempting to stitch ring " << ringId << endl;
+
         StitchingResultP res = store.LoadRing(ringId);
+
         if(res != NULL) {
             progress(1);
             return res;
         }
         
-        //TODO: Do not stitch if there is a file available
         RStitcher stitcher(store);
         
         res = stitcher.Stitch(ring, exposure, progress, ev, debug, debugName);
@@ -121,6 +123,7 @@ namespace optonaut {
         FeatherBlender* pblender = new FeatherBlender(0.01f); 
         Ptr<Blender> blender = Ptr<Blender>(pblender);
 
+        cout << "Attempting to stitch rings." << endl;
         int margin = -1; 
         
         for(size_t i = 0; i < rings.size(); i++) {
@@ -149,13 +152,15 @@ namespace optonaut {
         }
 
         assert(margin != -1);
-            
-        AdjustCorners(stitchedRings, corners, ringAdjustmentProgress);
+           
+        cout << "Attempting ring adjustment." << endl;
+        ringAdjustmentProgress(1); 
+        //AdjustCorners(stitchedRings, corners, ringAdjustmentProgress);
         
         STimer::Tick("Corner Adjusting Finished");
         blender->prepare(corners, sizes);
         
-
+        cout << "Attempting ring blending." << endl;
         for(size_t i = 0; i < stitchedRings.size(); i++) {
             finalBlendingProgress((float)i / (float)stitchedRings.size());
             auto res = stitchedRings[i];
@@ -167,15 +172,16 @@ namespace optonaut {
 
             Mat warpedImageAsShort;
             res->image.data.convertTo(warpedImageAsShort, CV_16S);
-            
-            res->image.Unload();
+
+            Mat mask = res->mask.data;
 
             //Set one pixel of the mask to black on the edges to enable blending. 
-            res->mask.data(Rect(0, 0, res->mask.cols, 1)).setTo(Scalar::all(0));
-            res->mask.data(Rect(0, res->mask.rows - 1, res->mask.cols, 1)).setTo(Scalar::all(0));
+            mask(Rect(0, 0, mask.cols, 1)).setTo(Scalar::all(0));
+            mask(Rect(0, mask.rows - 1, mask.cols, 1)).setTo(Scalar::all(0));
 
-            blender->feed(warpedImageAsShort, res->mask.data, corners[i]);
+            blender->feed(warpedImageAsShort, mask, corners[i]);
 
+            res->image.Unload();
             res->mask.Unload();
         }
         

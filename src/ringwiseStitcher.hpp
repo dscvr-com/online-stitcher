@@ -38,7 +38,7 @@ namespace optonaut {
                     ProgressCallback &progress,
                     int ringId,
                     bool debug, 
-                    const std::string &debugName);
+                    const std::string &debugName) const;
         public:
             RingwiseStitcher(int width, int height, CheckpointStore &store) : 
                 resizeOutput(true), w(width), h(height), store(store) { }

@@ -164,9 +164,9 @@ namespace optonaut {
 
             static const bool exposureOn = true;
 
-            void Apply(Mat &image, size_t id, double ev = 0) {
+            void Apply(Mat &image, size_t id, double ev = 0) const {
                 if(exposureOn) {
-                    multiply(image, gains[id] + ev, image);
+                    multiply(image, gains.at(id) + ev, image);
                 }
             }
     };
