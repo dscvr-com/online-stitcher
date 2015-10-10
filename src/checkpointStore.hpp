@@ -14,6 +14,8 @@ namespace optonaut {
         const std::string rawImagesPath;
         const std::string stitcherDumpPath;
         const std::string ringMapPath;
+        const std::string ringPath;
+        const std::string optographPath;
         const std::string exposureMapPath;
         const std::string defaultExtension = ".bmp";
         int c;
@@ -23,6 +25,8 @@ namespace optonaut {
             rawImagesPath(basePath + "raw_images/"),
             stitcherDumpPath(basePath + "dump/"),
             ringMapPath(basePath + "rings.json"),
+            ringPath(basePath + "rings/"),
+            optographPath(basePath + "optograph/"),
             exposureMapPath(basePath + "exposure.json"),
             c(0) { }
         
@@ -31,6 +35,12 @@ namespace optonaut {
         void SaveStitcherTemporaryImage(Image &image);
         
         void SaveStitcherInput(const std::vector<std::vector<InputImageP>> &rings, const std::map<size_t, double> &exposure);
+        
+        void SaveRing(int ringId, StitchingResultP image);
+        StitchingResultP LoadRing(int ringId);
+        
+        void SaveOptograph(StitchingResultP image);
+        StitchingResultP LoadOptograph();
 
         void LoadStitcherInput(std::vector<std::vector<InputImageP>> &rings, std::map<size_t, double> &exposure);
         

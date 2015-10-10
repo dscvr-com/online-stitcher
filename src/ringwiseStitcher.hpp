@@ -36,6 +36,7 @@ namespace optonaut {
             StitchingResultP StitchRing(
                     const std::vector<InputImageP> &ring,
                     ProgressCallback &progress,
+                    int ringId,
                     bool debug, 
                     const std::string &debugName);
         public:

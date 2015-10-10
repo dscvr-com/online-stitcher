@@ -20,6 +20,8 @@ namespace optonaut {
 
     InputImageP InputImageFromFile(const std::string &path, bool shallow = true);
     void InputImageToFile(const InputImageP image, const std::string &path);
+    StitchingResultP StitchingResultFromFile(const std::string &path, const std::string &extension);
+    void StitchingResultToFile(StitchingResultP image, const std::string &path, const std::string &extension);
  	bool FileExists(const std::string &fileName);
 
 	template <typename T>
@@ -36,6 +38,11 @@ namespace optonaut {
     
     void SaveExposureMap(const std::map<size_t, double> &exposure, const std::string &path);
     std::map<size_t, double> LoadExposureMap(const std::string &path);
+    
+    template <typename T>
+    void SaveListGeneric(const std::vector<T> input, const std::string &path);
+    template <typename T>
+    std::vector<T> LoadListGeneric(const std::string &path);
     
     void SaveRingMap(const std::vector<std::vector<InputImageP>> &rings, const std::string &path);
     std::vector<std::vector<size_t>> LoadRingMap(const std::string &path);

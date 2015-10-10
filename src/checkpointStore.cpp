@@ -46,6 +46,21 @@ namespace optonaut {
         
         exposure = LoadExposureMap(exposureMapPath);
     }
+    void CheckpointStore::SaveRing(int ringId, StitchingResultP image) {
+        StitchingResultToFile(image, ringPath + "ring_" + ToString(ringId), ".bmp");
+    }
+    
+    StitchingResultP CheckpointStore::LoadRing(int ringId) {
+        return StitchingResultFromFile(ringPath + "ring_" + ToString(ringId), ".bmp");
+    }
+    
+    void CheckpointStore::SaveOptograph(StitchingResultP image) {
+        StitchingResultToFile(image, optographPath + "result", ".bmp");
+    }
+    
+    StitchingResultP CheckpointStore::LoadOptograph() {
+        return StitchingResultFromFile(optographPath + "result", ".bmp");
+    }
     
     void CheckpointStore::Clear() {
         DeleteDirectories(basePath);

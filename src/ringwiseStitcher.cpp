@@ -75,15 +75,20 @@ namespace optonaut {
         this->dyCache = vector<int>();
     }
     
-    StitchingResultP RingwiseStitcher::StitchRing(const vector<InputImageP> &ring, ProgressCallback &progress, bool debug, const string &debugName) {
+    StitchingResultP RingwiseStitcher::StitchRing(const vector<InputImageP> &ring, ProgressCallback &progress, int ringId, bool debug, const string &debugName) {
+        
+        StitchingResultP res = store.LoadRing(ringId);
+        if(res != NULL) {
+            progress(1);
+            return res;
+        }
         
         //TODO: Do not stitch if there is a file available
         RStitcher stitcher(store);
         
-        auto res = stitcher.Stitch(ring, exposure, progress, ev, debug, debugName);
+        res = stitcher.Stitch(ring, exposure, progress, ev, debug, debugName);
 
-        store.SaveStitcherTemporaryImage(res->image);
-        store.SaveStitcherTemporaryImage(res->mask);
+        store.SaveRing(ringId, res);
 
         res->image.Unload();
         res->mask.Unload();
@@ -95,6 +100,14 @@ namespace optonaut {
 
         STimer::Tick("StitchStart");
         
+        StitchingResultP res = store.LoadOptograph();
+        if(res != NULL) {
+            progress(1);
+            return res;
+        }
+        
+        res = StitchingResultP(new StitchingResult());
+    
         vector<float> weights(rings.size() + 2);
         fill(weights.begin(), weights.end(), 1.0f / weights.size());
         ProgressCallbackAccumulator progressCallbacks(progress, weights);
@@ -116,7 +129,7 @@ namespace optonaut {
                 continue;
             }
             
-            auto res = StitchRing(rings[i], progressCallbacks.At(i), debug, debugName);
+            auto res = StitchRing(rings[i], progressCallbacks.At(i), i, debug, debugName);
             
             stitchedRings.push_back(res);
             sizes.push_back(res->image.size());
@@ -127,9 +140,9 @@ namespace optonaut {
             }
 
             if(debugName != "") {
-                 res->image.Load();
+                res->image.Load();
                 imwrite(debugName + "_ring_" + ToString(i) + "_ev_" + ToString(ev) + ".jpg",  res->image.data); 
-                 res->image.Unload();
+                res->image.Unload();
 
             }
             STimer::Tick("Ring Finished");
@@ -148,11 +161,14 @@ namespace optonaut {
             auto res = stitchedRings[i];
             res->image.Load();
             res->mask.Load(IMREAD_GRAYSCALE);
+            
+            assert(res->image.type() == CV_8UC3);
+            assert(res->mask.type() == CV_8U);
 
             Mat warpedImageAsShort;
             res->image.data.convertTo(warpedImageAsShort, CV_16S);
-
-            assert(res->mask.type() == CV_8U);
+            
+            res->image.Unload();
 
             //Set one pixel of the mask to black on the edges to enable blending. 
             res->mask.data(Rect(0, 0, res->mask.cols, 1)).setTo(Scalar::all(0));
@@ -160,17 +176,12 @@ namespace optonaut {
 
             blender->feed(warpedImageAsShort, res->mask.data, corners[i]);
 
-            res->image.Unload();
             res->mask.Unload();
-            warpedImageAsShort.release();
         }
         
         finalBlendingProgress(1);
 
         stitchedRings.clear();
-        STimer::Tick("FinalStitching Finished");
-
-        StitchingResultP res(new StitchingResult());
         {
             Mat imageRes, maskRes;
             blender->blend(imageRes, maskRes);
@@ -178,6 +189,7 @@ namespace optonaut {
             res->image = Image(imageRes);
             res->mask = Image(maskRes);
         }
+        STimer::Tick("FinalStitching Finished");
         blender.release();
         
         //Opencv somehow messes up the first few collumn while blending.
@@ -212,6 +224,9 @@ namespace optonaut {
                 res->mask = Image(Mat(0, 0, CV_8UC1));
             }
         }
+        
+        store.SaveOptograph(res);
+        
         STimer::Tick("Resize Finished");
 
         return res;

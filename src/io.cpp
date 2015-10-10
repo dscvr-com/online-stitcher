@@ -11,6 +11,7 @@
 #include "lib/rapidjson/writer.h"
 #include "support.hpp"
 #include "image.hpp"
+#include "stitchingResult.hpp"
 #include "inputImage.hpp"
 #include "dirent.h"
 
@@ -264,6 +265,27 @@ namespace optonaut {
 
         WriteJsonDocument(doc, path);
     }
+    
+    void WriteStitchingResultInfoFile(const string &path, StitchingResultP result) {
+        
+        CreateDirectories(path);
+        
+        Document doc;
+        Document::AllocatorType &allocator = doc.GetAllocator();
+        doc.SetObject();
+        doc.AddMember("x", result->corner.x, allocator);
+        doc.AddMember("y", result->corner.y, allocator);
+        
+        WriteJsonDocument(doc, path);
+    }
+    
+    void ParseStitchingResultInfoFile(const string &path, StitchingResultP result) {
+        Document doc;
+        
+        ReadJsonDocument(doc, path);
+        
+        result->corner = cv::Point(doc["x"].GetInt(), doc["y"].GetInt());
+    }
 
  	bool FileExists(const string &fileName) {
 	    std::ifstream infile(fileName);
@@ -301,7 +323,71 @@ namespace optonaut {
         ParseInputImageInfoFile(jsonPath, result);
 
 		return result;
-	}
+    }
+    
+    void StitchingResultToFile(StitchingResultP image, const string &path, const string &extension) {
+        string infoFilePath = path + ".data.json";
+        string imagePath = path + ".image" + extension;
+        string maskPath = path + ".mask" + extension;
+        
+        WriteStitchingResultInfoFile(infoFilePath, image);
+        
+        imwrite(imagePath, image->image.data);
+        imwrite(maskPath, image->mask.data);
+        image->image.source = imagePath;
+        image->mask.source = maskPath;
+    }
+    
+    StitchingResultP StitchingResultFromFile(const string &path, const string &extension) {
+        string infoFilePath = path + ".data.json";
+        string imagePath = path + ".image" + extension;
+        string maskPath = path + ".mask" + extension;
+        
+        if(!FileExists(infoFilePath))
+            return StitchingResultP(NULL);
+    
+        StitchingResultP res(new StitchingResult());
+        
+        ParseStitchingResultInfoFile(infoFilePath, res);
+        
+        res->image.source = imagePath;
+        res->mask.source = maskPath;
+
+        return res;
+    }
+    
+    
+    template <typename T>
+    void SaveListGeneric(const std::vector<T> input, const std::string &path) {
+        Document doc;
+        Document::AllocatorType &allocator = doc.GetAllocator();
+        
+        doc.SetArray();
+        
+        for(T &val : input) {
+            doc.PushBack(val, allocator);
+        }
+        
+        WriteJsonDocument(doc, path);
+    }
+    
+    template <typename T>
+    std::vector<T> LoadListGeneric(const std::string &path) {
+        Document doc;
+        ReadJsonDocument(doc, path);
+        Document::AllocatorType &allocator = doc.GetAllocator();
+        
+        
+        assert(doc.IsArray());
+        size_t size = doc.Size();
+        vector<T> res;
+        
+        for(size_t i = 0; i < size; i++) {
+            res.push_back(doc[i]);
+        }
+        
+        return res;
+    }
 
 	void BufferFromBinFile(unsigned char buf[], size_t len, const string &file) {
 
@@ -396,7 +482,7 @@ namespace optonaut {
         for(SizeType i = 0; i < jRings.Size(); i++) {
             vector<size_t> ring;
             for(SizeType j = 0; j < jRings[i].Size(); j++) {
-                ring.push_back(jRings[i][j].GetUint64());
+                ring.push_back((size_t)jRings[i][j].GetUint64());
             }
             rings.push_back(ring);
         }
