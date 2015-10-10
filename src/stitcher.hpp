@@ -1,13 +1,7 @@
 #include "image.hpp"
-#include "asyncAligner.hpp"
-#include "trivialAligner.hpp"
-#include "ringwiseStreamAligner.hpp"
-#include "monoStitcher.hpp"
-#include "recorderGraph.hpp"
-#include "recorderGraphGenerator.hpp"
-#include "recorderController.hpp"
-#include "ringwiseStitcher.hpp"
 #include "checkpointStore.hpp"
+#include "ringwiseStitcher.hpp"
+#include "progressCallback.hpp"
 
 #include "static_timer.hpp"
 
@@ -33,7 +27,7 @@ namespace optonaut {
             store(store), core(width, height, store) {
         }
 
-        StitchingResultP Finish(bool debug = false, string debugName = "") {
+        StitchingResultP Finish(ProgressCallback &progress, bool debug = false, string debugName = "") {
             vector<vector<InputImageP>> rings;
             ExposureCompensator exposure;
             map<size_t, double> gains;
@@ -45,7 +39,7 @@ namespace optonaut {
             StitchingResultP res;
             
             core.InitializeForStitching(rings, exposure, 0.4);
-            res = core.Stitch(debug, debugName);
+            res = core.Stitch(progress, debug, debugName);
 
             return res;
         }

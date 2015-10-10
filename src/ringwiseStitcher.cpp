@@ -19,12 +19,13 @@ using namespace cv::detail;
 
 namespace optonaut {
 
-    void RingwiseStitcher::AdjustCorners(std::vector<StitchingResultP> &rings, std::vector<cv::Point> &corners) {
-        //dyCache. 
+    void RingwiseStitcher::AdjustCorners(std::vector<StitchingResultP> &rings, std::vector<cv::Point> &corners, ProgressCallback &progress) {
+        
         if(dyCache.size() == 0) {
             rings[0]->image.Load();
             Mat a = rings[0]->image.data;
             for(size_t i = 1; i < rings.size(); i++) {
+                progress((float)i / (float)rings.size());
                 
                 rings[i]->image.Load();
                 Mat b = rings[i]->image.data;
@@ -57,6 +58,8 @@ namespace optonaut {
             }
             rings.back()->image.Load();
         }
+        
+        progress(1);
 
         for(size_t i = 1; i < rings.size(); i++) {
             corners[i].y = corners[i - 1].y - dyCache[i - 1];
@@ -72,14 +75,12 @@ namespace optonaut {
         this->dyCache = vector<int>();
     }
     
-    StitchingResultP Stitch(bool debug = false, std::string debugName = "");
-    
-    StitchingResultP RingwiseStitcher::StitchRing(const vector<InputImageP> &ring, bool debug, const string &debugName) {
+    StitchingResultP RingwiseStitcher::StitchRing(const vector<InputImageP> &ring, ProgressCallback &progress, bool debug, const string &debugName) {
         
         //TODO: Do not stitch if there is a file available
         RStitcher stitcher(store);
         
-        auto res = stitcher.Stitch(ring, exposure, ev, debug, debugName);
+        auto res = stitcher.Stitch(ring, exposure, progress, ev, debug, debugName);
 
         store.SaveStitcherTemporaryImage(res->image);
         store.SaveStitcherTemporaryImage(res->mask);
@@ -90,9 +91,15 @@ namespace optonaut {
         return res;
     }
 
-    StitchingResultP RingwiseStitcher::Stitch(bool debug, const string &debugName) {
+    StitchingResultP RingwiseStitcher::Stitch(ProgressCallback &progress, bool debug, const string &debugName) {
 
         STimer::Tick("StitchStart");
+        
+        vector<float> weights(rings.size() + 2);
+        fill(weights.begin(), weights.end(), 1.0f / weights.size());
+        ProgressCallbackAccumulator progressCallbacks(progress, weights);
+        ProgressCallback &ringAdjustmentProgress = progressCallbacks.At(weights.size() - 2);
+        ProgressCallback &finalBlendingProgress = progressCallbacks.At(weights.size() - 1);
 
         vector<StitchingResultP> stitchedRings;
         vector<cv::Size> sizes;
@@ -104,10 +111,12 @@ namespace optonaut {
         int margin = -1; 
         
         for(size_t i = 0; i < rings.size(); i++) {
-            if(rings[i].size() == 0) 
+            if(rings[i].size() == 0) {
+                progressCallbacks.At(i)(1);
                 continue;
+            }
             
-            auto res = StitchRing(rings[i], debug, debugName);
+            auto res = StitchRing(rings[i], progressCallbacks.At(i), debug, debugName);
             
             stitchedRings.push_back(res);
             sizes.push_back(res->image.size());
@@ -128,12 +137,14 @@ namespace optonaut {
 
         assert(margin != -1);
             
-        AdjustCorners(stitchedRings, corners);
+        AdjustCorners(stitchedRings, corners, ringAdjustmentProgress);
         
         STimer::Tick("Corner Adjusting Finished");
         blender->prepare(corners, sizes);
+        
 
         for(size_t i = 0; i < stitchedRings.size(); i++) {
+            finalBlendingProgress((float)i / (float)stitchedRings.size());
             auto res = stitchedRings[i];
             res->image.Load();
             res->mask.Load(IMREAD_GRAYSCALE);
@@ -153,6 +164,8 @@ namespace optonaut {
             res->mask.Unload();
             warpedImageAsShort.release();
         }
+        
+        finalBlendingProgress(1);
 
         stitchedRings.clear();
         STimer::Tick("FinalStitching Finished");

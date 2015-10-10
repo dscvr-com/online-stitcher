@@ -32,7 +32,7 @@ void RStitcher::PrepareMatrices(const vector<InputImageP> &r) {
     }
 }
 
-StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, ExposureCompensator &exposure, double ev, bool debug, const std::string&) {
+StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, ExposureCompensator &exposure, ProgressCallback &progress, double ev, bool debug, const std::string&) {
 
     //This is needed because xcode does not like the CV stitching header.
     //So we can't initialize this constant in the header. 
@@ -52,10 +52,12 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, ExposureC
    
     
     Ptr<WarperCreator> warperFactory = new cv::SphericalWarper();
-    Ptr<RotationWarper> warper = warperFactory->create(static_cast<float>(warperScale)); 
+    Ptr<RotationWarper> warper = warperFactory->create(static_cast<float>(warperScale));
+    
+    ProgressCallbackAccumulator stageProgress(progress, {0.5, 0.5});
 
     for(size_t i = 0; i < n; i++) {
-        
+        stageProgress.At(0)((float)i / (float)n);
         //Camera
         InputImageP img = in[i];
         if(!img->image.IsLoaded()) {
@@ -97,6 +99,7 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, ExposureC
         masks.back().Unload();
         images.back().Unload();
     }
+    stageProgress.At(0)(1);
 
     warper.release();
     warperFactory.release();
@@ -107,6 +110,7 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, ExposureC
     blender->prepare(corners, warpedSizes);
 
     for(size_t i = 0; i < n; i++) {
+        stageProgress.At(1)((float)i / (float)n);
         
         masks[i].Load(IMREAD_GRAYSCALE);
         images[i].Load();
@@ -149,6 +153,7 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, ExposureC
         res->corner.x = min(res->corner.x, corners[i].x);
         res->corner.y = min(res->corner.y, corners[i].y);
     }
+    stageProgress.At(1)(1);
 
 	return res;
 }

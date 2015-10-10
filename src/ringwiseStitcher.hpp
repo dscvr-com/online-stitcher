@@ -9,6 +9,7 @@
 #include "exposureCompensator.hpp"
 #include "checkpointStore.hpp"
 #include "stitchingResult.hpp"
+#include "progressCallback.hpp"
 
 #ifndef OPTONAUT_RINGWISE_STITCHER_HEADER
 #define OPTONAUT_RINGWISE_STITCHER_HEADER
@@ -28,11 +29,13 @@ namespace optonaut {
             
             void AdjustCorners(
                     std::vector<StitchingResultP> &rings, 
-                    std::vector<cv::Point> &corners);
+                    std::vector<cv::Point> &corners,
+                    ProgressCallback &progress);
 
             void Checkpoint();
             StitchingResultP StitchRing(
-                    const std::vector<InputImageP> &ring, 
+                    const std::vector<InputImageP> &ring,
+                    ProgressCallback &progress,
                     bool debug, 
                     const std::string &debugName);
         public:
@@ -47,6 +50,7 @@ namespace optonaut {
                     ExposureCompensator &exposure, double ev = 0);
             
             StitchingResultP Stitch(
+                    ProgressCallback &progress,
                     bool debug = false,
                     const std::string &debugName = "");
 

@@ -7,6 +7,7 @@
 #include "exposureCompensator.hpp"
 #include "support.hpp"
 #include "checkpointStore.hpp"
+#include "progressCallback.hpp"
 
 #ifndef OPTONAUT_RSTITCHER_HEADER
 #define OPTONAUT_RSTITCHER_HEADER
@@ -24,7 +25,7 @@ class RStitcher {
 
         RStitcher(CheckpointStore &store) : store(store) { }
 
-		StitchingResultP Stitch(const std::vector<InputImageP> &images, ExposureCompensator &exposure, double ev = 0, bool debug = false, const std::string &debugName = "");
+    StitchingResultP Stitch(const std::vector<InputImageP> &images, ExposureCompensator &exposure, ProgressCallback &progress, double ev = 0, bool debug = false, const std::string &debugName = "");
 		static void PrepareMatrices(const std::vector<InputImageP> &r);
 };
 }
