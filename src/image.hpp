@@ -46,6 +46,7 @@ namespace optonaut {
         }
 
         inline cv::Size size() const {
+            assert(cols_ != 0 && rows_ != 0); //Image was never loaded
             return cv::Size(cols_, rows_);
         }
 

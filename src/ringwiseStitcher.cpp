@@ -82,6 +82,12 @@ namespace optonaut {
         StitchingResultP res = store.LoadRing(ringId);
 
         if(res != NULL) {
+            //Load images and throw them away,
+            //so we know the sizes. 
+            res->image.Load();
+            res->mask.Load();
+            res->image.Unload();
+            res->mask.Unload();
             progress(1);
             return res;
         }
