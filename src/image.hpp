@@ -12,31 +12,29 @@ namespace optonaut {
 
         private:
 		cv::Mat data_;
-        int cols_;
-        int rows_;
 
         public:
 		const cv::Mat &data;
+        int cols;
+        int rows;
 	    std::string source;
-        const int &cols;
-        const int &rows;
 
-        Image() : data_(0, 0, CV_8UC3), cols_(0), rows_(0),
-                  data(data_), source(""), cols(cols_), rows(rows_)  {
+        Image() : data_(0, 0, CV_8UC3),
+                  data(data_), cols(0), rows(0), source("") {
         }
 
-        Image(cv::Mat in) : data_(in), cols_(in.cols), rows_(in.rows),
-                  data(data_), source(""), cols(cols_), rows(rows_)  {
+        Image(cv::Mat in) : data_(in), 
+                  data(data_), cols(in.cols), rows(in.rows), source("") {
         }
 
-        Image(const Image &ref) : data_(ref.data_), cols_(data_.cols), rows_(data_.rows),
-                  data(data_), source(""), cols(cols_), rows(rows_) {
+        Image(const Image &ref) : data_(ref.data_), 
+                  data(data_), cols(data_.cols), rows(data_.rows), source("") {
         }
 
         Image& operator=(Image other) {
             std::swap(this->data_, other.data_);
-            std::swap(this->rows_, other.rows_);
-            std::swap(this->cols_, other.cols_);
+            std::swap(this->rows, other.rows);
+            std::swap(this->cols, other.cols);
             std::swap(this->source, other.source);
             return *this;
         }
@@ -46,8 +44,8 @@ namespace optonaut {
         }
 
         inline cv::Size size() const {
-            assert(cols_ != 0 && rows_ != 0); //Image was never loaded
-            return cv::Size(cols_, rows_);
+            assert(cols != 0 && rows != 0); //Image was never loaded
+            return cv::Size(cols, rows);
         }
 
         inline int type() const {
@@ -63,10 +61,10 @@ namespace optonaut {
 
             cv::Mat n = cv::imread(source, flags);
             std::swap(data_, n);
-            cols_ = data.cols;
-            rows_ = data.rows;
+            cols = data.cols;
+            rows = data.rows;
 
-            assert(cols_ != 0 && rows_ != 0);
+            assert(cols != 0 && rows != 0);
         }
 	};
 }

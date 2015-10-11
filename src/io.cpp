@@ -226,11 +226,15 @@ namespace optonaut {
 		result->id = doc["id"].GetInt();
 		assert(MatrixFromJson(doc["intrinsics"], result->intrinsics) == 3);
         if(doc.HasMember("originalExtrinsics")) {
+            //Internal temporary image format
             assert(MatrixFromJson(doc["originalExtrinsics"],
                                   result->originalExtrinsics) == 4);
             assert(MatrixFromJson(doc["adjustedExtrinsics"],
                                   result->adjustedExtrinsics) == 4);
+            result->image.cols = doc["width"].GetInt();
+            result->image.rows = doc["height"].GetInt();
         } else {
+            //External debug format
             assert(MatrixFromJson(doc["extrinsics"], result->originalExtrinsics) == 4);
             result->adjustedExtrinsics = result->originalExtrinsics;
         }
@@ -244,6 +248,8 @@ namespace optonaut {
         Document::AllocatorType &allocator = doc.GetAllocator();
         doc.SetObject();
         doc.AddMember("id", result->id, allocator);
+        doc.AddMember("width", result->image.cols, allocator);
+        doc.AddMember("height", result->image.rows, allocator);
 
         Value intrinsics; 
         MatrixToJson(result->intrinsics,

@@ -22,6 +22,11 @@ bool CompareByFilename (const string &a, const string &b) {
 
 void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &rightStore) {
 
+    if(files.size() == 0) {
+        cout << "No Input." << endl;
+        return;
+    }
+
     static const bool isAsync = true;
     shared_ptr<Recorder> recorder(NULL);
 

@@ -47,62 +47,40 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
 	vector<Size> warpedSizes(n);
     vector<Image> masks;
     vector<Image> images;
+    vector<cv::detail::CameraParams> cameras;
+    vector<Mat> intrinsicsList;
+    
     masks.reserve(n);
     images.reserve(n);
-   
     
     Ptr<WarperCreator> warperFactory = new cv::SphericalWarper();
     Ptr<RotationWarper> warper = warperFactory->create(static_cast<float>(warperScale));
     
-    ProgressCallbackAccumulator stageProgress(progress, {0.5, 0.5});
+    ProgressCallbackAccumulator stageProgress(progress, {0.1, 0.9});
 
     for(size_t i = 0; i < n; i++) {
         stageProgress.At(0)((float)i / (float)n);
         //Camera
         InputImageP img = in[i];
-        if(!img->image.IsLoaded()) {
-            img->image.Load();
-        }
         
         cv::detail::CameraParams camera;
         From4DoubleTo3Float(img->adjustedExtrinsics, camera.R);
         Mat K; 
         Mat scaledIntrinsics;
-
         ScaleIntrinsicsToImage(img->intrinsics, img->image, scaledIntrinsics, debug ? 8 : 1);
         From3DoubleTo3Float(scaledIntrinsics, K);
 
-        //Mask
-        Mat mask(img->image.rows, img->image.cols, CV_8U);
-        mask.setTo(Scalar::all(255));
+        cameras.push_back(camera);
+        intrinsicsList.push_back(K);
 
         //Warping
-        Mat warpedMask;
-        Mat warpedImage;
+        Rect roi = warper->warpRoi(img->image.size(), K, camera.R);
 
-        corners[i] = warper->warp(img->image.data, K, camera.R, INTER_LINEAR, BORDER_CONSTANT, warpedImage);
-        if(!debug)
-            img->image.Unload();
-        warper->warp(mask, K, camera.R, INTER_NEAREST, BORDER_CONSTANT, warpedMask);
-        mask.release();
-        warpedSizes[i] = warpedImage.size();
-            
-        warpedMask(Rect(0, 0, 1, warpedMask.rows)).setTo(Scalar::all(0));
-        warpedMask(Rect(warpedMask.cols - 1, 0, 1, warpedMask.rows)).setTo(Scalar::all(0));
+        corners[i] = Point(roi.x, roi.y);
+        warpedSizes[i] = Size(roi.width, roi.height);
 
-        masks.emplace_back(warpedMask);
-        images.emplace_back(warpedImage);
-
-        store.SaveStitcherTemporaryImage(masks.back());
-        store.SaveStitcherTemporaryImage(images.back());
-
-        masks.back().Unload();
-        images.back().Unload();
     }
     stageProgress.At(0)(1);
-
-    warper.release();
-    warperFactory.release();
 
     //Blending
     Ptr<Blender> blender;
@@ -112,15 +90,35 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
     for(size_t i = 0; i < n; i++) {
         stageProgress.At(1)((float)i / (float)n);
         
-        masks[i].Load(IMREAD_GRAYSCALE);
-        images[i].Load();
+        InputImageP img = in[i];
+        if(!img->image.IsLoaded()) {
+            img->image.Load();
+        }
+        
+        const cv::detail::CameraParams &camera = cameras[i];
+        const Mat &K = intrinsicsList[i];
 
-        const Mat &warpedMask = masks[i].data;
-        const Mat &warpedImage = images[i].data;
+        //Mask Warping
+        Mat warpedMask;
+        Mat mask(img->image.rows, img->image.cols, CV_8U);
+        mask.setTo(Scalar::all(255));
+        warper->warp(mask, K, camera.R, INTER_NEAREST, BORDER_CONSTANT, warpedMask);
+        mask.release();
+           
+        //Add 1px border to mask, to enable feather blending 
+        warpedMask(Rect(0, 0, 1, warpedMask.rows)).setTo(Scalar::all(0));
+        warpedMask(Rect(warpedMask.cols - 1, 0, 1, warpedMask.rows)).setTo(Scalar::all(0));
+        //Image Warping
+        Mat warpedImage;
+        auto corner = warper->warp(img->image.data, K, camera.R, INTER_LINEAR, BORDER_CONSTANT, warpedImage);
+        assert(corner == corners[i]);
+        assert(warpedSizes[i] == warpedImage.size());
         
-	    Mat warpedImageAsShort;
-        
+        img->image.Unload(); 
+	    
+        Mat warpedImageAsShort;
         warpedImage.convertTo(warpedImageAsShort, CV_16S);
+        warpedImage.release();
         
         //Exposure compensate (Could move after warping?)
         exposure.Apply(warpedImageAsShort, in[i]->id, ev);
@@ -128,9 +126,11 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
 		blender->feed(warpedImageAsShort, warpedMask, corners[i]);
 
         warpedImageAsShort.release();
-        images[i].Unload();
-        masks[i].Unload();
     }
+    
+    warper.release();
+    warperFactory.release();
+
 
     cout << "Start blending" << endl;
 
