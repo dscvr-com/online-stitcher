@@ -85,7 +85,7 @@ namespace optonaut {
             //Load images and throw them away,
             //so we know the sizes. 
             res->image.Load();
-            res->mask.Load();
+            res->mask.Load(IMREAD_GRAYSCALE);
             res->image.Unload();
             res->mask.Unload();
             progress(1);
@@ -110,6 +110,8 @@ namespace optonaut {
         
         StitchingResultP res = store.LoadOptograph();
         if(res != NULL) {
+            //Caller expects a loaded image. 
+            res->image.Load();
             progress(1);
             return res;
         }
