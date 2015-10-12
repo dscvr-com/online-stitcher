@@ -20,6 +20,7 @@ bool CompareByFilename (const string &a, const string &b) {
     return IdFromFileName(a) < IdFromFileName(b);
 }
 
+
 void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &rightStore) {
 
     if(files.size() == 0) {
@@ -104,7 +105,7 @@ int main(int argc, char** argv) {
     {
         cout << "Start left stitcher." << endl;
         Stitcher leftStitcher(leftStore);
-        auto left = leftStitcher.Finish(callbacks.At(0), false, "dbg/left");
+        auto left = leftStitcher.Finish(callbacks.At(0));
         imwrite("dbg/left.jpg", left->image.data);
         left->image.Unload();  
         left->mask.Unload();  
@@ -112,7 +113,7 @@ int main(int argc, char** argv) {
     {
         cout << "Start right stitcher." << endl;
         Stitcher rightStitcher(rightStore);
-        auto right = rightStitcher.Finish(callbacks.At(1), false, "dbg/right");
+        auto right = rightStitcher.Finish(callbacks.At(1));
         imwrite("dbg/right.jpg", right->image.data);    
         right->image.Unload();  
         right->mask.Unload();  

@@ -124,13 +124,25 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
 	warpPerspective(b.image->image.data, resB, transB, resB.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
     
     if(debug) {
-        for(size_t i = 0; i < cornersA.size(); i++) {
-            line(resA, cornersA[i], cornersA[(i + 1) % cornersA.size()], Scalar(0, 0, 255), 3);
-            line(resB, cornersB[i], cornersB[(i + 1) % cornersB.size()], Scalar(0, 0, 255), 3);
-        }
+        //for(size_t i = 0; i < cornersA.size(); i++) {
+        //    line(resA, cornersA[i], cornersA[(i + 1) % cornersA.size()], Scalar(0, 0, 255), 3);
+        //    line(resB, cornersB[i], cornersB[(i + 1) % cornersB.size()], Scalar(0, 0, 255), 3);
+        //}
+        
+        auto aScene = GetInnerBoxForScene(GetSceneCorners(a.image->image, transA));
+        auto bScene = GetInnerBoxForScene(GetSceneCorners(b.image->image, transB));
+        
+        aScene = aScene & cv::Rect(0, 0, resA.cols, resA.rows);
+        bScene = bScene & cv::Rect(0, 0, resB.cols, resB.rows);
 
-        imwrite("dbg/warped_" + ToString(a.image->id) + "A.jpg", resA);
-        imwrite("dbg/warped_" + ToString(a.image->id) + "B.jpg", resB);
+        int minW = min(aScene.width, bScene.width);
+        int minH = min(aScene.height, bScene.height);
+
+        aScene = cv::Rect(aScene.x, aScene.y, minW, minH);
+        bScene = cv::Rect(bScene.x, bScene.y, minW, minH);
+
+        imwrite("dbg/" + ToString(a.image->id) + "_warped_A.jpg", resA(aScene));
+        imwrite("dbg/" + ToString(a.image->id) + "_warped_B.jpg", resB(bScene));
     }
 	Mat rvec(4, 1, CV_64F);
 	ExtractRotationVector(rot, rvec);
