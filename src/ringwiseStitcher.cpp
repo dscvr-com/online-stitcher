@@ -140,7 +140,7 @@ namespace optonaut {
                 continue;
             }
             
-            auto res = StitchRing(rings[i], progressCallbacks.At(i), i, debug, debugName);
+            auto res = StitchRing(rings[i], progressCallbacks.At(i), (int)i, debug, debugName);
             
             stitchedRings.push_back(res);
             sizes.push_back(res->image.size());
