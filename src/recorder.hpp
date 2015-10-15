@@ -8,6 +8,7 @@
 #include "recorderController.hpp"
 #include "ringwiseStitcher.hpp"
 #include "checkpointStore.hpp"
+#include "lib/control-system-cpp/src/pidController.hpp"
 
 #include "static_timer.hpp"
 
@@ -38,6 +39,8 @@ namespace optonaut {
         vector<InputImageP> rightImages;
 
         ExposureCompensator exposure;
+        double exposureBias;
+        cstk::PidController<double, double> exposureFilter;
         
         MonoStitcher stereoConverter;
 
@@ -66,6 +69,8 @@ namespace optonaut {
             base(base),
             leftStore(leftStore),
             rightStore(rightStore),
+            exposureBias(0),
+            exposureFilter(0, 0.5, 0.1, 0.2),
             stereoConverter(),
             isIdle(false),
             isFinished(false),
@@ -162,13 +167,29 @@ namespace optonaut {
             }
         }
         
-        std::chrono::time_point<std::chrono::system_clock> lt = 
+        void ExposureFeed(InputImageP a) {
+            InputImageP b = aligner->GetClosestKeyframe(a->adjustedExtrinsics);
+            if(b != NULL && a->id != b->id) {
+                auto exposureInfo = exposure.Register(a, b);
+                
+                //Count at least 1000 pixels.
+                
+                if(exposureInfo.n > 1000 && exposureInfo.iTo > 0 && exposureInfo.iFrom > 0) {
+                
+                    double errorRatio = exposureInfo.iTo / exposureInfo.iFrom;
+                    exposureBias = exposureFilter(log2(errorRatio));
+                    cout << "EV Exposure Error: " << log2(errorRatio) << endl;
+                    cout << "EV Exposure Bias: " << exposureBias << endl;
+                }
+            }
+        }
+        
+        std::chrono::time_point<std::chrono::system_clock> lt =
                 std::chrono::system_clock::now();
         
         static const bool measureTime = false;
         
         void Push(InputImageP image) {
-
             //cout << "Pipeline Push called by " << std::this_thread::get_id() << endl;
 
             if(isFinished) {
@@ -199,6 +220,11 @@ namespace optonaut {
             
             SelectionInfo current = controller.Push(image, isIdle);
             
+            if(current.dist < M_PI / 16 && recorderGraph.GetParentRing(current.closestPoint.ringId) != current.closestPoint.ringId) {
+                //We ALWAYS exposure feed, but not if we are your own parent.
+                ExposureFeed(image);
+            }
+
             if(isIdle)
                 return;
             
@@ -210,7 +236,7 @@ namespace optonaut {
             if(current.isValid) {
                 if(!image->IsLoaded())
                     image->LoadFromDataRef();
-
+                
                 if(current.closestPoint.globalId != currentBest.closestPoint.globalId) {
                     
                     aligner->AddKeyframe(currentBest.image);
@@ -228,13 +254,10 @@ namespace optonaut {
                             previous.isValid = false; //We reached a new ring. Invalidate prev.
                         }
                     }
-                    
-                    InputImageP closestKeyframe = aligner->GetClosestKeyframe(currentBest.image->adjustedExtrinsics);
-                    if(closestKeyframe != NULL) {
-                        exposure.Register(currentBest.image, closestKeyframe);
-                    }
+                
                     previous = currentBest;
                 }
+                
                 currentBest = current;
             }
             
@@ -285,6 +308,10 @@ namespace optonaut {
 
         bool IsIdle() {
             return isIdle;
+        }
+        
+        double GetExposureBias() {
+            return exposureBias;
         }
         
         bool IsFinished() {

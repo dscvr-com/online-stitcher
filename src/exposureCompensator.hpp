@@ -16,7 +16,7 @@ namespace optonaut {
         double iFrom; //Overlapping area brightness mine. 
         double iTo; //Overlapping area birghtness other.
 
-        ExposureInfo() : n(1), iFrom(0), iTo(0) { }
+        ExposureInfo() : n(0), iFrom(0), iTo(0) { }
     };
 
     class ExposureCompensator : public ImageCorrespondenceGraph<ExposureInfo> {
@@ -38,18 +38,19 @@ namespace optonaut {
                 return gains;
             }
         
-            void Register(InputImageP a, InputImageP b) {
+            ExposureInfo Register(InputImageP a, InputImageP b) {
                 Mat ga, gb;
                 GetOverlappingRegion(a, b, a->image, b->image, ga, gb);
                 
                 if(ga.cols < 1 || ga.rows < 1) {
-                    return;
+                    ExposureInfo zero;
+                    return zero;
                 }
 
-                ImageCorrespondenceGraph<ExposureInfo>::Register(ga, a->id, gb, b->id);
+                return ImageCorrespondenceGraph<ExposureInfo>::Register(ga, a->id, gb, b->id);
             }
 
-            virtual void GetCorrespondence(const Mat &a, size_t aId, const Mat &b, size_t bId, ExposureInfo &aToB, ExposureInfo &bToA) {
+            virtual ExposureInfo GetCorrespondence(const Mat &a, size_t aId, const Mat &b, size_t bId, ExposureInfo &aToB, ExposureInfo &bToA) {
                 assert(a.cols == b.cols && a.rows == b.rows);
                 assert(a.type() == b.type());
 
@@ -95,6 +96,8 @@ namespace optonaut {
 
                     imwrite("dbg/corr" + ToString(aId) + "_" + ToString(bId) + "_sa_" + ToString(sumA / size) + "_sb_" + ToString(sumB / size) +  ".jpg", target);
                 }
+                
+                return aToB;
             };
 
             void PrintCorrespondence() {
