@@ -70,7 +70,7 @@ namespace optonaut {
             leftStore(leftStore),
             rightStore(rightStore),
             exposureBias(0),
-            exposureFilter(0, 0.5, 0.1, 0.2),
+            exposureFilter(0, 0.5, 0.001, 0.2),
             stereoConverter(),
             isIdle(false),
             isFinished(false),
