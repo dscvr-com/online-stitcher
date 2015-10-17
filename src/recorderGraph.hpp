@@ -19,11 +19,10 @@ namespace optonaut {
         uint32_t globalId;
         uint32_t localId;
         uint32_t ringId;
-        bool enabled;
         Mat extrinsics;
         
         SelectionPoint() : globalId(0),
-            localId(0), ringId(0), enabled(false) {
+            localId(0), ringId(0) {
         }
     };
     
@@ -48,6 +47,7 @@ namespace optonaut {
         static const int ModeCenter = 1;
         static const int ModeTruncated = 2;
         static const int ModeNoBot = 3;
+        static const int ModeTinyDebug = 1337;
         
         vector<vector<SelectionEdge>> adj;
         vector<vector<SelectionPoint>> targets;
@@ -111,10 +111,6 @@ namespace optonaut {
             return false;
         }
         
-        void Disable(const SelectionPoint &point) {
-            targets[point.ringId][point.localId].enabled = false;
-        }
-        
         double FindClosestPoint(const Mat &extrinscs, SelectionPoint &point, const int ringId = -1) const {
             double bestDist = -1;
             Mat eInv = extrinscs.inv();
@@ -124,8 +120,6 @@ namespace optonaut {
                     continue;
                 
                 for(auto target : ring) {
-                    if(!target.enabled)
-                        continue;
                     double dist = GetAngleOfRotation(eInv * target.extrinsics);
                     if (dist < bestDist || bestDist < 0) {
                         point = target;
@@ -137,7 +131,7 @@ namespace optonaut {
             return bestDist;
         }
 
-        int FindAssociatedRing(const Mat &extrinsics, const double tolerance = M_PI / 16) {
+        int FindAssociatedRing(const Mat &extrinsics, const double tolerance = M_PI / 8) {
             assert(targets.size() > 0);
 
             SelectionPoint pt;
@@ -149,7 +143,7 @@ namespace optonaut {
         }
 
         int GetChildRing(int ring) {
-            int c = (int)targets.size() / 2;
+            int c = (int)(targets.size() - 1) / 2;
 
             if(ring == c) {
                 return ring;
@@ -170,7 +164,7 @@ namespace optonaut {
         }
 
         int GetParentRing(int ring) {
-            int c = (int)targets.size() / 2;
+            int c = (int)(targets.size() - 1) / 2;
 
             if(ring == c) {
                 return ring;

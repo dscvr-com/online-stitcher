@@ -11,15 +11,15 @@ using namespace std;
 #define OPTONAUT_EXPOSURE_COMPENSATOR_HEADER
 
 namespace optonaut {
-    struct ExposureInfo {
+    struct ExposureDiff {
         size_t n; //Count of measured pixels
         double iFrom; //Overlapping area brightness mine. 
         double iTo; //Overlapping area birghtness other.
 
-        ExposureInfo() : n(0), iFrom(0), iTo(0) { }
+        ExposureDiff() : n(0), iFrom(0), iTo(0) { }
     };
 
-    class ExposureCompensator : public ImageCorrespondenceGraph<ExposureInfo> {
+    class ExposureCompensator : public ImageCorrespondenceGraph<ExposureDiff> {
         private: 
             static const bool debug = false;
             map<size_t, double> gains;
@@ -38,19 +38,19 @@ namespace optonaut {
                 return gains;
             }
         
-            ExposureInfo Register(InputImageP a, InputImageP b) {
+            ExposureDiff Register(InputImageP a, InputImageP b) {
                 Mat ga, gb;
                 GetOverlappingRegion(a, b, a->image, b->image, ga, gb);
                 
                 if(ga.cols < 1 || ga.rows < 1) {
-                    ExposureInfo zero;
+                    ExposureDiff zero;
                     return zero;
                 }
 
-                return ImageCorrespondenceGraph<ExposureInfo>::Register(ga, a->id, gb, b->id);
+                return ImageCorrespondenceGraph<ExposureDiff>::Register(ga, a->id, gb, b->id);
             }
 
-            virtual ExposureInfo GetCorrespondence(const Mat &a, size_t aId, const Mat &b, size_t bId, ExposureInfo &aToB, ExposureInfo &bToA) {
+            virtual ExposureDiff GetCorrespondence(const Mat &a, size_t aId, const Mat &b, size_t bId, ExposureDiff &aToB, ExposureDiff &bToA) {
                 assert(a.cols == b.cols && a.rows == b.rows);
                 assert(a.type() == b.type());
 

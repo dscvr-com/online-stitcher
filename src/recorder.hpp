@@ -39,8 +39,6 @@ namespace optonaut {
         vector<InputImageP> rightImages;
 
         ExposureCompensator exposure;
-        double exposureBias;
-        cstk::PidController<double, double> exposureFilter;
         
         MonoStitcher stereoConverter;
 
@@ -53,6 +51,10 @@ namespace optonaut {
         
         uint32_t imagesToRecord;
         uint32_t recordedImages;
+        
+        InputImageP GetParentKeyframe(const Mat &extrinsics) {
+            return aligner->GetClosestKeyframe(extrinsics);
+        }
 
     public:
 
@@ -69,8 +71,6 @@ namespace optonaut {
             base(base),
             leftStore(leftStore),
             rightStore(rightStore),
-            exposureBias(0),
-            exposureFilter(0, 0.5, 0.001, 0.2),
             stereoConverter(),
             isIdle(false),
             isFinished(false),
@@ -126,7 +126,6 @@ namespace optonaut {
                     n.globalId = point.globalId;
                     n.ringId = point.ringId;
                     n.localId = point.localId;
-                    n.enabled = point.enabled;
                     n.extrinsics = ConvertFromStitcher(point.extrinsics);
                     
                     converted.push_back(n);
@@ -168,19 +167,9 @@ namespace optonaut {
         }
         
         void ExposureFeed(InputImageP a) {
-            InputImageP b = aligner->GetClosestKeyframe(a->adjustedExtrinsics);
+            InputImageP b = GetParentKeyframe(a->adjustedExtrinsics);
             if(b != NULL && a->id != b->id) {
-                auto exposureInfo = exposure.Register(a, b);
-                
-                //Count at least 1000 pixels.
-                
-                if(exposureInfo.n > 1000 && exposureInfo.iTo > 0 && exposureInfo.iFrom > 0) {
-                
-                    double errorRatio = exposureInfo.iTo / exposureInfo.iFrom;
-                    exposureBias = exposureFilter(log2(errorRatio));
-                    cout << "EV Exposure Error: " << log2(errorRatio) << endl;
-                    cout << "EV Exposure Bias: " << exposureBias << endl;
-                }
+                exposure.Register(a, b);
             }
         }
         
@@ -220,10 +209,6 @@ namespace optonaut {
             
             SelectionInfo current = controller.Push(image, isIdle);
             
-            if(current.dist < M_PI / 16 && recorderGraph.GetParentRing(current.closestPoint.ringId) != current.closestPoint.ringId) {
-                //We ALWAYS exposure feed, but not if we are your own parent.
-                ExposureFeed(image);
-            }
 
             if(isIdle)
                 return;
@@ -244,6 +229,8 @@ namespace optonaut {
                     if(previous.isValid) {
                         Stitch(previous, currentBest);
                         recordedImages++;
+                        
+                        ExposureFeed(currentBest.image);
                     }
                     if(!firstOfRing.isValid) {
                         firstOfRing = currentBest;
@@ -310,8 +297,38 @@ namespace optonaut {
             return isIdle;
         }
         
-        double GetExposureBias() {
-            return exposureBias;
+        ExposureInfo GetExposureHint() {
+            const Mat &current = aligner->GetCurrentRotation();
+            
+            vector<KeyframeInfo> frames = aligner->GetClosestKeyframes(aligner->GetCurrentRotation(), 2);
+            
+            if(frames.size() < 2) {
+                return ExposureInfo();
+            } else {
+                ExposureInfo info;
+                auto af = frames[0].keyframe;
+                auto bf = frames[1].keyframe;
+                auto a = af->exposureInfo;
+                auto b = bf->exposureInfo;
+
+                auto atos = abs(GetDistanceX(current, af->adjustedExtrinsics));
+                auto btos = abs(GetDistanceX(current, bf->adjustedExtrinsics));
+                
+                auto fa = atos / (atos + btos);
+                auto fb = btos / (atos + btos);
+                
+                //TODO - rather LERP
+                info.exposureTime = (a.exposureTime * fa + b.exposureTime * fb);
+                info.iso = (a.iso * fa + b.iso * fb);
+                info.gains.red = (a.gains.red * fa  + b.gains.red * fb);
+                info.gains.blue  = (a.gains.blue * fa + b.gains.blue * fb);
+                info.gains.green  = (a.gains.green * fa + b.gains.green * fb);
+                
+                cout << "ios: " << info.iso << endl;
+                
+                return ExposureInfo();
+                //return info;
+            }
         }
         
         bool IsFinished() {
