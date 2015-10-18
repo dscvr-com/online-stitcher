@@ -326,8 +326,7 @@ namespace optonaut {
                 
                 cout << "ios: " << info.iso << endl;
                 
-                return ExposureInfo();
-                //return info;
+                return info;
             }
         }
         
