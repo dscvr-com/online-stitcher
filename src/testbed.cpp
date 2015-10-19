@@ -4,6 +4,7 @@
 #include <chrono>
 #include <thread>
 #include <opencv2/stitching/detail/blenders.hpp>
+#include <opencv2/core/ocl.hpp>
 
 #include "intrinsics.hpp"
 #include "recorder.hpp"
@@ -69,6 +70,7 @@ void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &
 }
 
 int main(int argc, char** argv) {
+    cv::ocl::setUseOpenCL(false);
     CheckpointStore leftStore("tmp/left/");
     CheckpointStore rightStore("tmp/right/");
 
