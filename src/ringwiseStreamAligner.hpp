@@ -218,7 +218,7 @@ namespace optonaut {
             }
             if(sangles.size() == order) {
                 double avg = Average(sangles, 1.0 / 5.0);
-                CreateRotationY(avg, compassDrift);
+                //CreateRotationY(avg, compassDrift);
                 
                 next->vtag = avg;
             }
