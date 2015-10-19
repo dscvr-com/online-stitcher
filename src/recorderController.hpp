@@ -62,12 +62,12 @@ namespace optonaut {
         int GetNextRing() {
             //Moves from center outward, toggling between top and bottom, top ring comes before bottom ring.
             int ringCount = (int)graph.targets.size();
-            int centerRing = ringCount / 2;
+            int centerRing = (ringCount - 1) / 2;
             
             int newRing = currentRing - centerRing;
             //If we are on a bottom or the center ring, move outward.
-            if(newRing >= 0) {
-                newRing++;
+            if(newRing <= 0) {
+                newRing--;
             }
             //Switch bottom and top, or vice versa.
             newRing *= -1;
@@ -94,7 +94,7 @@ namespace optonaut {
         void Initialize(const Mat &initPosition) {
             assert(!isInitialized);
             
-            currentRing = (int)graph.targets.size() / 2;
+            currentRing = (int)(graph.targets.size() - 1) / 2;
             MoveToClosestPoint(initPosition);
             current = next;
             currentDone = false;

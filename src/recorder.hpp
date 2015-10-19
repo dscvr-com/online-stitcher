@@ -8,6 +8,7 @@
 #include "recorderController.hpp"
 #include "ringwiseStitcher.hpp"
 #include "checkpointStore.hpp"
+#include "lib/control-system-cpp/src/pidController.hpp"
 
 #include "static_timer.hpp"
 
@@ -50,6 +51,10 @@ namespace optonaut {
         
         uint32_t imagesToRecord;
         uint32_t recordedImages;
+        
+        InputImageP GetParentKeyframe(const Mat &extrinsics) {
+            return aligner->GetClosestKeyframe(extrinsics);
+        }
 
     public:
 
@@ -121,7 +126,6 @@ namespace optonaut {
                     n.globalId = point.globalId;
                     n.ringId = point.ringId;
                     n.localId = point.localId;
-                    n.enabled = point.enabled;
                     n.extrinsics = ConvertFromStitcher(point.extrinsics);
                     
                     converted.push_back(n);
@@ -162,13 +166,19 @@ namespace optonaut {
             }
         }
         
-        std::chrono::time_point<std::chrono::system_clock> lt = 
+        void ExposureFeed(InputImageP a) {
+            InputImageP b = GetParentKeyframe(a->adjustedExtrinsics);
+            if(b != NULL && a->id != b->id) {
+                exposure.Register(a, b);
+            }
+        }
+        
+        std::chrono::time_point<std::chrono::system_clock> lt =
                 std::chrono::system_clock::now();
         
         static const bool measureTime = false;
         
         void Push(InputImageP image) {
-
             //cout << "Pipeline Push called by " << std::this_thread::get_id() << endl;
 
             if(isFinished) {
@@ -199,6 +209,7 @@ namespace optonaut {
             
             SelectionInfo current = controller.Push(image, isIdle);
             
+
             if(isIdle)
                 return;
             
@@ -210,7 +221,7 @@ namespace optonaut {
             if(current.isValid) {
                 if(!image->IsLoaded())
                     image->LoadFromDataRef();
-
+                
                 if(current.closestPoint.globalId != currentBest.closestPoint.globalId) {
                     
                     aligner->AddKeyframe(currentBest.image);
@@ -218,6 +229,8 @@ namespace optonaut {
                     if(previous.isValid) {
                         Stitch(previous, currentBest);
                         recordedImages++;
+                        
+                        ExposureFeed(currentBest.image);
                     }
                     if(!firstOfRing.isValid) {
                         firstOfRing = currentBest;
@@ -228,13 +241,10 @@ namespace optonaut {
                             previous.isValid = false; //We reached a new ring. Invalidate prev.
                         }
                     }
-                    
-                    InputImageP closestKeyframe = aligner->GetClosestKeyframe(currentBest.image->adjustedExtrinsics);
-                    if(closestKeyframe != NULL) {
-                        exposure.Register(currentBest.image, closestKeyframe);
-                    }
+                
                     previous = currentBest;
                 }
+                
                 currentBest = current;
             }
             
@@ -285,6 +295,39 @@ namespace optonaut {
 
         bool IsIdle() {
             return isIdle;
+        }
+        
+        ExposureInfo GetExposureHint() {
+            const Mat &current = aligner->GetCurrentRotation();
+            
+            vector<KeyframeInfo> frames = aligner->GetClosestKeyframes(aligner->GetCurrentRotation(), 2);
+            
+            if(frames.size() < 2) {
+                return ExposureInfo();
+            } else {
+                ExposureInfo info;
+                auto af = frames[0].keyframe;
+                auto bf = frames[1].keyframe;
+                auto a = af->exposureInfo;
+                auto b = bf->exposureInfo;
+
+                auto atos = abs(GetDistanceX(current, af->adjustedExtrinsics));
+                auto btos = abs(GetDistanceX(current, bf->adjustedExtrinsics));
+                
+                auto fa = atos / (atos + btos);
+                auto fb = btos / (atos + btos);
+                
+                //TODO - rather LERP
+                info.exposureTime = (a.exposureTime * fa + b.exposureTime * fb);
+                info.iso = (a.iso * fa + b.iso * fb);
+                info.gains.red = (a.gains.red * fa  + b.gains.red * fb);
+                info.gains.blue  = (a.gains.blue * fa + b.gains.blue * fb);
+                info.gains.green  = (a.gains.green * fa + b.gains.green * fb);
+                
+                cout << "ios: " << info.iso << endl;
+                
+                return info;
+            }
         }
         
         bool IsFinished() {

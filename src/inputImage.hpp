@@ -30,13 +30,30 @@ namespace optonaut {
             height = 0;
         }
     };
+    
+    struct Gains {
+        double red;
+        double green;
+        double blue;
+        
+        Gains() : red(1), green(1), blue(1) { }
+    };
+    
+    struct ExposureInfo {
+        int iso;
+        double exposureTime;
+        Gains gains;
+        
+        ExposureInfo() : iso(0), exposureTime(0) { }
+    };
 
 	struct InputImage {
 		Image image;
         InputImageRef dataRef;
 		cv::Mat originalExtrinsics;
         cv::Mat adjustedExtrinsics;
-		cv::Mat intrinsics; 
+		cv::Mat intrinsics;
+        ExposureInfo exposureInfo;
 		int id;
         double vtag;
 

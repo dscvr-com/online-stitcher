@@ -81,7 +81,7 @@ public:
         //TODO: Wrong assumptions.
         //This actually builds the recorder graph from the bottom. 
 
-        if(mode == RecorderGraph::ModeTruncated) {
+        if(mode == RecorderGraph::ModeTruncated || mode == RecorderGraph::ModeTinyDebug) {
            //Configuration for ModeTruncated
            //Optimize for 3 rings.
            
@@ -94,7 +94,7 @@ public:
         else if(mode == RecorderGraph::ModeNoBot) {
             //Configuration for ModeNoBot
             vCount = vCount - 1;
-            vStart = (M_PI - (vFov * 4)) / 2;
+            vStart = (M_PI - (vFov * 3)) / 2;
             vBuffer = vFov * vBufferRatio;
             
         } else if(mode == RecorderGraph::ModeCenter) {
@@ -128,6 +128,10 @@ public:
             double hCenter = 0;
             double hRight = 0;
             SelectionEdge edge;
+            
+            if(mode ==  RecorderGraph::ModeTinyDebug) {
+                hCount = 6;
+            }
 
 			res.targets.push_back(vector<SelectionPoint>());
                     
@@ -140,7 +144,6 @@ public:
                 SelectionPoint p;
                 p.globalId = id;
                 GeoToRot(hLeft, vCenter, p.extrinsics);
-                p.enabled = true;
                 p.ringId = i;
                 p.localId = j;
                 

@@ -19,7 +19,12 @@ using namespace std;
 #ifndef OPTONAUT_RINGWISE_STREAM_ALIGNMENT_HEADER
 #define OPTONAUT_RINGWISE_STREAM_ALIGNMENT_HEADER
 
+
 namespace optonaut {
+    struct KeyframeInfo {
+        InputImageP keyframe;
+        double dist;
+    };
 	class RingwiseStreamAligner : public Aligner {
 	private:
         typedef AsyncStream<InputImageP, int> Worker; 
@@ -39,7 +44,7 @@ namespace optonaut {
 
         const bool async;
 	public:
-		RingwiseStreamAligner(RecorderGraph &graph, ExposureCompensator &exposure, const bool async = true) : 
+		RingwiseStreamAligner(RecorderGraph &graph, ExposureCompensator &exposure, const bool async = true) :
             graph(graph), 
             visual(exposure),
             rings(graph.GetRings().size()), 
@@ -68,31 +73,53 @@ namespace optonaut {
         vector<vector<InputImageP>> SplitIntoRings(vector<InputImageP> &imgs) const {
             return SplitIntoRings(imgs, graph);
         }
-
+        
         InputImageP GetClosestKeyframe(const Mat &search) {
+            auto keyframes = GetClosestKeyframes(search, 1);
+            if(keyframes.size() != 1) {
+                return NULL;
+            } else {
+                return keyframes[0].keyframe;
+            }
+        }
+
+        vector<KeyframeInfo> GetClosestKeyframes(const Mat &search, size_t count) {
 
             int ring = graph.FindAssociatedRing(search);
             
+            
             if(ring == -1)
-                return InputImageP(NULL);
+                return { };
 
             int target = graph.GetParentRing(ring);
+            
+            if(target == ring)
+                return { };
             
             assert(target != -1);
                 
             InputImageP closest = NULL;
-            double minDist = 100;
-
-            for(size_t j = 0; j < rings[target].size(); j++) {
-                double dist = abs(GetAngleOfRotation(search, rings[target][j]->adjustedExtrinsics));
-
-                if(closest == NULL || dist < minDist) {
-                    minDist = dist;
-                    closest = rings[target][j];
-                } 
+            
+            vector<KeyframeInfo> copiedKeyframes(rings[target].size());
+            
+            count = count > copiedKeyframes.size() ? copiedKeyframes.size() : count;
+            
+            for(size_t i = 0; i < copiedKeyframes.size(); i++) {
+                copiedKeyframes[i].dist = abs(GetAngleOfRotation(search, rings[target][i]->adjustedExtrinsics));
+                copiedKeyframes[i].keyframe = rings[target][i];
             }
+            
+            vector<KeyframeInfo> keyframes(count);
+            
+            std::sort(copiedKeyframes.begin(), copiedKeyframes.end(),
+                      [search](KeyframeInfo l, KeyframeInfo r)
+                      {
+                          return l.dist < r.dist;
+                      });
 
-            return closest;
+            std::copy(copiedKeyframes.begin(), copiedKeyframes.begin() + count, keyframes.begin());
+
+            return keyframes;
         }
 
         static vector<vector<InputImageP>> SplitIntoRings(vector<InputImageP> &imgs, RecorderGraph &graph) {
@@ -191,7 +218,7 @@ namespace optonaut {
             }
             if(sangles.size() == order) {
                 double avg = Average(sangles, 1.0 / 5.0);
-                CreateRotationY(avg, compassDrift);
+                //CreateRotationY(avg, compassDrift);
                 
                 next->vtag = avg;
             }
