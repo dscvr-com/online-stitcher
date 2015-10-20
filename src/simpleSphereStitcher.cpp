@@ -1,4 +1,5 @@
 #include <vector>
+#include <deque>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/stitching.hpp>
@@ -8,6 +9,7 @@
 #include "simpleSphereStitcher.hpp"
 #include "support.hpp"
 #include "simpleSeamer.hpp"
+#include "verticalDynamicSeamer.hpp"
 
 using namespace std;
 using namespace cv;
@@ -37,7 +39,7 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
     //This is needed because xcode does not like the CV stitching header.
     //So we can't initialize this constant in the header. 
     if(blendMode == -1) {
-        blendMode = cv::detail::Blender::FEATHER;
+        blendMode = cv::detail::Blender::NO;
     }
     
 	size_t n = in.size();
@@ -87,6 +89,8 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
 	blender = Blender::createDefault(blendMode, false);
     blender->prepare(corners, warpedSizes);
 
+    deque<StitchingResultP> buffer;
+
     for(size_t i = 0; i < n; i++) {
         stageProgress.At(1)((float)i / (float)n);
         
@@ -97,35 +101,51 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
         
         const cv::detail::CameraParams &camera = cameras[i];
         const Mat &K = intrinsicsList[i];
+        
+        StitchingResultP res(new StitchingResult()); 
 
         //Mask Warping
-        Mat warpedMask;
         Mat mask(img->image.rows, img->image.cols, CV_8U);
+        Mat warpedMask;
         mask.setTo(Scalar::all(255));
         warper->warp(mask, K, camera.R, INTER_NEAREST, BORDER_CONSTANT, warpedMask);
         mask.release();
+        res->mask = Image(warpedMask);
            
         //Add 1px border to mask, to enable feather blending 
-        warpedMask(Rect(0, 0, 1, warpedMask.rows)).setTo(Scalar::all(0));
-        warpedMask(Rect(warpedMask.cols - 1, 0, 1, warpedMask.rows)).setTo(Scalar::all(0));
+       // warpedMask(Rect(0, 0, 1, warpedMask.rows)).setTo(Scalar::all(0));
+       // warpedMask(Rect(warpedMask.cols - 1, 0, 1, warpedMask.rows)).setTo(Scalar::all(0));
         //Image Warping
         Mat warpedImage;
-        auto corner = warper->warp(img->image.data, K, camera.R, INTER_LINEAR, BORDER_CONSTANT, warpedImage);
-        assert(corner == corners[i]);
-        assert(warpedSizes[i] == warpedImage.size());
+        res->corner = warper->warp(img->image.data, K, camera.R, INTER_LINEAR, BORDER_CONSTANT, warpedImage);
+        res->image = Image(warpedImage);
+
+        assert(res->corner == corners[i]);
+        assert(warpedSizes[i] == res->image.size());
         
         img->image.Unload(); 
-	    
-        Mat warpedImageAsShort;
-        warpedImage.convertTo(warpedImageAsShort, CV_16S);
-        warpedImage.release();
-        
-        //Exposure compensate (Could move after warping?)
-        exposure.Apply(warpedImageAsShort, in[i]->id, ev);
 
-		blender->feed(warpedImageAsShort, warpedMask, corners[i]);
+        buffer.push_back(res);
 
-        warpedImageAsShort.release();
+        if(buffer.size() > 1) {
+            Mat warpedImageAsShort;
+            auto a = buffer.front();
+            auto b = buffer.back();
+            VerticalDynamicSeamer::Find(a->image.data, b->image.data, 
+                    a->mask.data, b->mask.data, 
+                    a->corner, b->corner);
+
+            a->image.data.convertTo(warpedImageAsShort, CV_16S);
+            
+            //Exposure compensate (Could move after warping?)
+            exposure.Apply(warpedImageAsShort, in[i]->id, ev);
+
+            blender->feed(warpedImageAsShort, a->mask.data, corners[i]);
+
+            warpedImageAsShort.release();
+
+            buffer.pop_front();
+        }
     }
     
     warper.release();
