@@ -91,12 +91,14 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
     Rect resultRoi = cv::detail::resultRoi(corners, warpedSizes);
     blender->prepare(resultRoi);
 
+    //Seam finder function. 
     auto findSeams = [] (StitchingResultP &a, StitchingResultP &b) {
             VerticalDynamicSeamer::Find(a->image.data, b->image.data, 
                     a->mask.data, b->mask.data, 
                     a->corner, b->corner, 5, a->id);
     };
 
+    //Stitcher feed function. 
     auto feed = [&] (StitchingResultP &in) {
             Mat warpedImageAsShort;
             in->image.data.convertTo(warpedImageAsShort, CV_16S);
@@ -106,8 +108,10 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
             Rect overlap = imageRoi & resultRoi;
 
             if(overlap == imageRoi) {
+                //Image fits.
                 blender->feed(warpedImageAsShort, in->mask.data, in->corner);
             } else {
+                //Image overlaps on X-Axis and we have to blend two parts. 
                 Rect overlapI(0, 0, overlap.width, overlap.height);
                 blender->feed(warpedImageAsShort(overlapI), 
                         in->mask.data(overlapI), 
@@ -149,15 +153,16 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
         mask.release();
         res->mask = Image(warpedMask);
         
-           
         //Image Warping
         Mat warpedImage(dstRoi.size(), CV_8UC3);
-        remap(img->image.data, warpedImage, uxmap, uymap, INTER_LINEAR, BORDER_CONSTANT); 
+        remap(img->image.data, warpedImage, uxmap, uymap, 
+                INTER_LINEAR, BORDER_CONSTANT); 
         res->image = Image(warpedImage);
-
         res->id = img->id;
-        Point cornerTop = warper->warpPoint(Point(img->image.cols / -2, img->image.rows / -2), intrinsicsList[i], cameras[i].R);
-        //Point cornerBot = warper->warpPoint(Point(img->image.cols / -2, img->image.rows / -2), intrinsicsList[i], cameras[i].R);
+
+        //Calculate Image Position (without wrapping aroing)
+        Point cornerTop = warper->warpRoi(Size(1, 1), 
+                intrinsicsList[i], cameras[i].R).tl();
         res->corner = Point(cornerTop.x, corners[i].y);
         
         img->image.Unload(); 
