@@ -162,10 +162,10 @@ namespace optonaut {
         assert(margin != -1);
            
         cout << "Attempting ring adjustment." << endl;
-        //ringAdjustmentProgress(1);
+        ringAdjustmentProgress(1);
         
         //Todo - also make this persistent. Additionally, use y adjustment.
-        AdjustCorners(stitchedRings, corners, ringAdjustmentProgress);
+        //AdjustCorners(stitchedRings, corners, ringAdjustmentProgress);
         
         STimer::Tick("Corner Adjusting Finished");
         blender->prepare(corners, sizes);

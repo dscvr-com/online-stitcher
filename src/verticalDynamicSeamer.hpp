@@ -3,6 +3,7 @@
 #include <opencv2/opencv_modules.hpp>
 #include <opencv2/stitching.hpp>
 #include <vector>
+#include "support.hpp"
 
 #ifndef OPTONAUT_VERTICAL_DP_SEAMER_HEADER
 #define OPTONAUT_VERTICAL_DP_SEAMER_HEADER
@@ -11,19 +12,24 @@ using namespace std;
 using namespace cv;
 using namespace cv::detail;
 
+namespace optonaut {
 class VerticalDynamicSeamer 
 {
 public:
-    static void Find(Mat& imageA, Mat &imageP, Mat &maskA, Mat &maskB, const Point &tlA, const Point &tlB);
+    static void Find(Mat& imageA, Mat &imageP, Mat &maskA, Mat &maskB, const Point &tlA, const Point &tlB, int overlap = 0, int id = 0);
 };
 
-void VerticalDynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB, const Point &tlA, const Point &tlB)
+void VerticalDynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB, const Point &tlA, const Point &tlB, int overlap, int id)
 {
+    static const bool debug = false;
+
     Rect roi = Rect(tlA.x, tlA.y, imgA.cols, imgA.rows) & 
                Rect(tlB.x, tlB.y, imgB.cols, imgB.rows);
 
-    cout << "Roi: " << roi << endl;
-    cout << "TLA: " << tlA << " TLB: " << tlB << endl;
+    if(debug) {
+        cout << "Roi: " << roi << endl;
+        cout << "TLA: " << tlA << " TLB: " << tlB << endl;
+    }   
 
     assert(maskA.type() == CV_8U);
     assert(maskB.type() == CV_8U);
@@ -48,7 +54,6 @@ void VerticalDynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB, c
 
     Mat invCost = Mat::zeros(roi.size(), CV_32F);
     Mat path = Mat::zeros(roi.size(), CV_8U);
-    imwrite("dbg/cost_inv_canvas.jpg", invCost);
 
     //Calculate weighting costs. 
     for(int x = 0; x < roi.width; x++) {
@@ -77,7 +82,9 @@ void VerticalDynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB, c
         }
     }
 
-    imwrite("dbg/cost_inv.jpg", invCost);
+    if(debug) {
+        imwrite("dbg/" + ToString(id) + "_cost_inv.jpg", invCost);
+    }
     
     //Calculate path. 
     for(int y = 1; y < roi.height; y++) {
@@ -97,9 +104,10 @@ void VerticalDynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB, c
             invCost.at<float>(y, x) += invCost.at<float>(y - 1, x + min);
         }
     }
-    
-    imwrite("dbg/path.jpg", path * 100);
-
+   
+    if(debug) { 
+        imwrite("dbg/" + ToString(id) + "_path.jpg", path * 100);
+    }
     //Find best path
     int start = 0;
 
@@ -126,11 +134,11 @@ void VerticalDynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB, c
     int x = start;
 
     for(int y = roi.height - 1; y >= 0; y--) {
-        for(int q = x - leftToRoiX; q < leftMask.cols; q++) {
+        for(int q = std::min<int>(x - leftToRoiX + 1 + overlap, leftMask.cols); q < leftMask.cols; q++) {
             //Left mask is black right of path.
             leftMask.at<uchar>(y, q) = 0;
         }
-        for(int q = 0; q < x - rightToRoiX; q++) {
+        for(int q = 0; std::max<int>(q < x - rightToRoiX - overlap, 0); q++) {
             //Right mask is black left of path
             rightMask.at<uchar>(y, q) = 0;
         }
@@ -143,17 +151,20 @@ void VerticalDynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB, c
             
             x += dir;
 
-            cout << "x: " << x << endl;
-            
+            if(debug) {
+                cout << "x: " << x << endl;
+            }
             assert(x >= 0);
             assert(x < roi.width);
         }   
     }   
-    
-    imwrite("dbg/a.jpg", imgA);
-    imwrite("dbg/b.jpg", imgB);
-    imwrite("dbg/ma.jpg", maskA);
-    imwrite("dbg/mb.jpg", maskB);
+   
+    if(debug) { 
+        imwrite("dbg/" + ToString(id) + "_a.jpg", imgA);
+        imwrite("dbg/" + ToString(id) + "_b.jpg", imgB);
+        imwrite("dbg/" + ToString(id) + "_ma.jpg", maskA);
+        imwrite("dbg/" + ToString(id) + "_mb.jpg", maskB);
+    }
+};
 }
-
 #endif

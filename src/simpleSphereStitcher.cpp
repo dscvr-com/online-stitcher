@@ -10,6 +10,7 @@
 #include "support.hpp"
 #include "simpleSeamer.hpp"
 #include "verticalDynamicSeamer.hpp"
+#include "ringProcessor.hpp"
 
 using namespace std;
 using namespace cv;
@@ -39,7 +40,7 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
     //This is needed because xcode does not like the CV stitching header.
     //So we can't initialize this constant in the header. 
     if(blendMode == -1) {
-        blendMode = cv::detail::Blender::NO;
+        blendMode = cv::detail::Blender::FEATHER;
     }
     
 	size_t n = in.size();
@@ -87,9 +88,48 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
     //Blending
     Ptr<Blender> blender;
 	blender = Blender::createDefault(blendMode, false);
-    blender->prepare(corners, warpedSizes);
+    Rect resultRoi = cv::detail::resultRoi(corners, warpedSizes);
+    blender->prepare(resultRoi);
 
-    deque<StitchingResultP> buffer;
+    auto findSeams = [] (StitchingResultP &a, StitchingResultP &b) {
+            VerticalDynamicSeamer::Find(a->image.data, b->image.data, 
+                    a->mask.data, b->mask.data, 
+                    a->corner, b->corner, 5, a->id);
+    };
+
+    auto feed = [&] (StitchingResultP &in) {
+            Mat warpedImageAsShort;
+            in->image.data.convertTo(warpedImageAsShort, CV_16S);
+            exposure.Apply(warpedImageAsShort, in->id, ev);
+
+            Rect imageRoi(in->corner, in->image.size());
+            Rect overlap = imageRoi & resultRoi;
+
+            if(overlap == imageRoi) {
+                blender->feed(warpedImageAsShort, in->mask.data, in->corner);
+            } else {
+                Rect overlapI(0, 0, overlap.width, overlap.height);
+                blender->feed(warpedImageAsShort(overlapI), 
+                        in->mask.data(overlapI), 
+                        overlap.tl());
+
+                Rect other(resultRoi.x, overlap.y, 
+                        imageRoi.width - overlap.width, overlap.height);
+                Rect otherI(overlap.width, 0, other.width, other.height);
+                blender->feed(warpedImageAsShort(otherI), 
+                        in->mask.data(otherI), 
+                        other.tl());
+            }
+            warpedImageAsShort.release();
+    };
+
+    UMat uxmap, uymap;
+    const Mat &K = intrinsicsList[0];
+    const Mat &R = cameras[0].R;
+    Rect dstRoi = warper->buildMaps(in[0]->image.size(), K, R, uxmap, uymap);
+    dstRoi = Rect(dstRoi.x, dstRoi.y, dstRoi.width + 1, dstRoi.height + 1);
+
+    RingProcessor<StitchingResultP> queue(1, findSeams, feed);
 
     for(size_t i = 0; i < n; i++) {
         stageProgress.At(1)((float)i / (float)n);
@@ -99,54 +139,33 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
             img->image.Load();
         }
         
-        const cv::detail::CameraParams &camera = cameras[i];
-        const Mat &K = intrinsicsList[i];
-        
         StitchingResultP res(new StitchingResult()); 
 
         //Mask Warping
         Mat mask(img->image.rows, img->image.cols, CV_8U);
-        Mat warpedMask;
         mask.setTo(Scalar::all(255));
-        warper->warp(mask, K, camera.R, INTER_NEAREST, BORDER_CONSTANT, warpedMask);
+        Mat warpedMask(dstRoi.size(), CV_8U);
+        remap(mask, warpedMask, uxmap, uymap, INTER_NEAREST, BORDER_CONSTANT); 
         mask.release();
         res->mask = Image(warpedMask);
+        
            
-        //Add 1px border to mask, to enable feather blending 
-       // warpedMask(Rect(0, 0, 1, warpedMask.rows)).setTo(Scalar::all(0));
-       // warpedMask(Rect(warpedMask.cols - 1, 0, 1, warpedMask.rows)).setTo(Scalar::all(0));
         //Image Warping
-        Mat warpedImage;
-        res->corner = warper->warp(img->image.data, K, camera.R, INTER_LINEAR, BORDER_CONSTANT, warpedImage);
+        Mat warpedImage(dstRoi.size(), CV_8UC3);
+        remap(img->image.data, warpedImage, uxmap, uymap, INTER_LINEAR, BORDER_CONSTANT); 
         res->image = Image(warpedImage);
 
-        assert(res->corner == corners[i]);
-        assert(warpedSizes[i] == res->image.size());
+        res->id = img->id;
+        Point cornerTop = warper->warpPoint(Point(img->image.cols / -2, img->image.rows / -2), intrinsicsList[i], cameras[i].R);
+        //Point cornerBot = warper->warpPoint(Point(img->image.cols / -2, img->image.rows / -2), intrinsicsList[i], cameras[i].R);
+        res->corner = Point(cornerTop.x, corners[i].y);
         
         img->image.Unload(); 
 
-        buffer.push_back(res);
-
-        if(buffer.size() > 1) {
-            Mat warpedImageAsShort;
-            auto a = buffer.front();
-            auto b = buffer.back();
-            VerticalDynamicSeamer::Find(a->image.data, b->image.data, 
-                    a->mask.data, b->mask.data, 
-                    a->corner, b->corner);
-
-            a->image.data.convertTo(warpedImageAsShort, CV_16S);
-            
-            //Exposure compensate (Could move after warping?)
-            exposure.Apply(warpedImageAsShort, in[i]->id, ev);
-
-            blender->feed(warpedImageAsShort, a->mask.data, corners[i]);
-
-            warpedImageAsShort.release();
-
-            buffer.pop_front();
-        }
+        queue.Push(res);
     }
+
+    queue.Flush();
     
     warper.release();
     warperFactory.release();
