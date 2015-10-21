@@ -21,7 +21,7 @@ public:
 
 void VerticalDynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB, const Point &tlA, const Point &tlB, int overlap, int id)
 {
-    static const bool debug = true;
+    static const bool debug = false;
 
     Rect roi = Rect(tlA.x, tlA.y, imgA.cols, imgA.rows) & 
                Rect(tlB.x, tlB.y, imgB.cols, imgB.rows);

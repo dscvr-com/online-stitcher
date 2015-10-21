@@ -22,7 +22,7 @@ private:
 	//Horizontal and Vertical overlap in percent. 
 	const double hOverlap = 0.9;
 	const double vOverlap = 0.25;
-    const double hBufferRatio = 1;
+    const double hBufferRatio = 3;
     const double vBufferRatio = 0.05;
     
     Mat intrinsics;

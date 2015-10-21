@@ -93,6 +93,7 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
     MultiBandBlender* mb;
 	blender = Blender::createDefault(blendMode, false);
     mb = dynamic_cast<MultiBandBlender*>(blender.get());
+    mb->setNumBands(6);
     Rect resultRoi = cv::detail::resultRoi(corners, warpedSizes);
     blender->prepare(resultRoi);
 
@@ -158,9 +159,10 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
         
         StitchingResultP res(new StitchingResult()); 
 
-        //Mask Warping
-        Mat mask(img->image.rows, img->image.cols, CV_8U);
-        mask.setTo(Scalar::all(255));
+        //Mask Warping - we force a tiny mask for each image.
+        //Todo: Can probably warp once, then use multiple times. .  
+        Mat mask = Mat::zeros(img->image.rows, img->image.cols, CV_8U);
+        mask(Rect(img->image.cols / 4, 0, img->image.cols / 2, img->image.rows)).setTo(Scalar::all(255));
         Mat warpedMask(dstRoi.size(), CV_8U);
         remap(mask, warpedMask, uxmap, uymap, INTER_NEAREST, BORDER_CONSTANT); 
         mask.release();
