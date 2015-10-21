@@ -27,7 +27,8 @@ namespace optonaut {
             prefixSize(dist),
             process(process),
             finish(onFinish) {
-            
+            //Necassary for the below implementation. 
+            assert(prefixSize <= dist);
         }
 
         void Push(InType &in) {
@@ -40,7 +41,13 @@ namespace optonaut {
 
             if(buffer.size() > distance) {
                 process(buffer.front(), buffer.back());
-                finish(buffer.front());
+                
+                if(prefixSize == 0) {
+                    finish(buffer.front());
+                } else {
+                    prefixSize--;
+                }
+
                 buffer.pop_front();
             }
         }
@@ -48,6 +55,7 @@ namespace optonaut {
         void Flush() {
             for(auto &pre : prefix) {
                 Push(pre);
+                finish(pre);
             } 
 
             prefix.clear();

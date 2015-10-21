@@ -21,7 +21,7 @@ public:
 
 void VerticalDynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB, const Point &tlA, const Point &tlB, int overlap, int id)
 {
-    static const bool debug = false;
+    static const bool debug = true;
 
     Rect roi = Rect(tlA.x, tlA.y, imgA.cols, imgA.rows) & 
                Rect(tlB.x, tlB.y, imgB.cols, imgB.rows);
@@ -83,7 +83,7 @@ void VerticalDynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB, c
     }
 
     if(debug) {
-        imwrite("dbg/" + ToString(id) + "_cost_inv.jpg", invCost);
+        //imwrite("dbg/" + ToString(id) + "_cost_inv.jpg", invCost);
     }
     
     //Calculate path. 
@@ -106,7 +106,7 @@ void VerticalDynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB, c
     }
    
     if(debug) { 
-        imwrite("dbg/" + ToString(id) + "_path.jpg", path * 100);
+       // imwrite("dbg/" + ToString(id) + "_path.jpg", path * 100);
     }
     //Find best path
     int start = 0;
@@ -160,10 +160,10 @@ void VerticalDynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB, c
     }   
    
     if(debug) { 
-        imwrite("dbg/" + ToString(id) + "_a.jpg", imgA);
-        imwrite("dbg/" + ToString(id) + "_b.jpg", imgB);
+        //imwrite("dbg/" + ToString(id) + "_a.jpg", imgA);
+        //imwrite("dbg/" + ToString(id) + "_b.jpg", imgB);
         imwrite("dbg/" + ToString(id) + "_ma.jpg", maskA);
-        imwrite("dbg/" + ToString(id) + "_mb.jpg", maskB);
+        //imwrite("dbg/" + ToString(id) + "_mb.jpg", maskB);
     }
 };
 }

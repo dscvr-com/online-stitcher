@@ -2,6 +2,9 @@
 #include <deque>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
+#define private public 
+#include <opencv2/stitching/detail/blenders.hpp>
+#undef private
 #include <opencv2/stitching.hpp>
 
 #include "image.hpp"
@@ -35,12 +38,12 @@ void RStitcher::PrepareMatrices(const vector<InputImageP> &r) {
     }
 }
 
-StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const ExposureCompensator &exposure, ProgressCallback &progress, double ev, bool debug, const std::string&) {
+StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const ExposureCompensator &exposure, ProgressCallback &progress, double ev, bool debug, const std::string& debugName) {
 
     //This is needed because xcode does not like the CV stitching header.
     //So we can't initialize this constant in the header. 
     if(blendMode == -1) {
-        blendMode = cv::detail::Blender::FEATHER;
+        blendMode = cv::detail::Blender::MULTI_BAND;
     }
     
 	size_t n = in.size();
@@ -87,15 +90,25 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
 
     //Blending
     Ptr<Blender> blender;
+    MultiBandBlender* mb;
 	blender = Blender::createDefault(blendMode, false);
+    mb = dynamic_cast<MultiBandBlender*>(blender.get());
     Rect resultRoi = cv::detail::resultRoi(corners, warpedSizes);
     blender->prepare(resultRoi);
 
     //Seam finder function. 
-    auto findSeams = [] (StitchingResultP &a, StitchingResultP &b) {
+    auto findSeams = [&] (StitchingResultP &a, StitchingResultP &b) {
+
+            Point aCorner = a->corner;
+
+            if(aCorner.x > b->corner.x) {
+                //Warp a around if b is already warped around.  
+                aCorner.x -= resultRoi.width;
+            }
+
             VerticalDynamicSeamer::Find(a->image.data, b->image.data, 
                     a->mask.data, b->mask.data, 
-                    a->corner, b->corner, 5, a->id);
+                    aCorner, b->corner, 1, a->id);
     };
 
     //Stitcher feed function. 
@@ -151,6 +164,10 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
         Mat warpedMask(dstRoi.size(), CV_8U);
         remap(mask, warpedMask, uxmap, uymap, INTER_NEAREST, BORDER_CONSTANT); 
         mask.release();
+
+        Mat kernel = Mat::ones(1, 10, CV_8U);
+        erode(warpedMask, warpedMask, kernel);
+
         res->mask = Image(warpedMask);
         
         //Image Warping
@@ -181,6 +198,13 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
 	StitchingResultP res(new StitchingResult());
     {
         Mat resImage, resMask;
+        for(int i = 0; i < mb->num_bands_; i++) {
+            Mat tmp;
+            mb->dst_pyr_laplace_[i].convertTo(tmp, CV_8UC3, 32, 1);
+            imwrite("dbg/laplace_" + debugName + "_" + ToString(i) + ".jpg", tmp);
+            mb->dst_band_weights_[i].convertTo(tmp, CV_8U, 64, 1);
+            imwrite("dbg/weights_" + debugName + "_" + ToString(i) + ".jpg", tmp);
+        }
         blender->blend(resImage, resMask);
 
         resImage.convertTo(resImage, CV_8U);
