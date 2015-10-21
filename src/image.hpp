@@ -10,29 +10,26 @@ namespace optonaut {
 	
      class Image {
 
-        private:
-		cv::Mat data_;
-
         public:
-		const cv::Mat &data;
+		cv::Mat data;
         int cols;
         int rows;
 	    std::string source;
 
-        Image() : data_(0, 0, CV_8UC3),
-                  data(data_), cols(0), rows(0), source("") {
+        Image() : data(0, 0, CV_8UC3),
+                  cols(0), rows(0), source("") {
         }
 
-        Image(cv::Mat in) : data_(in), 
-                  data(data_), cols(in.cols), rows(in.rows), source("") {
+        Image(cv::Mat in) : data(in), 
+                  cols(in.cols), rows(in.rows), source("") {
         }
 
-        Image(const Image &ref) : data_(ref.data_), 
-                  data(data_), cols(data_.cols), rows(data_.rows), source("") {
+        Image(const Image &ref) : data(ref.data), 
+                  cols(data.cols), rows(data.rows), source("") {
         }
 
         Image& operator=(Image other) {
-            std::swap(this->data_, other.data_);
+            std::swap(this->data, other.data);
             std::swap(this->rows, other.rows);
             std::swap(this->cols, other.cols);
             std::swap(this->source, other.source);
@@ -40,7 +37,7 @@ namespace optonaut {
         }
 
         inline bool IsLoaded() const {
-            return data_.cols != 0 && data_.rows != 0;
+            return data.cols != 0 && data.rows != 0;
         }
 
         inline cv::Size size() const {
@@ -49,18 +46,18 @@ namespace optonaut {
         }
 
         inline int type() const {
-            return data_.type();
+            return data.type();
         }
 
         void Unload() {
-            data_.release();
+            data.release();
         }
 
         void Load(int flags = cv::IMREAD_COLOR) {
             assert(source != "");
 
             cv::Mat n = cv::imread(source, flags);
-            std::swap(data_, n);
+            std::swap(data, n);
             cols = data.cols;
             rows = data.rows;
 
