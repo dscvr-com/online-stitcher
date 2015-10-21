@@ -82,7 +82,7 @@ namespace optonaut {
             controller(recorderGraph),
             imagesToRecord(recorderGraph.Size()),
             recordedImages(0),
-            monoQueue(1, 
+            monoQueue(2, 
                 std::bind(&Recorder::StitchImages, 
                     this, placeholders::_1, placeholders::_2),
                 std::bind(&Recorder::FinishImage, 
