@@ -5,6 +5,7 @@
 #include "support.hpp"
 #include "recorderGraph.hpp"
 #include "ringProcessor.hpp"
+#include "projection.hpp"
 
 using namespace cv;
 using namespace std;
@@ -23,40 +24,8 @@ private:
 	//Horizontal and Vertical overlap in percent. 
 	const double hOverlap = 0.9;
 	const double vOverlap = 0.25;
-    const double hBufferRatio = 3;
-    const double vBufferRatio = 0.05;
     
     Mat intrinsics;
-
-    static void GeoToRot(double hAngle, double vAngle, Mat &res) {
-        Mat hRot;
-        Mat vRot;
-        
-        //cout << hAngle << ", " << vAngle << endl;
-        
-        CreateRotationY(hAngle, hRot);
-        CreateRotationX(vAngle, vRot);
-        
-        res = hRot * vRot;
-    }
-    
-    InputImageP CreateDebugImage(Mat pos, double scale, Scalar color) const {
-        InputImageP d(new InputImage());
-        
-        d->originalExtrinsics = pos;
-        d->adjustedExtrinsics = pos;
-        d->intrinsics = intrinsics.clone();
-        d->intrinsics.at<double>(0, 2) *= scale;
-        d->intrinsics.at<double>(1, 2) *= scale;
-        d->image = Image(Mat::zeros(240, 320, CV_8UC3));
-        d->id = 0;
-        
-        line(d->image.data, Point2f(0, 0), Point2f(320, 240), color, 4);
-        line(d->image.data, Point2f(320, 0), Point2f(0, 240), color, 4);
-        
-        return d;
-    }
-    
 
 public:
     
@@ -75,7 +44,7 @@ public:
         cout << "Ratio: " << (sin(maxVFov) / sin(maxHFov)) << endl;
 
         uint32_t vCount = ceil(M_PI / vFov);
-        double vStart = 0, vBuffer = 0;
+        double vStart = 0;
         uint32_t id = 0;
         uint32_t hCenterCount = ceil(2 * M_PI / hFov);
         
@@ -89,14 +58,12 @@ public:
            vCount = vCount - 2; //Always skip out two rings.
            //vFov stays the same.
            vStart = (M_PI - (vFov * 3)) / 2;
-           vBuffer = vFov * vBufferRatio;
             
         }
         else if(mode == RecorderGraph::ModeNoBot) {
             //Configuration for ModeNoBot
             vCount = vCount - 1;
             vStart = (M_PI - (vFov * 3)) / 2;
-            vBuffer = vFov * vBufferRatio;
             
         } else if(mode == RecorderGraph::ModeCenter) {
             assert(true); //Not implemented and probably not needed any more.
@@ -105,7 +72,6 @@ public:
             vStart = maxVFov * vOverlap;
             
             vFov = (M_PI - 2 * vStart) / vCount;
-            vBuffer = vFov * vBufferRatio;
         }
 
         if(vCount % 2 == 0 && mode == RecorderGraph::ModeCenter) {
@@ -120,7 +86,6 @@ public:
 
 			uint32_t hCount = hCenterCount * cos(vCenter);
 			hFov = M_PI * 2 / hCount;
-            double hBuffer = hFov * hBufferRatio;
 
             double hLeft = 0;
             SelectionEdge edge;
@@ -131,29 +96,12 @@ public:
 
 			res.targets.push_back(vector<SelectionPoint>(hCount));
 
-            auto createEdge = [hBuffer, vBuffer, &res] (SelectionPoint &a, SelectionPoint &b) {
+            auto createEdge = [&res] (SelectionPoint &a, SelectionPoint &b) {
                 SelectionEdge edge;
                 edge.from = a.globalId;
                 edge.to = b.globalId;
+                edge.recorded = false;
 
-                double hLeft = a.hPos;
-                double hRight = b.hPos;
-                if(hLeft > hRight) {
-                    hRight += 2 * M_PI;
-                }
-                double hCenter = (hLeft + hRight) / 2.0;
-                double vCenter = a.vPos;
-                double vTop = vCenter - a.vFov / 2.0;
-                double vBot = vCenter + a.vFov / 2.0;
-
-                GeoToRot(hCenter, vCenter, edge.roiCenter);
-                GeoToRot(hLeft - hBuffer, vTop - vBuffer, edge.roiCorners[0]);
-                GeoToRot(hRight + hBuffer, vTop - vBuffer, edge.roiCorners[1]);
-                GeoToRot(hRight + hBuffer, vBot + vBuffer, edge.roiCorners[2]);
-                GeoToRot(hLeft - hBuffer, vBot + vBuffer, edge.roiCorners[3]);
-
-                assert(hLeft - hBuffer < hRight + hBuffer); 
-                    
                 res.adj[edge.from].push_back(edge);
             };
 
@@ -167,18 +115,17 @@ public:
                 res.adj.push_back(vector<SelectionEdge>());
                 
                 hLeft = j * hFov;
-               // hCenter = hLeft + hFov / 2;
-               // hRight = hLeft + hFov;
                 
                 SelectionPoint p;
                 p.globalId = id;
-                GeoToRot(hLeft, vCenter, p.extrinsics);
                 p.hPos = hLeft;
                 p.vPos = vCenter;
                 p.ringId = i;
                 p.localId = j;
                 p.vFov = vFov;
                 p.hFov = hFov;
+                
+                GeoToRot(hLeft, vCenter, p.extrinsics);
                 
                 hqueue.Push(p);
                 
@@ -189,35 +136,8 @@ public:
             
 		}
 
-        /*for(size_t i = 0; i < adj.size(); i++) {
-            for(size_t j = 0; j < adj[i].size(); j++) {
-                cout << i << " -> "<< adj[i][j] << endl;
-            }
-        }*/
-        
         return res;
 	}
-
-    vector<InputImageP> GenerateDebugImages(RecorderGraph &graph) const {
-		vector<InputImageP> images;
-
-		for(auto ring : graph.targets) {
-			for(auto t : ring) {
-
-				images.push_back(CreateDebugImage(t.extrinsics, 1.0, Scalar(0, 255, 0)));
-
-                for(auto edge : graph.adj[t.globalId]) {
-                    for(auto corner : edge.roiCorners) {
-				        images.push_back(CreateDebugImage(corner, 0.1, Scalar(0, 0, 255)));
-                    }
-                }
-			}
-		}
-
-		return images;
-	}
-
-
 };
 }
 

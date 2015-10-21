@@ -35,9 +35,6 @@ namespace optonaut {
         uint32_t to;
         bool recorded;
         
-        Mat roiCorners[4];
-        Mat roiCenter;
-        
         SelectionEdge() : from(0), to(0), recorded(false) {
             
         }

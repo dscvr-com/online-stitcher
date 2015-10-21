@@ -32,7 +32,7 @@ namespace optonaut {
         private: 
         public:
             MonoStitcher() { }
-            void CreateStereo(const SelectionInfo &a, const SelectionInfo &b, const SelectionEdge &target, StereoImage &stereo);
+            void CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo);
     };
 }
 

@@ -150,6 +150,19 @@ namespace optonaut {
         overlapA = wa(roi);
         overlapB = bi.data(roi);
     }
+    
+    static inline void GeoToRot(double hAngle, double vAngle, Mat &res) {
+        Mat hRot;
+        Mat vRot;
+        
+        //cout << hAngle << ", " << vAngle << endl;
+        
+        CreateRotationY(hAngle, hRot);
+        CreateRotationX(vAngle, vRot);
+        
+        res = hRot * vRot;
+    }
+    
 }
 #endif
 

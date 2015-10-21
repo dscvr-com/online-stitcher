@@ -156,17 +156,13 @@ namespace optonaut {
 
             assert(a.image->IsLoaded());
             assert(b.image->IsLoaded());
-            SelectionEdge edge;
             
             recordedImages++;
             
             exposure.Register(a.image, b.image);
 
-            if(!recorderGraph.GetEdge(a.closestPoint, b.closestPoint, edge))
-                return;
-           
             StereoImage stereo;
-            stereoConverter.CreateStereo(a, b, edge, stereo);
+            stereoConverter.CreateStereo(a, b, stereo);
 
             assert(stereo.valid);
 
