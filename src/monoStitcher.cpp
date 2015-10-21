@@ -30,6 +30,8 @@ Rect CornersToRoi(const vector<Point2f> &corners) {
     float y = min2(corners[2].y, corners[3].y);
     float width = max2(corners[1].x, corners[2].x) - x;
     float height = max2(corners[0].y, corners[1].y) - y;
+    assert(width > 0);
+    assert(height > 0);
     Rect roi(x, y, width, height); 
 
     return roi;
@@ -59,7 +61,7 @@ void GetCorners(vector<Point2f> &corners, const SelectionEdge &target, const Mat
 
 void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, const SelectionEdge &target, StereoImage &stereo) {
 
-    const static bool debug = false;
+    const static bool debug = true;
 
     Mat k;
     stereo.valid = false;
@@ -124,10 +126,10 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
 	warpPerspective(b.image->image.data, resB, transB, resB.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
     
     if(debug) {
-        //for(size_t i = 0; i < cornersA.size(); i++) {
-        //    line(resA, cornersA[i], cornersA[(i + 1) % cornersA.size()], Scalar(0, 0, 255), 3);
-        //    line(resB, cornersB[i], cornersB[(i + 1) % cornersB.size()], Scalar(0, 0, 255), 3);
-        //}
+        for(size_t i = 0; i < cornersA.size(); i++) {
+            line(resA, cornersA[i], cornersA[(i + 1) % cornersA.size()], Scalar(0, 0, 255), 3);
+            line(resB, cornersB[i], cornersB[(i + 1) % cornersB.size()], Scalar(0, 0, 255), 3);
+        }
         
         auto aScene = GetInnerBoxForScene(GetSceneCorners(a.image->image, transA));
         auto bScene = GetInnerBoxForScene(GetSceneCorners(b.image->image, transB));

@@ -4,6 +4,7 @@
 #include "inputImage.hpp"
 #include "support.hpp"
 #include "recorderGraph.hpp"
+#include "ringProcessor.hpp"
 
 using namespace cv;
 using namespace std;
@@ -27,7 +28,7 @@ private:
     
     Mat intrinsics;
 
-    void GeoToRot(double hAngle, double vAngle, Mat &res) {
+    static void GeoToRot(double hAngle, double vAngle, Mat &res) {
         Mat hRot;
         Mat vRot;
         
@@ -116,65 +117,75 @@ public:
 
             //Vertical center, bottom and top of ring
 			double vCenter = i * vFov + vFov / 2.0 - M_PI / 2.0 + vStart;
-            double vTop = vCenter - vFov / 2.0;
-            double vBot = vCenter + vFov / 2.0;
 
 			uint32_t hCount = hCenterCount * cos(vCenter);
 			hFov = M_PI * 2 / hCount;
             double hBuffer = hFov * hBufferRatio;
 
-			uint32_t firstId = 0;
             double hLeft = 0;
-            double hCenter = 0;
-            double hRight = 0;
             SelectionEdge edge;
             
             if(mode ==  RecorderGraph::ModeTinyDebug) {
                 hCount = 6;
             }
 
-			res.targets.push_back(vector<SelectionPoint>());
-                    
-            for(uint32_t j = 0; j < hCount; j++) {
-                
-                hLeft = j * hFov;
-                hCenter = hLeft + hFov / 2;
-                hRight = hLeft + hFov;
-                
-                SelectionPoint p;
-                p.globalId = id;
-                GeoToRot(hLeft, vCenter, p.extrinsics);
-                p.ringId = i;
-                p.localId = j;
-                
-                res.adj.push_back(vector<SelectionEdge>());
-                
+			res.targets.push_back(vector<SelectionPoint>(hCount));
+
+            auto createEdge = [hBuffer, vBuffer, &res] (SelectionPoint &a, SelectionPoint &b) {
                 SelectionEdge edge;
-                edge.from = id;
-                edge.to = id + 1;
-                edge.roiCenter = p.extrinsics;
+                edge.from = a.globalId;
+                edge.to = b.globalId;
+
+                double hLeft = a.hPos;
+                double hRight = b.hPos;
+                if(hLeft > hRight) {
+                    hRight += 2 * M_PI;
+                }
+                double hCenter = (hLeft + hRight) / 2.0;
+                double vCenter = a.vPos;
+                double vTop = vCenter - a.vFov / 2.0;
+                double vBot = vCenter + a.vFov / 2.0;
+
                 GeoToRot(hCenter, vCenter, edge.roiCenter);
                 GeoToRot(hLeft - hBuffer, vTop - vBuffer, edge.roiCorners[0]);
                 GeoToRot(hRight + hBuffer, vTop - vBuffer, edge.roiCorners[1]);
                 GeoToRot(hRight + hBuffer, vBot + vBuffer, edge.roiCorners[2]);
                 GeoToRot(hLeft - hBuffer, vBot + vBuffer, edge.roiCorners[3]);
+
+                assert(hLeft - hBuffer < hRight + hBuffer); 
+                    
+                res.adj[edge.from].push_back(edge);
+            };
+
+            auto finish = [&res] (SelectionPoint &a) {
+                res.targets[a.ringId][a.localId] = a;
+            };
+
+            RingProcessor<SelectionPoint> hqueue(1, createEdge, finish);
+                    
+            for(uint32_t j = 0; j < hCount; j++) {
+                res.adj.push_back(vector<SelectionEdge>());
                 
-                if(j == 0) {
-                    //Remember Id of first one.
-                    firstId = id;
-                }
+                hLeft = j * hFov;
+               // hCenter = hLeft + hFov / 2;
+               // hRight = hLeft + hFov;
                 
-                if(j != hCount - 1) {
-                    res.adj[id].push_back(edge);
-                } else {
-                    //Loop last one back to first one.
-                    edge.to = firstId;
-                    res.adj[id].push_back(edge);
-                }
-                res.targets[i].push_back(p);
+                SelectionPoint p;
+                p.globalId = id;
+                GeoToRot(hLeft, vCenter, p.extrinsics);
+                p.hPos = hLeft;
+                p.vPos = vCenter;
+                p.ringId = i;
+                p.localId = j;
+                p.vFov = vFov;
+                p.hFov = hFov;
+                
+                hqueue.Push(p);
                 
                 id++;
             }
+
+            hqueue.Flush();
             
 		}
 

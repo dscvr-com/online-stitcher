@@ -19,10 +19,14 @@ namespace optonaut {
         uint32_t globalId;
         uint32_t localId;
         uint32_t ringId;
+        double hPos;
+        double vPos;
+        double hFov;
+        double vFov;
         Mat extrinsics;
         
         SelectionPoint() : globalId(0),
-            localId(0), ringId(0) {
+            localId(0), ringId(0), hPos(0), vPos(0), hFov(0), vFov(0) {
         }
     };
     

@@ -2,9 +2,7 @@
 #include <deque>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
-#define private public 
 #include <opencv2/stitching/detail/blenders.hpp>
-#undef private
 #include <opencv2/stitching.hpp>
 
 #include "image.hpp"
@@ -38,7 +36,7 @@ void RStitcher::PrepareMatrices(const vector<InputImageP> &r) {
     }
 }
 
-StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const ExposureCompensator &exposure, ProgressCallback &progress, double ev, bool debug, const std::string& debugName) {
+StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const ExposureCompensator &exposure, ProgressCallback &progress, double ev, bool debug, const std::string&) {
 
     //This is needed because xcode does not like the CV stitching header.
     //So we can't initialize this constant in the header. 
@@ -200,13 +198,6 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
 	StitchingResultP res(new StitchingResult());
     {
         Mat resImage, resMask;
-        for(int i = 0; i < mb->num_bands_; i++) {
-            Mat tmp;
-            mb->dst_pyr_laplace_[i].convertTo(tmp, CV_8UC3, 32, 1);
-            imwrite("dbg/laplace_" + debugName + "_" + ToString(i) + ".jpg", tmp);
-            mb->dst_band_weights_[i].convertTo(tmp, CV_8U, 64, 1);
-            imwrite("dbg/weights_" + debugName + "_" + ToString(i) + ".jpg", tmp);
-        }
         blender->blend(resImage, resMask);
 
         resImage.convertTo(resImage, CV_8U);

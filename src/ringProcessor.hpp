@@ -3,7 +3,7 @@
 using namespace std;
 
 #ifndef OPTONAUT_RINGWISE_PROCESSOR_HEADER
-#define OPTONAUT_RINGWISE_PROSECCOR_HEADER
+#define OPTONAUT_RINGWISE_PROCESSOR_HEADER
 
 namespace optonaut {
     template <typename InType>
@@ -40,6 +40,7 @@ namespace optonaut {
             buffer.push_back(in);
 
             if(buffer.size() > distance) {
+
                 process(buffer.front(), buffer.back());
                 
                 if(prefixSize == 0) {
