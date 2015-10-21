@@ -56,7 +56,7 @@ namespace optonaut {
         }
 
         bool NeedsImageData() {
-            return true; 
+            return false;
         }
 
         void Dispose() {
@@ -185,8 +185,9 @@ namespace optonaut {
         }
 
 		void Push(InputImageP next) {
-            
             last = next;
+            return;
+            
 
             int ring = graph.FindAssociatedRing(next->originalExtrinsics);
            // cout << "Ring " << ring << endl;
@@ -218,7 +219,7 @@ namespace optonaut {
             }
             if(sangles.size() == order) {
                 double avg = Average(sangles, 1.0 / 5.0);
-                //CreateRotationY(avg, compassDrift);
+                CreateRotationY(avg, compassDrift);
                 
                 next->vtag = avg;
             }

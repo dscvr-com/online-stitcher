@@ -176,10 +176,10 @@ namespace optonaut {
         std::chrono::time_point<std::chrono::system_clock> lt =
                 std::chrono::system_clock::now();
         
-        static const bool measureTime = false;
+        static const bool measureTime = true;
         
         void Push(InputImageP image) {
-            //cout << "Pipeline Push called by " << std::this_thread::get_id() << endl;
+            cout << "Pipeline Push called by " << std::this_thread::get_id() << endl;
 
             if(isFinished) {
                 cout << "Push after finish warning - this could be a racing condition" << endl;
