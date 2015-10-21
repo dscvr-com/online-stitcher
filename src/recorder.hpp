@@ -8,7 +8,7 @@
 #include "recorderController.hpp"
 #include "ringwiseStitcher.hpp"
 #include "checkpointStore.hpp"
-#include "lib/control-system-cpp/src/pidController.hpp"
+#include "ringProcessor.hpp"
 
 #include "static_timer.hpp"
 
@@ -28,9 +28,7 @@ namespace optonaut {
         Mat zero;
 
         shared_ptr<RingwiseStreamAligner> aligner;
-        SelectionInfo previous;
         SelectionInfo currentBest;
-        SelectionInfo firstOfRing;
         
         CheckpointStore leftStore;
         CheckpointStore rightStore;
@@ -51,6 +49,8 @@ namespace optonaut {
         
         uint32_t imagesToRecord;
         uint32_t recordedImages;
+
+        RingProcessor<SelectionInfo> monoQueue;
         
         InputImageP GetParentKeyframe(const Mat &extrinsics) {
             return aligner->GetClosestKeyframe(extrinsics);
@@ -67,7 +67,10 @@ namespace optonaut {
 
         static const int stretch = 10;
         
-        Recorder(Mat base, Mat zeroWithoutBase, Mat intrinsics, CheckpointStore &leftStore, CheckpointStore &rightStore, int graphConfiguration = RecorderGraph::ModeAll, bool isAsync = true) :
+        Recorder(Mat base, Mat zeroWithoutBase, Mat intrinsics, 
+                CheckpointStore &leftStore, CheckpointStore &rightStore, 
+                int graphConfiguration = RecorderGraph::ModeAll, 
+                bool isAsync = true) :
             base(base),
             leftStore(leftStore),
             rightStore(rightStore),
@@ -78,7 +81,12 @@ namespace optonaut {
             recorderGraph(generator.Generate(intrinsics, graphConfiguration)),
             controller(recorderGraph),
             imagesToRecord(recorderGraph.Size()),
-            recordedImages(0)
+            recordedImages(0),
+            monoQueue(2, 
+                std::bind(&Recorder::StitchImages, 
+                    this, placeholders::_1, placeholders::_2),
+                std::bind(&Recorder::FinishImage, 
+                    this, placeholders::_1))
         {
             baseInv = base.inv();
             zero = zeroWithoutBase;
@@ -139,31 +147,33 @@ namespace optonaut {
             aligner->Dispose();
         }
         
-        void Stitch(const SelectionInfo &a, const SelectionInfo &b, bool discard = false) {
+        void FinishImage(SelectionInfo &fin) {
+            ExposureFeed(fin.image);
+        }   
+        
+        void StitchImages(const SelectionInfo &a, const SelectionInfo &b) {
+            cout << "Stitch" << endl;
+
             assert(a.image->IsLoaded());
             assert(b.image->IsLoaded());
-            SelectionEdge edge;
+            
+            recordedImages++;
             
             exposure.Register(a.image, b.image);
 
-            if(!recorderGraph.GetEdge(a.closestPoint, b.closestPoint, edge))
-                return;
-           
             StereoImage stereo;
-            stereoConverter.CreateStereo(a, b, edge, stereo);
+            stereoConverter.CreateStereo(a, b, stereo);
 
             assert(stereo.valid);
 
-            if(!discard) {
-                leftStore.SaveRectifiedImage(stereo.A);
-                rightStore.SaveRectifiedImage(stereo.B);
-                
-                stereo.A->image.Unload();
-                stereo.B->image.Unload();
+            leftStore.SaveRectifiedImage(stereo.A);
+            rightStore.SaveRectifiedImage(stereo.B);
+            
+            stereo.A->image.Unload();
+            stereo.B->image.Unload();
 
-                leftImages.push_back(stereo.A);
-                rightImages.push_back(stereo.B);
-            }
+            leftImages.push_back(stereo.A);
+            rightImages.push_back(stereo.B);
         }
         
         void ExposureFeed(InputImageP a) {
@@ -217,32 +227,22 @@ namespace optonaut {
                 //Initialization. 
                 currentBest = current;
             }
-            
+
             if(current.isValid) {
                 if(!image->IsLoaded())
                     image->LoadFromDataRef();
                 
-                if(current.closestPoint.globalId != currentBest.closestPoint.globalId) {
+                if(current.closestPoint.globalId != 
+                        currentBest.closestPoint.globalId) {
                     
                     aligner->AddKeyframe(currentBest.image);
                     //Ok, hit that. We can stitch.
-                    if(previous.isValid) {
-                        Stitch(previous, currentBest);
-                        recordedImages++;
-                        
-                        ExposureFeed(currentBest.image);
+                    monoQueue.Push(currentBest);
+                    
+                    if(current.closestPoint.ringId != 
+                            currentBest.closestPoint.ringId) { 
+                        monoQueue.Flush();
                     }
-                    if(!firstOfRing.isValid) {
-                        firstOfRing = currentBest;
-                    } else {
-                        if(firstOfRing.closestPoint.ringId != currentBest.closestPoint.ringId) { 
-                            Stitch(previous, firstOfRing);
-                            firstOfRing = currentBest;
-                            previous.isValid = false; //We reached a new ring. Invalidate prev.
-                        }
-                    }
-                
-                    previous = currentBest;
                 }
                 
                 currentBest = current;
@@ -250,8 +250,6 @@ namespace optonaut {
             
             if(recordedImages == imagesToRecord) {
                 isFinished = true;
-                Stitch(previous, currentBest);
-                Stitch(currentBest, firstOfRing);
             }
         }
 
@@ -262,9 +260,10 @@ namespace optonaut {
             aligner->Finish();
            
             if(HasResults()) {
-                if(previous.isValid) {
-                    exposure.FindGains();
-                }
+                monoQueue.Push(currentBest);
+                monoQueue.Flush();
+
+                exposure.FindGains();
                
                 aligner->Postprocess(leftImages);
                 aligner->Postprocess(rightImages);
@@ -289,10 +288,6 @@ namespace optonaut {
             return currentBest;
         }
         
-        SelectionInfo PreviousPoint() {
-            return previous;
-        }
-
         bool IsIdle() {
             return isIdle;
         }
@@ -317,7 +312,6 @@ namespace optonaut {
                 auto fa = atos / (atos + btos);
                 auto fb = btos / (atos + btos);
                 
-                //TODO - rather LERP
                 info.exposureTime = (a.exposureTime * fa + b.exposureTime * fb);
                 info.iso = (a.iso * fa + b.iso * fb);
                 info.gains.red = (a.gains.red * fa  + b.gains.red * fb);

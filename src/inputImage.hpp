@@ -8,8 +8,8 @@
 #define OPTONAUT_INPUT_IMAGE_HEADER
 
 namespace optonaut {
-    const int WorkingHeight = 640;
-    const int WorkingWidth = 360;
+    const int WorkingHeight = 1280;
+    const int WorkingWidth = 720;
 
     namespace colorspace {
         const int RGBA = 0;

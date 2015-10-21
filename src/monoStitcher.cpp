@@ -30,12 +30,15 @@ Rect CornersToRoi(const vector<Point2f> &corners) {
     float y = min2(corners[2].y, corners[3].y);
     float width = max2(corners[1].x, corners[2].x) - x;
     float height = max2(corners[0].y, corners[1].y) - y;
+    assert(width > 0);
+    assert(height > 0);
     Rect roi(x, y, width, height); 
 
     return roi;
 }
 
-void GetCorners(vector<Point2f> &corners, const SelectionEdge &target, const Mat, int width, int height) {
+void GetCorners(vector<Point2f> &corners, Mat &targetCenter, 
+        vector<Mat> &targetCorners, const Mat, int width, int height) {
     
 	Mat I = Mat::eye(4, 4, CV_64F);
 
@@ -43,7 +46,7 @@ void GetCorners(vector<Point2f> &corners, const SelectionEdge &target, const Mat
        
         //Todo: Don't we need some offset here?  
 
-        Mat rot = target.roiCenter.inv() * target.roiCorners[i];
+        Mat rot = targetCenter.inv() * targetCorners[i];
         
         //cout << "Rot " << i << " " << rot << endl;
         
@@ -56,10 +59,40 @@ void GetCorners(vector<Point2f> &corners, const SelectionEdge &target, const Mat
         //cout << "MatDiff: " << rot << endl;
     }
 }
+    
+const double hBufferRatio = 3;
+const double vBufferRatio = 0.05;
 
-void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, const SelectionEdge &target, StereoImage &stereo) {
+void GetTargetRoi(const SelectionPoint &a, const SelectionPoint &b, Mat &center, vector<Mat> &corners) {
+    SelectionEdge edge;
+    edge.from = a.globalId;
+    edge.to = b.globalId;
 
-    const static bool debug = false;
+    double hLeft = a.hPos;
+    double hRight = b.hPos;
+    if(hLeft > hRight) {
+        //Corner case - ring closing. 
+        hRight += 2 * M_PI;
+    }
+    double hCenter = (hLeft + hRight) / 2.0;
+    double vCenter = a.vPos;
+    double vTop = vCenter - a.vFov / 2.0;
+    double vBot = vCenter + a.vFov / 2.0;
+    double hBuffer = a.hFov * hBufferRatio;
+    double vBuffer = a.vFov * vBufferRatio;
+
+    GeoToRot(hCenter, vCenter, center);
+    GeoToRot(hLeft - hBuffer, vTop - vBuffer, corners[0]);
+    GeoToRot(hRight + hBuffer, vTop - vBuffer, corners[1]);
+    GeoToRot(hRight + hBuffer, vBot + vBuffer, corners[2]);
+    GeoToRot(hLeft - hBuffer, vBot + vBuffer, corners[3]);
+
+    assert(hLeft - hBuffer < hRight + hBuffer); 
+}
+
+void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo) {
+
+    const static bool debug = true;
 
     Mat k;
     stereo.valid = false;
@@ -110,12 +143,17 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
 	Mat resA(a.image->image.rows, a.image->image.cols, CV_32F);
 	Mat resB(b.image->image.rows, b.image->image.cols, CV_32F);
 
+    vector<Mat> targetCorners(4);
+    Mat targetCenter;
+
+    GetTargetRoi(a.closestPoint, b.closestPoint, targetCenter, targetCorners);
+
 	Mat I = Mat::eye(4, 4, CV_64F);
 	vector<Point2f> cornersA(4);
 	vector<Point2f> cornersB(4);
        
-    GetCorners(cornersA, target, aIntrinsics, a.image->image.cols, a.image->image.rows);
-    GetCorners(cornersB, target, bIntrinsics, b.image->image.cols, a.image->image.rows);
+    GetCorners(cornersA, targetCenter, targetCorners, aIntrinsics, a.image->image.cols, a.image->image.rows);
+    GetCorners(cornersB, targetCenter, targetCorners, bIntrinsics, b.image->image.cols, a.image->image.rows);
 
     assert(a.image->image.IsLoaded());
     assert(b.image->image.IsLoaded());
@@ -124,10 +162,10 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
 	warpPerspective(b.image->image.data, resB, transB, resB.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
     
     if(debug) {
-        //for(size_t i = 0; i < cornersA.size(); i++) {
-        //    line(resA, cornersA[i], cornersA[(i + 1) % cornersA.size()], Scalar(0, 0, 255), 3);
-        //    line(resB, cornersB[i], cornersB[(i + 1) % cornersB.size()], Scalar(0, 0, 255), 3);
-        //}
+        for(size_t i = 0; i < cornersA.size(); i++) {
+            line(resA, cornersA[i], cornersA[(i + 1) % cornersA.size()], Scalar(0, 0, 255), 3);
+            line(resB, cornersB[i], cornersB[(i + 1) % cornersB.size()], Scalar(0, 0, 255), 3);
+        }
         
         auto aScene = GetInnerBoxForScene(GetSceneCorners(a.image->image, transA));
         auto bScene = GetInnerBoxForScene(GetSceneCorners(b.image->image, transB));
@@ -157,8 +195,8 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
  	newKA.at<double>(1, 2) = stereo.B->image.rows / 2.0f;
 
 	stereo.A->intrinsics = newKA;
-	stereo.A->adjustedExtrinsics = target.roiCenter;
-	stereo.A->originalExtrinsics = target.roiCenter;
+	stereo.A->adjustedExtrinsics = targetCenter;
+	stereo.A->originalExtrinsics = targetCenter;
 	stereo.A->id = a.image->id;
 
 	Mat newKB = Mat::eye(3, 3, CV_64F);
@@ -168,11 +206,11 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
  	newKB.at<double>(1, 2) = stereo.B->image.rows / 2.0f;
 
 	stereo.B->intrinsics = newKB;
-	stereo.B->adjustedExtrinsics = target.roiCenter;
-	stereo.B->originalExtrinsics = target.roiCenter;
+	stereo.B->adjustedExtrinsics = targetCenter;
+	stereo.B->originalExtrinsics = targetCenter;
 	stereo.B->id = b.image->id;
 
-	stereo.extrinsics = target.roiCenter;
+	stereo.extrinsics = targetCenter;
 
 	stereo.valid = true;
 }

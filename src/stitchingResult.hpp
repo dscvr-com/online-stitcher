@@ -11,6 +11,7 @@ namespace optonaut {
         Image mask;
         //Most top-right corner.
         cv::Point corner;
+        int id;
     };
 
     typedef std::shared_ptr<StitchingResult> StitchingResultP;

@@ -19,10 +19,14 @@ namespace optonaut {
         uint32_t globalId;
         uint32_t localId;
         uint32_t ringId;
+        double hPos;
+        double vPos;
+        double hFov;
+        double vFov;
         Mat extrinsics;
         
         SelectionPoint() : globalId(0),
-            localId(0), ringId(0) {
+            localId(0), ringId(0), hPos(0), vPos(0), hFov(0), vFov(0) {
         }
     };
     
@@ -30,9 +34,6 @@ namespace optonaut {
         uint32_t from;
         uint32_t to;
         bool recorded;
-        
-        Mat roiCorners[4];
-        Mat roiCenter;
         
         SelectionEdge() : from(0), to(0), recorded(false) {
             
@@ -156,7 +157,7 @@ namespace optonaut {
 
         bool HasChildRing(int ring) {
             int c = GetChildRing(ring);
-            if(c < 0 || c >= targets.size()) {
+            if(c < 0 || c >= (int)targets.size()) {
                 return false;
             } else {
                 return targets[c].size() > 0;
