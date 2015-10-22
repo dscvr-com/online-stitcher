@@ -44,7 +44,7 @@ namespace optonaut {
             
             StitchingResultP res;
             
-            core.InitializeForStitching(rings, exposure, 0.4);
+            core.InitializeForStitching(rings, exposure, 0.4, debug, debugName);
             res = core.Stitch(debug, debugName);
             
             return res;

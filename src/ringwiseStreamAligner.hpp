@@ -36,9 +36,8 @@ namespace optonaut {
         shared_ptr<Worker> worker;
        
         double lasty;
+        double lastDx;
 
-        static constexpr double keyframeThreshold = M_PI / 64; 
-        
         deque<InputImageP> pasts;
         deque<double> sangles;
 
@@ -50,6 +49,7 @@ namespace optonaut {
             rings(graph.GetRings().size()), 
             compassDrift(Mat::eye(4, 4, CV_64F)), 
             lasty(0),
+            lastDx(0),
             async(async)
         { 
             worker = shared_ptr<Worker>(new Worker(alignOp));
@@ -141,13 +141,16 @@ namespace optonaut {
             InputImageP closest = GetClosestKeyframe(next->originalExtrinsics);
             
             if(closest != NULL) {
-                CorrelationDiff corr = visual.Match(next, closest);
+                //Todo: Bias intensity is probably dependent on image size. 
+                CorrelationDiff corr = visual.Match(next, closest, 
+                        75, lastDx, next->image.cols / 64);
                
                 if(corr.valid) { 
                     double dx = corr.offset.x;
                     double width = next->image.cols;
                     
                     //cout << "dx: " << dx << ", width: " << width << endl; 
+                    lastDx = dx;
 
                     double hx = next->intrinsics.at<double>(0, 0) / (next->intrinsics.at<double>(0, 2) * 2); 
 
@@ -207,7 +210,7 @@ namespace optonaut {
             pasts.push_back(next); 
             sangles.push_back(lasty);
 
-            static const int order = 100;
+            static const int order = 5;
 
             if(sangles.size() > order) {
                 sangles.pop_front();
@@ -236,7 +239,7 @@ namespace optonaut {
 
         void Postprocess(vector<InputImageP> imgs) const {
             for(auto img : imgs) {
-                //DrawBar(img->img, img->vtag);
+                DrawBar(img->image.data, img->vtag);
             }
         }
 	};

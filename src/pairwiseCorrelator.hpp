@@ -30,11 +30,11 @@ public:
 class PairwiseCorrelator {
 
 private:
-    static const bool debug = false;
+    static const bool debug = true;
 public:
     PairwiseCorrelator(ExposureCompensator&) { }
 
-    CorrelationDiff Match(const InputImageP a, const InputImageP b) {
+    CorrelationDiff Match(const InputImageP a, const InputImageP b, double bias, int biasX, double biasWidth) {
 
         const bool useGradient = false;
         const bool useReduce = true;
@@ -53,11 +53,12 @@ public:
             GetGradient(fa, ga, 1, 0);
             GetGradient(fb, gb, 1, 0);
         }
-        
-        GetOverlappingRegion(a, b, ga, gb, ga, gb);
+       
+        //Todo: Vertical Overlap factor of 0.09 is probably related to FOV
+        GetOverlappingRegion(a, b, ga, gb, ga, gb, 0.07);
         
         //If those asserts fire, we've fed the aligner two non-overlapping 
-        //images probably. SHAME!
+        //images probably. 
         if(ga.cols < 1 || ga.rows < 1) {
             return result;
         }
@@ -71,7 +72,7 @@ public:
             //ReduceForCorrelation(ga, ca);
             //ReduceForCorrelation(gb, cb);
             int dx; 
-            var = CorrelateX(ga, gb, 0.5, dx, corr, debug);
+            var = CorrelateX(ga, gb, 0.5, dx, corr, bias, biasX, biasWidth, debug);
             result.offset = Point2f(dx, 0);
             result.valid = var > 50;
             //ga = ca;

@@ -10,7 +10,7 @@ using namespace std;
 
 namespace optonaut {
 
-    static inline double CorrelateX(const Mat &a, const Mat &b, double window, int &dx, Mat &corr, bool debug = true) {
+    static inline double CorrelateX(const Mat &a, const Mat &b, double window, int &dx, Mat &corr, double bias = 0, int biasX = 0, double biasWidth = 0, bool debug = true) {
         
         double best = -1;
         double cur = 0;
@@ -36,6 +36,11 @@ namespace optonaut {
                 }
            }
            cur = cur / (w - abs(i)) / (a.rows / skip);
+           
+           if(bias != 0) {
+               cur += gauss(i, bias, biasX, biasWidth);
+           }
+
            values[i + w * window] = cur;
 
            if(cur > best) {

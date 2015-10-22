@@ -132,12 +132,18 @@ namespace optonaut {
         }
     } 
   
-    static inline void GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, const Image &bi, Mat &overlapA, Mat &overlapB) {
+    static inline void GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, const Image &bi, Mat &overlapA, Mat &overlapB, double vBuffer = 0) {
         Mat hom(3, 3, CV_64F);
         Mat rot(4, 4, CV_64F);
 
         HomographyFromImages(a, b, hom, rot);
-        
+
+        if(hom.at<double>(1, 2) < 0) {
+            hom.at<double>(1, 2) += a->image.rows * vBuffer; 
+        } else {
+            hom.at<double>(1, 2) -= a->image.rows * vBuffer; 
+        }
+
         Mat wa;
         warpPerspective(ai.data, wa, hom, cv::Size(ai.cols, ai.rows), INTER_LINEAR, BORDER_CONSTANT, 0);
        

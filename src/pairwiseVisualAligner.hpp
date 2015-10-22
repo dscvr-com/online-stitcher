@@ -36,7 +36,7 @@ private:
 	Ptr<AKAZE> detector;
 
     //TODO Make dependent of image size
-    const double OutlinerTolerance = 155 * 155; //Chosen by fair jojo roll
+    const double OutlinerTolerance = 155 * 155; 
 
     static const bool debug = true;
 

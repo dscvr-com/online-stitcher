@@ -54,6 +54,11 @@ namespace optonaut {
 	double max4(double a, double b, double c, double d);
 	double angleAvg(double x, double y);
 	double interpolate(double x, double x1, double x2, double y1, double y2);
+    // x = value
+    // a = height of peak
+    // b = position of peak
+    // c = width of peak
+    double gauss(double x, double a, double b, double c);
 
     void GetGradient(const cv::Mat &src_gray, cv::Mat &grad, double wx = 0.5, double wy = 0.5);
 }

@@ -319,5 +319,8 @@ namespace optonaut {
 		return y1 + (y2 - y1) * (x - x1) / (x2 - x1);
 	}
     
+    double gauss(double x, double a, double b, double c) {
+        return a * exp( -(x - b) * (x - b) / (2 * c * c));
+    }
 
 }
