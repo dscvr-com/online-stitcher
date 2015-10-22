@@ -10,7 +10,7 @@
 #include "simpleSphereStitcher.hpp"
 #include "support.hpp"
 #include "simpleSeamer.hpp"
-#include "verticalDynamicSeamer.hpp"
+#include "dynamicSeamer.hpp"
 #include "ringProcessor.hpp"
 
 using namespace std;
@@ -105,9 +105,9 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
                 aCorner.x -= resultRoi.width;
             }
 
-            VerticalDynamicSeamer::Find(a->image.data, b->image.data, 
+            DynamicSeamer::Find(a->image.data, b->image.data, 
                     a->mask.data, b->mask.data, 
-                    aCorner, b->corner, 1, a->id);
+                    aCorner, b->corner, true, 1, a->id);
     };
 
     //Stitcher feed function. 

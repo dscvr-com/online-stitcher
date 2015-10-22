@@ -5,32 +5,64 @@
 #include <vector>
 #include "support.hpp"
 
-#ifndef OPTONAUT_VERTICAL_DP_SEAMER_HEADER
-#define OPTONAUT_VERTICAL_DP_SEAMER_HEADER
+#ifndef OPTONAUT_DP_SEAMER_HEADER
+#define OPTONAUT_DP_SEAMER_HEADER
 
 using namespace std;
 using namespace cv;
 using namespace cv::detail;
 
 namespace optonaut {
-class VerticalDynamicSeamer 
+class DynamicSeamer 
 {
 public:
-    static void Find(Mat& imageA, Mat &imageP, Mat &maskA, Mat &maskB, const Point &tlA, const Point &tlB, int overlap = 0, int id = 0);
+    static void Find(Mat& imageA, Mat &imageP, Mat &maskA, Mat &maskB, const Point &tlA, const Point &tlB, bool vertical = true, int overlap = 0, int id = 0);
 };
 
-void VerticalDynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB, const Point &tlA, const Point &tlB, int overlap, int id)
+void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB, const Point &tlAIn, const Point &tlBIn, bool vertical, int overlap, int id)
 {
     static const bool debug = false;
 
-    Rect roi = Rect(tlA.x, tlA.y, imgA.cols, imgA.rows) & 
-               Rect(tlB.x, tlB.y, imgB.cols, imgB.rows);
+    // Remap all coordinates between vertical & horizontal. 
+    // Algorithm is written in vertical.
+    // It is important to only use the remapped values!
+    auto remap = [vertical] (int x, int y) {
+        // Take care, point has switched x/y order anyway. 
+        if(vertical)
+            return Point(y, x);
+        else 
+            return Point(x, y);
+    };
+    
+    Point tlA;
+    Point tlB;
+    int acols, bcols, arows, brows;
+
+    if(vertical) {
+        tlA = tlAIn;
+        tlB = tlBIn;
+        acols = imgA.cols;
+        arows = imgA.rows;
+        bcols = imgB.cols;
+        brows = imgB.rows;
+    } else  {
+        tlA = Point(tlAIn.y, tlAIn.x);
+        tlB = Point(tlBIn.y, tlBIn.x);
+        acols = imgA.rows;
+        arows = imgA.cols;
+        bcols = imgB.rows;
+        brows = imgB.cols;
+    }
+        
+    Rect roi = Rect(tlA.x, tlA.y, acols, arows) & 
+               Rect(tlB.x, tlB.y, bcols, brows);
 
     if(debug) {
         cout << "Roi: " << roi << endl;
         cout << "TLA: " << tlA << " TLB: " << tlB << endl;
     }   
 
+    // Bunch of assertions. 
     assert(maskA.type() == CV_8U);
     assert(maskB.type() == CV_8U);
     
@@ -61,16 +93,16 @@ void VerticalDynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB, c
             
             // Must be satisfied, or else we calculate ROI wrong. 
             assert(y - aToRoiY >= 0 && y - bToRoiY >= 0);
-            assert(y - aToRoiY < maskA.rows && y - bToRoiY < maskB.rows);
+            assert(y - aToRoiY < arows && y - bToRoiY < brows);
             assert(x - aToRoiX >= 0 && x - bToRoiX >= 0);
-            assert(x - aToRoiX < maskA.cols && x - bToRoiX < maskB.cols);
+            assert(x - aToRoiX < acols && x - bToRoiX < bcols);
 
-            if(maskA.at<uchar>(y - aToRoiY, x - aToRoiX) == 0 ||
-               maskB.at<uchar>(y - bToRoiY, x - bToRoiX) == 0) {
+            if(maskA.at<uchar>(remap(y - aToRoiY, x - aToRoiX)) == 0 ||
+               maskB.at<uchar>(remap(y - bToRoiY, x - bToRoiX)) == 0) {
                 invCost.at<uchar>(y, x) = 0;
             } else {
-                auto va = imgA.at<cv::Vec3b>(y - aToRoiY, x - aToRoiX);
-                auto vb = imgB.at<cv::Vec3b>(y - bToRoiY, x - bToRoiX);
+                auto va = imgA.at<cv::Vec3b>(remap(y - aToRoiY, x - aToRoiX));
+                auto vb = imgB.at<cv::Vec3b>(remap(y - bToRoiY, x - bToRoiX));
 
                 auto db = (float)va[0] - (float)vb[0];
                 auto dr = (float)va[1] - (float)vb[1];
@@ -123,28 +155,30 @@ void VerticalDynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB, c
     Mat &rightMask = maskB;
     auto leftToRoiX = aToRoiX;
     auto rightToRoiX = bToRoiX;
+    auto leftCols = acols;
 
     if(tlA.x > tlB.x) {
         leftMask = maskB;
         rightMask = maskA;
         leftToRoiX = bToRoiX;
         rightToRoiX = aToRoiX;
+        leftCols = bcols;
     }
 
     int x = start;
 
     for(int y = roi.height - 1; y >= 0; y--) {
-        for(int q = std::min<int>(x - leftToRoiX + 1 + overlap, leftMask.cols); q < leftMask.cols; q++) {
+        for(int q = std::min<int>(x - leftToRoiX + 1 + overlap, leftCols); q < leftCols; q++) {
             //Left mask is black right of path.
-            leftMask.at<uchar>(y, q) = 0;
+            leftMask.at<uchar>(remap(y, q)) = 0;
         }
         for(int q = 0; std::max<int>(q < x - rightToRoiX - overlap, 0); q++) {
             //Right mask is black left of path
-            rightMask.at<uchar>(y, q) = 0;
+            rightMask.at<uchar>(remap(y, q)) = 0;
         }
             
-        //imgA.at<Vec3b>(y - aToRoiY, x - aToRoiX) = Vec3b(0, 0, 255);
-        //imgB.at<Vec3b>(y - bToRoiY, x - bToRoiX) = Vec3b(0, 0, 255);
+        //imgA.at<Vec3b>(remap(y - aToRoiY, x - aToRoiX)) = Vec3b(0, 0, 255);
+        //imgB.at<Vec3b>(remap(y - bToRoiY, x - bToRoiX)) = Vec3b(0, 0, 255);
 
         if(y != 0) {
             int dir = ((int)path.at<uchar>(y, x)) - 1;
