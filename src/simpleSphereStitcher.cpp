@@ -118,13 +118,14 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
 
             Rect imageRoi(in->corner, in->image.size());
             Rect overlap = imageRoi & resultRoi;
-
-            if(overlap == imageRoi) {
+        
+            Rect overlapI(0, 0, overlap.width, overlap.height);
+        
+            if(overlap.width == imageRoi.width) {
                 //Image fits.
-                blender->feed(warpedImageAsShort, in->mask.data, in->corner);
+                blender->feed(warpedImageAsShort(overlapI), in->mask.data(overlapI), in->corner);
             } else {
-                //Image overlaps on X-Axis and we have to blend two parts. 
-                Rect overlapI(0, 0, overlap.width, overlap.height);
+                //Image overlaps on X-Axis and we have to blend two parts.
                 blender->feed(warpedImageAsShort(overlapI), 
                         in->mask.data(overlapI), 
                         overlap.tl());
