@@ -82,7 +82,7 @@ namespace optonaut {
             controller(recorderGraph),
             imagesToRecord(recorderGraph.Size()),
             recordedImages(0),
-            monoQueue(2, 
+            monoQueue(1, 
                 std::bind(&Recorder::StitchImages, 
                     this, placeholders::_1, placeholders::_2),
                 std::bind(&Recorder::FinishImage, 
@@ -157,8 +157,6 @@ namespace optonaut {
             assert(a.image->IsLoaded());
             assert(b.image->IsLoaded());
             
-            recordedImages++;
-            
             exposure.Register(a.image, b.image);
 
             StereoImage stereo;
@@ -186,10 +184,10 @@ namespace optonaut {
         std::chrono::time_point<std::chrono::system_clock> lt =
                 std::chrono::system_clock::now();
         
-        static const bool measureTime = true;
+        static const bool measureTime = false;
         
         void Push(InputImageP image) {
-            cout << "Pipeline Push called by " << std::this_thread::get_id() << endl;
+            //cout << "Pipeline Push called by " << std::this_thread::get_id() << endl;
 
             if(isFinished) {
                 cout << "Push after finish warning - this could be a racing condition" << endl;
@@ -238,6 +236,7 @@ namespace optonaut {
                     aligner->AddKeyframe(currentBest.image);
                     //Ok, hit that. We can stitch.
                     monoQueue.Push(currentBest);
+                    recordedImages++;
                     
                     if(current.closestPoint.ringId != 
                             currentBest.closestPoint.ringId) { 
@@ -249,6 +248,8 @@ namespace optonaut {
             }
             
             if(recordedImages == imagesToRecord) {
+                monoQueue.Push(currentBest);
+                monoQueue.Flush();
                 isFinished = true;
             }
         }
@@ -260,8 +261,6 @@ namespace optonaut {
             aligner->Finish();
            
             if(HasResults()) {
-                monoQueue.Push(currentBest);
-                monoQueue.Flush();
 
                 exposure.FindGains();
                

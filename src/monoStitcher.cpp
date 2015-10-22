@@ -92,7 +92,7 @@ void GetTargetRoi(const SelectionPoint &a, const SelectionPoint &b, Mat &center,
 
 void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo) {
 
-    const static bool debug = true;
+    const static bool debug = false;
 
     Mat k;
     stereo.valid = false;

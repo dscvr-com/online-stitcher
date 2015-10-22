@@ -59,6 +59,8 @@ namespace optonaut {
                 finish(pre);
             } 
 
+            prefixSize = distance; 
+
             prefix.clear();
             buffer.clear();
         }
