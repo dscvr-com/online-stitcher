@@ -130,8 +130,8 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
                         overlap.tl());
 
                 Rect other(resultRoi.x, overlap.y, 
-                        imageRoi.width - overlap.width, overlap.height);
-                Rect otherI(overlap.width, 0, other.width, other.height);
+                        overlap.width, overlap.height);
+                Rect otherI(overlap.width, 0, imageRoi.width - overlap.width, other.height);
                 blender->feed(warpedImageAsShort(otherI), 
                         in->mask.data(otherI), 
                         other.tl());
