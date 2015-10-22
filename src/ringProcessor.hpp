@@ -53,9 +53,10 @@ namespace optonaut {
             }
         }
 
-        void Flush() {
+        void Flush(bool push = true) {
             for(auto &pre : prefix) {
-                Push(pre);
+                if(push)
+                    Push(pre);
                 finish(pre);
             } 
 

@@ -56,7 +56,7 @@ namespace optonaut {
         }
 
         bool NeedsImageData() {
-            return false;
+            return true;
         }
 
         void Dispose() {
@@ -186,8 +186,6 @@ namespace optonaut {
 
 		void Push(InputImageP next) {
             last = next;
-            return;
-            
 
             int ring = graph.FindAssociatedRing(next->originalExtrinsics);
            // cout << "Ring " << ring << endl;
