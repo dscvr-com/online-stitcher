@@ -38,12 +38,6 @@ void RStitcher::PrepareMatrices(const vector<InputImageP> &r) {
 
 StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const ExposureCompensator &exposure, ProgressCallback &progress, double ev, bool debug, const std::string&) {
 
-    //This is needed because xcode does not like the CV stitching header.
-    //So we can't initialize this constant in the header. 
-    if(blendMode == -1) {
-        blendMode = cv::detail::Blender::MULTI_BAND;
-    }
-    
 	size_t n = in.size();
     assert(n > 0);
 
@@ -89,7 +83,7 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
     //Blending
     Ptr<Blender> blender;
     MultiBandBlender* mb;
-	blender = Blender::createDefault(blendMode, false);
+	blender = Blender::createDefault(cv::detail::Blender::MULTI_BAND, false);
     mb = dynamic_cast<MultiBandBlender*>(blender.get());
     mb->setNumBands(6);
     Rect resultRoi = cv::detail::resultRoi(corners, warpedSizes);

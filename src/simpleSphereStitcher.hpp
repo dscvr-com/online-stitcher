@@ -20,7 +20,6 @@ class RStitcher {
 		bool compensate = false;
 		float workScale = 0.2f;
 		float warperScale = 1200;
-        int blendMode = -1;
         CheckpointStore &store;
 
         RStitcher(CheckpointStore &store) : store(store) { }

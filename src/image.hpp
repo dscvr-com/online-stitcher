@@ -63,6 +63,15 @@ namespace optonaut {
 
             assert(cols != 0 && rows != 0);
         }
+
+        void Save() {
+            assert(source != "");
+
+            //Don't forget to update the JSON file!
+            assert(data.cols == cols && data.rows == rows); 
+
+            cv::imwrite(source, data);
+        }
 	};
 }
 

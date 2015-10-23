@@ -29,7 +29,6 @@ namespace optonaut {
             
             void AdjustCorners(
                     std::vector<StitchingResultP> &rings, 
-                    std::vector<cv::Point> &corners,
                     ProgressCallback &progress);
 
             void Checkpoint();

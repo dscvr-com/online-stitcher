@@ -11,7 +11,9 @@
 #include "correlation.hpp"
 #include "static_timer.hpp"
 #include "stitchingResult.hpp"
-
+#include "ringProcessor.hpp"
+#include "functional.hpp"
+#include "dynamicSeamer.hpp"
 
 using namespace std;
 using namespace cv;
@@ -19,52 +21,74 @@ using namespace cv::detail;
 
 namespace optonaut {
 
-    void RingwiseStitcher::AdjustCorners(std::vector<StitchingResultP> &rings, std::vector<cv::Point> &corners, ProgressCallback &progress) {
-        
-        if(dyCache.size() == 0) {
-            rings[0]->image.Load();
-            Mat a = rings[0]->image.data;
-            for(size_t i = 1; i < rings.size(); i++) {
-                progress((float)i / (float)rings.size());
+    static void LoadSRP(StitchingResultP &a) {
+        a->image.Load();
+        a->mask.Load(CV_LOAD_IMAGE_GRAYSCALE);
+    }
+
+    static void UnLoadSRP(StitchingResultP &a) {
+        a->image.Unload();
+        a->mask.Unload();
+    } 
+    
+    static void UnLoadSRPStoreMask(StitchingResultP &a) {
+        a->image.Unload();
+        cout << "Saving mask" << a->id << endl;
+        a->mask.Save();
+        a->mask.Unload();
+    }
+         
+    void RingwiseStitcher::AdjustCorners(std::vector<StitchingResultP> &rings, ProgressCallback &progress) {
+
+        auto correlate = [this] (StitchingResultP &imgA, StitchingResultP &imgB) {
+           Mat &a = imgA->image.data;             
+           Mat &b = imgB->image.data;             
                 
-                rings[i]->image.Load();
-                Mat b = rings[i]->image.data;
-                Mat ca, cb;
+           Mat ca, cb;
                 
-                cvtColor(a, ca, CV_BGR2GRAY);
-                cvtColor(b, cb, CV_BGR2GRAY); 
+            cvtColor(a, ca, CV_BGR2GRAY);
+            cvtColor(b, cb, CV_BGR2GRAY); 
 
-                const int warp = MOTION_TRANSLATION;
-                Mat affine = Mat::eye(2, 3, CV_32F);
+            const int warp = MOTION_TRANSLATION;
+            Mat affine = Mat::eye(2, 3, CV_32F);
 
-                const int iterations = 100;
-                const double eps = 1e-3;
+            const int iterations = 100;
+            const double eps = 1e-3;
 
-                int dy = corners[i - 1].y - corners[i].y;
-                affine.at<float>(1, 2) = dy;
+            int dy = imgA->corner.y - imgB->corner.y;
+            affine.at<float>(1, 2) = dy;
 
-                TermCriteria termination(TermCriteria::COUNT + TermCriteria::EPS, iterations, eps);
-                try {
-                    findTransformECC(ca, cb, affine, warp, termination);
-                    dy = affine.at<float>(1, 2);
-                } catch (Exception ex) {
-                    // :( 
-                }
+            TermCriteria termination(TermCriteria::COUNT + TermCriteria::EPS, 
+                    iterations, eps);
 
-                dyCache.push_back(dy);
-                
-                a = b;
-                rings[i - 1]->image.Unload();
+            try {
+                findTransformECC(ca, cb, affine, warp, termination);
+                dy = affine.at<float>(1, 2);
+            } catch (Exception ex) {
+                // :( 
             }
-            rings.back()->image.Unload();
-        }
-        
-        progress(1);
+
+            dyCache.push_back(dy);
+        };
+
+        RingProcessor<StitchingResultP> queue(1, 0, LoadSRP, correlate,  UnLoadSRP);
+        queue.Process(rings, progress);
 
         for(size_t i = 1; i < rings.size(); i++) {
-            corners[i].y = corners[i - 1].y - dyCache[i - 1];
-            rings[i]->corner = corners[i];
+            rings[i]->corner.y = rings[i - 1]->corner.y - dyCache[i - 1];
         }
+    }
+
+    void FindSeams(std::vector<StitchingResultP> &rings) {
+        RingProcessor<StitchingResultP> queue(1, 0, 
+                LoadSRP, 
+                DynamicSeamer::FindHorizontalFromStitchingResult, 
+                UnLoadSRPStoreMask);
+
+        auto ordered = fun::orderby<StitchingResultP, int>(rings, [](const auto &x) { 
+            return (int)x->corner.x; 
+        });
+        queue.Process(rings);
     }
     
     void RingwiseStitcher::InitializeForStitching(std::vector<std::vector<InputImageP>> &rings, ExposureCompensator &exposure, double ev) {
@@ -88,6 +112,7 @@ namespace optonaut {
             res->mask.Load(IMREAD_GRAYSCALE);
             res->image.Unload();
             res->mask.Unload();
+            res->id = ringId;
             progress(1);
             return res;
         }
@@ -95,6 +120,7 @@ namespace optonaut {
         RStitcher stitcher(store);
         
         res = stitcher.Stitch(ring, exposure, progress, ev, debug, debugName);
+        res->id = ringId;
 
         store.SaveRing(ringId, res);
 
@@ -125,11 +151,12 @@ namespace optonaut {
         ProgressCallback &finalBlendingProgress = progressCallbacks.At(weights.size() - 1);
 
         vector<StitchingResultP> stitchedRings;
-        vector<cv::Size> sizes;
-        vector<cv::Point> corners;
        
-        FeatherBlender* pblender = new FeatherBlender(0.01f); 
-        Ptr<Blender> blender = Ptr<Blender>(pblender);
+	    Ptr<Blender> blender;
+	    blender = Blender::createDefault(cv::detail::Blender::MULTI_BAND, false);
+        MultiBandBlender* mb;
+        mb = dynamic_cast<MultiBandBlender*>(blender.get());
+        mb->setNumBands(6);
 
         cout << "Attempting to stitch rings." << endl;
         int margin = -1; 
@@ -143,8 +170,6 @@ namespace optonaut {
             auto res = StitchRing(rings[i], progressCallbacks.At(i), (int)i, debug, debugName);
             
             stitchedRings.push_back(res);
-            sizes.push_back(res->image.size());
-            corners.push_back(res->corner);
 
             if(margin == -1 || margin > res->corner.y) {
                 margin = res->corner.y;
@@ -165,10 +190,15 @@ namespace optonaut {
         ringAdjustmentProgress(1);
         
         //Todo - also make this persistent. Additionally, use y adjustment.
-        AdjustCorners(stitchedRings, corners, ringAdjustmentProgress);
+        AdjustCorners(stitchedRings, ringAdjustmentProgress);
+        FindSeams(stitchedRings);
         
         STimer::Tick("Corner Adjusting Finished");
-        blender->prepare(corners, sizes);
+        
+        blender->prepare(fun::map<StitchingResultP, Point>
+                (stitchedRings, [](const auto &x) { return x->corner; }),
+                fun::map<StitchingResultP, Size>
+                (stitchedRings, [](const auto &x) { return x->image.size(); }));
         
         cout << "Attempting ring blending." << endl;
         for(size_t i = 0; i < stitchedRings.size(); i++) {
@@ -189,7 +219,7 @@ namespace optonaut {
             mask(Rect(0, 0, mask.cols, 1)).setTo(Scalar::all(0));
             mask(Rect(0, mask.rows - 1, mask.cols, 1)).setTo(Scalar::all(0));
 
-            blender->feed(warpedImageAsShort, mask, corners[i]);
+            blender->feed(warpedImageAsShort, mask, res->corner);
 
             res->image.Unload();
             res->mask.Unload();
@@ -210,9 +240,9 @@ namespace optonaut {
         
         //Opencv somehow messes up the first few collumn while blending.
         //Throw it away. 
-        const int trim = 6;
-        res->image = Image(res->image.data(cv::Rect(trim, 0, res->image.cols - trim * 2, res->image.rows)));
-        res->mask = Image(res->mask.data(cv::Rect(trim, 0, res->mask.cols - trim * 2, res->mask.rows)));
+        //const int trim = 6;
+        //res->image = Image(res->image.data(cv::Rect(trim, 0, res->image.cols - trim * 2, res->image.rows)));
+        //res->mask = Image(res->mask.data(cv::Rect(trim, 0, res->mask.cols - trim * 2, res->mask.rows)));
 
         if(resizeOutput) {
 

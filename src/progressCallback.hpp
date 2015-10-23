@@ -1,3 +1,6 @@
+#include <functional>
+#include <vector>
+#include <cassert>
 
 #ifndef OPTONAUT_PROGRESS_CALLBACK_HEADER
 #define OPTONAUT_PROGRESS_CALLBACK_HEADER
@@ -8,10 +11,12 @@ namespace optonaut {
     private:
         ProgressCallbackFunction callback;
         float progress;
+
     public:
         ProgressCallback(ProgressCallbackFunction function) : callback(function), progress(0) { }
         
         bool operator()(float progress) {
+            assert(progress >= 0);
             this->progress = progress;
             return callback(progress);
         }
@@ -19,6 +24,8 @@ namespace optonaut {
         float GetLastProgress() {
             return progress;
         }
+
+        static ProgressCallback Empty;
     };
     
     class ProgressCallbackAccumulator {
@@ -51,6 +58,7 @@ namespace optonaut {
             return callbacks[id];
         }
     };
+
 }
 
 #endif
