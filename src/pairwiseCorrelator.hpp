@@ -30,7 +30,7 @@ public:
 class PairwiseCorrelator {
 
 private:
-    static const bool debug = true;
+    static const bool debug = false;
 public:
     PairwiseCorrelator(ExposureCompensator&) { }
 
@@ -51,14 +51,14 @@ public:
             Mat fb(gb.rows / 2, gb.cols / 2, CV_8U);
             pyrDown(ga, fa);
             pyrDown(gb, fb);
-            GetGradient(fa, ga, 1, 0);
-            GetGradient(fb, gb, 1, 0);
-            //ga = fa;
-            //gb = fb;
+            //GetGradient(fa, ga, 1, 0);
+            //GetGradient(fb, gb, 1, 0);
+            ga = fa;
+            gb = fb;
         }
        
         //Todo: Vertical Overlap factor of 0.09 is probably related to FOV
-        GetOverlappingRegion(a, b, ga, gb, ga, gb, 0);
+        GetOverlappingRegion(a, b, ga, gb, ga, gb, 0.07);
         
         //If those asserts fire, we've fed the aligner two non-overlapping 
         //images probably. 

@@ -82,10 +82,10 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
 
     //Blending
     Ptr<Blender> blender;
-    MultiBandBlender* mb;
-	blender = Blender::createDefault(cv::detail::Blender::MULTI_BAND, false);
-    mb = dynamic_cast<MultiBandBlender*>(blender.get());
-    mb->setNumBands(6);
+    //MultiBandBlender* mb;
+	blender = Blender::createDefault(cv::detail::Blender::NO, false);
+    //mb = dynamic_cast<MultiBandBlender*>(blender.get());
+    //mb->setNumBands(6);
     Rect resultRoi = cv::detail::resultRoi(corners, warpedSizes);
     blender->prepare(resultRoi);
 

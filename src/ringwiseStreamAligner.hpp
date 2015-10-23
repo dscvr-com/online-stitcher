@@ -211,7 +211,7 @@ namespace optonaut {
 
             double avg = 0;
             
-            static const int order = 30;
+            static const int order = 50;
             
             if(sangles.size() == order) {
                 avg = Average(sangles, 1.0 / 5.0);
