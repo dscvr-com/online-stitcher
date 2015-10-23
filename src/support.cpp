@@ -25,15 +25,19 @@ namespace optonaut {
 		text >> val;
 		return val;
 	}
+	
+    void ScaleIntrinsicsToImage(const Mat &intrinsics, const Image &image, Mat &scaled, double fupscaling) {
+        ScaleIntrinsicsToImage(intrinsics, image.size(), scaled, fupscaling);
+    }
 
-	void ScaleIntrinsicsToImage(const Mat &intrinsics, const Image &image, Mat &scaled, double fupscaling) {
+	void ScaleIntrinsicsToImage(const Mat &intrinsics, const Size &image, Mat &scaled, double fupscaling) {
 		assert(MatIs(intrinsics, 3, 3, CV_64F));
 
 		scaled = Mat::zeros(3, 3, CV_64F);
 		
-		double scaleFactor = image.cols / (intrinsics.at<double>(0, 2) * 2);
-		scaled.at<double>(0, 2) = image.cols / 2;
-		scaled.at<double>(1, 2) = image.rows / 2;
+		double scaleFactor = image.width / (intrinsics.at<double>(0, 2) * 2);
+		scaled.at<double>(0, 2) = image.width / 2;
+		scaled.at<double>(1, 2) = image.height / 2;
 		//Todo: Remove factor 10 - only for debug. 
 		scaled.at<double>(0, 0) = intrinsics.at<double>(0, 0) * scaleFactor * fupscaling;
 		scaled.at<double>(1, 1) = intrinsics.at<double>(1, 1) * scaleFactor * fupscaling;

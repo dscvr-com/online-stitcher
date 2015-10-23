@@ -209,8 +209,6 @@ namespace optonaut {
             }
             
             aligner->Push(image);
-            
-            image->adjustedExtrinsics = aligner->GetCurrentRotation().clone();
 
             if(!controller.IsInitialized())
                 controller.Initialize(image->adjustedExtrinsics);

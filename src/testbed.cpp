@@ -24,6 +24,8 @@ bool CompareByFilename (const string &a, const string &b) {
 
 void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &rightStore) {
 
+    namedWindow("Recorder", WINDOW_AUTOSIZE);
+
     if(files.size() == 0) {
         cout << "No Input." << endl;
         return;
@@ -41,6 +43,9 @@ void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &
         //Create stack-local ref to mat. Clear image mat.
         //This is to simulate hard memory management.
         Mat tmpMat = image->image.data;
+
+        //imshow("Recorder", tmpMat);
+        //waitKey(0); 
         
         image->image = Image(Mat(0, 0, CV_8UC3));
         
@@ -64,6 +69,8 @@ void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &
             this_thread::sleep_for(sleep);
         }
     }
+
+    destroyWindow("Recorder");
 
     recorder->Finish();
     recorder->Dispose();

@@ -58,10 +58,10 @@ namespace optonaut {
     }
 
     static inline void RotationFromImages(const InputImageP a, const InputImageP b, Mat &rot) {
-        rot = b->originalExtrinsics.inv() * a->originalExtrinsics;
+        rot = b->adjustedExtrinsics.inv() * a->adjustedExtrinsics;
     }
 
-    static inline void HomographyFromImages(const InputImageP a, const InputImageP b, Mat &hom, Mat &rot) {
+    static inline void HomographyFromImages(const InputImageP a, const InputImageP b, Mat &hom, Mat &rot, Size scale) {
         Mat R3(3, 3, CV_64F);
         Mat aK3(3, 3, CV_64F);
 
@@ -69,11 +69,15 @@ namespace optonaut {
         
         From4DoubleTo3Double(rot, R3);
 
-        ScaleIntrinsicsToImage(a->intrinsics, a->image, aK3);
+        ScaleIntrinsicsToImage(a->intrinsics, scale, aK3);
 
         HomographyFromRotation(R3, aK3, hom);
     }
     
+    static inline void HomographyFromImages(const InputImageP a, const InputImageP b, Mat &hom, Mat &rot) {
+        HomographyFromImages(a, b, hom, rot, a->image.size());
+    }
+
     static inline bool ImagesAreOverlapping(const InputImageP a, const InputImageP b, double minOverlap = 0.1) {
         Mat hom, rot;
 
@@ -136,7 +140,7 @@ namespace optonaut {
         Mat hom(3, 3, CV_64F);
         Mat rot(4, 4, CV_64F);
 
-        HomographyFromImages(a, b, hom, rot);
+        HomographyFromImages(a, b, hom, rot, ai.size());
 
         if(hom.at<double>(1, 2) < 0) {
             hom.at<double>(1, 2) += a->image.rows * vBuffer; 

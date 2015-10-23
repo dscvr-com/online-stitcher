@@ -20,6 +20,7 @@ namespace optonaut {
         return text.str();
     }
 
+	void ScaleIntrinsicsToImage(const cv::Mat &intrinsics, const cv::Size &image, cv::Mat &scaled, double fupscaling = 1);
 	void ScaleIntrinsicsToImage(const cv::Mat &intrinsics, const Image &image, cv::Mat &scaled, double fupscaling = 1);
 
 	double GetHorizontalFov(const cv::Mat &intrinsics);

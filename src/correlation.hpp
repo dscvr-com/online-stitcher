@@ -13,10 +13,11 @@ namespace optonaut {
     static inline double CorrelateX(const Mat &a, const Mat &b, double window, int &dx, Mat &corr, double bias = 0, int biasX = 0, double biasWidth = 0, bool debug = true) {
         
         double best = -1;
+        double worst = std::numeric_limits<double>::max();
         double cur = 0;
        
         int w = min(a.cols, b.cols);
-        const int skip = 4;
+        const int skip = 1;
         unsigned char *ad = (unsigned char*)(a.data);
         unsigned char *bd = (unsigned char*)(b.data);
         
@@ -47,13 +48,16 @@ namespace optonaut {
                best = cur;
                dx = i;
            }
+           if(cur < worst) {
+               worst = cur;
+           }
        }
 
        if(debug) {
             corr = Mat(10, w * 2 * window + 1, CV_8U);
-            for(int j = 0; j < w; j++) {
+            for(int j = 0; j < corr.cols; j++) {
                 for(int i = 0; i < 10; i++) {
-                    corr.at<uchar>(i, j) = values[j] * 255.0 / best;
+                    corr.at<uchar>(i, j) = (values[j] - worst) * 255.0 / (best - worst);
                 }
             }
        }

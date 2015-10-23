@@ -138,12 +138,12 @@ namespace optonaut {
 
         function<int(InputImageP)> alignOp = [&] (InputImageP next) -> int {
 
-            InputImageP closest = GetClosestKeyframe(next->originalExtrinsics);
+            InputImageP closest = GetClosestKeyframe(next->adjustedExtrinsics);
             
             if(closest != NULL) {
                 //Todo: Bias intensity is probably dependent on image size. 
                 CorrelationDiff corr = visual.Match(next, closest, 
-                        75, lastDx, next->image.cols / 64);
+                        75, 0, next->image.cols / 64);
                
                 if(corr.valid) { 
                     double dx = corr.offset.x;
@@ -190,7 +190,9 @@ namespace optonaut {
 		void Push(InputImageP next) {
             last = next;
 
-            int ring = graph.FindAssociatedRing(next->originalExtrinsics);
+            next->adjustedExtrinsics = compassDrift * next->originalExtrinsics;
+
+            int ring = graph.FindAssociatedRing(next->adjustedExtrinsics);
            // cout << "Ring " << ring << endl;
             if(ring == -1)
                 return;
@@ -207,22 +209,25 @@ namespace optonaut {
                 }
             }
 
-            pasts.push_back(next); 
-            sangles.push_back(lasty);
+            double avg = 0;
+            
+            static const int order = 30;
+            
+            if(sangles.size() == order) {
+                avg = Average(sangles, 1.0 / 5.0);
+                CreateRotationY(avg, compassDrift);
+                
+                next->vtag = avg;
+            }
 
-            static const int order = 5;
+            sangles.push_back(lasty + avg);
+            pasts.push_back(next); 
 
             if(sangles.size() > order) {
                 sangles.pop_front();
             }
             if(pasts.size() > order) {
                 pasts.pop_front();
-            }
-            if(sangles.size() == order) {
-                double avg = Average(sangles, 1.0 / 5.0);
-                CreateRotationY(avg, compassDrift);
-                
-                next->vtag = avg;
             }
         }
 
