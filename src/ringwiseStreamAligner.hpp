@@ -56,7 +56,7 @@ namespace optonaut {
         }
 
         bool NeedsImageData() {
-            return true;
+            return false; //Will always load ourselves. 
         }
 
         void Dispose() {
@@ -203,7 +203,14 @@ namespace optonaut {
 
             if((int)target != ring) {
                 if(async) {
-                    worker->Push(next);
+                    if(worker->Finished()) {
+                        if(!next->IsLoaded()) {
+                            //Pre-load the image. 
+                            next->LoadFromDataRef();
+                        }
+
+                        worker->Push(next);
+                    }
                 } else {
                     alignOp(next);
                 }

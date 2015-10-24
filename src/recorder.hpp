@@ -225,8 +225,8 @@ namespace optonaut {
             }
 
             if(current.isValid) {
-                if(!image->IsLoaded())
-                    image->LoadFromDataRef();
+                if(!current.image->IsLoaded())
+                    current.image->LoadFromDataRef();
                 
                 if(current.closestPoint.globalId != 
                         currentBest.closestPoint.globalId) {

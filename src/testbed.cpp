@@ -47,7 +47,7 @@ void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &
         //imshow("Recorder", tmpMat);
         //waitKey(0); 
         
-        image->image = Image(Mat(0, 0, CV_8UC3));
+        image->image = Image(Mat(0, 0, CV_8UC4));
         
         image->dataRef.data = tmpMat.data;
         image->dataRef.width = tmpMat.cols;
