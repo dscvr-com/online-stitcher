@@ -42,7 +42,7 @@ namespace optonaut {
             distance(dist), 
             prefixSize(dist),
             prefixCounter(dist),
-            start([] (auto &) {}),
+            start([] (InType &) {}),
             process(process),
             finish(onFinish) {
             //Necassary for the below implementation. 
