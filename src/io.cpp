@@ -18,6 +18,7 @@
 //Will this work on IOS? q.q
 #include <sys/stat.h> 
 #include <sys/types.h>
+#include <unistd.h>
 #include <errno.h> 
 
 using namespace cv;

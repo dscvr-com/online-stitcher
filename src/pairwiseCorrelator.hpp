@@ -117,7 +117,7 @@ public:
                     " .jpg";
             if(useReduce) {
                 cvtColor(corr, corr, CV_GRAY2BGR);
-                corr = corr(Rect(0, 0, corr.cols, std::min<int>(corr.rows, target.rows)));
+                corr = corr(cv::Rect(0, 0, corr.cols, std::min<int>(corr.rows, target.rows)));
                 corr.copyTo(target(cv::Rect((target.cols - corr.cols) / 2, 0, corr.cols, corr.rows)));
                 //cvtColor(ca, ca, CV_GRAY2BGR);
                 //ca.copyTo(target(Rect(0, 0, ca.cols, ca.rows))); 

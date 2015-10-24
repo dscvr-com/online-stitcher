@@ -85,7 +85,7 @@ namespace optonaut {
                 DynamicSeamer::FindHorizontalFromStitchingResult, 
                 UnLoadSRPStoreMask);
 
-        auto ordered = fun::orderby<StitchingResultP, int>(rings, [](const auto &x) { 
+        auto ordered = fun::orderby<StitchingResultP, int>(rings, [](const StitchingResultP &x) {
             return (int)x->corner.x; 
         });
         queue.Process(rings);
@@ -196,9 +196,9 @@ namespace optonaut {
         STimer::Tick("Corner Adjusting Finished");
         
         blender->prepare(fun::map<StitchingResultP, Point>
-                (stitchedRings, [](const auto &x) { return x->corner; }),
+                (stitchedRings, [](const StitchingResultP &x) { return x->corner; }),
                 fun::map<StitchingResultP, Size>
-                (stitchedRings, [](const auto &x) { return x->image.size(); }));
+                (stitchedRings, [](const StitchingResultP &x) { return x->image.size(); }));
         
         cout << "Attempting ring blending." << endl;
         for(size_t i = 0; i < stitchedRings.size(); i++) {

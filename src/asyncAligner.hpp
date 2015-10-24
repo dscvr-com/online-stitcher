@@ -1,12 +1,14 @@
 #include <opencv2/features2d.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
+#include <mutex>
+#include <condition_variable>
 
 #include "image.hpp"
 #include "support.hpp"
 #include "aligner.hpp"
 #include "recorderGraph.hpp"
-#include "SequenceStreamAligner.hpp"
+#include "sequenceStreamAligner.hpp"
 #include "asyncStreamWrapper.hpp"
 
 using namespace cv;

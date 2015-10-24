@@ -61,7 +61,7 @@ namespace optonaut {
         rot = b->adjustedExtrinsics.inv() * a->adjustedExtrinsics;
     }
 
-    static inline void HomographyFromImages(const InputImageP a, const InputImageP b, Mat &hom, Mat &rot, Size scale) {
+    static inline void HomographyFromImages(const InputImageP a, const InputImageP b, Mat &hom, Mat &rot, cv::Size scale) {
         Mat R3(3, 3, CV_64F);
         Mat aK3(3, 3, CV_64F);
 
