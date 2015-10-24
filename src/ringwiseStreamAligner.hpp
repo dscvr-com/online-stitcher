@@ -191,6 +191,9 @@ namespace optonaut {
 
 		void Push(InputImageP next) {
             last = next;
+            
+            //DBG - giving up on alignment. 
+            return;
 
             next->adjustedExtrinsics = compassDrift * next->originalExtrinsics;
 
