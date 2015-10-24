@@ -231,7 +231,10 @@ namespace optonaut {
                 if(current.closestPoint.globalId != 
                         currentBest.closestPoint.globalId) {
                     
-                    aligner->AddKeyframe(currentBest.image);
+                    if(recordedImages % 2 == 0) {     
+                        //Save some memory by sparse keyframing. 
+                        aligner->AddKeyframe(currentBest.image);
+                    }
                     //Ok, hit that. We can stitch.
                     monoQueue.Push(currentBest);
                     recordedImages++;
