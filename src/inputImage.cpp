@@ -20,7 +20,7 @@ namespace optonaut {
         bool expectingPortrait = IsPortrait(intrinsics);
         
         if(dataRef.colorSpace == colorspace::RGBA) {
-            Mat result;
+            Mat result(dataRef.height, dataRef.width, CV_8UC3);
             
             cv::cvtColor(
                     cv::Mat(dataRef.height, dataRef.width, CV_8UC4, dataRef.data), 

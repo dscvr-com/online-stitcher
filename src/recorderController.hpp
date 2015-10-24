@@ -78,7 +78,7 @@ namespace optonaut {
         
         void MoveToClosestPoint(const Mat &closest) {
             graph.FindClosestPoint(closest, next, currentRing);
-            ballPosition = next.extrinsics.clone();
+            ballPosition = next.extrinsics;
         }
 
     public:
@@ -131,9 +131,9 @@ namespace optonaut {
             }
             
             if(!currentDone) {
-                ballPosition = current.extrinsics.clone();
+                ballPosition = current.extrinsics;
             } else {
-                ballPosition = next.extrinsics.clone();
+                ballPosition = next.extrinsics;
             }
             ExtractRotationVector(image->adjustedExtrinsics.inv() * current.extrinsics, errorVec);
 

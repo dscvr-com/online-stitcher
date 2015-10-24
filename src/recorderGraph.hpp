@@ -100,7 +100,7 @@ namespace optonaut {
         }
         
         bool GetPointById(uint32_t id, SelectionPoint &point) const {
-            for(auto ring : targets) {
+            for(auto &ring : targets) {
                 for(auto target : ring) {
                     if(target.globalId == id) {
                         point = target;
@@ -116,11 +116,11 @@ namespace optonaut {
             double bestDist = -1;
             Mat eInv = extrinscs.inv();
             
-            for(auto ring : targets) {
+            for(auto &ring : targets) {
                 if(ring.size() == 0 || (ringId != -1 && ringId != (int)ring[0].ringId))
                     continue;
                 
-                for(auto target : ring) {
+                for(auto &target : ring) {
                     double dist = GetAngleOfRotation(eInv * target.extrinsics);
                     if (dist < bestDist || bestDist < 0) {
                         point = target;
@@ -179,7 +179,7 @@ namespace optonaut {
         uint32_t Size() {
             uint32_t size = 0;
             
-            for(auto ring : targets)
+            for(auto &ring : targets)
                 size += ring.size();
             
             return size;

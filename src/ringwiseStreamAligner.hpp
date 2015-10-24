@@ -137,9 +137,7 @@ namespace optonaut {
         }
 
         function<int(InputImageP)> alignOp = [&] (InputImageP next) -> int {
-
             InputImageP closest = GetClosestKeyframe(next->adjustedExtrinsics);
-            cout << "Using keyframe " << closest->id << " for correlating." << endl;
             
             if(closest != NULL) {
                 //Todo: Bias intensity is probably dependent on image size. 

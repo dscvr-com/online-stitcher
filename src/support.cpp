@@ -71,16 +71,14 @@ namespace optonaut {
         return h > w;
     }
 
-	void ExtractRotationVector(const Mat &r, Mat &v) {
+	void ExtractRotationVector(const Mat &r, Mat &vec) {
 		assert(MatIs(r, 3, 3, CV_64F));
 
-		Mat vec = Mat::zeros(3, 1, CV_64F);
+		vec = Mat::zeros(3, 1, CV_64F);
 
 		vec.at<double>(0, 0) = atan2(r.at<double>(2, 1), r.at<double>(2, 2));
 		vec.at<double>(1, 0) = atan2(-r.at<double>(2, 0), sqrt(r.at<double>(2, 1) * r.at<double>(2, 1) + r.at<double>(2, 2) * r.at<double>(2, 2)));
 		vec.at<double>(2, 0) = atan2(r.at<double>(1, 0), r.at<double>(0, 0));
-
-		v = vec.clone();
 	}
 
 	void CreateRotationZ(double a, Mat &t) {
@@ -164,7 +162,8 @@ namespace optonaut {
 	}
     
     double GetAngleOfRotation(const Mat &a, const Mat &b) {
-        return GetAngleOfRotation(a.inv() * b);
+        Mat expr = a.inv() * b;
+        return GetAngleOfRotation(expr);
     }
    
     double GetDistanceByDimension(const Mat &a, const Mat &b, int dim) {

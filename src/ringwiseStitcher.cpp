@@ -156,7 +156,7 @@ namespace optonaut {
 	    blender = Blender::createDefault(cv::detail::Blender::MULTI_BAND, false);
         MultiBandBlender* mb;
         mb = dynamic_cast<MultiBandBlender*>(blender.get());
-        mb->setNumBands(6);
+        mb->setNumBands(3);
 
         cout << "Attempting to stitch rings." << endl;
         int margin = -1; 
