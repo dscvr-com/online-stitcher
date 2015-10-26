@@ -192,10 +192,10 @@ namespace optonaut {
 		void Push(InputImageP next) {
             last = next;
             
+            next->adjustedExtrinsics = compassDrift * next->originalExtrinsics;
+            
             //DBG - giving up on alignment. 
             return;
-
-            next->adjustedExtrinsics = compassDrift * next->originalExtrinsics;
 
             int ring = graph.FindAssociatedRing(next->adjustedExtrinsics);
            // cout << "Ring " << ring << endl;
