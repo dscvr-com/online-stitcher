@@ -113,7 +113,7 @@ int main(int argc, char** argv) {
 
     {
         cout << "Start left stitcher." << endl;
-        Stitcher leftStitcher(leftStore);
+        Stitcher leftStitcher(4096, 4096, leftStore);
         auto left = leftStitcher.Finish(callbacks.At(0), false, "dbg/left");
         imwrite("dbg/left.jpg", left->image.data);
         left->image.Unload();  
@@ -121,7 +121,7 @@ int main(int argc, char** argv) {
     }
     {
         cout << "Start right stitcher." << endl;
-        Stitcher rightStitcher(rightStore);
+        Stitcher rightStitcher(4096, 4096, rightStore);
         auto right = rightStitcher.Finish(callbacks.At(1), false, "dbg/right");
         imwrite("dbg/right.jpg", right->image.data);    
         right->image.Unload();  

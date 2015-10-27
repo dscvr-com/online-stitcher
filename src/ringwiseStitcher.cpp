@@ -150,12 +150,6 @@ namespace optonaut {
 
         vector<StitchingResultP> stitchedRings;
        
-	    Ptr<Blender> blender;
-	    blender = Blender::createDefault(cv::detail::Blender::FEATHER, false);
-        //MultiBandBlender* mb;
-        //mb = dynamic_cast<MultiBandBlender*>(blender.get());
-        //mb->setNumBands(5);
-
         cout << "Attempting to stitch rings." << endl;
         int margin = -1; 
         
@@ -192,34 +186,55 @@ namespace optonaut {
         
         stitcherTimer.Tick("Corner Adjusting Finished");
         
-        blender->prepare(fun::map<StitchingResultP, Point>
+	    Ptr<Blender> blender;
+	    blender = Blender::createDefault(cv::detail::Blender::FEATHER, false);
+        //MultiBandBlender* mb;
+        //mb = dynamic_cast<MultiBandBlender*>(blender.get());
+        //mb->setNumBands(5);
+        
+
+        Rect inRoi = detail::resultRoi(fun::map<StitchingResultP, Point>
                 (stitchedRings, [](const StitchingResultP &x) { return x->corner; }),
                 fun::map<StitchingResultP, Size>
                 (stitchedRings, [](const StitchingResultP &x) { return x->image.size(); }));
-        
+        Rect outRoi(0, 0, w, h);
+
+        int sx = inRoi.x;
+        int sy = inRoi.y - margin;
+        float dx = (float)outRoi.width / (float)inRoi.width;
+        float dy = (float)outRoi.height / (float)(inRoi.height + 2 * margin);
+
+        cout << "InRoi: " << inRoi << " OutRoi: " << outRoi << endl;
+        blender->prepare(outRoi);
+       
         cout << "Attempting ring blending." << endl;
         for(size_t i = 0; i < stitchedRings.size(); i++) {
             finalBlendingProgress((float)i / (float)stitchedRings.size());
             auto res = stitchedRings[i];
+
+            Mat resizedImage;
+            Mat resizedMask;
+
             res->image.Load();
-            res->mask.Load(IMREAD_GRAYSCALE);
-            
             assert(res->image.type() == CV_8UC3);
+            resize(res->image.data, resizedImage, cv::Size(0, 0), dx, dy);
+            res->image.Unload();
+
+            res->mask.Load(IMREAD_GRAYSCALE);
             assert(res->mask.type() == CV_8U);
+            resize(res->mask.data, resizedMask, cv::Size(0, 0), dx, dy);
+            res->mask.Unload();
 
             Mat warpedImageAsShort;
-            res->image.data.convertTo(warpedImageAsShort, CV_16S);
-
-            Mat mask = res->mask.data;
+            resizedImage.convertTo(warpedImageAsShort, CV_16S);
 
             //Set one pixel of the mask to black on the edges to enable blending. 
-            mask(Rect(0, 0, mask.cols, 1)).setTo(Scalar::all(0));
-            mask(Rect(0, mask.rows - 1, mask.cols, 1)).setTo(Scalar::all(0));
+            resizedMask(Rect(0, 0, resizedMask.cols, 1)).setTo(Scalar::all(0));
+            resizedMask(Rect(0, resizedMask.rows - 1, resizedMask.cols, 1)).setTo(Scalar::all(0));
 
-            blender->feed(warpedImageAsShort, mask, res->corner);
+            Point newCorner((res->corner.x - sx) * dx, (res->corner.y - sy) * dy); 
 
-            res->image.Unload();
-            res->mask.Unload();
+            blender->feed(warpedImageAsShort, resizedMask, newCorner);
         }
         
         finalBlendingProgress(1);
@@ -242,33 +257,6 @@ namespace optonaut {
         }
         stitcherTimer.Tick("FinalStitching Finished");
         blender.release();
-        
-        if(resizeOutput) {
-
-            int ih = (res->image.rows) * h / (res->image.rows + 2 * margin);
-            int x = (h - ih) / 2;
-
-            static const bool needMask = false;
-            
-            {
-                Mat canvas(w, h, CV_8UC3);
-                canvas.setTo(Scalar::all(0));
-                Mat resizedImage(w, ih, CV_8UC3);
-                resize(res->image.data, resizedImage, cv::Size(w, ih));
-                resizedImage.copyTo(canvas.rowRange(x, x + ih));
-                res->image = Image(canvas);
-            }
-            if(needMask) {
-                Mat maskCanvas(w, h, CV_8U);
-                maskCanvas.setTo(Scalar::all(0));
-                Mat resizedMask(w, ih, CV_8U);
-                resize(res->mask.data, resizedMask, cv::Size(w, ih));
-                resizedMask.copyTo(maskCanvas.rowRange(x, x + ih));
-                res->mask = Image(maskCanvas);
-            } else {
-                res->mask = Image(Mat(0, 0, CV_8UC1));
-            }
-        }
         
         store.SaveOptograph(res);
         

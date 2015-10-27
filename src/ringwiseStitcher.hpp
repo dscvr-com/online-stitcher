@@ -18,7 +18,6 @@ namespace optonaut {
     
     class RingwiseStitcher {
         private:
-            bool resizeOutput = true;
             int w = 4096;
             int h = 4096;
             std::vector<int> dyCache;
@@ -40,10 +39,10 @@ namespace optonaut {
                     const std::string &debugName) const;
         public:
             RingwiseStitcher(int width, int height, CheckpointStore &store) : 
-                resizeOutput(true), w(width), h(height), store(store) { }
+                w(width), h(height), store(store) { }
 
             RingwiseStitcher(CheckpointStore &store) : 
-                resizeOutput(false), w(0), h(0), store(store) { }
+                w(0), h(0), store(store) { }
 
             void InitializeForStitching(
                     std::vector<std::vector<InputImageP>> &rings, 
