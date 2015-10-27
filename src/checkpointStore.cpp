@@ -61,6 +61,10 @@ namespace optonaut {
         StitchingResultToFile(image, ringPath + "ring_" + ToString(ringId), ".bmp");
     }
     
+    void CheckpointStore::SaveRingMask(int ringId, StitchingResultP image) {
+        StitchingResultToFile(image, ringPath + "ring_" + ToString(ringId), ".bmp", true);
+    }
+    
     StitchingResultP CheckpointStore::LoadRing(int ringId) {
         return StitchingResultFromFile(ringPath + "ring_" + ToString(ringId), ".bmp");
     }

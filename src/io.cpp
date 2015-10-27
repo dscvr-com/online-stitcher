@@ -282,16 +282,24 @@ namespace optonaut {
         doc.SetObject();
         doc.AddMember("x", result->corner.x, allocator);
         doc.AddMember("y", result->corner.y, allocator);
+        doc.AddMember("id", result->id, allocator);
+        doc.AddMember("seamed", result->seamed, allocator);
+        doc.AddMember("width", result->image.cols, allocator);
+        doc.AddMember("height", result->image.rows, allocator);
         
         WriteJsonDocument(doc, path);
     }
     
-    void ParseStitchingResultInfoFile(const string &path, StitchingResultP result) {
+    void ParseStitchingResultInfoFile(const string &path, StitchingResultP result, int &width, int &height) {
         Document doc;
         
         ReadJsonDocument(doc, path);
         
         result->corner = cv::Point(doc["x"].GetInt(), doc["y"].GetInt());
+        result->id = doc["id"].GetInt();
+        result->seamed = doc["seamed"].GetBool();
+        width = doc["width"].GetInt();
+        height = doc["height"].GetInt();
     }
 
  	bool FileExists(const string &fileName) {
@@ -332,17 +340,20 @@ namespace optonaut {
 		return result;
     }
     
-    void StitchingResultToFile(StitchingResultP image, const string &path, const string &extension) {
+    void StitchingResultToFile(StitchingResultP image, const string &path, const string &extension, bool maskOnly) {
         string infoFilePath = path + ".data.json";
         string imagePath = path + ".image" + extension;
         string maskPath = path + ".mask" + extension;
         
         WriteStitchingResultInfoFile(infoFilePath, image);
         
-        imwrite(imagePath, image->image.data);
         imwrite(maskPath, image->mask.data);
-        image->image.source = imagePath;
         image->mask.source = maskPath;
+       
+        if(!maskOnly) { 
+            imwrite(imagePath, image->image.data);
+            image->image.source = imagePath;
+        }
     }
     
     StitchingResultP StitchingResultFromFile(const string &path, const string &extension) {
@@ -354,12 +365,18 @@ namespace optonaut {
             return StitchingResultP(NULL);
     
         StitchingResultP res(new StitchingResult());
+
+        int width, height;
         
-        ParseStitchingResultInfoFile(infoFilePath, res);
+        ParseStitchingResultInfoFile(infoFilePath, res, width, height);
         res->image = Image(Mat(0, 0, CV_8UC3)); 
-        res->mask = Image(Mat(0, 0, CV_8UC3)); 
+        res->mask = Image(Mat(0, 0, CV_8UC3));
+        res->image.cols = width;
+        res->image.rows = height;
         res->image.source = imagePath;
         res->mask.source = maskPath;
+        res->mask.cols = width;
+        res->mask.rows = height;
 
         return res;
     }

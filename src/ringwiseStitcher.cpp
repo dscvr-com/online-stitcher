@@ -33,10 +33,11 @@ namespace optonaut {
         a->mask.Unload();
     } 
     
-    static void UnLoadSRPStoreMask(StitchingResultP &a) {
+    void UnLoadSRPStoreMask(CheckpointStore &store, StitchingResultP &a) {
         a->image.Unload();
+        a->seamed = true;
         cout << "Saving mask" << a->id << endl;
-        a->mask.Save();
+        store.SaveRingMask(a->id, a);
         a->mask.Unload();
     }
          
@@ -54,8 +55,8 @@ namespace optonaut {
             const int warp = MOTION_TRANSLATION;
             Mat affine = Mat::eye(2, 3, CV_32F);
 
-            const int iterations = 100;
-            const double eps = 1e-3;
+            const int iterations = 500;
+            const double eps = 1e-4;
 
             int dy = imgA->corner.y - imgB->corner.y;
             affine.at<float>(1, 2) = dy;
@@ -86,11 +87,11 @@ namespace optonaut {
         }
     }
 
-    void FindSeams(std::vector<StitchingResultP> &rings) {
+    void FindSeams(std::vector<StitchingResultP> &rings, CheckpointStore &store) {
         RingProcessor<StitchingResultP> queue(1, 0, 
                 LoadSRP, 
                 DynamicSeamer::FindHorizontalFromStitchingResult, 
-                UnLoadSRPStoreMask);
+                std::bind(&UnLoadSRPStoreMask, store, std::placeholders::_1));
 
         auto ordered = fun::orderby<StitchingResultP, int>(rings, [](const StitchingResultP &x) {
             return (int)x->corner.x; 
@@ -113,13 +114,6 @@ namespace optonaut {
         StitchingResultP res = store.LoadRing(ringId);
 
         if(res != NULL) {
-            //Load images and throw them away,
-            //so we know the sizes. 
-            res->image.Load();
-            res->mask.Load(IMREAD_GRAYSCALE);
-            res->image.Unload();
-            res->mask.Unload();
-            res->id = ringId;
             progress(1);
             return res;
         }
@@ -196,9 +190,8 @@ namespace optonaut {
         cout << "Attempting ring adjustment." << endl;
         ringAdjustmentProgress(1);
         
-        //Todo - also make this persistent. Additionally, use y adjustment.
         AdjustCorners(stitchedRings, ringAdjustmentProgress);
-        FindSeams(stitchedRings);
+        FindSeams(stitchedRings, store);
         
         stitcherTimer.Tick("Corner Adjusting Finished");
         

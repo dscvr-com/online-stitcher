@@ -41,6 +41,7 @@ namespace optonaut {
         void SaveStitcherInput(const std::vector<std::vector<InputImageP>> &rings, const std::map<size_t, double> &exposure);
         
         void SaveRing(int ringId, StitchingResultP image);
+        void SaveRingMask(int ringId, StitchingResultP image);
         StitchingResultP LoadRing(int ringId);
         
         void SaveOptograph(StitchingResultP image);

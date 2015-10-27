@@ -204,6 +204,7 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
 
     res->corner.x = corners[0].x;
     res->corner.y = corners[0].y;
+    res->seamed = false;
 
     for(size_t i = 1; i < n; i++) {
         res->corner.x = min(res->corner.x, corners[i].x);

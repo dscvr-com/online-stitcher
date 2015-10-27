@@ -21,7 +21,7 @@ namespace optonaut {
     InputImageP InputImageFromFile(const std::string &path, bool shallow = true);
     void InputImageToFile(const InputImageP image, const std::string &path);
     StitchingResultP StitchingResultFromFile(const std::string &path, const std::string &extension);
-    void StitchingResultToFile(StitchingResultP image, const std::string &path, const std::string &extension);
+    void StitchingResultToFile(StitchingResultP image, const std::string &path, const std::string &extension, bool maskOnly = false);
  	bool FileExists(const std::string &fileName);
 
 	template <typename T>

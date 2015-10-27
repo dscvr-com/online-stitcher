@@ -105,8 +105,8 @@ int main(int argc, char** argv) {
     
     cout << "Create callbacks." << endl;
 
-    ProgressCallback progress([](float progress) -> bool {
-                cout << (int)(progress * 100) << "% ";
+    ProgressCallback progress([](float) -> bool {
+                //cout << (int)(progress * 100) << "% ";
                 return true;
             });
     ProgressCallbackAccumulator callbacks(progress, {0.5, 0.5});

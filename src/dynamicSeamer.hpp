@@ -25,6 +25,9 @@ public:
 
     static inline void FindHorizontalFromStitchingResult(StitchingResultP &a, StitchingResultP &b) {
 
+        if(a->seamed && b->seamed)
+            return;
+
         cout << "Seaming: " << a->id << ", " << b->id << endl;
 
         Find(a->image.data, b->image.data, a->mask.data,  

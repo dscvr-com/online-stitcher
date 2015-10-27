@@ -12,6 +12,7 @@ namespace optonaut {
         //Most top-right corner.
         cv::Point corner;
         int id;
+        bool seamed;
     };
 
     typedef std::shared_ptr<StitchingResult> StitchingResultP;
