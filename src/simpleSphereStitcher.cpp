@@ -89,7 +89,7 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
     MultiBandBlender* mb;
 	blender = Blender::createDefault(cv::detail::Blender::MULTI_BAND, false);
     mb = dynamic_cast<MultiBandBlender*>(blender.get());
-    mb->setNumBands(6);
+    mb->setNumBands(5);
     Rect resultRoi = cv::detail::resultRoi(corners, warpedSizes);
     blender->prepare(resultRoi);
     
@@ -138,7 +138,7 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
             DynamicSeamer::Find<true>(aImg, bImg, 
                     aMask, bMask, 
                     aCorner + dstCoreMaskRoi.tl(),
-                    b->corner + dstCoreMaskRoi.tl(), 1, a->id);
+                    b->corner + dstCoreMaskRoi.tl(), 0, 1, a->id);
     };
 
     //Stitcher feed function. 

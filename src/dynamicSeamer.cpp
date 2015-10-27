@@ -18,7 +18,7 @@ int DynamicSeamer::debugId = 0;
 
 template <bool vertical>
 void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB, 
-        const Point &tlAIn, const Point &tlBIn, int overlap, int id)
+        const Point &tlAIn, const Point &tlBIn, int border, int overlap, int id)
 {
     STimer seamTimer;
     static const bool debug = false;
@@ -78,7 +78,7 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
 
     //Calculate weighting costs. 
     for(int y = 0; y < roi.height; y++) {
-        for(int x = 0; x < roi.width; x++) {
+        for(int x = border; x < roi.width - border; x++) {
             
             int txA = x - aToRoiX;
             int tyA = y - aToRoiY;
@@ -119,7 +119,7 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
     
     //Calculate path. 
     for(int y = 1; y < roi.height; y++) {
-        for(int x = 0; x < roi.width; x++) {
+        for(int x = border; x < roi.width - border; x++) {
             int min = 0; 
 
             for(int q = -1; q <= 1; q++) {
@@ -142,7 +142,7 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
     //Find best path
     int start = 0;
 
-    for(int x = 1; x < roi.width; x++) {
+    for(int x = 1 + border; x < roi.width - border; x++) {
         if(invCost.at<float>(roi.height - 1, x) > 
            invCost.at<float>(roi.height - 1, start)) {
             start = x;
@@ -200,7 +200,7 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
     seamTimer.Tick("Image Seamed");
 }
 template void DynamicSeamer::Find<true>(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB, 
-        const Point &tlAIn, const Point &tlBIn, int overlap, int id);
+        const Point &tlAIn, const Point &tlBIn, int border, int overlap, int id);
 template void DynamicSeamer::Find<false>(Mat& imgA, Mat &imgB, Mat &maskA, 
-        Mat &maskB, const Point &tlAIn, const Point &tlBIn, int overlap, int id);
+        Mat &maskB, const Point &tlAIn, const Point &tlBIn, int border, int overlap, int id);
 }
