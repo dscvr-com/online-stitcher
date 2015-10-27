@@ -6,7 +6,13 @@ using namespace std;
 
 namespace optonaut {
 
+    static const bool enabled = true;
+
     void STimer::Tick(string label) {
+
+        if(!enabled)
+            return; 
+
         auto now = chrono::high_resolution_clock::now();
         auto duration = now - last;
 

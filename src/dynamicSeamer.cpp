@@ -5,6 +5,9 @@
 #include <vector>
 #include "support.hpp"
 
+#define REMAPX(x,y)  (vertical ? x : y)
+#define REMAPY(x,y)  (vertical ? y : x)
+
 using namespace std;
 using namespace cv;
 
@@ -12,22 +15,12 @@ namespace optonaut {
 
 int DynamicSeamer::debugId = 0;
 
+template <bool vertical>
 void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB, 
-        const Point &tlAIn, const Point &tlBIn, bool vertical, int overlap, int id)
+        const Point &tlAIn, const Point &tlBIn, int overlap, int id)
 {
     static const bool debug = false;
 
-    // Remap all coordinates between vertical & horizontal. 
-    // Algorithm is written in vertical.
-    // It is important to only use the remapped values!
-    auto remap = [vertical] (int x, int y) {
-        // Take care, point has switched x/y order anyway. 
-        if(vertical)
-            return Point(y, x);
-        else 
-            return Point(x, y);
-    };
-    
     Point tlA;
     Point tlB;
     int acols, bcols, arows, brows;
@@ -85,22 +78,32 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
     for(int x = 0; x < roi.width; x++) {
         for(int y = 0; y < roi.height; y++) {
             
+            int txA = x - aToRoiX;
+            int tyA = y - aToRoiY;
+            int txB = x - bToRoiX;
+            int tyB = y - bToRoiY;
+            
             // Must be satisfied, or else we calculate ROI wrong. 
-            assert(y - aToRoiY >= 0 && y - bToRoiY >= 0);
-            assert(y - aToRoiY < arows && y - bToRoiY < brows);
-            assert(x - aToRoiX >= 0 && x - bToRoiX >= 0);
-            assert(x - aToRoiX < acols && x - bToRoiX < bcols);
+            assert(tyA >= 0 && tyB >= 0);
+            assert(tyA < arows && tyB < brows);
+            assert(txA >= 0 && txB >= 0);
+            assert(txA < acols && txB < bcols);
 
-            if(maskA.at<uchar>(remap(y - aToRoiY, x - aToRoiX)) == 0 ||
-               maskB.at<uchar>(remap(y - bToRoiY, x - bToRoiX)) == 0) {
+            int xA = REMAPX(txA, tyA);
+            int yA = REMAPY(txA, tyA);
+            int xB = REMAPX(txB, tyB);
+            int yB = REMAPY(txB, tyB);
+
+            if(maskA.at<uchar>(yA, xA) == 0 ||
+               maskB.at<uchar>(yB, xB) == 0) {
                 invCost.at<uchar>(y, x) = 0;
             } else {
-                auto va = imgA.at<cv::Vec3b>(remap(y - aToRoiY, x - aToRoiX));
-                auto vb = imgB.at<cv::Vec3b>(remap(y - bToRoiY, x - bToRoiX));
+                auto va = imgA.at<cv::Vec3b>(yA, xA);
+                auto vb = imgB.at<cv::Vec3b>(yB, xB);
 
-                auto db = (float)va[0] - (float)vb[0];
-                auto dr = (float)va[1] - (float)vb[1];
-                auto dg = (float)va[2] - (float)vb[2];
+                float db = (float)va[0] - (float)vb[0];
+                float dr = (float)va[1] - (float)vb[1];
+                float dg = (float)va[2] - (float)vb[2];
                 
                 invCost.at<float>(y, x) = 255 - sqrt(db * db + dr * dr + dg * dg);
             }
@@ -162,11 +165,11 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
     for(int y = roi.height - 1; y >= 0; y--) {
         for(int q = std::min<int>(x - leftToRoiX + 1 + overlap, leftCols); q < leftCols; q++) {
             //Left mask is black right of path.
-            leftMask.at<uchar>(remap(y, q)) = 0;
+            leftMask.at<uchar>(REMAPX(y, q), REMAPY(y, q)) = 0;
         }
         for(int q = 0; std::max<int>(q < x - rightToRoiX - overlap, 0); q++) {
             //Right mask is black left of path
-            rightMask.at<uchar>(remap(y, q)) = 0;
+            rightMask.at<uchar>(REMAPX(y, q), REMAPY(y, q)) = 0;
         }
             
         //imgA.at<Vec3b>(remap(y - aToRoiY, x - aToRoiX)) = Vec3b(0, 0, 255);
@@ -192,4 +195,8 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
         //imwrite("dbg/" + ToString(id) + "_mb.jpg", maskB);
     }
 }
+template void DynamicSeamer::Find<true>(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB, 
+        const Point &tlAIn, const Point &tlBIn, int overlap, int id);
+template void DynamicSeamer::Find<false>(Mat& imgA, Mat &imgB, Mat &maskA, 
+        Mat &maskB, const Point &tlAIn, const Point &tlBIn, int overlap, int id);
 }

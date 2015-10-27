@@ -12,6 +12,7 @@
 #include "simpleSeamer.hpp"
 #include "dynamicSeamer.hpp"
 #include "ringProcessor.hpp"
+#include "static_timer.hpp"
 
 using namespace std;
 using namespace cv;
@@ -37,6 +38,9 @@ void RStitcher::PrepareMatrices(const vector<InputImageP> &r) {
 }
 
 StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const ExposureCompensator &exposure, ProgressCallback &progress, double ev, bool debug, const std::string&) {
+
+    STimer timer; 
+    timer.Tick("Ring Stitching Start");
 
 	size_t n = in.size();
     assert(n > 0);
@@ -99,9 +103,9 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
                 aCorner.x -= resultRoi.width;
             }
 
-            DynamicSeamer::Find(a->image.data, b->image.data, 
+            DynamicSeamer::Find<true>(a->image.data, b->image.data, 
                     a->mask.data, b->mask.data, 
-                    aCorner, b->corner, true, 1, a->id);
+                    aCorner, b->corner, 1, a->id);
     };
 
     //Stitcher feed function. 
@@ -142,6 +146,21 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
 
     RingProcessor<StitchingResultP> queue(1, findSeams, feed);
 
+    Mat warpedMask(dstRoi.size(), CV_8U);
+    {
+        //Mask Warping - we force a tiny mask for each image.
+        InputImageP img = in[0];
+        Mat mask = Mat::zeros(img->image.rows, img->image.cols, CV_8U);
+        mask(Rect(img->image.cols / 4, 0, img->image.cols / 2, img->image.rows)).setTo(Scalar::all(255));
+        remap(mask, warpedMask, uxmap, uymap, INTER_NEAREST, BORDER_CONSTANT); 
+        mask.release();
+    }
+
+    Mat kernel = Mat::ones(1, 10, CV_8U);
+    erode(warpedMask, warpedMask, kernel);
+
+    STimer detailTimer;
+
     for(size_t i = 0; i < n; i++) {
         stageProgress.At(1)((float)i / (float)n);
         
@@ -152,18 +171,7 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
         
         StitchingResultP res(new StitchingResult()); 
 
-        //Mask Warping - we force a tiny mask for each image.
-        //Todo: Can probably warp once, then use multiple times. .  
-        Mat mask = Mat::zeros(img->image.rows, img->image.cols, CV_8U);
-        mask(Rect(img->image.cols / 4, 0, img->image.cols / 2, img->image.rows)).setTo(Scalar::all(255));
-        Mat warpedMask(dstRoi.size(), CV_8U);
-        remap(mask, warpedMask, uxmap, uymap, INTER_NEAREST, BORDER_CONSTANT); 
-        mask.release();
-
-        Mat kernel = Mat::ones(1, 10, CV_8U);
-        erode(warpedMask, warpedMask, kernel);
-
-        res->mask = Image(warpedMask);
+        res->mask = Image(warpedMask.clone());
         
         //Image Warping
         Mat warpedImage(dstRoi.size(), CV_8UC3);
@@ -178,17 +186,16 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
         res->corner = Point(cornerTop.x, corners[i].y);
         
         img->image.Unload(); 
-
+        detailTimer.Tick("Image Warped");
         queue.Push(res);
+        detailTimer.Tick("Image Seamed");
     }
 
     queue.Flush();
+    timer.Tick("Ring Stitching Warped");
     
     warper.release();
     warperFactory.release();
-
-
-    cout << "Start blending" << endl;
 
 	StitchingResultP res(new StitchingResult());
     {
@@ -211,6 +218,7 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
         res->corner.y = min(res->corner.y, corners[i].y);
     }
     stageProgress.At(1)(1);
+    timer.Tick("Ring Stitching Blended");
 
 	return res;
 }

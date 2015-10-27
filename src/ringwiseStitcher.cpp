@@ -55,7 +55,7 @@ namespace optonaut {
             const int warp = MOTION_TRANSLATION;
             Mat affine = Mat::eye(2, 3, CV_32F);
 
-            const int iterations = 500;
+            const int iterations = 200;
             const double eps = 1e-4;
 
             int dy = imgA->corner.y - imgB->corner.y;

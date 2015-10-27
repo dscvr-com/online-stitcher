@@ -16,22 +16,23 @@ class DynamicSeamer
 private:
     static int debugId;
 public:
-    static void Find(Mat& imageA, Mat &imageB, Mat &maskA, Mat &maskB, const Point &tlA, const Point &tlB, bool vertical = true, int overlap = 0, int id = 0);
+    template <bool vertical>
+    static void Find(Mat& imageA, Mat &imageB, Mat &maskA, Mat &maskB, const Point &tlA, const Point &tlB, int overlap = 0, int id = 0);
 
     static inline void FindVerticalFromStitchingResult(StitchingResultP &a, StitchingResultP &b) {
-        Find(a->image.data, b->image.data, a->mask.data, 
-             b->mask.data, a->corner, b->corner, true, 1, debugId++);
+        Find<true>(a->image.data, b->image.data, a->mask.data, 
+             b->mask.data, a->corner, b->corner, 1, debugId++);
     }
 
     static inline void FindHorizontalFromStitchingResult(StitchingResultP &a, StitchingResultP &b) {
 
-        if(a->seamed && b->seamed)
-            return;
+ //       if(a->seamed && b->seamed)
+//            return;
 
         cout << "Seaming: " << a->id << ", " << b->id << endl;
 
-        Find(a->image.data, b->image.data, a->mask.data,  
-             b->mask.data, a->corner, b->corner, false, 1, debugId++);
+        Find<false>(a->image.data, b->image.data, a->mask.data,  
+             b->mask.data, a->corner, b->corner, 1, debugId++);
     }
 };
 
