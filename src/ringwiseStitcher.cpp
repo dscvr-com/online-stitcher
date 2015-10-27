@@ -1,8 +1,9 @@
 #include <vector>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
+#define private public
 #include <opencv2/stitching.hpp>
-
+#undef private
 #include "image.hpp"
 #include "support.hpp"
 #include "simpleSphereStitcher.hpp"
@@ -55,8 +56,8 @@ namespace optonaut {
             const int warp = MOTION_TRANSLATION;
             Mat affine = Mat::eye(2, 3, CV_32F);
 
-            const int iterations = 200;
-            const double eps = 1e-4;
+            const int iterations = 100;
+            const double eps = 1e-3;
 
             int dy = imgA->corner.y - imgB->corner.y;
             affine.at<float>(1, 2) = dy;
@@ -154,10 +155,10 @@ namespace optonaut {
         vector<StitchingResultP> stitchedRings;
        
 	    Ptr<Blender> blender;
-	    blender = Blender::createDefault(cv::detail::Blender::MULTI_BAND, false);
-        MultiBandBlender* mb;
-        mb = dynamic_cast<MultiBandBlender*>(blender.get());
-        mb->setNumBands(5);
+	    blender = Blender::createDefault(cv::detail::Blender::FEATHER, false);
+        //MultiBandBlender* mb;
+        //mb = dynamic_cast<MultiBandBlender*>(blender.get());
+        //mb->setNumBands(5);
 
         cout << "Attempting to stitch rings." << endl;
         int margin = -1; 
@@ -227,6 +228,14 @@ namespace optonaut {
         
         finalBlendingProgress(1);
 
+        //for(int i = 0; i < mb->num_bands_; i++) {
+        //    Mat tmp;
+        //    mb->dst_pyr_laplace_[i].convertTo(tmp, CV_8UC3, 12, 0);
+        //    imwrite("dbg/dst_pyr_laplace_" + ToString(i) + ".jpg", tmp);
+        //    mb->dst_band_weights_[i].convertTo(tmp, CV_8UC3, 255.0, 0);
+        //    imwrite("dbg/dst_pyr_weights_" + ToString(i) + ".jpg", mb->dst_band_weights_[i]);
+        //}
+
         stitchedRings.clear();
         {
             Mat imageRes, maskRes;
@@ -238,12 +247,6 @@ namespace optonaut {
         stitcherTimer.Tick("FinalStitching Finished");
         blender.release();
         
-        //Opencv somehow messes up the first few collumn while blending.
-        //Throw it away. 
-        //const int trim = 6;
-        //res->image = Image(res->image.data(cv::Rect(trim, 0, res->image.cols - trim * 2, res->image.rows)));
-        //res->mask = Image(res->mask.data(cv::Rect(trim, 0, res->mask.cols - trim * 2, res->mask.rows)));
-
         if(resizeOutput) {
 
             int ih = (res->image.rows) * h / (res->image.rows + 2 * margin);
