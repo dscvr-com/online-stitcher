@@ -73,8 +73,13 @@ namespace optonaut {
             dyCache.push_back(dy);
         };
 
-        RingProcessor<StitchingResultP> queue(1, 0, LoadSRP, correlate,  UnLoadSRP);
-        queue.Process(rings, progress);
+        store.LoadRingAdjustment(dyCache);
+
+        if(dyCache.size() == 0) {
+            RingProcessor<StitchingResultP> queue(1, 0, LoadSRP, correlate,  UnLoadSRP);
+            queue.Process(rings, progress);
+            store.SaveRingAdjustment(dyCache);
+        }
 
         for(size_t i = 1; i < rings.size(); i++) {
             rings[i]->corner.y = rings[i - 1]->corner.y - dyCache[i - 1];

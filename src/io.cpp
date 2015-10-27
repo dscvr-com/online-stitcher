@@ -496,6 +496,37 @@ namespace optonaut {
 
         return rings;
     }
+    
+    void SaveIntList(const std::vector<int> &vals, const std::string &path) {
+        Document doc;
+        Document::AllocatorType &allocator = doc.GetAllocator();
+        
+        Value jOffsets(kArrayType);
+        jOffsets.SetArray();
+
+        for(auto &val : vals) {
+            jOffsets.PushBack(val, allocator);
+        }
+        doc.SetObject();
+        doc.AddMember("offsets", jOffsets, allocator);
+
+        WriteJsonDocument(doc, path);
+    }
+
+    std::vector<int> LoadIntList(const std::string &path) {
+        Document doc;
+
+        vector<int> vals;
+        ReadJsonDocument(doc, path);
+
+        Value &jOffsets = doc["offsets"];
+
+        for(SizeType j = 0; j < jOffsets.Size(); j++) {
+            vals.push_back((double)jOffsets[j].GetInt());
+        }
+
+        return vals;
+    }
         
     vector<InputImageP> LoadAllImagesFromDirectory(const string &path, const string &extension) {
         vector<InputImageP> images;

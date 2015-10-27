@@ -46,6 +46,17 @@ namespace optonaut {
         
         exposure = LoadExposureMap(exposureMapPath);
     }
+        
+    void CheckpointStore::SaveRingAdjustment(const std::vector<int> &vals) {
+        SaveIntList(vals, ringAdjustmentPath); 
+    }
+
+    void CheckpointStore::LoadRingAdjustment(std::vector<int> &vals) {
+        if(FileExists(ringAdjustmentPath)) {
+            vals = LoadIntList(ringAdjustmentPath);
+        }
+    }
+
     void CheckpointStore::SaveRing(int ringId, StitchingResultP image) {
         StitchingResultToFile(image, ringPath + "ring_" + ToString(ringId), ".bmp");
     }

@@ -154,8 +154,8 @@ namespace optonaut {
         
         void Postprocess(vector<InputImageP>) const { };
         void Finish() { };
-        void AddKeyframe(InputImageP next) { }
-        std::vector<KeyframeInfo> GetClosestKeyframes(const cv::Mat &search, size_t count) const { return { }; }
+        void AddKeyframe(InputImageP) { }
+        std::vector<KeyframeInfo> GetClosestKeyframes(const cv::Mat&, size_t) const { return { }; }
 	};
 }
 

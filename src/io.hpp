@@ -49,6 +49,8 @@ namespace optonaut {
     std::vector<InputImageP> LoadAllImagesFromDirectory(const std::string &path, const std::string &extension);
     void SaveImage(Image &image, const std::string &path);
 
+    void SaveIntList(const std::vector<int> &vals, const std::string &path);
+    std::vector<int> LoadIntList(const std::string &path);
 }
 
 #endif
