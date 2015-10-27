@@ -22,6 +22,7 @@ namespace optonaut {
         
         void Push(InputImageP image) {
             current = image->originalExtrinsics.clone();
+            image->adjustedExtrinsics = image->originalExtrinsics;
         }
         
         void Dispose() {
@@ -31,6 +32,9 @@ namespace optonaut {
         Mat GetCurrentRotation() const {
             return current;
         }
+        
+        void AddKeyframe(InputImageP next) { }
+        std::vector<KeyframeInfo> GetClosestKeyframes(const cv::Mat &search, size_t count) const { return { }; }
         
         void Postprocess(vector<InputImageP>) const { };
         void Finish() { };

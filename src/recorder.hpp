@@ -27,7 +27,7 @@ namespace optonaut {
         Mat baseInv;
         Mat zero;
 
-        shared_ptr<RingwiseStreamAligner> aligner;
+        shared_ptr<Aligner> aligner;
         SelectionInfo currentBest;
         
         CheckpointStore leftStore;
@@ -65,7 +65,8 @@ namespace optonaut {
         static string tempDirectory;
         static string version;
 
-        static const int stretch = 10;
+        static bool exposureEnabled;
+        static bool alignmentEnabled;
         
         Recorder(Mat base, Mat zeroWithoutBase, Mat intrinsics, 
                 CheckpointStore &leftStore, CheckpointStore &rightStore, 
@@ -97,7 +98,11 @@ namespace optonaut {
             //cout << "BaseInv: " << baseInv << endl;
             //cout << "Zero: " << zero << endl;
         
-            aligner = shared_ptr<RingwiseStreamAligner>(new RingwiseStreamAligner(recorderGraph, exposure, isAsync));
+            if(Recorder::alignmentEnabled) {
+                aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph, exposure, isAsync));
+            } else {
+                aligner = shared_ptr<Aligner>(new TrivialAligner());
+            }
         }
         
         Mat ConvertFromStitcher(const Mat &in) const {
@@ -157,12 +162,16 @@ namespace optonaut {
             assert(a.image->IsLoaded());
             assert(b.image->IsLoaded());
             
-            exposure.Register(a.image, b.image);
-
+            if(exposureEnabled)
+                exposure.Register(a.image, b.image);
+            
+            STimer::Tick("Exposure Comp");
+            
             StereoImage stereo;
             stereoConverter.CreateStereo(a, b, stereo);
 
             assert(stereo.valid);
+            STimer::Tick("Stereo Conv");
 
             leftStore.SaveRectifiedImage(stereo.A);
             rightStore.SaveRectifiedImage(stereo.B);
@@ -172,20 +181,20 @@ namespace optonaut {
 
             leftImages.push_back(stereo.A);
             rightImages.push_back(stereo.B);
+            STimer::Tick("Stereo Store");
         }
         
         void ExposureFeed(InputImageP a) {
+            
+            if(!exposureEnabled)
+                return;
+            
             InputImageP b = GetParentKeyframe(a->adjustedExtrinsics);
             if(b != NULL && a->id != b->id) {
                 exposure.Register(a, b);
             }
         }
-        
-        std::chrono::time_point<std::chrono::system_clock> lt =
-                std::chrono::system_clock::now();
-        
-        static const bool measureTime = false;
-        
+    
         void Push(InputImageP image) {
             //cout << "Pipeline Push called by " << std::this_thread::get_id() << endl;
 
@@ -194,12 +203,7 @@ namespace optonaut {
                 return;
             }
             
-            if(measureTime) {
-                auto now = std::chrono::system_clock::now();
-                std::cout << "dt=" << std::chrono::duration_cast<std::chrono::microseconds>(now - lt).count() << " mms" << std::endl;
-            
-                lt = now;
-            }
+            STimer::Tick("Push");
             
             image->originalExtrinsics = base * zero * image->originalExtrinsics.inv() * baseInv;
             
@@ -263,13 +267,14 @@ namespace optonaut {
            
             if(HasResults()) {
 
-                exposure.FindGains();
+                if(exposureEnabled)
+                    exposure.FindGains();
                
                 aligner->Postprocess(leftImages);
                 aligner->Postprocess(rightImages);
                
-                vector<vector<InputImageP>> rightRings = aligner->SplitIntoRings(rightImages);
-                vector<vector<InputImageP>> leftRings = aligner->SplitIntoRings(leftImages);
+                vector<vector<InputImageP>> rightRings = recorderGraph.SplitIntoRings(rightImages);
+                vector<vector<InputImageP>> leftRings = recorderGraph.SplitIntoRings(leftImages);
                 leftStore.SaveStitcherInput(leftRings, exposure.GetGains());
                 rightStore.SaveStitcherInput(rightRings, exposure.GetGains()); 
             }

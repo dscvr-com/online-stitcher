@@ -132,7 +132,7 @@ namespace optonaut {
             return bestDist;
         }
 
-        int FindAssociatedRing(const Mat &extrinsics, const double tolerance = M_PI / 8) {
+        int FindAssociatedRing(const Mat &extrinsics, const double tolerance = M_PI / 8) const {
             assert(targets.size() > 0);
 
             SelectionPoint pt;
@@ -183,6 +183,20 @@ namespace optonaut {
                 size += ring.size();
             
             return size;
+        }
+        
+        
+        vector<vector<InputImageP>> SplitIntoRings(vector<InputImageP> &imgs) const {
+            vector<vector<InputImageP>> rings(this->GetRings().size());
+            
+            for(auto img : imgs) {
+                int r = this->FindAssociatedRing(img->originalExtrinsics);
+                if(r == -1)
+                    continue;
+                rings[r].push_back(img);
+            }
+            
+            return rings;
         }
     };
 }

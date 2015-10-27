@@ -21,10 +21,6 @@ using namespace std;
 
 
 namespace optonaut {
-    struct KeyframeInfo {
-        InputImageP keyframe;
-        double dist;
-    };
 	class RingwiseStreamAligner : public Aligner {
 	private:
         typedef AsyncStream<InputImageP, int> Worker; 
@@ -71,19 +67,10 @@ namespace optonaut {
         }
         
         vector<vector<InputImageP>> SplitIntoRings(vector<InputImageP> &imgs) const {
-            return SplitIntoRings(imgs, graph);
-        }
-        
-        InputImageP GetClosestKeyframe(const Mat &search) {
-            auto keyframes = GetClosestKeyframes(search, 1);
-            if(keyframes.size() != 1) {
-                return NULL;
-            } else {
-                return keyframes[0].keyframe;
-            }
+            return graph.SplitIntoRings(imgs);
         }
 
-        vector<KeyframeInfo> GetClosestKeyframes(const Mat &search, size_t count) {
+        vector<KeyframeInfo> GetClosestKeyframes(const Mat &search, size_t count) const {
 
             int ring = graph.FindAssociatedRing(search);
             
@@ -120,20 +107,6 @@ namespace optonaut {
             std::copy(copiedKeyframes.begin(), copiedKeyframes.begin() + count, keyframes.begin());
 
             return keyframes;
-        }
-
-        static vector<vector<InputImageP>> SplitIntoRings(vector<InputImageP> &imgs, RecorderGraph &graph) {
-            
-            vector<vector<InputImageP>> rings(graph.GetRings().size());
-
-            for(auto img : imgs) {
-                int r = graph.FindAssociatedRing(img->originalExtrinsics);
-                if(r == -1)
-                    continue;
-                rings[r].push_back(img);
-            }
-
-            return rings;
         }
 
         function<int(InputImageP)> alignOp = [&] (InputImageP next) -> int {
@@ -191,11 +164,7 @@ namespace optonaut {
 
 		void Push(InputImageP next) {
             last = next;
-            
             next->adjustedExtrinsics = compassDrift * next->originalExtrinsics;
-            
-            //DBG - giving up on alignment. 
-            return;
 
             int ring = graph.FindAssociatedRing(next->adjustedExtrinsics);
            // cout << "Ring " << ring << endl;
