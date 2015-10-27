@@ -46,6 +46,10 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
     Rect roi = Rect(tlA.x, tlA.y, acols, arows) & 
                Rect(tlB.x, tlB.y, bcols, brows);
 
+    //Well, we can't do anything about that. 
+    if(roi.width <= border * 2) 
+        return;
+
     if(debug) {
         cout << "Roi: " << roi << endl;
         cout << "TLA: " << tlA << " TLB: " << tlB << endl;

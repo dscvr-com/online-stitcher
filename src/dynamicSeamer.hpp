@@ -32,7 +32,7 @@ public:
         cout << "Seaming: " << a->id << ", " << b->id << endl;
 
         Find<false>(a->image.data, b->image.data, a->mask.data,  
-             b->mask.data, a->corner, b->corner, 32, 16, debugId++);
+             b->mask.data, a->corner, b->corner, 16, 16, debugId++);
     }
 };
 

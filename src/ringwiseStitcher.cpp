@@ -28,6 +28,10 @@ namespace optonaut {
         a->image.Load();
         a->mask.Load(CV_LOAD_IMAGE_GRAYSCALE);
     }
+    
+    static void LoadSRPGrayscaleDropMask(StitchingResultP &a) {
+        a->image.Load(CV_LOAD_IMAGE_GRAYSCALE);
+    }
 
     static void UnLoadSRP(StitchingResultP &a) {
         a->image.Unload();
@@ -45,14 +49,6 @@ namespace optonaut {
     void RingwiseStitcher::AdjustCorners(std::vector<StitchingResultP> &rings, ProgressCallback &progress) {
 
         auto correlate = [this] (StitchingResultP &imgA, StitchingResultP &imgB) {
-           Mat &a = imgA->image.data;             
-           Mat &b = imgB->image.data;             
-                
-           Mat ca, cb;
-                
-            cvtColor(a, ca, CV_BGR2GRAY);
-            cvtColor(b, cb, CV_BGR2GRAY); 
-
             const int warp = MOTION_TRANSLATION;
             Mat affine = Mat::eye(2, 3, CV_32F);
 
@@ -66,7 +62,7 @@ namespace optonaut {
                     iterations, eps);
 
             try {
-                findTransformECC(ca, cb, affine, warp, termination);
+                findTransformECC(imgA->image.data, imgB->image.data, affine, warp, termination);
                 dy = affine.at<float>(1, 2);
             } catch (Exception ex) {
                 // :( 
@@ -78,7 +74,7 @@ namespace optonaut {
         store.LoadRingAdjustment(dyCache);
 
         if(dyCache.size() == 0) {
-            RingProcessor<StitchingResultP> queue(1, 0, LoadSRP, correlate,  UnLoadSRP);
+            RingProcessor<StitchingResultP> queue(1, 0, LoadSRPGrayscaleDropMask, correlate, UnLoadSRP);
             queue.Process(rings, progress);
             store.SaveRingAdjustment(dyCache);
         }
