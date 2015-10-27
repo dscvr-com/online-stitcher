@@ -34,9 +34,7 @@ private:
 public:
     PairwiseCorrelator(ExposureCompensator&) { }
 
-    CorrelationDiff Match(const ImageP a, const ImageP b) {
-
-        cout << "Correlation Invoke" << endl;
+    CorrelationDiff Match(const InputImageP a, const InputImageP b, double bias, int biasX, double biasWidth) {
 
         const bool useGradient = false;
         const bool useReduce = true;
@@ -45,21 +43,25 @@ public:
 
         Mat ga, gb;
 
-        cvtColor(a->img, ga, CV_BGR2GRAY);
-        cvtColor(b->img, gb, CV_BGR2GRAY); 
+        cvtColor(a->image.data, ga, CV_BGR2GRAY);
+        cvtColor(b->image.data, gb, CV_BGR2GRAY); 
 
         if(useGradient || useReduce) {
-            Mat fa, fb;
-            fa = ga;
-            fb = gb;
-            GetGradient(fa, ga, 1, 0);
-            GetGradient(fb, gb, 1, 0);
+            Mat fa(ga.rows / 2, ga.cols / 2, CV_8U);
+            Mat fb(gb.rows / 2, gb.cols / 2, CV_8U);
+            pyrDown(ga, fa);
+            pyrDown(gb, fb);
+            //GetGradient(fa, ga, 1, 0);
+            //GetGradient(fb, gb, 1, 0);
+            ga = fa;
+            gb = fb;
         }
-        
-        GetOverlappingRegion(a, b, ga, gb, ga, gb);
+       
+        //Todo: Vertical Overlap factor of 0.09 is probably related to FOV
+        GetOverlappingRegion(a, b, ga, gb, ga, gb, 0.07);
         
         //If those asserts fire, we've fed the aligner two non-overlapping 
-        //images probably. SHAME!
+        //images probably. 
         if(ga.cols < 1 || ga.rows < 1) {
             return result;
         }
@@ -73,7 +75,7 @@ public:
             //ReduceForCorrelation(ga, ca);
             //ReduceForCorrelation(gb, cb);
             int dx; 
-            var = CorrelateX(ga, gb, 0.5, dx, corr, debug);
+            var = CorrelateX(ga, gb, 0.25, dx, corr, bias, biasX, biasWidth, debug);
             result.offset = Point2f(dx, 0);
             result.valid = var > 50;
             //ga = ca;
@@ -115,7 +117,8 @@ public:
                     " .jpg";
             if(useReduce) {
                 cvtColor(corr, corr, CV_GRAY2BGR);
-                corr.copyTo(target(cv::Rect((target.cols - corr.cols) / 2, corr.rows, corr.cols, corr.rows)));
+                corr = corr(cv::Rect(0, 0, corr.cols, std::min<int>(corr.rows, target.rows)));
+                corr.copyTo(target(cv::Rect((target.cols - corr.cols) / 2, 0, corr.cols, corr.rows)));
                 //cvtColor(ca, ca, CV_GRAY2BGR);
                 //ca.copyTo(target(Rect(0, 0, ca.cols, ca.rows))); 
                 //cvtColor(cb, cb, CV_GRAY2BGR);

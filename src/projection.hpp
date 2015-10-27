@@ -1,6 +1,8 @@
 #include <algorithm>
 #include <string>
 #include <opencv2/opencv.hpp>
+#include "inputImage.hpp"
+#include "image.hpp"
 
 #ifndef OPTONAUT_PROJECTION_HEADER
 #define OPTONAUT_PROJECTION_HEADER
@@ -9,7 +11,7 @@ using namespace std;
 using namespace cv;
 
 namespace optonaut {
-    static inline vector<Point2f> GetSceneCorners(const Mat &img, const Mat &homography) {
+    static inline vector<Point2f> GetSceneCorners(const Image &img, const Mat &homography) {
         std::vector<Point2f> obj_corners(4);
         obj_corners[0] = cvPoint(0,0); 
         obj_corners[1] = cvPoint(img.cols, 0);
@@ -55,11 +57,11 @@ namespace optonaut {
         hom = k * rot * k.inv();
     }
 
-    static inline void RotationFromImages(const ImageP a, const ImageP b, Mat &rot) {
-        rot = b->originalExtrinsics.inv() * a->originalExtrinsics;
+    static inline void RotationFromImages(const InputImageP a, const InputImageP b, Mat &rot) {
+        rot = b->adjustedExtrinsics.inv() * a->adjustedExtrinsics;
     }
 
-    static inline void HomographyFromImages(const ImageP a, const ImageP b, Mat &hom, Mat &rot) {
+    static inline void HomographyFromImages(const InputImageP a, const InputImageP b, Mat &hom, Mat &rot, cv::Size scale) {
         Mat R3(3, 3, CV_64F);
         Mat aK3(3, 3, CV_64F);
 
@@ -67,40 +69,44 @@ namespace optonaut {
         
         From4DoubleTo3Double(rot, R3);
 
-        ScaleIntrinsicsToImage(a->intrinsics, a->img, aK3);
+        ScaleIntrinsicsToImage(a->intrinsics, scale, aK3);
 
         HomographyFromRotation(R3, aK3, hom);
     }
     
-    static inline bool ImagesAreOverlapping(const ImageP a, const ImageP b, double minOverlap = 0.1) {
+    static inline void HomographyFromImages(const InputImageP a, const InputImageP b, Mat &hom, Mat &rot) {
+        HomographyFromImages(a, b, hom, rot, a->image.size());
+    }
+
+    static inline bool ImagesAreOverlapping(const InputImageP a, const InputImageP b, double minOverlap = 0.1) {
         Mat hom, rot;
 
         HomographyFromImages(a, b, hom, rot);
 
-        std::vector<Point2f> corners = GetSceneCorners(a->img, hom); 
+        std::vector<Point2f> corners = GetSceneCorners(a->image, hom); 
 
         int top = min(corners[0].x, corners[1].x); 
         int bot = max(corners[2].x, corners[3].x); 
         int left = min(corners[0].y, corners[3].y); 
         int right = max(corners[1].y, corners[2].y); 
 
-        int x_overlap = max(0, min(right, b->img.cols) - max(left, 0));
-        int y_overlap = max(0, min(bot, b->img.rows) - max(top, 0));
+        int x_overlap = max(0, min(right, b->image.cols) - max(left, 0));
+        int y_overlap = max(0, min(bot, b->image.rows) - max(top, 0));
         int overlapArea = x_overlap * y_overlap;
 
         //cout << "Overlap area of " << a->id << " and " << b->id << ": " << overlapArea << endl;
         
-        return overlapArea >= b->img.cols * b->img.rows * minOverlap;
+        return overlapArea >= b->image.cols * b->image.rows * minOverlap;
     }
     
-    static inline bool DecomposeHomography(const ImageP a, const ImageP b, const Mat &hom, Mat &r, Mat &t, bool useINRA = true) {
+    static inline bool DecomposeHomography(const InputImageP a, const InputImageP b, const Mat &hom, Mat &r, Mat &t, bool useINRA = true) {
 
         if(!useINRA) {
             Mat aK3(3, 3, CV_64F);
             Mat bK3(3, 3, CV_64F);
 
-            ScaleIntrinsicsToImage(a->intrinsics, a->img, aK3);
-            ScaleIntrinsicsToImage(b->intrinsics, b->img, bK3);
+            ScaleIntrinsicsToImage(a->intrinsics, a->image, aK3);
+            ScaleIntrinsicsToImage(b->intrinsics, b->image, bK3);
 
             t = Mat(3, 1, CV_64F);
 
@@ -109,7 +115,7 @@ namespace optonaut {
             return true;
         } else {
             Mat aK3(3, 3, CV_64F);
-            ScaleIntrinsicsToImage(a->intrinsics, a->img, aK3);
+            ScaleIntrinsicsToImage(a->intrinsics, a->image, aK3);
             
             vector<Mat> rotations(4);
             vector<Mat> translations(4);
@@ -130,14 +136,20 @@ namespace optonaut {
         }
     } 
   
-    static inline void GetOverlappingRegion(const ImageP a, const ImageP b, const Mat &ai, const Mat &bi, Mat &overlapA, Mat &overlapB) {
+    static inline void GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, const Image &bi, Mat &overlapA, Mat &overlapB, double vBuffer = 0) {
         Mat hom(3, 3, CV_64F);
         Mat rot(4, 4, CV_64F);
 
-        HomographyFromImages(a, b, hom, rot);
-        
+        HomographyFromImages(a, b, hom, rot, ai.size());
+
+        if(hom.at<double>(1, 2) < 0) {
+            hom.at<double>(1, 2) += a->image.rows * vBuffer; 
+        } else {
+            hom.at<double>(1, 2) -= a->image.rows * vBuffer; 
+        }
+
         Mat wa;
-        warpPerspective(ai, wa, hom, ai.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
+        warpPerspective(ai.data, wa, hom, cv::Size(ai.cols, ai.rows), INTER_LINEAR, BORDER_CONSTANT, 0);
        
         //Cut images, set homography to id.
         vector<Point2f> corners = GetSceneCorners(ai, hom);
@@ -146,8 +158,21 @@ namespace optonaut {
         roi = roi & cv::Rect(0, 0, bi.cols, bi.rows);
         
         overlapA = wa(roi);
-        overlapB = bi(roi);
+        overlapB = bi.data(roi);
     }
+    
+    static inline void GeoToRot(double hAngle, double vAngle, Mat &res) {
+        Mat hRot;
+        Mat vRot;
+        
+        //cout << hAngle << ", " << vAngle << endl;
+        
+        CreateRotationY(hAngle, hRot);
+        CreateRotationX(vAngle, vRot);
+        
+        res = hRot * vRot;
+    }
+    
 }
 #endif
 

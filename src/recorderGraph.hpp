@@ -19,11 +19,14 @@ namespace optonaut {
         uint32_t globalId;
         uint32_t localId;
         uint32_t ringId;
-        bool enabled;
+        double hPos;
+        double vPos;
+        double hFov;
+        double vFov;
         Mat extrinsics;
         
         SelectionPoint() : globalId(0),
-            localId(0), ringId(0), enabled(false) {
+            localId(0), ringId(0), hPos(0), vPos(0), hFov(0), vFov(0) {
         }
     };
     
@@ -31,9 +34,6 @@ namespace optonaut {
         uint32_t from;
         uint32_t to;
         bool recorded;
-        
-        Mat roiCorners[4];
-        Mat roiCenter;
         
         SelectionEdge() : from(0), to(0), recorded(false) {
             
@@ -48,6 +48,7 @@ namespace optonaut {
         static const int ModeCenter = 1;
         static const int ModeTruncated = 2;
         static const int ModeNoBot = 3;
+        static const int ModeTinyDebug = 1337;
         
         vector<vector<SelectionEdge>> adj;
         vector<vector<SelectionPoint>> targets;
@@ -99,7 +100,7 @@ namespace optonaut {
         }
         
         bool GetPointById(uint32_t id, SelectionPoint &point) const {
-            for(auto ring : targets) {
+            for(auto &ring : targets) {
                 for(auto target : ring) {
                     if(target.globalId == id) {
                         point = target;
@@ -111,21 +112,15 @@ namespace optonaut {
             return false;
         }
         
-        void Disable(const SelectionPoint &point) {
-            targets[point.ringId][point.localId].enabled = false;
-        }
-        
         double FindClosestPoint(const Mat &extrinscs, SelectionPoint &point, const int ringId = -1) const {
             double bestDist = -1;
             Mat eInv = extrinscs.inv();
             
-            for(auto ring : targets) {
+            for(auto &ring : targets) {
                 if(ring.size() == 0 || (ringId != -1 && ringId != (int)ring[0].ringId))
                     continue;
                 
-                for(auto target : ring) {
-                    if(!target.enabled)
-                        continue;
+                for(auto &target : ring) {
                     double dist = GetAngleOfRotation(eInv * target.extrinsics);
                     if (dist < bestDist || bestDist < 0) {
                         point = target;
@@ -137,7 +132,7 @@ namespace optonaut {
             return bestDist;
         }
 
-        int FindAssociatedRing(const Mat &extrinsics, const double tolerance = M_PI / 16) {
+        int FindAssociatedRing(const Mat &extrinsics, const double tolerance = M_PI / 8) const {
             assert(targets.size() > 0);
 
             SelectionPoint pt;
@@ -149,7 +144,7 @@ namespace optonaut {
         }
 
         int GetChildRing(int ring) {
-            int c = (int)targets.size() / 2;
+            int c = (int)(targets.size() - 1) / 2;
 
             if(ring == c) {
                 return ring;
@@ -161,12 +156,16 @@ namespace optonaut {
         }
 
         bool HasChildRing(int ring) {
-            size_t c = GetChildRing(ring);
-            return targets[c].size() > 0;
+            int c = GetChildRing(ring);
+            if(c < 0 || c >= (int)targets.size()) {
+                return false;
+            } else {
+                return targets[c].size() > 0;
+            }
         }
 
         int GetParentRing(int ring) {
-            int c = (int)targets.size() / 2;
+            int c = (int)(targets.size() - 1) / 2;
 
             if(ring == c) {
                 return ring;
@@ -180,10 +179,24 @@ namespace optonaut {
         uint32_t Size() {
             uint32_t size = 0;
             
-            for(auto ring : targets)
+            for(auto &ring : targets)
                 size += ring.size();
             
             return size;
+        }
+        
+        
+        vector<vector<InputImageP>> SplitIntoRings(vector<InputImageP> &imgs) const {
+            vector<vector<InputImageP>> rings(this->GetRings().size());
+            
+            for(auto img : imgs) {
+                int r = this->FindAssociatedRing(img->originalExtrinsics);
+                if(r == -1)
+                    continue;
+                rings[r].push_back(img);
+            }
+            
+            return rings;
         }
     };
 }

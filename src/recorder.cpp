@@ -1,12 +1,13 @@
 //
-//  pipeline.c
+//  recorder.c
 //  Optonaut
 //
 //  Created by Emi on 29/08/15.
 //  Copyright © 2015 Optonaut. All rights reserved.
 //
 
-#include "pipeline.hpp"
+#include "recorder.hpp"
+#include "static_timer.hpp"
 
 using namespace cv;
 using namespace std;
@@ -37,12 +38,14 @@ namespace optonaut {
     };
 
 
-    Mat Pipeline::androidBase(4, 4, CV_64F, androidBaseData);
-    Mat Pipeline::iosBase(4, 4, CV_64F, iosBaseData);
-    Mat Pipeline::iosZero = Pipeline::iosBase * Mat(4, 4, CV_64F, iosZeroData) * Pipeline::iosBase.inv();
+    Mat Recorder::androidBase(4, 4, CV_64F, androidBaseData);
+    Mat Recorder::iosBase(4, 4, CV_64F, iosBaseData);
+    Mat Recorder::iosZero = Recorder::iosBase * Mat(4, 4, CV_64F, iosZeroData) * Recorder::iosBase.inv();
 
-    string Pipeline::tempDirectory = "tmp/";
-    string Pipeline::version = "0.5.0";
-    bool Pipeline::debug = false;
+    string Recorder::tempDirectory = "tmp/";
+    string Recorder::version = "0.6.0";
+    
+    bool Recorder::exposureEnabled = true;
+    bool Recorder::alignmentEnabled = true;
 }
 

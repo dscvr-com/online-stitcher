@@ -11,33 +11,46 @@ using namespace std;
 #define OPTONAUT_EXPOSURE_COMPENSATOR_HEADER
 
 namespace optonaut {
-    struct ExposureInfo {
+    struct ExposureDiff {
         size_t n; //Count of measured pixels
         double iFrom; //Overlapping area brightness mine. 
         double iTo; //Overlapping area birghtness other.
 
-        ExposureInfo() : n(1), iFrom(0), iTo(0) { }
+        ExposureDiff() : n(0), iFrom(0), iTo(0) { }
     };
 
-    class ExposureCompensator : public ImageCorrespondenceGraph<ExposureInfo> {
+    class ExposureCompensator : public ImageCorrespondenceGraph<ExposureDiff> {
         private: 
             static const bool debug = false;
             map<size_t, double> gains;
         public:
             ExposureCompensator() { }
-
-            void Register(ImageP a, ImageP b) {
-                Mat ga, gb;
-                GetOverlappingRegion(a, b, a->img, b->img, ga, gb);
-                
-                if(ga.cols < 1 || ga.rows < 1) {
-                    return;
-                }
-
-                ImageCorrespondenceGraph<ExposureInfo>::Register(ga, a->id, gb, b->id);
+            ExposureCompensator(ExposureCompensator &ref) {
+                SetGains(ref.GetGains());
+            }
+        
+            void SetGains(map<size_t, double> gains)
+            {
+                this->gains = gains;
             }
 
-            virtual void GetCorrespondence(const Mat &a, size_t aId, const Mat &b, size_t bId, ExposureInfo &aToB, ExposureInfo &bToA) {
+            const map<size_t, double>& GetGains() const {
+                return gains;
+            }
+        
+            ExposureDiff Register(InputImageP a, InputImageP b) {
+                Mat ga, gb;
+                GetOverlappingRegion(a, b, a->image, b->image, ga, gb);
+                
+                if(ga.cols < 1 || ga.rows < 1) {
+                    ExposureDiff zero;
+                    return zero;
+                }
+
+                return ImageCorrespondenceGraph<ExposureDiff>::Register(ga, a->id, gb, b->id);
+            }
+
+            virtual ExposureDiff GetCorrespondence(const Mat &a, size_t aId, const Mat &b, size_t bId, ExposureDiff &aToB, ExposureDiff &bToA) {
                 assert(a.cols == b.cols && a.rows == b.rows);
                 assert(a.type() == b.type());
 
@@ -83,6 +96,8 @@ namespace optonaut {
 
                     imwrite("dbg/corr" + ToString(aId) + "_" + ToString(bId) + "_sa_" + ToString(sumA / size) + "_sb_" + ToString(sumB / size) +  ".jpg", target);
                 }
+                
+                return aToB;
             };
 
             void PrintCorrespondence() {
@@ -141,7 +156,7 @@ namespace optonaut {
 
                 solve(A, b, gains);
                 
-                assert(invmap.size() == n);
+                assert((int)invmap.size() == n);
 
                 for (int i = 0; i < n; ++i) {
                     this->gains[invmap[i]] = gains.at<double>(i, 0);
@@ -150,11 +165,9 @@ namespace optonaut {
 
             }
 
-            static const bool exposureOn = true;
-
-            void Apply(Mat &image, size_t id, double ev = 0) {
-                if(exposureOn) {
-                    multiply(image, gains[id] + ev, image);
+            void Apply(Mat &image, size_t id, double ev = 0) const {
+                if(gains.find(id) != gains.end()) {
+                    multiply(image, gains.at(id) + ev, image);
                 }
             }
     };

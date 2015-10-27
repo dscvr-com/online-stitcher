@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <string>
 #include <opencv2/opencv.hpp>
+#include "image.hpp"
 
 #ifndef OPTONAUT_SUPPORT_HEADER
 #define OPTONAUT_SUPPORT_HEADER
@@ -19,7 +20,8 @@ namespace optonaut {
         return text.str();
     }
 
-	void ScaleIntrinsicsToImage(const cv::Mat &intrinsics, const cv::Mat &image, cv::Mat &scaled, double fupscaling = 1);
+	void ScaleIntrinsicsToImage(const cv::Mat &intrinsics, const cv::Size &image, cv::Mat &scaled, double fupscaling = 1);
+	void ScaleIntrinsicsToImage(const cv::Mat &intrinsics, const Image &image, cv::Mat &scaled, double fupscaling = 1);
 
 	double GetHorizontalFov(const cv::Mat &intrinsics);
     double GetVerticalFov(const cv::Mat &intrinsics);
@@ -53,6 +55,11 @@ namespace optonaut {
 	double max4(double a, double b, double c, double d);
 	double angleAvg(double x, double y);
 	double interpolate(double x, double x1, double x2, double y1, double y2);
+    // x = value
+    // a = height of peak
+    // b = position of peak
+    // c = width of peak
+    double gauss(double x, double a, double b, double c);
 
     void GetGradient(const cv::Mat &src_gray, cv::Mat &grad, double wx = 0.5, double wy = 0.5);
 }

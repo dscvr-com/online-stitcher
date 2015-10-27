@@ -18,7 +18,7 @@ namespace optonaut {
 
     struct SelectionInfo {
         SelectionPoint closestPoint;
-        ImageP image;
+        InputImageP image;
         double dist;
         bool isValid;
         
@@ -62,12 +62,12 @@ namespace optonaut {
         int GetNextRing() {
             //Moves from center outward, toggling between top and bottom, top ring comes before bottom ring.
             int ringCount = (int)graph.targets.size();
-            int centerRing = ringCount / 2;
+            int centerRing = (ringCount - 1) / 2;
             
             int newRing = currentRing - centerRing;
             //If we are on a bottom or the center ring, move outward.
-            if(newRing >= 0) {
-                newRing++;
+            if(newRing <= 0) {
+                newRing--;
             }
             //Switch bottom and top, or vice versa.
             newRing *= -1;
@@ -78,7 +78,7 @@ namespace optonaut {
         
         void MoveToClosestPoint(const Mat &closest) {
             graph.FindClosestPoint(closest, next, currentRing);
-            ballPosition = next.extrinsics.clone();
+            ballPosition = next.extrinsics;
         }
 
     public:
@@ -94,14 +94,14 @@ namespace optonaut {
         void Initialize(const Mat &initPosition) {
             assert(!isInitialized);
             
-            currentRing = (int)graph.targets.size() / 2;
+            currentRing = (int)(graph.targets.size() - 1) / 2;
             MoveToClosestPoint(initPosition);
             current = next;
             currentDone = false;
             isInitialized = true;
         }
         
-        SelectionInfo Push(const ImageP image, bool isIdle) {
+        SelectionInfo Push(const InputImageP image, bool isIdle) {
             assert(isInitialized);
 
             SelectionInfo info;
@@ -131,9 +131,9 @@ namespace optonaut {
             }
             
             if(!currentDone) {
-                ballPosition = current.extrinsics.clone();
+                ballPosition = current.extrinsics;
             } else {
-                ballPosition = next.extrinsics.clone();
+                ballPosition = next.extrinsics;
             }
             ExtractRotationVector(image->adjustedExtrinsics.inv() * current.extrinsics, errorVec);
 
@@ -183,7 +183,7 @@ namespace optonaut {
             return errorVec;
         }
         
-        const SelectionInfo FindClosestPoint(const ImageP &image, const int ringId = -1) const {
+        const SelectionInfo FindClosestPoint(const InputImageP &image, const int ringId = -1) const {
             assert(isInitialized);
             
             SelectionInfo info;

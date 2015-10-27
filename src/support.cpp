@@ -4,6 +4,7 @@
 #include "quat.hpp"
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
+#include "image.hpp"
 
 using namespace cv;
 using namespace std;
@@ -24,15 +25,19 @@ namespace optonaut {
 		text >> val;
 		return val;
 	}
+	
+    void ScaleIntrinsicsToImage(const Mat &intrinsics, const Image &image, Mat &scaled, double fupscaling) {
+        ScaleIntrinsicsToImage(intrinsics, image.size(), scaled, fupscaling);
+    }
 
-	void ScaleIntrinsicsToImage(const Mat &intrinsics, const Mat &image, Mat &scaled, double fupscaling) {
+	void ScaleIntrinsicsToImage(const Mat &intrinsics, const Size &image, Mat &scaled, double fupscaling) {
 		assert(MatIs(intrinsics, 3, 3, CV_64F));
 
 		scaled = Mat::zeros(3, 3, CV_64F);
 		
-		double scaleFactor = image.cols / (intrinsics.at<double>(0, 2) * 2);
-		scaled.at<double>(0, 2) = image.cols / 2;
-		scaled.at<double>(1, 2) = image.rows / 2;
+		double scaleFactor = image.width / (intrinsics.at<double>(0, 2) * 2);
+		scaled.at<double>(0, 2) = image.width / 2;
+		scaled.at<double>(1, 2) = image.height / 2;
 		//Todo: Remove factor 10 - only for debug. 
 		scaled.at<double>(0, 0) = intrinsics.at<double>(0, 0) * scaleFactor * fupscaling;
 		scaled.at<double>(1, 1) = intrinsics.at<double>(1, 1) * scaleFactor * fupscaling;
@@ -66,16 +71,14 @@ namespace optonaut {
         return h > w;
     }
 
-	void ExtractRotationVector(const Mat &r, Mat &v) {
+	void ExtractRotationVector(const Mat &r, Mat &vec) {
 		assert(MatIs(r, 3, 3, CV_64F));
 
-		Mat vec = Mat::zeros(3, 1, CV_64F);
+		vec = Mat::zeros(3, 1, CV_64F);
 
 		vec.at<double>(0, 0) = atan2(r.at<double>(2, 1), r.at<double>(2, 2));
 		vec.at<double>(1, 0) = atan2(-r.at<double>(2, 0), sqrt(r.at<double>(2, 1) * r.at<double>(2, 1) + r.at<double>(2, 2) * r.at<double>(2, 2)));
 		vec.at<double>(2, 0) = atan2(r.at<double>(1, 0), r.at<double>(0, 0));
-
-		v = vec.clone();
 	}
 
 	void CreateRotationZ(double a, Mat &t) {
@@ -159,7 +162,8 @@ namespace optonaut {
 	}
     
     double GetAngleOfRotation(const Mat &a, const Mat &b) {
-        return GetAngleOfRotation(a.inv() * b);
+        Mat expr = a.inv() * b;
+        return GetAngleOfRotation(expr);
     }
    
     double GetDistanceByDimension(const Mat &a, const Mat &b, int dim) {
@@ -318,5 +322,8 @@ namespace optonaut {
 		return y1 + (y2 - y1) * (x - x1) / (x2 - x1);
 	}
     
+    double gauss(double x, double a, double b, double c) {
+        return a * exp( -(x - b) * (x - b) / (2 * c * c));
+    }
 
 }

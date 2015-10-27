@@ -3,21 +3,36 @@
 #include <opencv2/opencv.hpp>
 #include <deque>
 
-#include "image.hpp"
+#include "inputImage.hpp"
 #include "support.hpp"
 
 #ifndef OPTONAUT_ALIGNMENT_HEADER
 #define OPTONAUT_ALIGNMENT_HEADER
 
 namespace optonaut {
-	class Aligner {
+    struct KeyframeInfo {
+        InputImageP keyframe;
+        double dist;
+    };
+    class Aligner {
     public:
-		virtual void Push(ImageP next) = 0;
+		virtual void Push(InputImageP next) = 0;
 		virtual cv::Mat GetCurrentRotation() const = 0;
         virtual void Dispose() = 0; 
         virtual bool NeedsImageData() = 0;
-        virtual void Postprocess(std::vector<ImageP> imgs) const = 0;
+        virtual void Postprocess(std::vector<InputImageP> imgs) const = 0;
         virtual void Finish() = 0;
+        virtual void AddKeyframe(InputImageP next) = 0;
+        virtual std::vector<KeyframeInfo> GetClosestKeyframes(const cv::Mat &search, size_t count) const = 0;
+        
+        InputImageP GetClosestKeyframe(const cv::Mat &search) const {
+            auto keyframes = GetClosestKeyframes(search, 1);
+            if(keyframes.size() != 1) {
+                return NULL;
+            } else {
+                return keyframes[0].keyframe;
+            }
+        }
 	};
 }
 

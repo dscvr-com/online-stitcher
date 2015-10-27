@@ -36,18 +36,18 @@ private:
 	Ptr<AKAZE> detector;
 
     //TODO Make dependent of image size
-    const double OutlinerTolerance = 155 * 155; //Chosen by fair jojo roll
+    const double OutlinerTolerance = 155 * 155; 
 
     static const bool debug = true;
 
     //Needed for bundle adj.
-    map<ImageP, size_t> imgToLocalId;
+    map<InputImageP, size_t> imgToLocalId;
     vector<MatchesInfo> matches;
     vector<ImageFeatures> features;
 
-    size_t GetImageId(ImageP img) {
+    size_t GetImageId(InputImageP img) {
         if(imgToLocalId.find(img) == imgToLocalId.end()) {
-            imgToLocalId.insert(pair<ImageP, size_t>(img, imgToLocalId.size()));
+            imgToLocalId.insert(pair<InputImageP, size_t>(img, imgToLocalId.size()));
         }
         
         size_t id = imgToLocalId[img];
@@ -58,18 +58,18 @@ public:
 
 	PairwiseVisualAligner() : detector(AKAZE::create()) { }
 
-	void FindKeyPoints(ImageP img) {
+	void FindKeyPoints(InputImageP img) {
         size_t id = GetImageId(img);
 
         assert(features.size() == id);
 
         ImageFeatures f;
 
-        Mat tmp = img->img;
+        Mat tmp = img->image.data;
 
         f.img_idx = (int)id;
         Mat *descriptors = new Mat();
-        f.img_size = img->img.size();
+        f.img_size = img->image.data.size();
 
         detector->detectAndCompute(tmp, noArray(), f.keypoints, *descriptors);
 
@@ -78,7 +78,7 @@ public:
         features.push_back(f);
     }
 
-	MatchInfo *FindCorrespondence(const ImageP a, const ImageP b) {
+	MatchInfo *FindCorrespondence(const InputImageP a, const InputImageP b) {
         assert(a != NULL);
         assert(b != NULL);
 
@@ -194,11 +194,11 @@ public:
 
                 Mat aK3;
                 Mat reHom, rot3(3, 3, CV_64F);
-                ScaleIntrinsicsToImage(a->intrinsics, a->img, aK3);
+                ScaleIntrinsicsToImage(a->intrinsics, a->image.data, aK3);
                 From4DoubleTo3Double(info->rotation, rot3);
                 HomographyFromRotation(rot3, aK3, reHom);
 
-                DrawMatchingResults(info->homography, reHom, goodMatches, a->img, aFeatures, b->img, bFeatures, target);
+                DrawMatchingResults(info->homography, reHom, goodMatches, a->image.data, aFeatures, b->image.data, bFeatures, target);
 
                 std::string filename = 
                     "dbg/Homogpraphy" + ToString(a->id) + "_" + ToString(b->id) + 
@@ -216,7 +216,7 @@ public:
         return info;
     }
 
-    void RunBundleAdjustment(const vector<ImageP> &images) const {
+    void RunBundleAdjustment(const vector<InputImageP> &images) const {
         vector<CameraParams> cameras(images.size());
 
         for(auto img : images) {

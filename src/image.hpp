@@ -7,66 +7,72 @@
 #define OPTONAUT_IMAGE_HEADER
 
 namespace optonaut {
-    const int WorkingWidth = 640;
-    const int WorkingHeight = 360;
+	
+     class Image {
 
-    namespace colorspace {
-        const int RGBA = 0;
-        const int RGB = 1;
-    }
+        public:
+		cv::Mat data;
+        int cols;
+        int rows;
+	    std::string source;
 
-    struct ImageRef {
-        void* data;
-        int width;
-        int height;
-        int colorSpace;
-
-        ImageRef() : data(NULL), width(0), height(0), colorSpace(colorspace::RGBA) { }
-
-        void Invalidate() {
-            data = NULL;
-            width = 0;
-            height = 0;
-        }
-    };
-
-	struct Image {
-		cv::Mat img;
-        ImageRef dataRef;
-		cv::Mat originalExtrinsics;
-        cv::Mat adjustedExtrinsics;
-		cv::Mat intrinsics; 
-		int id;
-		std::string source;
-        double vtag;
-
-        Image()  : img(0, 0, CV_8UC3), originalExtrinsics(4, 4, CV_64F), adjustedExtrinsics(4, 4, CV_64F), intrinsics(3, 3, CV_64F), source("Unknown"), vtag(0) {
-        };
-
-        bool IsLoaded() {
-            return img.cols != 0 && img.rows != 0;
+        Image() : data(0, 0, CV_8UC3),
+                  cols(0), rows(0), source("") {
         }
 
-        void LoadFromDataRef(bool copy = true);
-    
-        void SaveToDisk();
+        Image(cv::Mat in) : data(in), 
+                  cols(in.cols), rows(in.rows), source("") {
+        }
 
-        void LoadFromDisk(bool removeFile = true);
+        Image(const Image &ref) : data(ref.data), 
+                  cols(data.cols), rows(data.rows), source("") {
+        }
 
-        static void ClearAllFromDisk();
+        Image& operator=(Image other) {
+            std::swap(this->data, other.data);
+            std::swap(this->rows, other.rows);
+            std::swap(this->cols, other.cols);
+            std::swap(this->source, other.source);
+            return *this;
+        }
+
+        inline bool IsLoaded() const {
+            return data.cols != 0 && data.rows != 0;
+        }
+
+        inline cv::Size size() const {
+            assert(cols != 0 && rows != 0); //Image was never loaded
+            return cv::Size(cols, rows);
+        }
+
+        inline int type() const {
+            return data.type();
+        }
 
         void Unload() {
-            img.release();
+            data.release();
         }
-         
-        static std::string GetFilePath(size_t id);
 
-        static void LoadFromDisk(size_t id, cv::Mat &img, int loadFlags = CV_LOAD_IMAGE_COLOR);
-        
-        static void SaveToDisk(size_t id, cv::Mat &img);
+        void Load(int flags = cv::IMREAD_COLOR) {
+            assert(source != "");
+
+            cv::Mat n = cv::imread(source, flags);
+            std::swap(data, n);
+            cols = data.cols;
+            rows = data.rows;
+
+            assert(cols != 0 && rows != 0);
+        }
+
+        void Save() {
+            assert(source != "");
+
+            //Don't forget to update the JSON file!
+            assert(data.cols == cols && data.rows == rows); 
+
+            cv::imwrite(source, data);
+        }
 	};
-    
-    typedef std::shared_ptr<Image> ImageP;
 }
 
 
