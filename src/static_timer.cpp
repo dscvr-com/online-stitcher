@@ -6,7 +6,7 @@ using namespace std;
 
 namespace optonaut {
 
-    static const bool enabled = true;
+    static const bool enabled = false;
 
     void STimer::Tick(string label) {
 

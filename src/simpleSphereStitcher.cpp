@@ -92,6 +92,30 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
     mb->setNumBands(6);
     Rect resultRoi = cv::detail::resultRoi(corners, warpedSizes);
     blender->prepare(resultRoi);
+    
+    //Prepare global masks and distortions. 
+    UMat uxmap, uymap;
+    const Mat &K = intrinsicsList[0];
+    const Mat &R = cameras[0].R;
+    Rect coreMaskRoi = Rect(in[0]->image.cols / 4, 0, in[0]->image.cols / 2, in[0]->image.rows);
+    Rect dstRoi = warper->buildMaps(in[0]->image.size(), K, R, uxmap, uymap);
+    Rect dstCoreMaskRoi = warper->warpRoi(coreMaskRoi.size(), K, R);
+    dstCoreMaskRoi = Rect((dstRoi.width - dstCoreMaskRoi.width) / 2, 
+                          0, dstCoreMaskRoi.width, dstCoreMaskRoi.height); 
+    dstRoi = Rect(dstRoi.x, dstRoi.y, dstRoi.width + 1, dstRoi.height + 1);
+
+
+    Mat warpedMask(dstRoi.size(), CV_8U);
+    {
+        //Mask Warping - we force a tiny mask for each image.
+        InputImageP img = in[0];
+        Mat mask = Mat::zeros(img->image.rows, img->image.cols, CV_8U);
+        mask(coreMaskRoi).setTo(Scalar::all(255));
+        remap(mask, warpedMask, uxmap, uymap, INTER_NEAREST, BORDER_CONSTANT); 
+        mask.release();
+        
+    }
+
 
     //Seam finder function. 
     auto findSeams = [&] (StitchingResultP &a, StitchingResultP &b) {
@@ -103,13 +127,25 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
                 aCorner.x -= resultRoi.width;
             }
 
-            DynamicSeamer::Find<true>(a->image.data, b->image.data, 
-                    a->mask.data, b->mask.data, 
-                    aCorner, b->corner, 1, a->id);
+            //We can boost performance here if we omit the
+            //black regions of our masks. 
+            
+            Mat aImg = a->image.data(dstCoreMaskRoi);
+            Mat bImg = b->image.data(dstCoreMaskRoi);
+            Mat aMask = a->mask.data(dstCoreMaskRoi);
+            Mat bMask = b->mask.data(dstCoreMaskRoi);
+
+            DynamicSeamer::Find<true>(aImg, bImg, 
+                    aMask, bMask, 
+                    aCorner + dstCoreMaskRoi.tl(),
+                    b->corner + dstCoreMaskRoi.tl(), 1, a->id);
     };
 
     //Stitcher feed function. 
     auto feed = [&] (StitchingResultP &in) {
+
+            STimer feedTimer;
+
             Mat warpedImageAsShort;
             in->image.data.convertTo(warpedImageAsShort, CV_16S);
             exposure.Apply(warpedImageAsShort, in->id, ev);
@@ -136,28 +172,11 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
                         other.tl());
             }
             warpedImageAsShort.release();
+
+            feedTimer.Tick("Image Fed");
     };
 
-    UMat uxmap, uymap;
-    const Mat &K = intrinsicsList[0];
-    const Mat &R = cameras[0].R;
-    Rect dstRoi = warper->buildMaps(in[0]->image.size(), K, R, uxmap, uymap);
-    dstRoi = Rect(dstRoi.x, dstRoi.y, dstRoi.width + 1, dstRoi.height + 1);
-
     RingProcessor<StitchingResultP> queue(1, findSeams, feed);
-
-    Mat warpedMask(dstRoi.size(), CV_8U);
-    {
-        //Mask Warping - we force a tiny mask for each image.
-        InputImageP img = in[0];
-        Mat mask = Mat::zeros(img->image.rows, img->image.cols, CV_8U);
-        mask(Rect(img->image.cols / 4, 0, img->image.cols / 2, img->image.rows)).setTo(Scalar::all(255));
-        remap(mask, warpedMask, uxmap, uymap, INTER_NEAREST, BORDER_CONSTANT); 
-        mask.release();
-    }
-
-    Mat kernel = Mat::ones(1, 10, CV_8U);
-    erode(warpedMask, warpedMask, kernel);
 
     STimer detailTimer;
 
@@ -168,6 +187,7 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
         if(!img->image.IsLoaded()) {
             img->image.Load();
         }
+        detailTimer.Tick("Image Loaded");
         
         StitchingResultP res(new StitchingResult()); 
 
@@ -188,7 +208,7 @@ StitchingResultP RStitcher::Stitch(const std::vector<InputImageP> &in, const Exp
         img->image.Unload(); 
         detailTimer.Tick("Image Warped");
         queue.Push(res);
-        detailTimer.Tick("Image Seamed");
+        detailTimer.Tick("Image Seamed And and Fed");
     }
 
     queue.Flush();

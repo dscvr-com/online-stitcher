@@ -4,6 +4,7 @@
 #include <opencv2/stitching.hpp>
 #include <vector>
 #include "support.hpp"
+#include "static_timer.hpp"
 
 #define REMAPX(x,y)  (vertical ? x : y)
 #define REMAPY(x,y)  (vertical ? y : x)
@@ -19,6 +20,7 @@ template <bool vertical>
 void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB, 
         const Point &tlAIn, const Point &tlBIn, int overlap, int id)
 {
+    STimer seamTimer;
     static const bool debug = false;
 
     Point tlA;
@@ -75,8 +77,8 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
     Mat path = Mat::zeros(roi.size(), CV_8U);
 
     //Calculate weighting costs. 
-    for(int x = 0; x < roi.width; x++) {
-        for(int y = 0; y < roi.height; y++) {
+    for(int y = 0; y < roi.height; y++) {
+        for(int x = 0; x < roi.width; x++) {
             
             int txA = x - aToRoiX;
             int tyA = y - aToRoiY;
@@ -194,6 +196,8 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
         imwrite("dbg/" + ToString(id) + "_ma.jpg", maskA);
         //imwrite("dbg/" + ToString(id) + "_mb.jpg", maskB);
     }
+
+    seamTimer.Tick("Image Seamed");
 }
 template void DynamicSeamer::Find<true>(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB, 
         const Point &tlAIn, const Point &tlBIn, int overlap, int id);
