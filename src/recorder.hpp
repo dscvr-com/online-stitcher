@@ -9,6 +9,7 @@
 #include "ringwiseStitcher.hpp"
 #include "checkpointStore.hpp"
 #include "ringProcessor.hpp"
+#include "asyncQueueWorker.hpp"
 
 #include "static_timer.hpp"
 
@@ -18,6 +19,12 @@
 #define OPTONAUT_RECORDER_HEADER
 
 namespace optonaut {
+    
+    
+    struct StereoPair {
+        SelectionInfo a;
+        SelectionInfo b;
+    };
     
     class Recorder {
 
@@ -51,6 +58,10 @@ namespace optonaut {
         uint32_t recordedImages;
 
         RingProcessor<SelectionInfo> monoQueue;
+        AsyncQueue<StereoPair> stereoProcessor;
+        
+        STimer monoTimer;
+        STimer pipeTimer;
         
         InputImageP GetParentKeyframe(const Mat &extrinsics) {
             return aligner->GetClosestKeyframe(extrinsics);
@@ -83,11 +94,16 @@ namespace optonaut {
             controller(recorderGraph),
             imagesToRecord(recorderGraph.Size()),
             recordedImages(0),
-            monoQueue(1, 
-                std::bind(&Recorder::StitchImages, 
-                    this, placeholders::_1, placeholders::_2),
+            monoQueue(1,
+                    [this] (const SelectionInfo &a, const SelectionInfo &b) {
+                        StereoPair pair;
+                        pair.a = a;
+                        pair.b = b;
+                        stereoProcessor.Push(pair);
+                    },
                 std::bind(&Recorder::FinishImage, 
-                    this, placeholders::_1))
+                    this, placeholders::_1)),
+            stereoProcessor([this] (const StereoPair &a) { StitchImages(a); })
         {
             baseInv = base.inv();
             zero = zeroWithoutBase;
@@ -150,28 +166,29 @@ namespace optonaut {
         void Dispose() {
             //cout << "Pipeline Dispose called by " << std::this_thread::get_id() << endl;
             aligner->Dispose();
+            stereoProcessor.Dispose();
         }
         
         void FinishImage(SelectionInfo &fin) {
             ExposureFeed(fin.image);
         }   
         
-        void StitchImages(const SelectionInfo &a, const SelectionInfo &b) {
+        void StitchImages(const StereoPair &pair) {
             cout << "Stitch" << endl;
 
-            assert(a.image->IsLoaded());
-            assert(b.image->IsLoaded());
+            assert(pair.a.image->IsLoaded());
+            assert(pair.b.image->IsLoaded());
             
             if(exposureEnabled)
-                exposure.Register(a.image, b.image);
+                exposure.Register(pair.a.image, pair.b.image);
             
-            STimer::Tick("Exposure Comp");
+            monoTimer.Tick("Exposure Comp");
             
             StereoImage stereo;
-            stereoConverter.CreateStereo(a, b, stereo);
+            stereoConverter.CreateStereo(pair.a, pair.b, stereo);
 
             assert(stereo.valid);
-            STimer::Tick("Stereo Conv");
+            monoTimer.Tick("Stereo Conv");
 
             leftStore.SaveRectifiedImage(stereo.A);
             rightStore.SaveRectifiedImage(stereo.B);
@@ -181,7 +198,7 @@ namespace optonaut {
 
             leftImages.push_back(stereo.A);
             rightImages.push_back(stereo.B);
-            STimer::Tick("Stereo Store");
+            monoTimer.Tick("Stereo Store");
         }
         
         void ExposureFeed(InputImageP a) {
@@ -203,7 +220,7 @@ namespace optonaut {
                 return;
             }
             
-            STimer::Tick("Push");
+            pipeTimer.Tick("Push");
             
             image->originalExtrinsics = base * zero * image->originalExtrinsics.inv() * baseInv;
             
@@ -264,6 +281,8 @@ namespace optonaut {
             isFinished = true;
 
             aligner->Finish();
+            
+            stereoProcessor.Finish();
            
             if(HasResults()) {
 

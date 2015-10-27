@@ -20,6 +20,8 @@ using namespace cv;
 using namespace cv::detail;
 
 namespace optonaut {
+    
+    STimer stitcherTimer;
 
     static void LoadSRP(StitchingResultP &a) {
         a->image.Load();
@@ -132,7 +134,7 @@ namespace optonaut {
 
     StitchingResultP RingwiseStitcher::Stitch(ProgressCallback &progress, bool debug, const string &debugName) {
 
-        STimer::Tick("StitchStart");
+        stitcherTimer.Tick("StitchStart");
         
         StitchingResultP res = store.LoadOptograph();
         if(res != NULL) {
@@ -181,7 +183,7 @@ namespace optonaut {
                 res->image.Unload();
 
             }
-            STimer::Tick("Ring Finished");
+            stitcherTimer.Tick("Ring Finished");
         }
 
         assert(margin != -1);
@@ -193,7 +195,7 @@ namespace optonaut {
         AdjustCorners(stitchedRings, ringAdjustmentProgress);
         FindSeams(stitchedRings);
         
-        STimer::Tick("Corner Adjusting Finished");
+        stitcherTimer.Tick("Corner Adjusting Finished");
         
         blender->prepare(fun::map<StitchingResultP, Point>
                 (stitchedRings, [](const StitchingResultP &x) { return x->corner; }),
@@ -235,7 +237,7 @@ namespace optonaut {
             res->image = Image(imageRes);
             res->mask = Image(maskRes);
         }
-        STimer::Tick("FinalStitching Finished");
+        stitcherTimer.Tick("FinalStitching Finished");
         blender.release();
         
         //Opencv somehow messes up the first few collumn while blending.
@@ -273,7 +275,7 @@ namespace optonaut {
         
         store.SaveOptograph(res);
         
-        STimer::Tick("Resize Finished");
+        stitcherTimer.Tick("Resize Finished");
 
         return res;
     }

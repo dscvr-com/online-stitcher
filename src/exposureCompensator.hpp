@@ -165,10 +165,8 @@ namespace optonaut {
 
             }
 
-            static const bool exposureOn = true;
-
             void Apply(Mat &image, size_t id, double ev = 0) const {
-                if(exposureOn) {
+                if(gains.find(id) != gains.end()) {
                     multiply(image, gains.at(id) + ev, image);
                 }
             }
