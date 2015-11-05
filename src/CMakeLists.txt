@@ -19,3 +19,7 @@ stitcher/ringStitcher.cpp
 add_executable(optonaut-test stitcherTest.cpp)
 target_link_libraries(optonaut-test ${OpenCV_LIBS})
 target_link_libraries(optonaut-test optonaut-lib)
+
+add_executable(aligner-test alignerTest.cpp)
+target_link_libraries(aligner-test ${OpenCV_LIBS})
+target_link_libraries(aligner-test optonaut-lib)
