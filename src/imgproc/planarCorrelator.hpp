@@ -44,7 +44,7 @@ class BaseCorrelator {
     public:
     static inline float Calculate(const Mat &a, const Mat &b, int dx, int dy) {
         int sx = max(0, -dx);
-        int ex = min(a.cols, b.cols - dy);
+        int ex = min(a.cols, b.cols - dx);
         
         int sy = max(0, -dy);
         int ey = min(a.rows, b.rows - dy);
@@ -85,6 +85,21 @@ class AbsoluteDifference {
     }
 };
 
+template <>
+class AbsoluteDifference<Vec3b> {
+    public:
+    static inline float Calculate(const Mat &a, const Mat &b, int xa, int ya, int xb, int yb) {
+        auto va = a.at<cv::Vec3b>(ya, xa);
+        auto vb = b.at<cv::Vec3b>(yb, xb);
+
+        float db = (float)va[0] - (float)vb[0];
+        float dr = (float)va[1] - (float)vb[1];
+        float dg = (float)va[2] - (float)vb[2];
+                
+        return (abs(db) + abs(dr) + abs(dg)) / 3;
+    }
+};
+
 template <typename T>
 class LeastSquares {
     public:
@@ -93,6 +108,22 @@ class LeastSquares {
         return diff * diff;
     }
 };
+
+template <>
+class LeastSquares<Vec3b> {
+    public:
+    static inline float Calculate(const Mat &a, const Mat &b, int xa, int ya, int xb, int yb) {
+        auto va = a.at<cv::Vec3b>(ya, xa);
+        auto vb = b.at<cv::Vec3b>(yb, xb);
+
+        float db = (float)va[0] - (float)vb[0];
+        float dr = (float)va[1] - (float)vb[1];
+        float dg = (float)va[2] - (float)vb[2];
+                
+        return (db * db + dr * dr + dg * dg) / (3 * 3);
+    }
+};
+
 
 template <typename T, int alpha>
 class GemanMcClure {

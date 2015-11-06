@@ -11,18 +11,17 @@
 #include "io/io.hpp"
 #include "math/projection.hpp"
 #include "recorder/recorder.hpp"
+#include "stitcher/simpleSphereStitcher.hpp"
 
 using namespace std;
 using namespace cv;
 using namespace optonaut;
 using namespace std::chrono;
 
-bool CompareByFilename (const string &a, const string &b) {
-    return IdFromFileName(a) < IdFromFileName(b);
-}
-
 int main(int argc, char** argv) {
     cv::ocl::setUseOpenCL(false);
+
+    const bool grayscale = true;
 
     int n = argc - 1;
     vector<string> files;
@@ -34,30 +33,29 @@ int main(int argc, char** argv) {
 
     assert(n == 2);
 
-    Mat corr;
+    Mat imgA, imgB, corr;
 
-    auto imgA = InputImageFromFile(files[0], false);
-    auto imgB = InputImageFromFile(files[1], false);
-
-    auto base = Recorder::iosBase;
-    auto zero = Recorder::iosZero;
-    auto baseInv = base.t();
-            
-    imgA->originalExtrinsics = base * zero * imgA->originalExtrinsics.inv() * baseInv;
-    imgB->originalExtrinsics = base * zero * imgB->originalExtrinsics.inv() * baseInv;
-
-    Mat wa, wb;
-
-    GetOverlappingRegion(imgA, imgB, imgA->image, imgB->image, wa, wb, 0);
+    if(grayscale) {
+        imgA = imread(files[0], CV_LOAD_IMAGE_GRAYSCALE);
+        imgB = imread(files[1], CV_LOAD_IMAGE_GRAYSCALE);
+    } else {
+        imgA = imread(files[0]);
+        imgB = imread(files[1]);
+    }
     
-    imwrite("dbg/overlapA.jpg", wa);
-    imwrite("dbg/overlapB.jpg", wb);
-
-    cvtColor(wa, wa, CV_RGB2GRAY);
-    cvtColor(wb, wb, CV_RGB2GRAY);
-
-    Point res = BruteForcePlanarAligner<NormedCorrelator<GemanMcClure<uchar, 128>>>::Align(wa, wb, corr, 0.5, 0.5);
+    pyrDown(imgA, imgA);
+    pyrDown(imgB, imgB);
     
+    imwrite("dbg/inA.jpg", imgA);
+    imwrite("dbg/inB.jpg", imgB);
+    
+    Point res;
+   
+    if(grayscale) {
+        res = BruteForcePlanarAligner<NormedCorrelator<AbsoluteDifference<uchar>>>::Align(imgA, imgB, corr, 0.5, 0.5);
+    } else {
+        res = BruteForcePlanarAligner<NormedCorrelator<AbsoluteDifference<cv::Vec3b>>>::Align(imgA, imgB, corr, 0.5, 0.5);
+    }
     imwrite("dbg/corr.jpg", corr);
 
     cout << "Result: " << res << endl;
