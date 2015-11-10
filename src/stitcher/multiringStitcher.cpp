@@ -237,8 +237,6 @@ namespace optonaut {
 
             blender->feed(warpedImageAsShort, resizedMask, newCorner);
         }
-        
-        finalBlendingProgress(1);
 
         //for(int i = 0; i < mb->num_bands_; i++) {
         //    Mat tmp;
@@ -260,6 +258,8 @@ namespace optonaut {
         blender.release();
         
         store.SaveOptograph(res);
+        
+        finalBlendingProgress(1);
         
         stitcherTimer.Tick("Resize Finished");
 
