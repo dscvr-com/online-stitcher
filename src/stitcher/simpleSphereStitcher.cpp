@@ -1,0 +1,99 @@
+
+#include <vector>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/opencv.hpp>
+#include <opencv2/stitching.hpp>
+
+#include "simpleSphereStitcher.hpp"
+
+using namespace std;
+using namespace cv;
+using namespace cv::detail;
+
+namespace optonaut {
+
+StitchingResultP SimpleSphereStitcher::Stitch(const std::vector<InputImageP> &in, bool debug) const {
+	size_t n = in.size();
+    assert(n > 0);
+
+    vector<Mat> images(n);
+    vector<cv::detail::CameraParams> cameras(n);
+
+    for(size_t i = 0; i < n; i++) {
+        images[i] = in[i]->image.data;
+        From4DoubleTo3Float(in[i]->adjustedExtrinsics, cameras[i].R);
+        for(size_t j = 0; j < n; j++)
+            cameras[i].t.at<float>(j) = in[i]->adjustedExtrinsics.at<double>(j, 3);
+    }
+
+	//Create masks and small images for fast stitching. 
+    vector<Mat> masks(n);
+
+    for(size_t i = 0; i < n; i++) {
+        masks[i].create(images[i].size(), CV_8U);
+        masks[i].setTo(Scalar::all(255));
+    }
+
+    //Create warper
+    Ptr<WarperCreator> warperFactory = new cv::SphericalWarper();
+
+    Ptr<RotationWarper> warper = warperFactory->create(static_cast<float>(warperScale)); 
+	//Create data structures for warped images
+	vector<Point> corners(n);
+	vector<Mat> warpedImages(n);
+	vector<Mat> warpedMasks(n);
+	vector<Size> warpedSizes(n);
+
+	for (size_t i = 0; i < n; i++) {
+       	Mat k;
+        Mat scaledIntrinsics;
+        ScaleIntrinsicsToImage(in[i]->intrinsics, images[i], scaledIntrinsics, debug ? 10 : 1);
+        From3DoubleTo3Float(scaledIntrinsics, k);
+
+        //Big
+        corners[i] = warper->warp(images[i], k, cameras[i].R, INTER_LINEAR, BORDER_CONSTANT, warpedImages[i]);
+        corners[i].x += cameras[i].t.at<float>(0);
+        corners[i].y += cameras[i].t.at<float>(1);
+        warper->warp(masks[i], k, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, warpedMasks[i]);
+        warpedSizes[i] = warpedImages[i].size();
+    }
+
+    masks.clear();
+
+    //Final blending
+	Mat warpedImageAsShort;
+	Ptr<Blender> blender;
+
+	blender = Blender::createDefault(Blender::FEATHER, true);
+  
+    blender->prepare(corners, warpedSizes);
+
+	for (size_t i = 0; i < n; i++)
+	{
+        warpedImages[i].convertTo(warpedImageAsShort, CV_16S);
+		blender->feed(warpedImageAsShort, warpedMasks[i], corners[i]);
+	}
+
+	StitchingResultP res(new StitchingResult());
+    Mat image;
+    Mat mask;
+	blender->blend(image, mask);
+
+    res->image = Image(image);
+    res->mask = Image(mask);
+
+	//Rotate by 180°
+	//flip(res->image, res->image, -1);
+	//flip(res->mask, res->mask, -1);
+
+    res->corner.x = corners[0].x;
+    res->corner.y = corners[0].y;
+
+    for(size_t i = 1; i < n; i++) {
+        res->corner.x = min(res->corner.x, corners[i].x);
+        res->corner.y = min(res->corner.y, corners[i].y);
+    }
+
+	return res;
+}
+}

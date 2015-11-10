@@ -63,6 +63,8 @@ int main(int argc, char** argv) {
 
         pyrDown(wa, wa);
         pyrDown(wb, wb);
+        pyrDown(wa, wa);
+        pyrDown(wb, wb);
         
         imwrite("dbg/" + ToString(i) + "_overlapA.jpg", wa);
         imwrite("dbg/" + ToString(i) + "_overlapB.jpg", wb);
@@ -71,6 +73,8 @@ int main(int argc, char** argv) {
         //cvtColor(wb, wb, CV_RGB2GRAY);
 
         Point res = BruteForcePlanarAligner<NormedCorrelator<AbsoluteDifference<Vec3b>>>::Align(wa, wb, corr, 0.25, 0.25);
+        
+        cout << "Result: " << res << endl;
 
         SimplePlaneStitcher planeStitcher;
         scene = planeStitcher.Stitch({make_shared<Image>(wa), make_shared<Image>(wb)}, 
@@ -95,8 +99,6 @@ int main(int argc, char** argv) {
         }
         
         imwrite("dbg/corr.jpg", corr);
-
-        cout << "Result: " << res << endl;
     }
     return 0;
 }
