@@ -17,7 +17,8 @@ class BruteForcePlanarAligner {
         int h = max(a.rows, b.rows);
         float min = std::numeric_limits<float>::max();
 
-        corr = Mat(wy * h * 2, wx * w * 2, CV_32F);
+        corr = Mat(wy * h * 2 + 1, wx * w * 2 + 1, CV_32F);
+	corr.setTo(Scalar::all(0));
 
         for(int dx = -w * wx; dx < w * wx; dx++) {
             for(int dy = -h * wy; dy < h * wy; dy++) {

@@ -40,7 +40,7 @@ StitchingResultP SimplePlaneStitcher::Stitch(const std::vector<ImageP> &in, cons
 
 	for (size_t i = 0; i < n; i++)
 	{
-        cout << "Bleinging image " << i << endl;
+        cout << "Blending image " << i << endl;
         images[i].convertTo(imageAsShort, CV_16S);
 		blender->feed(imageAsShort, masks[i], corners[i]);
 	}
