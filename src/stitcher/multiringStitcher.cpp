@@ -1,6 +1,8 @@
 #include <vector>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
+//define private public, so we can access
+//opencv internal information and print it (to debug the multi-band blender ONLY)
 #define private public
 #include <opencv2/stitching.hpp>
 #undef private
@@ -13,7 +15,7 @@
 #include "../common/functional.hpp"
 #include "../imgproc/correlation.hpp"
 #include "ringStitcher.hpp"
-#include "multiRingStitcher.hpp"
+#include "multiringStitcher.hpp"
 #include "stitchingResult.hpp"
 #include "dynamicSeamer.hpp"
 
