@@ -12,7 +12,7 @@ using namespace cv::detail;
 
 namespace optonaut {
 
-StitchingResultP SimpleSphereStitcher::Stitch(const std::vector<InputImageP> &in, bool debug) const {
+StitchingResultP SimpleSphereStitcher::Stitch(const std::vector<InputImageP> &in, bool debug) {
 	size_t n = in.size();
     assert(n > 0);
 
@@ -34,10 +34,6 @@ StitchingResultP SimpleSphereStitcher::Stitch(const std::vector<InputImageP> &in
         masks[i].setTo(Scalar::all(255));
     }
 
-    //Create warper
-    Ptr<WarperCreator> warperFactory = new cv::SphericalWarper();
-
-    Ptr<RotationWarper> warper = warperFactory->create(static_cast<float>(warperScale)); 
 	//Create data structures for warped images
 	vector<Point> corners(n);
 	vector<Mat> warpedImages(n);
@@ -51,10 +47,10 @@ StitchingResultP SimpleSphereStitcher::Stitch(const std::vector<InputImageP> &in
         From3DoubleTo3Float(scaledIntrinsics, k);
 
         //Big
-        corners[i] = warper->warp(images[i], k, cameras[i].R, INTER_LINEAR, BORDER_CONSTANT, warpedImages[i]);
+        corners[i] = warper.warp(images[i], k, cameras[i].R, INTER_LINEAR, BORDER_CONSTANT, warpedImages[i]);
         corners[i].x += cameras[i].t.at<float>(0);
         corners[i].y += cameras[i].t.at<float>(1);
-        warper->warp(masks[i], k, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, warpedMasks[i]);
+        warper.warp(masks[i], k, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, warpedMasks[i]);
         warpedSizes[i] = warpedImages[i].size();
     }
 
@@ -95,5 +91,13 @@ StitchingResultP SimpleSphereStitcher::Stitch(const std::vector<InputImageP> &in
     }
 
 	return res;
+}
+
+cv::Point2f SimpleSphereStitcher::Warp(const cv::Mat &intrinsics, const cv::Mat &extrinsics, const Size &imageSize) {
+   Mat sk, r, k;
+   From4DoubleTo3Float(extrinsics, r);
+   ScaleIntrinsicsToImage(intrinsics, imageSize, sk);
+   From3DoubleTo3Float(sk, k);
+   return warper.warpPoint(Point(0, 0), k, r); 
 }
 }

@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
         Mat wa, wb;
 
         Point appliedBorder;
-        Rect overlappingRoi = GetOverlappingRegion(imgA, imgB, imgA->image, imgB->image, wa, wb, 100, appliedBorder);
+        Rect overlappingRoi = GetOverlappingRegion(imgA, imgB, imgA->image, imgB->image, wa, wb, imgA->image.cols * 0.2, appliedBorder);
 
         timer.Tick("Overlap");
 
@@ -76,10 +76,11 @@ int main(int argc, char** argv) {
 
         Point res = PyramidPlanarAligner<NormedCorrelator<LeastSquares<Vec3b>>>::Align(wa, wb, corr, 0.25, 0.25, 1);
         Point correctedRes = res + appliedBorder; 
+        
+        timer.Tick("Aligned");
 
         cout << correctedRes << ", " << overlappingRoi << endl;
         
-        timer.Tick("Aligned");
 
         cout << "Result: " << res << endl;
         
@@ -93,17 +94,14 @@ int main(int argc, char** argv) {
         imwrite("dbg/" + ToString(i) + "_overlap_aligned.jpg", scene->image.data);
         
         double h = imgB->intrinsics.at<double>(0, 0) * (imgB->image.cols / (imgB->intrinsics.at<double>(0, 2) * 2));
-        double olA = (overlappingRoi.x + correctedRes.x - imgB->image.cols / 2) / h;
-        double olB = (overlappingRoi.x - imgB->image.cols / 2) / h;
-        double corrAngle = sin(olA) - sin(olB);
-
-        cout << "Bias: " << corrAngle << endl;
-
-        //imgB->adjustedExtrinsics.at<double>(0, 3) += res.x;
-        //imgB->adjustedExtrinsics.at<double>(1, 3) += res.y;
+        double olXA = (overlappingRoi.x + correctedRes.x - imgB->image.cols / 2) / h;
+        double olXB = (overlappingRoi.x - imgB->image.cols / 2) / h;
+        double corrAngleY = sin(olXA) - sin(olXB);
+        
+        cout << "BiasY: " << corrAngleY << endl;
 
         Mat rotY;
-        CreateRotationY(corrAngle, rotY);
+        CreateRotationY(corrAngleY, rotY);
         imgA->adjustedExtrinsics = rotY * imgA->adjustedExtrinsics; 
         
         scene = stitcher.Stitch({imgA, imgB});
