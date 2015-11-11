@@ -59,7 +59,7 @@ public:
        
         //Todo: Vertical Overlap factor of 0.09 is probably related to FOV
         assert(false); //TODO - new correlator model
-        GetOverlappingRegion(a, b, ga, gb, ga, gb, 1);
+        GetOverlappingRegion(a, b, ga, gb, ga, gb);
         
         //If those asserts fire, we've fed the aligner two non-overlapping 
         //images probably. 

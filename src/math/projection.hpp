@@ -139,7 +139,22 @@ namespace optonaut {
         }
     } 
   
-    static inline void GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, const Image &bi, Mat &overlapA, Mat &overlapB, int buffer = 0) {
+    /**
+     * Gets the overlapping region between two images related by a perspective 
+     * transfoerm. The first image is distorted, so the overlapping area matches the 
+     * second image. 
+     *
+     * @param a Gives the transform of the first image.
+     * @param b Gives the transform of the second image. 
+     * @param ai The first image. 
+     * @param bi the second image. 
+     * @param overlapA On completion, is set to the overlapping, undistorted part of a
+     * @param overlapB On completion, is set to the overlapping, undistorted part of b
+     * @param buffer Additional image border to be included in the overlap, wherever possible, relative to the position of a.
+     *
+     * @returns The roi of the overlapping image area of b. 
+     */
+    static inline Rect GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, const Image &bi, Mat &overlapA, Mat &overlapB, int buffer, Point &appliedBorder) {
         Mat hom(3, 3, CV_64F);
         Mat rot(4, 4, CV_64F);
 
@@ -150,14 +165,18 @@ namespace optonaut {
         //Modify homography, so it includes buffer. 
         if(hom.at<double>(1, 2) < 0) {
             offset.at<double>(1, 2) += buffer; 
+            appliedBorder.y = buffer;
         } else {
             offset.at<double>(1, 2) -= buffer; 
+            appliedBorder.y = -buffer;
         }
         
         if(hom.at<double>(0, 2) < 0) {
             offset.at<double>(0, 2) += buffer; 
+            appliedBorder.x = buffer;
         } else {
             offset.at<double>(0, 2) -= buffer; 
+            appliedBorder.x = -buffer;
         }
 
         hom = offset * hom; 
@@ -181,6 +200,13 @@ namespace optonaut {
         warpPerspective(ai.data, overlapA, hom, roia.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
 
         overlapB = bi.data(roib);
+
+        return roib;
+    }
+ 
+    static inline void GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, const Image &bi, Mat &overlapA, Mat &overlapB) {
+        Point dummy;
+        GetOverlappingRegion(a, b, ai, bi, overlapA, overlapB, 0, dummy);
     }
     
     static inline void GeoToRot(double hAngle, double vAngle, Mat &res) {
