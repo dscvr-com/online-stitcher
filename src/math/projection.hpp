@@ -145,38 +145,41 @@ namespace optonaut {
 
         HomographyFromImages(a, b, hom, rot, ai.size());
 
-        //TODO: Use hom to get direction of offset. Then compensate. 
+        Mat offset = Mat::eye(3, 3, CV_64F);
+
+        //Modify homography, so it includes buffer. 
         if(hom.at<double>(1, 2) < 0) {
-            hom.at<double>(1, 2) += buffer; 
+            offset.at<double>(1, 2) += buffer; 
         } else {
-            hom.at<double>(1, 2) -= buffer; 
+            offset.at<double>(1, 2) -= buffer; 
         }
         
         if(hom.at<double>(0, 2) < 0) {
-            hom.at<double>(0, 2) += buffer; 
+            offset.at<double>(0, 2) += buffer; 
         } else {
-            hom.at<double>(0, 2) -= buffer; 
+            offset.at<double>(0, 2) -= buffer; 
         }
-        
-        //Calculate scene corners
+
+        hom = offset * hom; 
+
+        //Calculate scene corners and ROIs
         vector<Point2f> corners = GetSceneCorners(ai, hom);
         cv::Rect roi = GetInnerBoxForScene(corners);
-        cout << buffer << endl;
-
-        Mat wa;
-        warpPerspective(ai.data, wa, hom, cv::Size(ai.cols, ai.rows), INTER_LINEAR, BORDER_CONSTANT, 0);
-
-        imwrite("dbg/" + ToString(a->id) + "_warped.jpg", wa);
-       
+        
         Rect roib = cv::Rect(roi.x, roi.y, roi.width, roi.height);
-
-        //Offset for a already in homography
         Rect roia = cv::Rect(roi.x, roi.y, roi.width, roi.height);
 
-        roia = roia & cv::Rect(0, 0, wa.cols, wa.rows);
-        roib = roib  & cv::Rect(0, 0, bi.cols, bi.rows);
+        roia = roia & cv::Rect(0, 0, ai.cols, ai.rows);
+        roib = roib & cv::Rect(0, 0, bi.cols, bi.rows);
+            
+        //Warp image, modify homography to set target. 
+        offset.at<double>(0, 2) = -roia.x; 
+        offset.at<double>(1, 2) = -roia.y; 
         
-        overlapA = wa(roia);
+        hom = offset * hom; 
+
+        warpPerspective(ai.data, overlapA, hom, roia.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
+
         overlapB = bi.data(roib);
     }
     
