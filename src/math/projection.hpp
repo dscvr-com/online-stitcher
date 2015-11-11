@@ -4,6 +4,7 @@
 
 #include "../io/inputImage.hpp"
 #include "../common/image.hpp"
+#include "../common/support.hpp"
 #include "support.hpp"
 
 #ifndef OPTONAUT_PROJECTION_HEADER
@@ -138,29 +139,45 @@ namespace optonaut {
         }
     } 
   
-    static inline void GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, const Image &bi, Mat &overlapA, Mat &overlapB, double vBuffer = 0) {
+    static inline void GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, const Image &bi, Mat &overlapA, Mat &overlapB, int buffer = 0) {
         Mat hom(3, 3, CV_64F);
         Mat rot(4, 4, CV_64F);
 
         HomographyFromImages(a, b, hom, rot, ai.size());
 
+        //TODO: Use hom to get direction of offset. Then compensate. 
         if(hom.at<double>(1, 2) < 0) {
-            hom.at<double>(1, 2) += a->image.rows * vBuffer; 
+            hom.at<double>(1, 2) += buffer; 
         } else {
-            hom.at<double>(1, 2) -= a->image.rows * vBuffer; 
+            hom.at<double>(1, 2) -= buffer; 
         }
+        
+        if(hom.at<double>(0, 2) < 0) {
+            hom.at<double>(0, 2) += buffer; 
+        } else {
+            hom.at<double>(0, 2) -= buffer; 
+        }
+        
+        //Calculate scene corners
+        vector<Point2f> corners = GetSceneCorners(ai, hom);
+        cv::Rect roi = GetInnerBoxForScene(corners);
+        cout << buffer << endl;
 
         Mat wa;
         warpPerspective(ai.data, wa, hom, cv::Size(ai.cols, ai.rows), INTER_LINEAR, BORDER_CONSTANT, 0);
+
+        imwrite("dbg/" + ToString(a->id) + "_warped.jpg", wa);
        
-        //Cut images, set homography to id.
-        vector<Point2f> corners = GetSceneCorners(ai, hom);
-        cv::Rect roi = GetInnerBoxForScene(corners);
+        Rect roib = cv::Rect(roi.x, roi.y, roi.width, roi.height);
+
+        //Offset for a already in homography
+        Rect roia = cv::Rect(roi.x, roi.y, roi.width, roi.height);
+
+        roia = roia & cv::Rect(0, 0, wa.cols, wa.rows);
+        roib = roib  & cv::Rect(0, 0, bi.cols, bi.rows);
         
-        roi = roi & cv::Rect(0, 0, bi.cols, bi.rows);
-        
-        overlapA = wa(roi);
-        overlapB = bi.data(roi);
+        overlapA = wa(roia);
+        overlapB = bi.data(roib);
     }
     
     static inline void GeoToRot(double hAngle, double vAngle, Mat &res) {

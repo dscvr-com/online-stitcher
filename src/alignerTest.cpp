@@ -21,7 +21,7 @@ using namespace std::chrono;
 int main(int argc, char** argv) {
     cv::ocl::setUseOpenCL(false);
 
-    const bool grayscale = true;
+    const bool grayscale = false;
 
     int n = argc - 1;
     vector<string> files;

@@ -7,6 +7,7 @@
 #include <opencv2/core/ocl.hpp>
 
 #include "common/intrinsics.hpp"
+#include "common/static_timer.hpp"
 #include "imgproc/planarCorrelator.hpp"
 #include "io/io.hpp"
 #include "math/projection.hpp"
@@ -56,29 +57,35 @@ int main(int argc, char** argv) {
         SimpleSphereStitcher stitcher;
         auto scene = stitcher.Stitch({imgA, imgB});
         imwrite("dbg/" + ToString(i) + "_scene.jpg", scene->image.data);
+        
+        STimer timer;
 
         Mat wa, wb;
 
-        GetOverlappingRegion(imgA, imgB, imgA->image, imgB->image, wa, wb, 0);
+        GetOverlappingRegion(imgA, imgB, imgA->image, imgB->image, wa, wb, 100);
 
-        pyrDown(wa, wa);
-        pyrDown(wb, wb);
-        pyrDown(wa, wa);
-        pyrDown(wb, wb);
-        
-        imwrite("dbg/" + ToString(i) + "_overlapA.jpg", wa);
-        imwrite("dbg/" + ToString(i) + "_overlapB.jpg", wb);
+        timer.Tick("Overlap");
 
         //cvtColor(wa, wa, CV_RGB2GRAY);
         //cvtColor(wb, wb, CV_RGB2GRAY);
-
-        Point res = BruteForcePlanarAligner<NormedCorrelator<AbsoluteDifference<Vec3b>>>::Align(wa, wb, corr, 0.25, 0.25);
         
+        //pyrDown(wa, wa);
+        //pyrDown(wb, wb);
+        
+
+        Point res = PyramidPlanarAligner<NormedCorrelator<LeastSquares<Vec3b>>>::Align(wa, wb, corr, 0.25, 0.25, 1);
+        
+        timer.Tick("Aligned");
+
         cout << "Result: " << res << endl;
+        
+        imwrite("dbg/" + ToString(i) + "_corr.jpg", corr);
+        imwrite("dbg/" + ToString(i) + "_overlapA.jpg", wa);
+        imwrite("dbg/" + ToString(i) + "_overlapB.jpg", wb);
+
 
         SimplePlaneStitcher planeStitcher;
-        scene = planeStitcher.Stitch({make_shared<Image>(wa), make_shared<Image>(wb)}, 
-                {Point(-res.x, res.y), Point(0, 0)});
+        scene = planeStitcher.Stitch({make_shared<Image>(wa), make_shared<Image>(wb)},              {Point(res.x, res.y), Point(0, 0)});
         imwrite("dbg/" + ToString(i) + "_overlap_aligned.jpg", scene->image.data);
 
         //TODO 

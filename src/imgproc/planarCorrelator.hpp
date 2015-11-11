@@ -7,36 +7,70 @@ using namespace std;
 
 namespace optonaut {
 
+static const bool debug = false;
+
 template <typename Correlator>
 class BruteForcePlanarAligner {
     public:
-    static inline Point Align(const Mat &a, const Mat &b, Mat &corr, double wx = 1, double wy = 1) {
+    static inline Point Align(const Mat &a, const Mat &b, Mat &corr, double wx = 0.5, double wy = 0.5) {
+        return Align(a, b, corr, max(a.cols, b.cols) * wx, max(a.rows, b.rows) * wy, 0, 0);
+    }
+    
+    static inline Point Align(const Mat &a, const Mat &b, Mat &corr, int wx, int wy, int ox, int oy) {
         int mx = 0;
         int my = 0;
-        int w = max(a.cols, b.cols);
-        int h = max(a.rows, b.rows);
         float min = std::numeric_limits<float>::max();
 
-        corr = Mat(wy * h * 2 + 1, wx * w * 2 + 1, CV_32F);
-	corr.setTo(Scalar::all(0));
+        if(debug) {
+            corr = Mat(wy * 2, wx * 2, CV_32F);
+	        corr.setTo(Scalar::all(0));
+        }
 
-        for(int dx = -w * wx; dx < w * wx; dx++) {
-            for(int dy = -h * wy; dy < h * wy; dy++) {
-                float res = Correlator::Calculate(a, b, dx, dy);
-                corr.at<float>(dy + wy * h, dx + wx * w) = res; 
-
+        for(int dx = -wx; dx < wx; dx++) {
+            for(int dy = -wy; dy < wy; dy++) {
+                float res = Correlator::Calculate(a, b, dx + ox, dy + oy);
+                if(debug) {
+                    corr.at<float>(dy + wy, dx + wx) = res; 
+                }
                 if(res < min) {
                     min = res;
                     mx = dx;
                     my = dy;
                 }
-        
-                //cout << dx << ", " << dy << endl;
             }
         }
 
 
-        return Point(mx, my);
+        return Point(mx + ox, my + oy);
+    }
+};
+
+template <typename Correlator>
+class PyramidPlanarAligner {
+    public:
+    static inline Point Align(const Mat &a, const Mat &b, Mat &corr, double wx = 0.5, double wy = 0.5, int dskip = 0) {
+        const int minSize = 4;
+
+        Point res;
+
+        if(a.cols > minSize / wx && b.cols > minSize / wx 
+                && a.rows > minSize / wy && b.rows > minSize / wy) {
+            Mat ta, tb;
+
+            pyrDown(a, ta);
+            pyrDown(b, tb);
+
+            Point guess = PyramidPlanarAligner<Correlator>::Align(ta, tb, corr, wx, wy, dskip - 1);
+            if(dskip > 0) {
+                res = guess * 2;
+            } else {
+                res = BruteForcePlanarAligner<Correlator>::Align(a, b, corr, 2, 2, guess.x * 2, guess.y * 2);
+            }
+        } else {
+            res = BruteForcePlanarAligner<Correlator>::Align(a, b, corr, wx, wy);
+        }
+
+        return res;
     }
 };
 
@@ -58,7 +92,7 @@ class BaseCorrelator {
             }
         }
 
-        return corr;
+        return corr * ErrorMetric::Sign();
     }
 };
 
@@ -75,6 +109,9 @@ class NormedCorrelator {
         float corr = BaseCorrelator<ErrorMetric>::Calculate(a, b, dx, dy);
         return corr / ((ex - sx) * (ey - sy));
     }
+    static inline float Sign() {
+        return 1;
+    }
 };
 
 template <typename T>
@@ -84,20 +121,28 @@ class AbsoluteDifference {
         float diff = ((float)a.at<T>(ya, xa) - (float)b.at<T>(yb, xb));
         return abs(diff);
     }
+    static inline float Sign() {
+        return 1;
+    }
 };
 
 template <>
 class AbsoluteDifference<Vec3b> {
     public:
     static inline float Calculate(const Mat &a, const Mat &b, int xa, int ya, int xb, int yb) {
-        auto va = a.at<cv::Vec3b>(ya, xa);
-        auto vb = b.at<cv::Vec3b>(yb, xb);
+        uchar *va = a.data + (ya * a.cols + xa) * 3;
+        uchar *vb = b.data + (yb * b.cols + xb) * 3;
+       // auto va = a.at<cv::Vec3b>(ya, xa);
+       // auto vb = b.at<cv::Vec3b>(yb, xb);
 
         float db = (float)va[0] - (float)vb[0];
         float dr = (float)va[1] - (float)vb[1];
         float dg = (float)va[2] - (float)vb[2];
                 
         return (abs(db) + abs(dr) + abs(dg)) / 3;
+    }
+    static inline float Sign() {
+        return 1;
     }
 };
 
@@ -107,6 +152,9 @@ class LeastSquares {
     static inline float Calculate(const Mat &a, const Mat &b, int xa, int ya, int xb, int yb) {
         float diff = AbsoluteDifference<T>::Calculate(a, b, xa, ya, xb, yb);
         return diff * diff;
+    }
+    static inline float Sign() {
+        return 1;
     }
 };
 
@@ -123,6 +171,9 @@ class LeastSquares<Vec3b> {
                 
         return (db * db + dr * dr + dg * dg) / (3 * 3);
     }
+    static inline float Sign() {
+        return 1;
+    }
 };
 
 
@@ -134,6 +185,9 @@ class GemanMcClure {
         x = x * x;
         return (x) / (1.0 + x / (alpha * alpha));
     }
+    static inline float Sign() {
+        return 1;
+    }
 };
 
 template <typename T, int alpha>
@@ -142,6 +196,21 @@ class CrossCorrelation {
     static inline float Calculate(const Mat &a, const Mat &b, int xa, int ya, int xb, int yb) {
         float diff = ((float)a.at<T>(ya, xa) - alpha) * ((float)b.at<T>(yb, xb) - alpha);
         return diff;
+    }
+    static inline float Sign() {
+        return -1;
+    }
+};
+template <int alpha>
+class CrossCorrelation<Vec3b, alpha> {
+    public:
+    static inline float Calculate(const Mat &a, const Mat &b, int xa, int ya, int xb, int yb) {
+        static const Vec3b alphaV = Vec3b(alpha, alpha, alpha);
+        float diff = (a.at<Vec3b>(ya, xa) - alphaV).ddot(b.at<Vec3b>(yb, xb) - alphaV);
+        return diff / (256 * 3);
+    }
+    static inline float Sign() {
+        return -1;
     }
 };
 }
