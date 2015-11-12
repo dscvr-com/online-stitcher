@@ -129,14 +129,17 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
             int min = 0; 
 
             for(int q = -1; q <= 1; q++) {
-                if(x + q < roi.width && x + q >= 0) {
-                    if(invCost.at<float>(y - 1, x + q) > 
+                if(x + q < roi.width - border && x + q >= border) {
+                    if(invCost.at<float>(y - 1, x + q) >
                        invCost.at<float>(y - 1, x + min)) {
                         min = q;
                     }
                 }
             }
 
+            assert(min + x >= border);
+            assert(min + x < roi.width - border);
+            
             path.at<uchar>(y, x) = (min + 1);
             invCost.at<float>(y, x) += invCost.at<float>(y - 1, x + min);
         }
@@ -191,8 +194,8 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
             if(debug) {
                 cout << "x: " << x << endl;
             }
-            assert(x >= 0);
-            assert(x < roi.width);
+            assert(x >= border);
+            assert(x < roi.width - border);
         }   
     }   
    
