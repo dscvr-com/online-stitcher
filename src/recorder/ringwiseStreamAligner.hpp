@@ -32,7 +32,6 @@ namespace optonaut {
         shared_ptr<Worker> worker;
        
         double lasty;
-        double lastDx;
 
         deque<InputImageP> pasts;
         deque<double> sangles;
@@ -45,7 +44,6 @@ namespace optonaut {
             rings(graph.GetRings().size()), 
             compassDrift(Mat::eye(4, 4, CV_64F)), 
             lasty(0),
-            lastDx(0),
             async(async)
         { 
             worker = shared_ptr<Worker>(new Worker(alignOp));
@@ -111,31 +109,13 @@ namespace optonaut {
 
         function<int(InputImageP)> alignOp = [&] (InputImageP next) -> int {
             InputImageP closest = GetClosestKeyframe(next->adjustedExtrinsics);
-            
+
             if(closest != NULL) {
                 //Todo: Bias intensity is probably dependent on image size. 
-                CorrelationDiff corr = visual.Match(next, closest, 
-                        75, 0, next->image.cols / 64);
+                CorrelationDiff corr = visual.Match(next, closest);
                
                 if(corr.valid) { 
-                    double dx = corr.offset.x;
-                    double width = next->image.cols;
-                    
-                    //cout << "dx: " << dx << ", width: " << width << endl; 
-                    lastDx = dx;
-
-                    double hx = next->intrinsics.at<double>(0, 0) / (next->intrinsics.at<double>(0, 2) * 2); 
-
-                    assert(dx <= width);
-
-                    double angleY = asin((dx / width) / hx);
-
-                    //Todo: Don't we have to include the diff between image/keyframe
-                    //in this calculation. 
-                    //(ej): No, we don't. The correlator includes the diff in 
-                    //the projection calculation, the diff is exlusive 
-                    //the previous compass drift. 
-                    //angleY += GetDistanceY(search, closest->adjustedExtrinsics);
+                    double angleY = corr.horizontalAngularOffset;
                     
                     while(angleY < -M_PI)
                         angleY = M_PI * 2 + angleY;
@@ -167,13 +147,13 @@ namespace optonaut {
             next->adjustedExtrinsics = compassDrift * next->originalExtrinsics;
 
             int ring = graph.FindAssociatedRing(next->adjustedExtrinsics);
-           // cout << "Ring " << ring << endl;
+            // cout << "Ring " << ring << endl;
             if(ring == -1)
                 return;
 
             size_t target = graph.GetParentRing(ring);
 
-           // cout << "Target " << target << endl;
+            // cout << "Target " << target << endl;
 
             if((int)target != ring) {
                 if(async) {
@@ -182,17 +162,21 @@ namespace optonaut {
                             //Pre-load the image. 
                             next->LoadFromDataRef();
                         }
-
+cout << "RSA worker push " << endl;
                         worker->Push(next);
                     }
                 } else {
+                    if(!next->IsLoaded()) {
+                        //Pre-load the image. 
+                        next->LoadFromDataRef();
+                    }
                     alignOp(next);
                 }
             }
 
             double avg = 0;
             
-            static const int order = 50;
+            static const int order = 5;
             
             if(sangles.size() == order) {
                 avg = Average(sangles, 1.0 / 5.0);

@@ -24,14 +24,12 @@ bool CompareByFilename (const string &a, const string &b) {
 
 void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &rightStore) {
 
-    namedWindow("Recorder", WINDOW_AUTOSIZE);
-
     if(files.size() == 0) {
         cout << "No Input." << endl;
         return;
     }
 
-    static const bool isAsync = true;
+    static const bool isAsync = false;
     shared_ptr<Recorder> recorder(NULL);
 
     for(size_t i = 0; i < files.size(); i++) {
@@ -69,8 +67,6 @@ void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &
             this_thread::sleep_for(sleep);
         }
     }
-
-    destroyWindow("Recorder");
 
     recorder->Finish();
     recorder->Dispose();

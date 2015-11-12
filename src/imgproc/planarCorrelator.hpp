@@ -1,3 +1,5 @@
+#include "../common/support.hpp"
+#include "../common/drawing.hpp"
 
 #ifndef OPTONAUT_PLANAR_CORRELATOR_HEADER
 #define OPTONAUT_PLANAR_CORRELATOR_HEADER
@@ -7,7 +9,7 @@ using namespace std;
 
 namespace optonaut {
 
-static const bool debug = false;
+static const bool debug = true;
 
 template <typename Correlator>
 class BruteForcePlanarAligner {
@@ -48,10 +50,11 @@ class BruteForcePlanarAligner {
 template <typename Correlator>
 class PyramidPlanarAligner {
     public:
-    static inline Point Align(const Mat &a, const Mat &b, Mat &corr, double wx = 0.5, double wy = 0.5, int dskip = 0) {
+    static inline Point Align(const Mat &a, const Mat &b, double wx = 0.5, double wy = 0.5, int dskip = 0) {
         const int minSize = 4;
 
         Point res;
+        Mat corr(0, 0, CV_32F);
 
         if(a.cols > minSize / wx && b.cols > minSize / wx 
                 && a.rows > minSize / wy && b.rows > minSize / wy) {
@@ -60,7 +63,7 @@ class PyramidPlanarAligner {
             pyrDown(a, ta);
             pyrDown(b, tb);
 
-            Point guess = PyramidPlanarAligner<Correlator>::Align(ta, tb, corr, wx, wy, dskip - 1);
+            Point guess = PyramidPlanarAligner<Correlator>::Align(ta, tb, wx, wy, dskip - 1);
             if(dskip > 0) {
                 res = guess * 2;
             } else {
@@ -68,6 +71,28 @@ class PyramidPlanarAligner {
             }
         } else {
             res = BruteForcePlanarAligner<Correlator>::Align(a, b, corr, wx, wy);
+        }
+        
+        //debug - draw resulting image. 
+        if(debug) {
+            static int dbgctr = 0;
+            Mat eye = Mat::eye(3, 3, CV_64F);
+            Mat hom = Mat::eye(3, 3, CV_64F);
+            hom.at<double>(0, 2) = res.x;
+            hom.at<double>(1, 2) = res.y;
+
+            Mat target(max(max(a.rows, a.rows), corr.rows), corr.cols + a.cols + b.cols, CV_8UC3);
+
+            DrawMatchingResults(hom, eye, a, b, target);
+            std::string filename =  
+                    "dbg/pcc_result_" + ToString(dbgctr) + 
+                    "_x_corr_" + ToString(res.x) + 
+                    ".jpg";
+            Rect targetRoi(b.cols + a.cols, 0, corr.cols, corr.rows);
+            corr.convertTo(target(targetRoi), CV_8UC3);
+
+            imwrite(filename, target);
+            dbgctr++;
         }
 
         return res;

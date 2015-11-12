@@ -198,7 +198,8 @@ public:
                 From4DoubleTo3Double(info->rotation, rot3);
                 HomographyFromRotation(rot3, aK3, reHom);
 
-                DrawMatchingResults(info->homography, reHom, goodMatches, a->image.data, aFeatures, b->image.data, bFeatures, target);
+                assert(false);
+                //DrawMatchingResults(info->homography, reHom, goodMatches, a->image.data, aFeatures, b->image.data, bFeatures, target);
 
                 std::string filename = 
                     "dbg/Homogpraphy" + ToString(a->id) + "_" + ToString(b->id) + 

@@ -5,6 +5,7 @@
 #include "../common/asyncQueueWorker.hpp"
 #include "../common/static_timer.hpp"
 #include "../common/progressCallback.hpp"
+#include "../stitcher/simpleSphereStitcher.hpp"
 
 #include "recorderGraph.hpp"
 #include "recorderGraphGenerator.hpp"
@@ -220,7 +221,7 @@ namespace optonaut {
                 return;
             }
             
-            pipeTimer.Tick("Push");
+            //pipeTimer.Tick("Push");
             
             image->originalExtrinsics = base * zero * image->originalExtrinsics.inv() * baseInv;
             
@@ -291,7 +292,7 @@ namespace optonaut {
                
                 aligner->Postprocess(leftImages);
                 aligner->Postprocess(rightImages);
-               
+
                 vector<vector<InputImageP>> rightRings = recorderGraph.SplitIntoRings(rightImages);
                 vector<vector<InputImageP>> leftRings = recorderGraph.SplitIntoRings(leftImages);
                 leftStore.SaveStitcherInput(leftRings, exposure.GetGains());

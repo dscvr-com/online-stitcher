@@ -7,6 +7,9 @@
 #include "../stitcher/stitchingResult.hpp"
 #include "../io/inputImage.hpp"
 
+#ifndef OPTONAUT_SIMPLE_SPHERE_STITCHER_HEADER
+#define OPTONAUT_SIMPLE_SPHERE_STITCHER_HEADER
+
 namespace optonaut {
 //Fast pure R-Matrix based stitcher
 class SimpleSphereStitcher {
@@ -22,3 +25,5 @@ class SimpleSphereStitcher {
         cv::Point2f Warp(const cv::Mat &intrinsics, const cv::Mat &extrinsics, const cv::Size &imageSize);
 };
 }
+
+#endif

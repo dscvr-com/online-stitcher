@@ -4,6 +4,8 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/stitching/detail/matchers.hpp>
 
+#include "../math/projection.hpp"
+
 #ifndef OPTONAUT_DRAWING_DEBUG_HEADER
 #define OPTONAUT_DRAWING_DEBUG_HEADER
 
@@ -56,24 +58,13 @@ namespace optonaut {
         DrawPoly(target, scene_corners, color);
     }
 
-    static inline void DrawMatchingResults(const Mat &homography, const Mat &homographyFromRot, const vector<DMatch> &goodMatches, const Mat &a, const ImageFeatures &aFeatures, const Mat &b, const ImageFeatures &bFeatures, Mat &target) {
-
-        //Colors: Green: Detected Homography.
-        //        Red:   Estimated from Sensor.
-        //        Blue:  Hmoography induced by dectected rotation. 
-
-  		drawMatches(a, aFeatures.keypoints, b, bFeatures.keypoints,
-               goodMatches, target, Scalar::all(-1), Scalar::all(-1),
-               vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+    static inline void DrawMatchingResults(const Mat &homography, const Mat &homographyFromRot, const Mat &a, const Mat &b, Mat &target) {
+        
+        a.copyTo(target(Rect(0, 0, a.cols, a.rows)));
+        b.copyTo(target(Rect(a.cols, 0, b.cols, b.rows)));
 
         DrawMatchingHomographyBorder(homography, a, Scalar(0, 255, 0), target);
         DrawMatchingHomographyBorder(homographyFromRot, a, Scalar(255, 0, 0), target);
-       
-        //Estimation not possible without imageP 
-        //Mat estimation;
-        //Mat rot;
-        //HomographyFromKnownParameters(a, b, estimation, rot);
-        //DrawHomographyBorder(estimation, a, Scalar(0, 0, 255), target);
     }
 }
 

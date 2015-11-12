@@ -67,20 +67,14 @@ int main(int argc, char** argv) {
 
         timer.Tick("Overlap");
 
-        //cvtColor(wa, wa, CV_RGB2GRAY);
-        //cvtColor(wb, wb, CV_RGB2GRAY);
-        
-        //pyrDown(wa, wa);
-        //pyrDown(wb, wb);
-        
-
-        Point res = PyramidPlanarAligner<NormedCorrelator<LeastSquares<Vec3b>>>::Align(wa, wb, corr, 0.25, 0.25, 1);
+        Point res = PyramidPlanarAligner<NormedCorrelator<LeastSquares<Vec3b>>>::Align(wa, wb, 0.25, 0.25, 1);
         Point correctedRes = res + appliedBorder; 
         
         timer.Tick("Aligned");
 
         cout << correctedRes << ", " << overlappingRoi << endl;
-        
+       
+       //TODO: Clean this sandbox up.  
 
         cout << "Result: " << res << endl;
         
