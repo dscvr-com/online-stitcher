@@ -51,7 +51,11 @@ namespace optonaut {
             measurements.emplace_back(variance, poolSize);
         }
 
-        T Result() {
+        size_t Count() const {
+            return measurements.size();
+        }
+
+        T Result() const {
             T nom = 0;
             T den = -((int)measurements.size());
 

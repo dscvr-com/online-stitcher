@@ -24,6 +24,7 @@ public:
 	bool valid;
     Point2f offset;
     double horizontalAngularOffset;
+    double variance;
 
 	CorrelationDiff() : valid(false), offset(0, 0), horizontalAngularOffset(0) {}
 
@@ -49,8 +50,8 @@ public:
 
         cTimer.Tick("Overlap found");
 
-        Point res = Aligner::Align(wa, wb, 0.25, 0.25, 1);
-        Point correctedRes = res + appliedBorder; 
+        PlanarCorrelationResult res = Aligner::Align(wa, wb, 0.5, 0.5, 1);
+        Point correctedRes = res.offset + appliedBorder; 
         
         double h = b->intrinsics.at<double>(0, 0) * (b->image.cols / (b->intrinsics.at<double>(0, 2) * 2));
         double olXA = (overlappingRoi.x + correctedRes.x - b->image.cols / 2) / h;
@@ -59,6 +60,7 @@ public:
         result.horizontalAngularOffset = sin(olXA) - sin(olXB);
         result.offset = correctedRes;
         result.valid = true;
+        result.variance = res.variance;
         cTimer.Tick("Correalted");
 
         return result;

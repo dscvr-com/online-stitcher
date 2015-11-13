@@ -125,6 +125,10 @@ namespace optonaut {
                         angleY = M_PI * 2 + angleY;
                     
                     lasty = angleY;
+                
+                    cout << "AngularBias: " << lasty << endl;
+                    cout << "AbsBias: " << corr.offset.x << endl;
+                    cout << "Variance: " << corr.variance << endl;
                 }
             }
 
@@ -180,7 +184,6 @@ namespace optonaut {
                         next->LoadFromDataRef();
                     }
                     alignOp(next);
-                    cout << "Bias: " << lasty << endl;
                 }
             }
                 

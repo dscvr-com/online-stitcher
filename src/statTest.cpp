@@ -6,7 +6,6 @@ using namespace std;
 using namespace optonaut;
 
 int main(int, char**) {
-
     vector<deque<double>> in = {{31, 30, 29}, 
                                  {42, 41, 40, 39}, 
                                  {31, 28},
@@ -37,6 +36,5 @@ int main(int, char**) {
 
     AssertEQ(expectedPooledVar, pool.Result());
 
-    cout << "[\u2713] Statistic module." << endl;
-
+    cout << "[\u2713] Statistics module." << endl;
 }

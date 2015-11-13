@@ -1,5 +1,6 @@
 #include "../common/support.hpp"
 #include "../common/drawing.hpp"
+#include "../math/stat.hpp"
 
 #ifndef OPTONAUT_PLANAR_CORRELATOR_HEADER
 #define OPTONAUT_PLANAR_CORRELATOR_HEADER
@@ -9,19 +10,26 @@ using namespace std;
 
 namespace optonaut {
 
-static const bool debug = false;
+static const bool debug = true;
+
+struct PlanarCorrelationResult {
+    Point offset;
+    size_t n; 
+    double variance;
+};
 
 template <typename Correlator>
 class BruteForcePlanarAligner {
     public:
-    static inline Point Align(const Mat &a, const Mat &b, Mat &corr, double wx = 0.5, double wy = 0.5) {
+    static inline PlanarCorrelationResult Align(const Mat &a, const Mat &b, Mat &corr, double wx = 0.5, double wy = 0.5) {
         return Align(a, b, corr, max(a.cols, b.cols) * wx, max(a.rows, b.rows) * wy, 0, 0);
     }
     
-    static inline Point Align(const Mat &a, const Mat &b, Mat &corr, int wx, int wy, int ox, int oy) {
+    static inline PlanarCorrelationResult Align(const Mat &a, const Mat &b, Mat &corr, int wx, int wy, int ox, int oy) {
         int mx = 0;
         int my = 0;
         float min = std::numeric_limits<float>::max();
+        OnlineVariance<double> var;
 
         if(debug) {
             corr = Mat(wy * 2, wx * 2, CV_32F);
@@ -31,6 +39,7 @@ class BruteForcePlanarAligner {
         for(int dx = -wx; dx < wx; dx++) {
             for(int dy = -wy; dy < wy; dy++) {
                 float res = Correlator::Calculate(a, b, dx + ox, dy + oy);
+                var.Push(res);
                 if(debug) {
                     corr.at<float>(dy + wy, dx + wx) = res; 
                 }
@@ -43,14 +52,14 @@ class BruteForcePlanarAligner {
         }
 
 
-        return Point(mx + ox, my + oy);
+        return { Point(mx + ox, my + oy), static_cast<size_t>(wx * 2 + wy * 2), var.Result() };
     }
 };
 
 template <typename Correlator>
 class PyramidPlanarAligner {
-    public:
-    static inline Point Align(const Mat &a, const Mat &b, double wx = 0.5, double wy = 0.5, int dskip = 0) {
+    private:
+    static inline Point AlignInternal(const Mat &a, const Mat &b, double wx, double wy, int dskip, int depth, VariancePool<double> &pool) {
         const int minSize = 4;
 
         Point res;
@@ -63,16 +72,32 @@ class PyramidPlanarAligner {
             pyrDown(a, ta);
             pyrDown(b, tb);
 
-            Point guess = PyramidPlanarAligner<Correlator>::Align(ta, tb, wx, wy, dskip - 1);
+            Point guess = PyramidPlanarAligner<Correlator>::AlignInternal(ta, tb, wx, wy, dskip - 1, depth + 1, pool);
             if(dskip > 0) {
                 res = guess * 2;
             } else {
-                res = BruteForcePlanarAligner<Correlator>::Align(a, b, corr, 2, 2, guess.x * 2, guess.y * 2);
+                PlanarCorrelationResult detailedRes = 
+                    BruteForcePlanarAligner<Correlator>::Align(a, b, corr, 2, 2, 
+                                                        guess.x * 2, guess.y * 2);
+
+                res = detailedRes.offset;
+                pool.Push(detailedRes.variance, detailedRes.n * pow(2, depth));
             }
         } else {
-            res = BruteForcePlanarAligner<Correlator>::Align(a, b, corr, wx, wy);
+            PlanarCorrelationResult detailedRes = 
+                BruteForcePlanarAligner<Correlator>::Align(a, b, corr, wx, wy);
+                
+            res = detailedRes.offset;
+            pool.Push(detailedRes.variance, detailedRes.n * pow(2, depth));
         }
         
+        return res;
+    }
+    public:
+    static inline PlanarCorrelationResult Align(const Mat &a, const Mat &b, double wx = 0.5, double wy = 0.5, int dskip = 0) {
+        VariancePool<double> pool;
+        Point res = PyramidPlanarAligner<Correlator>::AlignInternal(a, b, wx, wy, dskip, 0, pool);
+
         //debug - draw resulting image. 
         if(debug && dskip > 0) {
             static int dbgctr = 0;
@@ -81,22 +106,20 @@ class PyramidPlanarAligner {
             hom.at<double>(0, 2) = res.x;
             hom.at<double>(1, 2) = res.y;
 
-            Mat target(max(max(a.rows, a.rows), corr.rows), corr.cols + a.cols + b.cols, CV_8UC3);
+            Mat target(max(a.rows, a.rows), a.cols + b.cols, CV_8UC3);
 
             DrawMatchingResults(hom, eye, a, b, target);
             std::string filename =  
-                    "dbg/pcc_result_" + ToString(dbgctr) + 
-                    "_x_corr_" + ToString(res.x) + 
+                    "dbg/pcc_" + ToString(dbgctr) + 
+                    "_x_" + ToString(res.x) + 
+                    "_var_" + ToString(pool.Result()) + 
                     ".jpg";
-            Rect targetRoi(b.cols + a.cols, 0, corr.cols, corr.rows);
-            cvtColor(corr, corr, CV_GRAY2BGR);
-            corr.copyTo(target(targetRoi));
 
             imwrite(filename, target);
             dbgctr++;
         }
 
-        return res;
+        return { res, pool.Count(), pool.Result() };
     }
 };
 

@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
     imwrite("dbg/inA.jpg", imgA);
     imwrite("dbg/inB.jpg", imgB);
     
-    Point res;
+    PlanarCorrelationResult res;
    
     if(grayscale) {
         res = BruteForcePlanarAligner<NormedCorrelator<AbsoluteDifference<uchar>>>::Align(imgA, imgB, corr, 0.5, 0.5);
@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
     }
     imwrite("dbg/corr.jpg", corr);
 
-    cout << "Result: " << res << endl;
+    cout << "Result: " << res.offset << ", variance: " << res.variance << endl;
     
     return 0;
 }

@@ -67,8 +67,8 @@ int main(int argc, char** argv) {
 
         timer.Tick("Overlap");
 
-        Point res = PyramidPlanarAligner<NormedCorrelator<LeastSquares<Vec3b>>>::Align(wa, wb, 0.25, 0.25, 1);
-        Point correctedRes = res + appliedBorder; 
+        PlanarCorrelationResult res = PyramidPlanarAligner<NormedCorrelator<LeastSquares<Vec3b>>>::Align(wa, wb, 0.25, 0.25, 1);
+        Point correctedRes = res.offset + appliedBorder; 
         
         timer.Tick("Aligned");
 
@@ -76,15 +76,13 @@ int main(int argc, char** argv) {
        
        //TODO: Clean this sandbox up.  
 
-        cout << "Result: " << res << endl;
-        
         imwrite("dbg/" + ToString(i) + "_corr.jpg", corr);
         imwrite("dbg/" + ToString(i) + "_overlapA.jpg", wa);
         imwrite("dbg/" + ToString(i) + "_overlapB.jpg", wb);
 
 
         SimplePlaneStitcher planeStitcher;
-        scene = planeStitcher.Stitch({make_shared<Image>(wa), make_shared<Image>(wb)},              {Point(res.x, res.y), Point(0, 0)});
+        scene = planeStitcher.Stitch({make_shared<Image>(wa), make_shared<Image>(wb)},              {Point(res.offset.x, res.offset.y), Point(0, 0)});
         imwrite("dbg/" + ToString(i) + "_overlap_aligned.jpg", scene->image.data);
         
         double h = imgB->intrinsics.at<double>(0, 0) * (imgB->image.cols / (imgB->intrinsics.at<double>(0, 2) * 2));
