@@ -150,10 +150,10 @@ namespace optonaut {
             static const int order = 9;
             
             if(sangles.size() == order) {
-                cury = Average(sangles, 1.0 / 3.0);
-                CreateRotationY(cury, compassDrift);
+                cury = Mean(sangles, 1.0 / 3.0);
+            //    CreateRotationY(cury, compassDrift);
             }
-            CreateRotationY(cury, compassDrift);
+           // CreateRotationY(cury, compassDrift);
 
             next->adjustedExtrinsics = compassDrift * next->originalExtrinsics;
             int ring = graph.FindAssociatedRing(next->adjustedExtrinsics);
@@ -189,11 +189,11 @@ namespace optonaut {
 
             next->adjustedExtrinsics = tmp * next->adjustedExtrinsics;
 
-            sangles.push_back(lasty + cury);
-
-            if(sangles.size() > order) {
-                sangles.pop_front();
-            }
+         //   sangles.push_back(lasty + cury);
+ 
+ //           if(sangles.size() > order) {
+   //             sangles.pop_front();
+     //       }
         }
 
 		Mat GetCurrentRotation() const {

@@ -29,3 +29,7 @@ target_link_libraries(aligner-test optonaut-lib)
 add_executable(perspective-aligner-test perspectiveAlignerTest.cpp)
 target_link_libraries(perspective-aligner-test ${OpenCV_LIBS})
 target_link_libraries(perspective-aligner-test optonaut-lib)
+
+add_executable(stat-test statTest.cpp)
+target_link_libraries(stat-test ${OpenCV_LIBS})
+target_link_libraries(stat-test optonaut-lib)

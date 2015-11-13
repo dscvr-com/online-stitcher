@@ -1,5 +1,6 @@
 #!/bin/bash
 
+echo "-- Setting up Environment."
 set -e
 
 if [ ! -d "build" ]; then
@@ -13,6 +14,12 @@ if [ -d "tmp" ]; then
 fi
 mkdir dbg
 mkdir tmp
+
+echo "-- Compiling."
 cd build
 cmake .. $@
 make $MAKEOPTS 
+
+echo "-- Executing Tests."
+cd ../
+build/src/stat-test
