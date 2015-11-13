@@ -11,6 +11,7 @@ namespace optonaut {
         public:
         STimer() : last(std::chrono::high_resolution_clock::now()) { }
         void Tick(std::string label = "");
+        void Reset();
     };
 }
 

@@ -9,7 +9,7 @@ using namespace std;
 
 namespace optonaut {
 
-static const bool debug = true;
+static const bool debug = false;
 
 template <typename Correlator>
 class BruteForcePlanarAligner {
@@ -74,7 +74,7 @@ class PyramidPlanarAligner {
         }
         
         //debug - draw resulting image. 
-        if(debug) {
+        if(debug && dskip > 0) {
             static int dbgctr = 0;
             Mat eye = Mat::eye(3, 3, CV_64F);
             Mat hom = Mat::eye(3, 3, CV_64F);
@@ -89,7 +89,8 @@ class PyramidPlanarAligner {
                     "_x_corr_" + ToString(res.x) + 
                     ".jpg";
             Rect targetRoi(b.cols + a.cols, 0, corr.cols, corr.rows);
-            corr.convertTo(target(targetRoi), CV_8UC3);
+            cvtColor(corr, corr, CV_GRAY2BGR);
+            corr.copyTo(target(targetRoi));
 
             imwrite(filename, target);
             dbgctr++;

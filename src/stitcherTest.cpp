@@ -8,6 +8,7 @@
 
 #include "recorder/recorder.hpp"
 #include "common/intrinsics.hpp"
+#include "common/backtrace.hpp"
 #include "stitcher/stitcher.hpp"
 #include "io/io.hpp"
 
@@ -74,6 +75,8 @@ void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &
 
 int main(int argc, char** argv) {
     cv::ocl::setUseOpenCL(false);
+    RegisterCrashHandler();
+
     CheckpointStore leftStore("tmp/left/", "tmp/shared/");
     CheckpointStore rightStore("tmp/right/", "tmp/shared/");
 
@@ -109,7 +112,7 @@ int main(int argc, char** argv) {
 
     {
         cout << "Start left stitcher." << endl;
-        Stitcher leftStitcher(4096, 4096, leftStore);
+        Stitcher leftStitcher(leftStore);
         auto left = leftStitcher.Finish(callbacks.At(0), false, "dbg/left");
         imwrite("dbg/left.jpg", left->image.data);
         left->image.Unload();  
@@ -117,7 +120,7 @@ int main(int argc, char** argv) {
     }
     {
         cout << "Start right stitcher." << endl;
-        Stitcher rightStitcher(4096, 4096, rightStore);
+        Stitcher rightStitcher(rightStore);
         auto right = rightStitcher.Finish(callbacks.At(1), false, "dbg/right");
         imwrite("dbg/right.jpg", right->image.data);    
         right->image.Unload();  

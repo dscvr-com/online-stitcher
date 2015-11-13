@@ -39,12 +39,15 @@ public:
 
     CorrelationDiff Match(const InputImageP a, const InputImageP b) {
 
+        STimer cTimer;
         CorrelationDiff result;
         
         Mat wa, wb;
 
         Point appliedBorder;
         Rect overlappingRoi = GetOverlappingRegion(a, b, a->image, b->image, wa, wb, a->image.cols * 0.2, appliedBorder);
+
+        cTimer.Tick("Overlap found");
 
         Point res = Aligner::Align(wa, wb, 0.25, 0.25, 1);
         Point correctedRes = res + appliedBorder; 
@@ -56,6 +59,7 @@ public:
         result.horizontalAngularOffset = sin(olXA) - sin(olXB);
         result.offset = correctedRes;
         result.valid = true;
+        cTimer.Tick("Correalted");
 
         return result;
     }

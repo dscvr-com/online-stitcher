@@ -179,6 +179,8 @@ namespace optonaut {
 
             assert(pair.a.image->IsLoaded());
             assert(pair.b.image->IsLoaded());
+
+            monoTimer.Reset();
             
             if(exposureEnabled)
                 exposure.Register(pair.a.image, pair.b.image);

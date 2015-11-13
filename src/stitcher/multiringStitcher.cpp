@@ -200,6 +200,11 @@ namespace optonaut {
                 (stitchedRings, [](const StitchingResultP &x) { return x->corner; }),
                 fun::map<StitchingResultP, Size>
                 (stitchedRings, [](const StitchingResultP &x) { return x->image.size(); }));
+        if(w == 0 && h == 0) {
+            w = inRoi.width;
+            h = inRoi.height;
+            margin = 0;
+        }
         Rect outRoi(0, 0, w, h);
 
         int sx = inRoi.x;

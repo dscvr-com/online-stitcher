@@ -91,7 +91,7 @@ void GetTargetRoi(const SelectionPoint &a, const SelectionPoint &b, Mat &center,
 
 void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo) {
 
-    const static bool debug = true;
+    const static bool debug = false;
 
     Mat k;
     stereo.valid = false;
@@ -136,7 +136,7 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
     Mat rotVec(3, 1, CV_64F);
 	ExtractRotationVector(aOffset, rotVec);
 
-    cout << "A rotation " << rotVec << endl;
+    //cout << "A rotation " << rotVec << endl;
 
     Mat bOffset; 
     From4DoubleTo3Double(b.image->adjustedExtrinsics.inv() * b.closestPoint.extrinsics, bOffset);

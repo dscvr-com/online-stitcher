@@ -6,7 +6,7 @@ using namespace std;
 
 namespace optonaut {
 
-    static const bool enabled = true;
+    static const bool enabled = false;
 
     void STimer::Tick(string label) {
 
@@ -21,6 +21,9 @@ namespace optonaut {
         cout << chrono::duration_cast<chrono::milliseconds>(duration).count() << "ms" << endl;
 
         last = now;
-        
+    }
+
+    void STimer::Reset() {
+        last = chrono::high_resolution_clock::now();
     }
 }

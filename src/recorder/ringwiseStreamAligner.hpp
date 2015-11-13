@@ -32,6 +32,7 @@ namespace optonaut {
         shared_ptr<Worker> worker;
        
         double lasty;
+        double cury;
 
         deque<InputImageP> pasts;
         deque<double> sangles;
@@ -44,6 +45,7 @@ namespace optonaut {
             rings(graph.GetRings().size()), 
             compassDrift(Mat::eye(4, 4, CV_64F)), 
             lasty(0),
+            cury(0),
             async(async)
         { 
             worker = shared_ptr<Worker>(new Worker(alignOp));
@@ -108,11 +110,13 @@ namespace optonaut {
         }
 
         function<int(InputImageP)> alignOp = [&] (InputImageP next) -> int {
+            STimer aTime;
             InputImageP closest = GetClosestKeyframe(next->adjustedExtrinsics);
-
+            aTime.Tick("Keyframe found");
             if(closest != NULL) {
                 //Todo: Bias intensity is probably dependent on image size. 
                 CorrelationDiff corr = visual.Match(next, closest);
+                aTime.Tick("Aligned");
                
                 if(corr.valid) { 
                     double angleY = corr.horizontalAngularOffset;
@@ -138,14 +142,20 @@ namespace optonaut {
             
                 cout << "Adding keyframe " << next->id << " to ring: " << ring << " count: " << rings[ring].size() << endl;
             }
-
-
         }
 
 		void Push(InputImageP next) {
             last = next;
-            next->adjustedExtrinsics = compassDrift * next->originalExtrinsics;
+            
+            static const int order = 9;
+            
+            if(sangles.size() == order) {
+                cury = Average(sangles, 1.0 / 3.0);
+                CreateRotationY(cury, compassDrift);
+            }
+            CreateRotationY(cury, compassDrift);
 
+            next->adjustedExtrinsics = compassDrift * next->originalExtrinsics;
             int ring = graph.FindAssociatedRing(next->adjustedExtrinsics);
             // cout << "Ring " << ring << endl;
             if(ring == -1)
@@ -162,7 +172,6 @@ namespace optonaut {
                             //Pre-load the image. 
                             next->LoadFromDataRef();
                         }
-cout << "RSA worker push " << endl;
                         worker->Push(next);
                     }
                 } else {
@@ -171,28 +180,19 @@ cout << "RSA worker push " << endl;
                         next->LoadFromDataRef();
                     }
                     alignOp(next);
+                    cout << "Bias: " << lasty << endl;
                 }
             }
-
-            double avg = 0;
-            
-            static const int order = 5;
-            
-            if(sangles.size() == order) {
-                avg = Average(sangles, 1.0 / 5.0);
-                CreateRotationY(avg, compassDrift);
                 
-                next->vtag = avg;
-            }
+            Mat tmp;
+            CreateRotationY(lasty, tmp);
 
-            sangles.push_back(lasty + avg);
-            pasts.push_back(next); 
+            next->adjustedExtrinsics = tmp * next->adjustedExtrinsics;
+
+            sangles.push_back(lasty + cury);
 
             if(sangles.size() > order) {
                 sangles.pop_front();
-            }
-            if(pasts.size() > order) {
-                pasts.pop_front();
             }
         }
 
@@ -210,6 +210,11 @@ cout << "RSA worker push " << endl;
         void Postprocess(vector<InputImageP> imgs) const {
             for(auto img : imgs) {
                 DrawBar(img->image.data, img->vtag);
+            }
+            for(size_t i = 0; i < rings.size(); i++) {
+                SimpleSphereStitcher stitcher; 
+                auto res = stitcher.Stitch(rings[i]);
+                imwrite("dbg/keyframe_ring_" + ToString(i) + ".jpg", rings[i]);
             }
         }
 	};
