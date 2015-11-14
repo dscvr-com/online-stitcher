@@ -14,13 +14,12 @@ namespace optonaut {
         function<void(InType)> core;
         deque<InType> inData;
         bool running;
+        bool isInitialized;
         bool cancel;
         thread worker;
 
         mutex m;
         condition_variable sem;
-
-        bool isInitialized;
 
         void WorkerLoop() {
     
@@ -43,7 +42,14 @@ namespace optonaut {
         }
 
 	public:
-		AsyncQueue(function<void(InType)> core) : core(core), running(false), isInitialized(false) { }
+		AsyncQueue(function<void(InType)> core) : 
+            core(core), 
+            inData(), 
+            running(false),
+            isInitialized(false), 
+            cancel(false),
+            m(), 
+            sem() { }
        
         void Push(InType in) {
             {

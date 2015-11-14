@@ -16,15 +16,14 @@ namespace optonaut {
         function<void(InType&)> finish;
 
         deque<InType> buffer;
-
     public:
-
         QueueProcessor(size_t length, 
                 function<void(InType&)> onFinish) : 
             length(length),
             start([] (InType&) {}),
             finish(onFinish) {
         }
+
         QueueProcessor(size_t length, 
                 function<void(InType&)> onStart,
                 function<void(InType&)> onFinish) : 

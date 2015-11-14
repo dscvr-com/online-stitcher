@@ -45,6 +45,6 @@ namespace optonaut {
     string Recorder::version = "0.6.0";
     
     bool Recorder::exposureEnabled = false;
-    bool Recorder::alignmentEnabled = false;
+    bool Recorder::alignmentEnabled = true;
 }
 

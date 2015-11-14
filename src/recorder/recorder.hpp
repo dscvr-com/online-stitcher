@@ -227,13 +227,15 @@ namespace optonaut {
 
         void ApplyAlignment(InputImageP image) {
 
-            //image->adjustedExtrinsics = aligner->GetCurrentBias() * image->originalExtrinsics;
+            cout << "Apply correction to image " << image->id << endl;
+            cout << aligner->GetCurrentBias() << endl;
+
+            image->adjustedExtrinsics = aligner->GetCurrentBias() * image->originalExtrinsics;
 
             if(!controller.IsInitialized())
                 controller.Initialize(image->adjustedExtrinsics);
             
             SelectionInfo current = controller.Push(image, isIdle);
-            
 
             if(isIdle)
                 return;
@@ -295,7 +297,7 @@ namespace optonaut {
             
             aligner->Push(image);
             alignerQueue.Push(image);
-
+            //ApplyAlignment(image);
         }
 
         void Finish() {

@@ -49,6 +49,10 @@ namespace optonaut {
         const double tolerance = M_PI / 8; //TODO CHANGE FOR RELEASE
         
         void MoveToNextRing(const Mat &cur) {
+
+            cout << "###############################" << endl;
+            cout << "Ring Jump." << endl;
+            cout << "###############################" << endl;
             
             int ringCount = (int)graph.targets.size();
             int newRing = GetNextRing(); 
