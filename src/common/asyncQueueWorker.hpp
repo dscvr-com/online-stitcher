@@ -46,16 +46,17 @@ namespace optonaut {
 		AsyncQueue(function<void(InType)> core) : core(core), running(false), isInitialized(false) { }
        
         void Push(InType in) {
-            if(!isInitialized) {
-                isInitialized = true;
-                running = true;
-                worker = thread(&AsyncQueue::WorkerLoop, this); 
-            }
-        
             {
                 unique_lock<mutex> lock(m);
                 inData.push_back(in);
                 sem.notify_one();
+            }
+            
+            if(!isInitialized) {
+                cancel = false;
+                isInitialized = true;
+                running = true;
+                worker = thread(&AsyncQueue::WorkerLoop, this); 
             }
         }
         

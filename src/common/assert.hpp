@@ -18,13 +18,13 @@
 namespace optonaut {
 
     inline void PrintAndTerminate(std::string message, std::string vars, std::string values = "") {
-        std::cout << "Assertion Failed. " << std::endl;
+        std::cerr << "Assertion Failed. " << std::endl;
         if(message != "")
-            std::cout << message << std::endl;
+            std::cerr << message << std::endl;
         if(vars != "")
-            std::cout << "(" << vars << ")" << std::endl;
+            std::cerr << "(" << vars << ")" << std::endl;
         if(values != "")
-            std::cout << "(" << values << ")" << std::endl;
+            std::cerr << "(" << values << ")" << std::endl;
         PrintBacktrace();
         std::abort();
     }

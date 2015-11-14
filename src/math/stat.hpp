@@ -26,8 +26,9 @@ namespace optonaut {
         }
 
         T Result() {
-            if(n < 2)
-                assert(false); //Variance undefined. 
+            AssertGTM(n, 0, "Variance is undefined");
+            if(n == 1)
+                return 0;
             return m2 / (n - 1);
         }
     };

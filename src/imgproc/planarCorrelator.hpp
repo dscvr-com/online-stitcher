@@ -36,6 +36,9 @@ class BruteForcePlanarAligner {
 	        corr.setTo(Scalar::all(0));
         }
 
+        AssertGTM(wx, 0, "Correlation window exists.");
+        AssertGTM(wy, 0, "Correlation window exists.");
+
         for(int dx = -wx; dx < wx; dx++) {
             for(int dy = -wy; dy < wy; dy++) {
                 float res = Correlator::Calculate(a, b, dx + ox, dy + oy);

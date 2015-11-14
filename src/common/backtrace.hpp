@@ -88,14 +88,14 @@ static inline void PrintBacktrace(FILE *out = stderr, unsigned int max_frames = 
     free(symbollist);
 }
 static inline void handler(int sig) {
-    std::cout << "Crash (" << sig << ") Stack Trace: " << std::endl;
+    std::cerr << "Crash (" << sig << ") Stack Trace: " << std::endl;
     PrintBacktrace();
     exit(1);
 }
 
 static inline void RegisterCrashHandler() {
-    signal(SIGSEGV, handler);   // install our handler
-    signal(SIGABRT, handler);   // install our handler
+    //signal(SIGSEGV, handler); 
+    //signal(SIGABRT, handler); 
 }
 
 #endif

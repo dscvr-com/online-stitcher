@@ -16,7 +16,7 @@ namespace optonaut {
     class Aligner {
     public:
 		virtual void Push(InputImageP next) = 0;
-		virtual cv::Mat GetCurrentRotation() const = 0;
+		virtual cv::Mat GetCurrentBias() const = 0;
         virtual void Dispose() = 0; 
         virtual bool NeedsImageData() = 0;
         virtual void Postprocess(std::vector<InputImageP> imgs) const = 0;

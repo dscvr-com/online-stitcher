@@ -29,7 +29,7 @@ namespace optonaut {
 
         Mat operator()(InputImageP in) {
             core.Push(in);
-            return core.GetCurrentRotation().clone();
+            return core.GetCurrentBias().clone();
         }
         
         void Postprocess(vector<InputImageP> imgs) const { core.Postprocess(imgs); };
@@ -81,7 +81,8 @@ namespace optonaut {
             worker.Dispose();
         }
 
-        Mat GetCurrentRotation() const {
+        Mat GetCurrentBias() const {
+            assert(false); //Wrong semantics. 
             return current;
         }
         

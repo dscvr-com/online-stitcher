@@ -24,3 +24,4 @@ echo "-- Executing Tests."
 cd ../
 build/src/test/stat-test
 build/src/test/processor-test
+build/src/test/async-queue-test

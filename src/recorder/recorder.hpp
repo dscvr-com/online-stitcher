@@ -2,6 +2,7 @@
 #include "../io/checkpointStore.hpp"
 #include "../stereo/monoStitcher.hpp"
 #include "../common/ringProcessor.hpp"
+#include "../common/queueProcessor.hpp"
 #include "../common/asyncQueueWorker.hpp"
 #include "../common/static_timer.hpp"
 #include "../common/progressCallback.hpp"
@@ -59,6 +60,7 @@ namespace optonaut {
         uint32_t recordedImages;
 
         RingProcessor<SelectionInfo> monoQueue;
+        QueueProcessor<InputImageP> alignerQueue;
         AsyncQueue<StereoPair> stereoProcessor;
         
         STimer monoTimer;
@@ -104,6 +106,8 @@ namespace optonaut {
                     },
                 std::bind(&Recorder::FinishImage, 
                     this, placeholders::_1)),
+            alignerQueue(30, std::bind(&Recorder::ApplyAlignment, 
+                this, placeholders::_1)),
             stereoProcessor([this] (const StereoPair &a) { StitchImages(a); })
         {
             baseInv = base.inv();
@@ -123,7 +127,12 @@ namespace optonaut {
         }
         
         Mat ConvertFromStitcher(const Mat &in) const {
+            assert(false); //Dangerous to use. Allocation error. 
             return (zero.inv() * baseInv * in * base).inv();
+        }
+        
+        void ConvertToStitcher(const Mat &in, Mat &out) const {
+            out = (base * zero * in.inv() * baseInv);
         }
        
         //TODO: Rename all ball methods.  
@@ -145,7 +154,8 @@ namespace optonaut {
         }
 
         Mat GetCurrentRotation() const {
-            return ConvertFromStitcher(aligner->GetCurrentRotation());
+            assert(false); //Wrong semantics.
+            return ConvertFromStitcher(aligner->GetCurrentBias());
         }
 
         vector<SelectionPoint> GetSelectionPoints() const {
@@ -214,25 +224,10 @@ namespace optonaut {
                 exposure.Register(a, b);
             }
         }
-    
-        void Push(InputImageP image) {
-            //cout << "Pipeline Push called by " << std::this_thread::get_id() << endl;
 
-            if(isFinished) {
-                cout << "Push after finish warning - this could be a racing condition" << endl;
-                return;
-            }
-            
-            //pipeTimer.Tick("Push");
-            
-            image->originalExtrinsics = base * zero * image->originalExtrinsics.inv() * baseInv;
-            
-            if(aligner->NeedsImageData() && !image->IsLoaded()) {
-                //If the aligner needs image data, pre-load the image.
-                image->LoadFromDataRef();
-            }
-            
-            aligner->Push(image);
+        void ApplyAlignment(InputImageP image) {
+
+            //image->adjustedExtrinsics = aligner->GetCurrentBias() * image->originalExtrinsics;
 
             if(!controller.IsInitialized())
                 controller.Initialize(image->adjustedExtrinsics);
@@ -254,6 +249,7 @@ namespace optonaut {
                 
                 if(current.closestPoint.globalId != 
                         currentBest.closestPoint.globalId) {
+            cout << "Valid Frame:  " << image->id << endl;
                     
                     if(recordedImages % 2 == 0) {     
                         //Save some memory by sparse keyframing. 
@@ -278,13 +274,36 @@ namespace optonaut {
                 isFinished = true;
             }
         }
+    
+        void Push(InputImageP image) {
+            //cout << "Pipeline Push called by " << std::this_thread::get_id() << endl;
+
+            if(isFinished) {
+                cout << "Push after finish warning - this could be a racing condition" << endl;
+                return;
+            }
+            
+            //pipeTimer.Tick("Push");
+            
+            ConvertToStitcher(image->originalExtrinsics, image->originalExtrinsics);
+            image->adjustedExtrinsics = image->originalExtrinsics;
+            
+            if(aligner->NeedsImageData() && !image->IsLoaded()) {
+                //If the aligner needs image data, pre-load the image.
+                image->LoadFromDataRef();
+            }
+            
+            aligner->Push(image);
+            alignerQueue.Push(image);
+
+        }
 
         void Finish() {
             //cout << "Pipeline Finish called by " << std::this_thread::get_id() << endl;
             isFinished = true;
 
             aligner->Finish();
-            
+            alignerQueue.Flush();
             stereoProcessor.Finish();
            
             if(HasResults()) {
@@ -320,9 +339,10 @@ namespace optonaut {
         }
         
         ExposureInfo GetExposureHint() {
-            const Mat &current = aligner->GetCurrentRotation();
+            assert(false); //Wrong semantics. 
+            const Mat &current = aligner->GetCurrentBias();
             
-            vector<KeyframeInfo> frames = aligner->GetClosestKeyframes(aligner->GetCurrentRotation(), 2);
+            vector<KeyframeInfo> frames = aligner->GetClosestKeyframes(current, 2);
             
             if(frames.size() < 2) {
                 return ExposureInfo();

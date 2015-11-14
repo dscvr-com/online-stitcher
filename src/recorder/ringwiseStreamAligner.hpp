@@ -19,7 +19,6 @@ using namespace std;
 #ifndef OPTONAUT_RINGWISE_STREAM_ALIGNMENT_HEADER
 #define OPTONAUT_RINGWISE_STREAM_ALIGNMENT_HEADER
 
-
 namespace optonaut {
 	class RingwiseStreamAligner : public Aligner {
 	private:
@@ -164,11 +163,10 @@ namespace optonaut {
             static const int order = 30;
             
             if(sangles.size() == order) {
-                cury += Mean(sangles, 1.0 / 3.0);
+                cury = Mean(sangles, 1.0 / 3.0);
                 CreateRotationY(cury, compassDrift);
                 cout << "FilteredBias: " << cury << endl;
             }
-           // CreateRotationY(cury, compassDrift);
 
             if(async) {
                 if(worker->Finished()) {
@@ -186,12 +184,6 @@ namespace optonaut {
                 alignOp(next);
             }
                 
-            Mat tmp;
-            //CreateRotationY(lasty, tmp);
-
-            //next->adjustedExtrinsics = tmp * next->adjustedExtrinsics;
-            next->adjustedExtrinsics = compassDrift * next->originalExtrinsics;
-
             sangles.push_back(lasty);
  
             if(sangles.size() > order) {
@@ -199,8 +191,8 @@ namespace optonaut {
             }
         }
 
-		Mat GetCurrentRotation() const {
-			return compassDrift * last->originalExtrinsics;
+		Mat GetCurrentBias() const {
+			return compassDrift;
 		}
 
         void Finish() {
