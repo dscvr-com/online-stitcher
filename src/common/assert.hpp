@@ -35,7 +35,11 @@ namespace optonaut {
     }
 
     template <typename T, typename V>
-    inline void AssertEQ_(T a, V b, std::string message, std::string vars) {
+    inline void AssertEQ_(T a, V b, 
+            std::string message, 
+            std::string vars,
+            typename std::enable_if<!std::is_floating_point<T>::value >::type* = 0, 
+            typename std::enable_if<!std::is_floating_point<V>::value >::type* = 0) {
         if(a != (T)b) {
             PrintAndTerminate(message, vars, ToString(a) + " == " + ToString(b));
         }
@@ -48,8 +52,11 @@ namespace optonaut {
         }
     }
     
-    template<>
-    inline void AssertEQ_<double, double>(double a, double b, std::string message, std::string vars) {
+    template<typename T, typename V>
+    inline void AssertEQ_(T a, V b, 
+            std::string message, std::string vars,
+            typename std::enable_if<std::is_floating_point<T>::value >::type* = 0, 
+            typename std::enable_if<std::is_floating_point<V>::value >::type* = 0) {
         if(std::abs(a - b) > 0.00001) {
             PrintAndTerminate(message, vars, ToString(a) + " == " + ToString(b));
         }

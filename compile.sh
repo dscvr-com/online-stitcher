@@ -22,4 +22,5 @@ make $MAKEOPTS
 
 echo "-- Executing Tests."
 cd ../
-build/src/stat-test
+build/src/test/stat-test
+build/src/test/processor-test

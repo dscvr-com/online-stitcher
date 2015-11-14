@@ -21,6 +21,28 @@ namespace optonaut {
 
         deque<InType> buffer;
         deque<InType> prefix;
+        
+        void PushInternal(InType &in) {
+
+            if(prefix.size() < prefixSize) {
+                prefix.push_back(in);
+            }
+
+            buffer.push_back(in);
+
+            if(buffer.size() > distance) {
+
+                process(buffer.front(), buffer.back());
+                
+                if(prefixCounter == 0) {
+                    finish(buffer.front());
+                } else {
+                    prefixCounter--;
+                }
+
+                buffer.pop_front();
+            }
+        }
 
     public:
 
@@ -63,33 +85,14 @@ namespace optonaut {
         }
 
         void Push(InType &in) {
-
             start(in);
-
-            if(prefix.size() < prefixSize) {
-                prefix.push_back(in);
-            }
-
-            buffer.push_back(in);
-
-            if(buffer.size() > distance) {
-
-                process(buffer.front(), buffer.back());
-                
-                if(prefixCounter == 0) {
-                    finish(buffer.front());
-                } else {
-                    prefixCounter--;
-                }
-
-                buffer.pop_front();
-            }
+            PushInternal(in);
         }
 
         void Flush(bool push = true) {
             for(auto &pre : prefix) {
                 if(push)
-                    Push(pre);
+                    PushInternal(pre);
             }
 
             Clear();

@@ -74,7 +74,6 @@ namespace optonaut {
 
             int ring = graph.FindAssociatedRing(search);
             
-            
             if(ring == -1)
                 return { };
 
@@ -126,8 +125,8 @@ namespace optonaut {
                     
                     lasty = angleY;
                 
-                    cout << "AngularBias: " << lasty << endl;
-                    cout << "AbsBias: " << corr.offset.x << endl;
+                    cout << "AngularDiffBias: " << lasty << endl;
+                    cout << "AbsDiffBias: " << corr.offset.x << endl;
                     cout << "Variance: " << corr.variance << endl;
                 }
             }
@@ -151,52 +150,53 @@ namespace optonaut {
 		void Push(InputImageP next) {
             last = next;
             
-            static const int order = 9;
-            
-            if(sangles.size() == order) {
-                cury = Mean(sangles, 1.0 / 3.0);
-            //    CreateRotationY(cury, compassDrift);
-            }
-           // CreateRotationY(cury, compassDrift);
-
-            next->adjustedExtrinsics = compassDrift * next->originalExtrinsics;
             int ring = graph.FindAssociatedRing(next->adjustedExtrinsics);
             // cout << "Ring " << ring << endl;
             if(ring == -1)
                 return;
-
+            
             size_t target = graph.GetParentRing(ring);
-
+            
             // cout << "Target " << target << endl;
+            if((int)target == ring)
+                return;
+            
+            static const int order = 30;
+            
+            if(sangles.size() == order) {
+                cury += Mean(sangles, 1.0 / 3.0);
+                CreateRotationY(cury, compassDrift);
+                cout << "FilteredBias: " << cury << endl;
+            }
+           // CreateRotationY(cury, compassDrift);
 
-            if((int)target != ring) {
-                if(async) {
-                    if(worker->Finished()) {
-                        if(!next->IsLoaded()) {
-                            //Pre-load the image. 
-                            next->LoadFromDataRef();
-                        }
-                        worker->Push(next);
-                    }
-                } else {
+            if(async) {
+                if(worker->Finished()) {
                     if(!next->IsLoaded()) {
                         //Pre-load the image. 
                         next->LoadFromDataRef();
                     }
-                    alignOp(next);
+                    worker->Push(next);
                 }
+            } else {
+                if(!next->IsLoaded()) {
+                    //Pre-load the image. 
+                    next->LoadFromDataRef();
+                }
+                alignOp(next);
             }
                 
             Mat tmp;
-            CreateRotationY(lasty, tmp);
+            //CreateRotationY(lasty, tmp);
 
-            next->adjustedExtrinsics = tmp * next->adjustedExtrinsics;
+            //next->adjustedExtrinsics = tmp * next->adjustedExtrinsics;
+            next->adjustedExtrinsics = compassDrift * next->originalExtrinsics;
 
-         //   sangles.push_back(lasty + cury);
+            sangles.push_back(lasty);
  
- //           if(sangles.size() > order) {
-   //             sangles.pop_front();
-     //       }
+            if(sangles.size() > order) {
+               sangles.pop_front();
+            }
         }
 
 		Mat GetCurrentRotation() const {

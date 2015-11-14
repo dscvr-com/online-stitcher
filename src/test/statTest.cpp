@@ -1,6 +1,6 @@
 #include <vector>
-#include "math/stat.hpp"
-#include "common/assert.hpp"
+#include "../math/stat.hpp"
+#include "../common/assert.hpp"
 
 using namespace std;
 using namespace optonaut;
