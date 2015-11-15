@@ -13,7 +13,7 @@ namespace optonaut {
 static const bool debug = true;
 
 struct PlanarCorrelationResult {
-    Point offset;
+    cv::Point offset;
     size_t n; 
     double variance;
 };
@@ -55,17 +55,17 @@ class BruteForcePlanarAligner {
         }
 
 
-        return { Point(mx + ox, my + oy), static_cast<size_t>(wx * 2 + wy * 2), var.Result() };
+        return { cv::Point(mx + ox, my + oy), static_cast<size_t>(wx * 2 + wy * 2), var.Result() };
     }
 };
 
 template <typename Correlator>
 class PyramidPlanarAligner {
     private:
-    static inline Point AlignInternal(const Mat &a, const Mat &b, double wx, double wy, int dskip, int depth, VariancePool<double> &pool) {
+    static inline cv::Point AlignInternal(const Mat &a, const Mat &b, double wx, double wy, int dskip, int depth, VariancePool<double> &pool) {
         const int minSize = 4;
 
-        Point res;
+        cv::Point res;
         Mat corr(0, 0, CV_32F);
 
         if(a.cols > minSize / wx && b.cols > minSize / wx 
@@ -75,7 +75,7 @@ class PyramidPlanarAligner {
             pyrDown(a, ta);
             pyrDown(b, tb);
 
-            Point guess = PyramidPlanarAligner<Correlator>::AlignInternal(ta, tb, wx, wy, dskip - 1, depth + 1, pool);
+            cv::Point guess = PyramidPlanarAligner<Correlator>::AlignInternal(ta, tb, wx, wy, dskip - 1, depth + 1, pool);
             if(dskip > 0) {
                 res = guess * 2;
             } else {
@@ -99,7 +99,7 @@ class PyramidPlanarAligner {
     public:
     static inline PlanarCorrelationResult Align(const Mat &a, const Mat &b, double wx = 0.5, double wy = 0.5, int dskip = 0) {
         VariancePool<double> pool;
-        Point res = PyramidPlanarAligner<Correlator>::AlignInternal(a, b, wx, wy, dskip, 0, pool);
+        cv::Point res = PyramidPlanarAligner<Correlator>::AlignInternal(a, b, wx, wy, dskip, 0, pool);
 
         //debug - draw resulting image. 
         if(debug && dskip > 0) {

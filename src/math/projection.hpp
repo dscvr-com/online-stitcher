@@ -154,7 +154,7 @@ namespace optonaut {
      *
      * @returns The roi of the overlapping image area of b. 
      */
-    static inline Rect GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, const Image &bi, Mat &overlapA, Mat &overlapB, int buffer, Point &appliedBorder) {
+    static inline cv::Rect GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, const Image &bi, Mat &overlapA, Mat &overlapB, int buffer, cv::Point &appliedBorder) {
         Mat hom(3, 3, CV_64F);
         Mat rot(4, 4, CV_64F);
 
@@ -185,8 +185,8 @@ namespace optonaut {
         vector<Point2f> corners = GetSceneCorners(ai, hom);
         cv::Rect roi = GetInnerBoxForScene(corners);
         
-        Rect roib = cv::Rect(roi.x, roi.y, roi.width, roi.height);
-        Rect roia = cv::Rect(roi.x, roi.y, roi.width, roi.height);
+        cv::Rect roib = cv::Rect(roi.x, roi.y, roi.width, roi.height);
+        cv::Rect roia = cv::Rect(roi.x, roi.y, roi.width, roi.height);
 
         roia = roia & cv::Rect(0, 0, ai.cols, ai.rows);
         roib = roib & cv::Rect(0, 0, bi.cols, bi.rows);
@@ -205,7 +205,7 @@ namespace optonaut {
     }
  
     static inline void GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, const Image &bi, Mat &overlapA, Mat &overlapB) {
-        Point dummy;
+        cv::Point dummy;
         GetOverlappingRegion(a, b, ai, bi, overlapA, overlapB, 0, dummy);
     }
     

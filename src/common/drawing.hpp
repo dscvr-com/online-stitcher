@@ -60,8 +60,8 @@ namespace optonaut {
 
     static inline void DrawMatchingResults(const Mat &homography, const Mat &homographyFromRot, const Mat &a, const Mat &b, Mat &target) {
         
-        a.copyTo(target(Rect(0, 0, a.cols, a.rows)));
-        b.copyTo(target(Rect(a.cols, 0, b.cols, b.rows)));
+        a.copyTo(target(cv::Rect(0, 0, a.cols, a.rows)));
+        b.copyTo(target(cv::Rect(a.cols, 0, b.cols, b.rows)));
 
         DrawMatchingHomographyBorder(homography, a, Scalar(0, 255, 0), target);
         DrawMatchingHomographyBorder(homographyFromRot, a, Scalar(255, 0, 0), target);

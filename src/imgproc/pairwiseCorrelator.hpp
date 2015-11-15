@@ -45,13 +45,13 @@ public:
         
         Mat wa, wb;
 
-        Point appliedBorder;
-        Rect overlappingRoi = GetOverlappingRegion(a, b, a->image, b->image, wa, wb, a->image.cols * 0.2, appliedBorder);
+        cv::Point appliedBorder;
+        cv::Rect overlappingRoi = GetOverlappingRegion(a, b, a->image, b->image, wa, wb, a->image.cols * 0.2, appliedBorder);
 
         cTimer.Tick("Overlap found");
 
         PlanarCorrelationResult res = Aligner::Align(wa, wb, 0.25, 0.25, 1);
-        Point correctedRes = res.offset + appliedBorder; 
+        cv::Point correctedRes = res.offset + appliedBorder;
         
         double h = b->intrinsics.at<double>(0, 0) * (b->image.cols / (b->intrinsics.at<double>(0, 2) * 2));
         double olXA = (overlappingRoi.x + correctedRes.x - b->image.cols / 2) / h;

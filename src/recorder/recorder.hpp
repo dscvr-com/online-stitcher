@@ -66,6 +66,8 @@ namespace optonaut {
         STimer monoTimer;
         STimer pipeTimer;
         
+        InputImageP last;
+        
         InputImageP GetParentKeyframe(const Mat &extrinsics) {
             return aligner->GetClosestKeyframe(extrinsics);
         }
@@ -127,7 +129,7 @@ namespace optonaut {
         }
         
         Mat ConvertFromStitcher(const Mat &in) const {
-            assert(false); //Dangerous to use. Allocation error. 
+            //assert(false); //Dangerous to use. Allocation error.
             return (zero.inv() * baseInv * in * base).inv();
         }
         
@@ -154,8 +156,8 @@ namespace optonaut {
         }
 
         Mat GetCurrentRotation() const {
-            assert(false); //Wrong semantics.
-            return ConvertFromStitcher(aligner->GetCurrentBias());
+            
+            return ConvertFromStitcher(last->adjustedExtrinsics);
         }
 
         vector<SelectionPoint> GetSelectionPoints() const {
@@ -186,7 +188,7 @@ namespace optonaut {
         
         void StitchImages(const StereoPair &pair) {
             cout << "Stitch" << endl;
-
+            
             assert(pair.a.image->IsLoaded());
             assert(pair.b.image->IsLoaded());
 
@@ -277,6 +279,8 @@ namespace optonaut {
     
         void Push(InputImageP image) {
             //cout << "Pipeline Push called by " << std::this_thread::get_id() << endl;
+            
+            last = image;
 
             if(isFinished) {
                 cout << "Push after finish warning - this could be a racing condition" << endl;
