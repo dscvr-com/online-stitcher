@@ -115,19 +115,19 @@ namespace optonaut {
                 //Todo: Bias intensity is probably dependent on image size. 
                 CorrelationDiff corr = visual.Match(next, closest);
                 aTime.Tick("Aligned");
-               
-                if(corr.valid) { 
-                    double angleY = corr.horizontalAngularOffset;
-                    
-                    while(angleY < -M_PI)
-                        angleY = M_PI * 2 + angleY;
-                    
-                    lasty = angleY;
+
+                double angleY = corr.horizontalAngularOffset;
                 
-                    cout << "AngularDiffBias: " << lasty << endl;
-                    cout << "AbsDiffBias: " << corr.offset.x << endl;
-                    cout << "Variance: " << corr.variance << endl;
+                while(angleY < -M_PI)
+                    angleY = M_PI * 2 + angleY;
+                
+                //Check variance. Value of 10^6 guessed via chart observation. 
+                if(corr.valid && corr.variance > 1000) { 
+                    lasty = angleY;
                 }
+                cout << "AngularDiffBias: " << lasty << endl;
+                cout << "AbsDiffBias: " << corr.offset.x << endl;
+                cout << "Variance: " << corr.variance << endl;
             }
 
             return lasty;
@@ -160,7 +160,7 @@ namespace optonaut {
             if((int)target == ring)
                 return;
             
-            static const int order = 30;
+            static const int order = 60;
             
             if(sangles.size() == order) {
                 cury = Mean(sangles, 1.0 / 3.0);

@@ -27,7 +27,7 @@ namespace optonaut {
         Mat extrinsics;
         
         SelectionPoint() : globalId(0),
-            localId(0), ringId(0), hPos(0), vPos(0), hFov(0), vFov(0) {
+            localId(0), ringId(0), hPos(0), vPos(0), hFov(0), vFov(0), extrinsics(0, 0, CV_64F) {
         }
     };
     

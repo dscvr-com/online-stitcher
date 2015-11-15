@@ -106,7 +106,7 @@ namespace optonaut {
                     },
                 std::bind(&Recorder::FinishImage, 
                     this, placeholders::_1)),
-            alignerQueue(30, std::bind(&Recorder::ApplyAlignment, 
+            alignerQueue(60, std::bind(&Recorder::ApplyAlignment, 
                 this, placeholders::_1)),
             stereoProcessor([this] (const StereoPair &a) { StitchImages(a); })
         {
@@ -227,9 +227,6 @@ namespace optonaut {
 
         void ApplyAlignment(InputImageP image) {
 
-            cout << "Apply correction to image " << image->id << endl;
-            cout << aligner->GetCurrentBias() << endl;
-
             image->adjustedExtrinsics = aligner->GetCurrentBias() * image->originalExtrinsics;
 
             if(!controller.IsInitialized())
@@ -246,8 +243,9 @@ namespace optonaut {
             }
 
             if(current.isValid) {
-                if(!current.image->IsLoaded())
-                    current.image->LoadFromDataRef();
+                AssertM(current.image->IsLoaded(), "Image is loaded");
+                //if(!current.image->IsLoaded())
+                //    current.image->LoadFromDataRef();
                 
                 if(current.closestPoint.globalId != 
                         currentBest.closestPoint.globalId) {
@@ -289,9 +287,9 @@ namespace optonaut {
             
             ConvertToStitcher(image->originalExtrinsics, image->originalExtrinsics);
             image->adjustedExtrinsics = image->originalExtrinsics;
-            
-            if(aligner->NeedsImageData() && !image->IsLoaded()) {
-                //If the aligner needs image data, pre-load the image.
+           
+            //Load all the images.  
+            if(!image->IsLoaded()) {
                 image->LoadFromDataRef();
             }
             

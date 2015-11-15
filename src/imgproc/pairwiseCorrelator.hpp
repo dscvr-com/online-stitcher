@@ -50,7 +50,7 @@ public:
 
         cTimer.Tick("Overlap found");
 
-        PlanarCorrelationResult res = Aligner::Align(wa, wb, 0.5, 0.5, 1);
+        PlanarCorrelationResult res = Aligner::Align(wa, wb, 0.25, 0.25, 1);
         Point correctedRes = res.offset + appliedBorder; 
         
         double h = b->intrinsics.at<double>(0, 0) * (b->image.cols / (b->intrinsics.at<double>(0, 2) * 2));
