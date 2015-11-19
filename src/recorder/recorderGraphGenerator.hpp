@@ -24,6 +24,8 @@ private:
 	//Horizontal and Vertical overlap in percent. 
 	const double hOverlap = 0.9;
 	const double vOverlap = 0.25;
+
+    static const bool debug = false;
     
     Mat intrinsics;
 
@@ -66,11 +68,11 @@ public:
             vStart = (M_PI - (vFov * 3)) / 2;
             
         } else if(mode == RecorderGraph::ModeCenter) {
-            assert(true); //Not implemented and probably not needed any more.
+            vCount = 1;
+            vStart = M_PI / 2 - (vFov / 2);
         } else {
             //Configuration for ModeAll
             vStart = maxVFov * vOverlap;
-            
             vFov = (M_PI - 2 * vStart) / vCount;
         }
 
@@ -112,6 +114,10 @@ public:
             RingProcessor<SelectionPoint> hqueue(1, createEdge, finish);
                     
             for(uint32_t j = 0; j < hCount; j++) {
+                if(debug) {
+                    cout << "Recorder Graph Pushing " << hLeft << ", " << vCenter << endl;
+                }
+
                 res.adj.push_back(vector<SelectionEdge>());
                 
                 hLeft = j * hFov;

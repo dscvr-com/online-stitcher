@@ -30,4 +30,8 @@ add_executable(perspective-aligner-test perspectiveAlignerTest.cpp)
 target_link_libraries(perspective-aligner-test ${OpenCV_LIBS})
 target_link_libraries(perspective-aligner-test optonaut-lib)
 
+add_executable(ring-closure-test ringClosureTest.cpp)
+target_link_libraries(ring-closure-test ${OpenCV_LIBS})
+target_link_libraries(ring-closure-test optonaut-lib)
+
 add_subdirectory(test)
