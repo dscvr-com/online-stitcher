@@ -38,9 +38,9 @@ namespace optonaut {
 
         const bool async;
 	public:
-		RingwiseStreamAligner(RecorderGraph &graph, ExposureCompensator &exposure, const bool async = true) :
+		RingwiseStreamAligner(RecorderGraph &graph, ExposureCompensator&, const bool async = true) :
             graph(graph), 
-            visual(exposure),
+            //visual(exposure),
             rings(graph.GetRings().size()), 
             compassDrift(Mat::eye(4, 4, CV_64F)), 
             lasty(0),

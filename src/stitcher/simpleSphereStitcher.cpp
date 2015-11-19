@@ -30,11 +30,9 @@ StitchingResultP SimpleSphereStitcher::Stitch(const std::vector<InputImageP> &in
         AssertEQ(image->adjustedExtrinsics.rows, 4);
         AssertEQ(image->adjustedExtrinsics.type(), CV_64F);
 
-        cout << "Extrinsics: " << image->adjustedExtrinsics << endl;
-
         images[i] = image->image.data;
         From4DoubleTo3Float(image->adjustedExtrinsics, cameras[i].R);
-        for(size_t j = 0; j < n; j++)
+        for(size_t j = 0; j < 3; j++)
             cameras[i].t.at<float>(j) = image->adjustedExtrinsics.at<double>(j, 3);
     }
 

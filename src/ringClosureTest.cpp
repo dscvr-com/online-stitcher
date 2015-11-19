@@ -67,14 +67,7 @@ int main(int argc, char** argv) {
     for(int i = 0; i < n; i++) {
         auto image = InputImageFromFile(files[i], false);
         image->originalExtrinsics = base * zero * image->originalExtrinsics.inv() * baseInv;
-        image->originalExtrinsics = image->originalExtrinsics.clone();
-        image->adjustedExtrinsics = image->originalExtrinsics.clone();
-        AssertEQ(image->adjustedExtrinsics.cols, 4);
-        AssertEQ(image->adjustedExtrinsics.rows, 4);
-        AssertEQ(image->adjustedExtrinsics.type(), CV_64F);
-
-        AssertGT(image->image.data.cols, 0);
-        AssertGT(image->image.data.rows, 0);
+        image->adjustedExtrinsics = image->originalExtrinsics;
 
         if(!controller.IsInitialized())
             controller.Initialize(image->adjustedExtrinsics);
@@ -87,13 +80,6 @@ int main(int argc, char** argv) {
                     currentBest.closestPoint.globalId) {
                 ring.push_back(currentBest.image);
         
-                AssertEQ(currentBest.image->adjustedExtrinsics.cols, 4);
-        AssertEQ(currentBest.image->adjustedExtrinsics.rows, 4);
-        AssertEQ(currentBest.image->adjustedExtrinsics.type(), CV_64F);
-
-        AssertGT(currentBest.image->image.data.cols, 0);
-        AssertGT(currentBest.image->image.data.rows, 0);
-
                 cout << "Found " << ring.size() << " images." << endl;
             }
             
@@ -103,9 +89,30 @@ int main(int argc, char** argv) {
                 i = n;
         }
     }
-
+    
     auto scene = stitcher.Stitch(ring);
     imwrite("dbg/extracted_ring.jpg", scene->image.data);
+
+    //Wooop woop ring closure
+    //#######################
+   
+    PairwiseCorrelator corr;
+
+    auto result = corr.Match(ring.front(), ring.back()); 
+
+    n = ring.size();
+
+    for(int i = 0; i < n; i++) {
+        double ydiff = result.horizontalAngularOffset * (1.0 - ((double)i) / ((double)n));
+        Mat correction;
+        CreateRotationY(ydiff, correction);
+        ring[i]->adjustedExtrinsics = correction * ring[i]->adjustedExtrinsics;
+    }
+
+    //#######################
+
+    scene = stitcher.Stitch(ring);
+    imwrite("dbg/adjusted_ring.jpg", scene->image.data);
 
     return 0;
 }
