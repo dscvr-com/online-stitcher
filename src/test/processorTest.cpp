@@ -1,6 +1,7 @@
 #include <vector>
 #include <string>
 #include "../common/queueProcessor.hpp"
+#include "../common/reduceProcessor.hpp"
 #include "../common/ringProcessor.hpp"
 #include "../common/assert.hpp"
 
@@ -99,4 +100,16 @@ int main(int, char**) {
     AssertEQM(lastReceived, count - 1, "All elements were delayed.");
 
     cout << "[\u2713] Queue processor module." << endl;
+    
+    ReduceProcessor<int, int> reducer(std::plus<int>(), 0);
+
+    int sum = 0;
+
+    for(int i = 0; i < 25; i++) {
+        sum += i;
+        AssertEQ(reducer.Push(i), sum);
+    }
+    AssertEQ(reducer.GetState(), sum);
+
+    cout << "[\u2713] Reduce processor module." << endl;
 }
