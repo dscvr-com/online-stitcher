@@ -117,7 +117,7 @@ StitchingResultP RingStitcher::Stitch(const std::vector<InputImageP> &in, const 
 
 
     //Seam finder function. 
-    auto findSeams = [&] (StitchingResultP &a, StitchingResultP &b) {
+    auto findSeams = [&] (const StitchingResultP &a, const StitchingResultP &b) {
 
             Point aCorner = a->corner;
 
@@ -141,7 +141,7 @@ StitchingResultP RingStitcher::Stitch(const std::vector<InputImageP> &in, const 
     };
 
     //Stitcher feed function. 
-    auto feed = [&] (StitchingResultP &in) {
+    auto feed = [&] (const StitchingResultP &in) {
 
             STimer feedTimer;
 

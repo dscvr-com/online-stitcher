@@ -9,16 +9,16 @@ namespace optonaut {
     template <typename InType, typename OutType>
 	class ReduceProcessor {
 	private:
-        function<OutType(OutType&, InType&)> reduce;
+        const function<OutType(const OutType&, const InType&)> reduce;
         OutType state;
     public:
-        ReduceProcessor(function<OutType(OutType&, InType&)> op, 
+        ReduceProcessor(function<OutType(const OutType&, const InType&)> op, 
                 const OutType &initial) : 
             reduce(op),
             state(initial) {
         }
 
-        const OutType& Push(InType &in) {
+        const OutType& Push(const InType &in) {
             state = reduce(state, in);
             return state;
         }

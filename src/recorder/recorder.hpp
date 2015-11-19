@@ -2,10 +2,12 @@
 #include "../io/checkpointStore.hpp"
 #include "../stereo/monoStitcher.hpp"
 #include "../common/ringProcessor.hpp"
+#include "../common/functional.hpp"
 #include "../common/queueProcessor.hpp"
 #include "../common/asyncQueueWorker.hpp"
 #include "../common/static_timer.hpp"
 #include "../common/progressCallback.hpp"
+#include "../common/reduceProcessor.hpp"
 #include "../stitcher/simpleSphereStitcher.hpp"
 
 #include "recorderGraph.hpp"
@@ -22,7 +24,6 @@
 
 namespace optonaut {
     
-    
     struct StereoPair {
         SelectionInfo a;
         SelectionInfo b;
@@ -37,7 +38,6 @@ namespace optonaut {
         Mat zero;
 
         shared_ptr<Aligner> aligner;
-        SelectionInfo currentBest;
         
         CheckpointStore leftStore;
         CheckpointStore rightStore;
@@ -51,6 +51,7 @@ namespace optonaut {
 
         bool isIdle;
         bool isFinished;
+        bool firstRingFinished;
         
         RecorderGraphGenerator generator;
         RecorderGraph recorderGraph;
@@ -59,9 +60,12 @@ namespace optonaut {
         uint32_t imagesToRecord;
         uint32_t recordedImages;
 
+        ReduceProcessor<SelectionInfo, SelectionInfo> selectorQueue;
         RingProcessor<SelectionInfo> monoQueue;
         QueueProcessor<InputImageP> alignerQueue;
         AsyncQueue<StereoPair> stereoProcessor;
+
+        vector<SelectionInfo> firstRing;
         
         STimer monoTimer;
         STimer pipeTimer;
@@ -94,23 +98,28 @@ namespace optonaut {
             stereoConverter(),
             isIdle(false),
             isFinished(false),
+            firstRingFinished(false),
             generator(),
             recorderGraph(generator.Generate(intrinsics, graphConfiguration)),
             controller(recorderGraph),
             imagesToRecord(recorderGraph.Size()),
             recordedImages(0),
+            selectorQueue(
+                std::bind(&Recorder::SelectBetterMatch,
+                    this, placeholders::_1,
+                    placeholders::_2), SelectionInfo()),
             monoQueue(1,
-                    [this] (const SelectionInfo &a, const SelectionInfo &b) {
-                        StereoPair pair;
-                        pair.a = a;
-                        pair.b = b;
-                        stereoProcessor.Push(pair);
-                    },
+                std::bind(&Recorder::ForwardToStereoQueue, 
+                    this, placeholders::_1,
+                    placeholders::_2),
                 std::bind(&Recorder::FinishImage, 
                     this, placeholders::_1)),
-            alignerQueue(60, std::bind(&Recorder::ApplyAlignment, 
-                this, placeholders::_1)),
-            stereoProcessor([this] (const StereoPair &a) { StitchImages(a); })
+            alignerQueue(60, 
+                std::bind(&Recorder::ApplyAlignment, 
+                    this, placeholders::_1)),
+            stereoProcessor(
+                std::bind(&Recorder::StitchImages, 
+                    this, placeholders::_1))
         {
             baseInv = base.inv();
             zero = zeroWithoutBase;
@@ -127,9 +136,15 @@ namespace optonaut {
                 aligner = shared_ptr<Aligner>(new TrivialAligner());
             }
         }
+
+        void ForwardToStereoQueue(const SelectionInfo &a, const SelectionInfo &b) {
+            StereoPair pair;
+            pair.a = a;
+            pair.b = b;
+            stereoProcessor.Push(pair);
+        }
         
         Mat ConvertFromStitcher(const Mat &in) const {
-            //assert(false); //Dangerous to use. Allocation error.
             return (zero.inv() * baseInv * in * base).inv();
         }
         
@@ -137,7 +152,7 @@ namespace optonaut {
             out = (base * zero * in.inv() * baseInv);
         }
        
-        //TODO: Rename all ball methods.  
+        //TODO: Rename/Remove all ball methods.  
         Mat GetBallPosition() const {
             return ConvertFromStitcher(controller.GetBallPosition());
         }
@@ -182,7 +197,7 @@ namespace optonaut {
             stereoProcessor.Dispose();
         }
         
-        void FinishImage(SelectionInfo &fin) {
+        void FinishImage(const SelectionInfo &fin) {
             ExposureFeed(fin.image);
         }   
         
@@ -226,6 +241,115 @@ namespace optonaut {
                 exposure.Register(a, b);
             }
         }
+        
+        void ForwardToMonoQueue(const SelectionInfo &in) {
+            if(!firstRingFinished) {
+                firstRing.push_back(in);    
+            } else {
+                ForwardToMonoQueueEx(in);
+            }
+        }
+
+        void FinishFirstRing() {
+            AssertM(!firstRingFinished, "First ring has not been closed");
+            firstRingFinished = true;
+
+            PairwiseCorrelator corr;
+            auto result = corr.Match(firstRing.back().image, firstRing.front().image); 
+            int n = firstRing.size();
+
+            for(int i = 0; i < n; i++) {
+                double ydiff = result.horizontalAngularOffset * 
+                    (1.0 - ((double)i) / ((double)n));
+                Mat correction;
+                CreateRotationY(ydiff, correction);
+                firstRing[i].image->adjustedExtrinsics = correction * 
+                    firstRing[i].image->adjustedExtrinsics;
+
+            }
+
+            auto images = fun::map<SelectionInfo, InputImageP>(
+                        firstRing, 
+                        [] (const SelectionInfo &p) -> InputImageP { 
+                            return p.image; 
+                        });
+            
+            //Debug 
+            //SimpleSphereStitcher stitcher;
+            //auto scene = stitcher.Stitch(images);
+            //imwrite("dbg/extracted_ring.jpg", scene->image.data);
+    
+            //Re-select images.
+            for(int i = 0; i < n; i++) {
+                int picked = -1;
+                int distCur = 10;
+                for(int j = 0; j < n; j++) {
+
+                    if(images[j] == NULL)
+                        continue;
+
+                    double distCand = GetAngleOfRotation(
+                            images[j]->adjustedExtrinsics, 
+                            firstRing[i].closestPoint.extrinsics);
+
+                    if(distCur < distCand || picked == -1) {
+                        distCur = distCand;
+                        picked = i;
+                    }
+                }
+                AssertGTM(picked, -1, "Must pick an image."); 
+                firstRing[i].image = images[picked];
+                firstRing[i].dist = distCur;
+                images[picked] = NULL;
+                ForwardToMonoQueueEx(firstRing[i]);
+            }
+           
+
+            firstRing.clear();
+        }
+
+        void ForwardToMonoQueueEx(const SelectionInfo &in) {
+            //Stitch - case additional ring. 
+            monoQueue.Push(in);
+            recordedImages++;
+            
+            if(recordedImages % 2 == 0) {     
+                //Save some memory by sparse keyframing. 
+                aligner->AddKeyframe(in.image);
+            }
+        }
+
+        void FlushMonoQueue() {
+            monoQueue.Flush();
+        }
+
+        SelectionInfo SelectBetterMatch(const SelectionInfo &best, const SelectionInfo &in) {
+            //Init case
+            if(!best.isValid)
+                return in;
+
+            //Invalid case
+            if(!in.isValid)
+                return best;
+            
+            if(best.closestPoint.globalId != in.closestPoint.globalId) {
+                //We will not get a better match. Can forward best.  
+                ForwardToMonoQueue(best);
+
+                //We Finished a ring. Flush. 
+                if(best.closestPoint.ringId != in.closestPoint.ringId) { 
+                    if(!firstRingFinished) {
+                        FinishFirstRing();
+                    }
+                    FlushMonoQueue();
+                }
+
+            } else {
+                AssertM(best.dist >= in.dist, "Recorder controller only returns better or equal matches");  
+            }
+
+            return in; 
+        }
 
         void ApplyAlignment(InputImageP image) {
 
@@ -238,41 +362,14 @@ namespace optonaut {
 
             if(isIdle)
                 return;
-            
-            if(!currentBest.isValid) {
-                //Initialization. 
-                currentBest = current;
-            }
-
-            if(current.isValid) {
-                AssertM(current.image->IsLoaded(), "Image is loaded");
-                //if(!current.image->IsLoaded())
-                //    current.image->LoadFromDataRef();
-                
-                if(current.closestPoint.globalId != 
-                        currentBest.closestPoint.globalId) {
-            cout << "Valid Frame:  " << image->id << endl;
-                    
-                    if(recordedImages % 2 == 0) {     
-                        //Save some memory by sparse keyframing. 
-                        aligner->AddKeyframe(currentBest.image);
-                    }
-                    //Ok, hit that. We can stitch.
-                    monoQueue.Push(currentBest);
-                    recordedImages++;
-                    
-                    if(current.closestPoint.ringId != 
-                            currentBest.closestPoint.ringId) { 
-                        monoQueue.Flush();
-                    }
-                }
-                
-                currentBest = current;
-            }
+           
+            selectorQueue.Push(current); 
             
             if(recordedImages == imagesToRecord) {
-                monoQueue.Push(currentBest);
-                monoQueue.Flush();
+                //Special Case for last image. 
+                SelectionInfo last = selectorQueue.GetState();
+                monoQueue.Push(last);
+                FlushMonoQueue();
                 isFinished = true;
             }
         }
@@ -335,7 +432,7 @@ namespace optonaut {
         }
         
         SelectionInfo CurrentPoint() {
-            return currentBest;
+            return selectorQueue.GetState();
         }
         
         bool IsIdle() {

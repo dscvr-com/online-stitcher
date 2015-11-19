@@ -1,4 +1,4 @@
-////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////
 //
 // Beem mono stitcher test by Emi
 //
@@ -13,6 +13,7 @@
 #include <opencv2/stitching/detail/warpers.hpp>
 
 #include "../common/image.hpp"
+#include "../common/assert.hpp"
 #include "../math/quat.hpp"
 #include "../math/support.hpp"
 #include "../recorder/recorderController.hpp"
@@ -29,8 +30,8 @@ Rect CornersToRoi(const vector<Point2f> &corners) {
     float y = min2(corners[2].y, corners[3].y);
     float width = max2(corners[1].x, corners[2].x) - x;
     float height = max2(corners[0].y, corners[1].y) - y;
-    assert(width > 0);
-    assert(height > 0);
+    AssertGTM(width, 0, "Transformation is mirrored.");
+    AssertGTM(height, 0, "Transformation is mirrored.");
     Rect roi(x, y, width, height); 
 
     return roi;
@@ -90,7 +91,7 @@ void GetTargetRoi(const SelectionPoint &a, const SelectionPoint &b, Mat &center,
 }
 
 void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo) {
-
+   cout << "Mono processing " << a.image->id << " and " << b.image->id << endl; 
     const static bool debug = false;
 
     Mat k;

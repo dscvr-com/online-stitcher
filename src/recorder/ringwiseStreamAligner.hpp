@@ -124,6 +124,8 @@ namespace optonaut {
                 //Check variance. Value of 10^6 guessed via chart observation. 
                 if(corr.valid && corr.variance > 1000) { 
                     lasty = angleY;
+                } else {
+                    lasty = cury;
                 }
                 cout << "AngularDiffBias: " << lasty << endl;
                 cout << "AbsDiffBias: " << corr.offset.x << endl;

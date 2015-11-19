@@ -12,27 +12,27 @@ namespace optonaut {
 	private:
         const size_t length;
 
-        function<void(InType&)> start;
-        function<void(InType&)> finish;
+        const function<void(const InType&)> start;
+        const function<void(const InType&)> finish;
 
         deque<InType> buffer;
     public:
         QueueProcessor(size_t length, 
-                function<void(InType&)> onFinish) : 
+                function<void(const InType&)> onFinish) : 
             length(length),
-            start([] (InType&) {}),
+            start([] (const InType&) {}),
             finish(onFinish) {
         }
 
         QueueProcessor(size_t length, 
-                function<void(InType&)> onStart,
-                function<void(InType&)> onFinish) : 
+                function<void(const InType&)> onStart,
+                function<void(const InType&)> onFinish) : 
             length(length),
             start(onStart),
             finish(onFinish) {
         }
         
-        void Push(InType &in) {
+        void Push(const InType &in) {
 
             start(in);
 

@@ -54,7 +54,6 @@ int main(int argc, char** argv) {
     RecorderController controller(graph);
 
     SelectionInfo currentBest;
-    SimpleSphereStitcher stitcher;
         
     auto base = Recorder::iosBase;
     auto zero = Recorder::iosZero;
@@ -90,6 +89,7 @@ int main(int argc, char** argv) {
         }
     }
     
+    SimpleSphereStitcher stitcher;
     auto scene = stitcher.Stitch(ring);
     imwrite("dbg/extracted_ring.jpg", scene->image.data);
 

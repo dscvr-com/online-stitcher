@@ -98,7 +98,7 @@ public:
 
 			res.targets.push_back(vector<SelectionPoint>(hCount));
 
-            auto createEdge = [&res] (SelectionPoint &a, SelectionPoint &b) {
+            auto createEdge = [&res] (const SelectionPoint &a, const SelectionPoint &b) {
                 SelectionEdge edge;
                 edge.from = a.globalId;
                 edge.to = b.globalId;
@@ -107,7 +107,7 @@ public:
                 res.adj[edge.from].push_back(edge);
             };
 
-            auto finish = [&res] (SelectionPoint &a) {
+            auto finish = [&res] (const SelectionPoint &a) {
                 res.targets[a.ringId][a.localId] = a;
             };
 

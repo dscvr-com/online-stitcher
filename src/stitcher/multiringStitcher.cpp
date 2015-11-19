@@ -27,21 +27,21 @@ namespace optonaut {
     
     STimer stitcherTimer;
 
-    static void LoadSRP(StitchingResultP &a) {
+    static void LoadSRP(const StitchingResultP &a) {
         a->image.Load();
         a->mask.Load(CV_LOAD_IMAGE_GRAYSCALE);
     }
     
-    static void LoadSRPGrayscaleDropMask(StitchingResultP &a) {
+    static void LoadSRPGrayscaleDropMask(const StitchingResultP &a) {
         a->image.Load(CV_LOAD_IMAGE_GRAYSCALE);
     }
 
-    static void UnLoadSRP(StitchingResultP &a) {
+    static void UnLoadSRP(const StitchingResultP &a) {
         a->image.Unload();
         a->mask.Unload();
     } 
     
-    void UnLoadSRPStoreMask(CheckpointStore &store, StitchingResultP &a) {
+    void UnLoadSRPStoreMask(CheckpointStore &store, const StitchingResultP &a) {
         a->image.Unload();
         a->seamed = true;
         cout << "Saving mask" << a->id << endl;
@@ -51,7 +51,7 @@ namespace optonaut {
          
     void MultiRingStitcher::AdjustCorners(std::vector<StitchingResultP> &rings, ProgressCallback &progress) {
 
-        auto correlate = [this] (StitchingResultP &imgA, StitchingResultP &imgB) {
+        auto correlate = [this] (const StitchingResultP &imgA, const StitchingResultP &imgB) {
             const int warp = MOTION_TRANSLATION;
             Mat affine = Mat::eye(2, 3, CV_32F);
 
