@@ -5,6 +5,7 @@
 #include <opencv2/stitching.hpp>
 
 #include "simpleSphereStitcher.hpp"
+#include "../common/assert.hpp"
 
 using namespace std;
 using namespace cv;
@@ -20,10 +21,21 @@ StitchingResultP SimpleSphereStitcher::Stitch(const std::vector<InputImageP> &in
     vector<cv::detail::CameraParams> cameras(n);
 
     for(size_t i = 0; i < n; i++) {
-        images[i] = in[i]->image.data;
-        From4DoubleTo3Float(in[i]->adjustedExtrinsics, cameras[i].R);
+
+        auto image = in[i];
+
+        AssertEQ(image->image.data.cols, image->image.cols);
+        AssertEQ(image->image.data.rows, image->image.rows);
+        AssertEQ(image->adjustedExtrinsics.cols, 4);
+        AssertEQ(image->adjustedExtrinsics.rows, 4);
+        AssertEQ(image->adjustedExtrinsics.type(), CV_64F);
+
+        cout << "Extrinsics: " << image->adjustedExtrinsics << endl;
+
+        images[i] = image->image.data;
+        From4DoubleTo3Float(image->adjustedExtrinsics, cameras[i].R);
         for(size_t j = 0; j < n; j++)
-            cameras[i].t.at<float>(j) = in[i]->adjustedExtrinsics.at<double>(j, 3);
+            cameras[i].t.at<float>(j) = image->adjustedExtrinsics.at<double>(j, 3);
     }
 
 	//Create masks and small images for fast stitching. 
@@ -41,9 +53,11 @@ StitchingResultP SimpleSphereStitcher::Stitch(const std::vector<InputImageP> &in
 	vector<Size> warpedSizes(n);
 
 	for (size_t i = 0; i < n; i++) {
+        auto image = in[i];
+
        	Mat k;
         Mat scaledIntrinsics;
-        ScaleIntrinsicsToImage(in[i]->intrinsics, images[i], scaledIntrinsics, debug ? 10 : 1);
+        ScaleIntrinsicsToImage(image->intrinsics, images[i], scaledIntrinsics, debug ? 10 : 1);
         From3DoubleTo3Float(scaledIntrinsics, k);
 
         //Big

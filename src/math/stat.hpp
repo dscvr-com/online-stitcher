@@ -93,7 +93,7 @@ namespace optonaut {
         size_t start = in.size() * trim;
         size_t end = in.size() * (1 - trim);
 
-        AssertGT(end - start - 1, 1);
+        AssertGT(end - start, 1);
 
         T average = Mean(in, trim);
         

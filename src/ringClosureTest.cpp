@@ -53,7 +53,6 @@ int main(int argc, char** argv) {
     cout << "Graph generated" << endl;
     RecorderController controller(graph);
 
-    vector<InputImageP> ring;
     SelectionInfo currentBest;
     SimpleSphereStitcher stitcher;
         
@@ -62,11 +61,20 @@ int main(int argc, char** argv) {
     auto baseInv = base.t();
 
     size_t imagesToRecord = graph.Size();
+    vector<InputImageP> ring;
+    ring.reserve(imagesToRecord);
 
     for(int i = 0; i < n; i++) {
         auto image = InputImageFromFile(files[i], false);
         image->originalExtrinsics = base * zero * image->originalExtrinsics.inv() * baseInv;
+        image->originalExtrinsics = image->originalExtrinsics.clone();
         image->adjustedExtrinsics = image->originalExtrinsics.clone();
+        AssertEQ(image->adjustedExtrinsics.cols, 4);
+        AssertEQ(image->adjustedExtrinsics.rows, 4);
+        AssertEQ(image->adjustedExtrinsics.type(), CV_64F);
+
+        AssertGT(image->image.data.cols, 0);
+        AssertGT(image->image.data.rows, 0);
 
         if(!controller.IsInitialized())
             controller.Initialize(image->adjustedExtrinsics);
@@ -78,6 +86,13 @@ int main(int argc, char** argv) {
                     current.closestPoint.globalId != 
                     currentBest.closestPoint.globalId) {
                 ring.push_back(currentBest.image);
+        
+                AssertEQ(currentBest.image->adjustedExtrinsics.cols, 4);
+        AssertEQ(currentBest.image->adjustedExtrinsics.rows, 4);
+        AssertEQ(currentBest.image->adjustedExtrinsics.type(), CV_64F);
+
+        AssertGT(currentBest.image->image.data.cols, 0);
+        AssertGT(currentBest.image->image.data.rows, 0);
 
                 cout << "Found " << ring.size() << " images." << endl;
             }

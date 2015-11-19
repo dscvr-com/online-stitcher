@@ -8,10 +8,10 @@
 #ifndef OPTONAUT_ASSERT_HEADER
 #define OPTONAUT_ASSERT_HEADER
 
-#define AssertEQ(x, y) AssertEQ_(x, y, "", #x" != "#y)
-#define AssertEQM(x, y, msg) AssertEQ_(x, y, msg, #x" != "#y)
-#define AssertGT(x, y) AssertGT_(x, y, "", #x" != "#y)
-#define AssertGTM(x, y, msg) AssertGT_(x, y, msg, #x" != "#y)
+#define AssertEQ(x, y) AssertEQ_(x, y, "", #x" == "#y)
+#define AssertEQM(x, y, msg) AssertEQ_(x, y, msg, #x" == "#y)
+#define AssertGT(x, y) AssertGT_(x, y, "", #x" > "#y)
+#define AssertGTM(x, y, msg) AssertGT_(x, y, msg, #x" > "#y)
 #define Assert(x) Assert_(x, "", #x)
 #define AssertM(x, msg) Assert_(x, msg, #x)
 
@@ -47,7 +47,7 @@ namespace optonaut {
     
     template <typename T, typename V>
     inline void AssertGT_(T a, V b, std::string message, std::string vars) {
-        if(a < (T)b) {
+        if(a <= (T)b) {
             PrintAndTerminate(message, vars, ToString(a) + " < " + ToString(b));
         }
     }
