@@ -47,7 +47,7 @@ namespace optonaut {
     
     template <typename T, typename V>
     inline void AssertGT_(T a, V b, std::string message, std::string vars) {
-        if(a <= (T)b) {
+        if(a <= b) {
             PrintAndTerminate(message, vars, ToString(a) + " < " + ToString(b));
         }
     }

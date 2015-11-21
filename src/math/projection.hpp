@@ -158,6 +158,9 @@ namespace optonaut {
     static inline cv::Rect GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, const Image &bi, Mat &overlapA, Mat &overlapB, int buffer, cv::Point &appliedBorder) {
         Mat hom(3, 3, CV_64F);
         Mat rot(4, 4, CV_64F);
+        
+        AssertM(ai.IsLoaded(), "Input a exists");
+        AssertM(bi.IsLoaded(), "Input b exists");
 
         HomographyFromImages(a, b, hom, rot, ai.size());
 

@@ -23,7 +23,7 @@ bool CompareByFilename (const string &a, const string &b) {
 }
 
 
-void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &rightStore) {
+void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &rightStore, CheckpointStore &commonStore) {
 
     if(files.size() == 0) {
         cout << "No Input." << endl;
@@ -54,7 +54,7 @@ void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &
         image->dataRef.colorSpace = colorspace::RGB;
 
         if(i == 0) {
-            recorder = shared_ptr<Recorder>(new Recorder(Recorder::iosBase, Recorder::iosZero, image->intrinsics, leftStore, rightStore, RecorderGraph::ModeTruncated, isAsync));
+            recorder = shared_ptr<Recorder>(new Recorder(Recorder::iosBase, Recorder::iosZero, image->intrinsics, leftStore, rightStore, commonStore, RecorderGraph::ModeTruncated, isAsync));
         }
 
         recorder->Push(image);
@@ -79,6 +79,7 @@ int main(int argc, char** argv) {
 
     CheckpointStore leftStore("tmp/left/", "tmp/shared/");
     CheckpointStore rightStore("tmp/right/", "tmp/shared/");
+    CheckpointStore commonStore("tmp/common/", "tmp/shared/");
 
     cout << "Starting." << endl;
 
@@ -94,7 +95,7 @@ int main(int argc, char** argv) {
 
     if(!leftStore.HasUnstitchedRecording()) {
         cout << "Recording." << endl;
-        Record(files, leftStore, rightStore);
+        Record(files, leftStore, rightStore, commonStore);
     }
 
     if(!leftStore.HasUnstitchedRecording()) {

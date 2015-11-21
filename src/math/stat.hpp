@@ -26,7 +26,7 @@ namespace optonaut {
         }
 
         T Result() {
-            AssertGTM(n, 0, "Variance is undefined");
+            AssertGTM(n, (size_t)0, "Variance is undefined");
             if(n == 1)
                 return 0;
             return m2 / (n - 1);
@@ -93,7 +93,7 @@ namespace optonaut {
         size_t start = in.size() * trim;
         size_t end = in.size() * (1 - trim);
 
-        AssertGT(end - start, 1);
+        AssertGT(end - start, (size_t)1);
 
         T average = Mean(in, trim);
         

@@ -266,6 +266,8 @@ namespace optonaut {
             firstRingFinished = true;
 
             PairwiseCorrelator corr;
+            firstRingImagePool.back()->image.Load();
+            firstRingImagePool.front()->image.Load();
             auto result = corr.Match(firstRingImagePool.back(), firstRingImagePool.front()); 
             size_t n = firstRingImagePool.size();
 
@@ -311,15 +313,18 @@ namespace optonaut {
                     << " reassigned image " << firstRing[i].image->id << " to " 
                     << firstRingImagePool[picked]->id << " with dist: " 
                     << distCur << endl;
-                AssertGTM(i, -1, "Must pick image"); 
+                AssertGTM(picked, -1, "Must pick image"); 
                 firstRing[i].image = firstRingImagePool[picked];
                 firstRing[i].dist = distCur;
                 firstRingImagePool[picked] = NULL;
             }
 
-            for(int i = 0; i < m; i++) {
-                firstRing[i].image->image.Load();
+            for(size_t i = 0; i < m; i++) {
+                if(!firstRing[i].image->image.IsLoaded()) {
+                    firstRing[i].image->image.Load();
+                }
                 ForwardToMonoQueueEx(firstRing[i]);
+                firstRing[i].image = NULL; //Decrement our ref to the loaded instance
             }
            
             firstRingImagePool.clear();
@@ -333,6 +338,7 @@ namespace optonaut {
             
             if(recordedImages % 2 == 0) {
                 //Save some memory by sparse keyframing. 
+                assert(in.image->image.IsLoaded());
                 aligner->AddKeyframe(in.image);
             }
         }
