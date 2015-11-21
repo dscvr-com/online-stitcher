@@ -200,9 +200,9 @@ namespace optonaut {
         offset.at<double>(1, 2) = -roia.y; 
         
         hom = offset * hom;
-        
-        AssertGTM(roia.width, 0, "Overlapping region exists");
-        AssertGTM(roia.height, 0, "Overlapping region exists");
+        if(roia.width == 0 || roia.height == 0) {
+            return roia;
+        }
         
         warpPerspective(ai.data, overlapA, hom, roia.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
 

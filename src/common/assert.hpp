@@ -10,6 +10,8 @@
 
 #define AssertEQ(x, y) AssertEQ_(x, y, "", #x" == "#y)
 #define AssertEQM(x, y, msg) AssertEQ_(x, y, msg, #x" == "#y)
+#define AssertGE(x, y) AssertGE_(x, y, "", #x" >= "#y)
+#define AssertGEM(x, y, msg) AssertGE_(x, y, msg, #x" >= "#y)
 #define AssertGT(x, y) AssertGT_(x, y, "", #x" > "#y)
 #define AssertGTM(x, y, msg) AssertGT_(x, y, msg, #x" > "#y)
 #define Assert(x) Assert_(x, "", #x)
@@ -48,7 +50,14 @@ namespace optonaut {
     template <typename T, typename V>
     inline void AssertGT_(T a, V b, std::string message, std::string vars) {
         if(a <= b) {
-            PrintAndTerminate(message, vars, ToString(a) + " < " + ToString(b));
+            PrintAndTerminate(message, vars, ToString(a) + " > " + ToString(b));
+        }
+    }
+    
+    template <typename T, typename V>
+    inline void AssertGE_(T a, V b, std::string message, std::string vars) {
+        if(a < b) {
+            PrintAndTerminate(message, vars, ToString(a) + " >= " + ToString(b));
         }
     }
     

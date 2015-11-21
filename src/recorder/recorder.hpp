@@ -207,6 +207,13 @@ namespace optonaut {
         void StitchImages(const StereoPair &pair) {
             cout << "Stitch" << endl;
             
+            if(!pair.a.image->image.IsLoaded()) {
+                pair.a.image->image.Load();
+            }
+            if(!pair.b.image->image.IsLoaded()) {
+                pair.b.image->image.Load();
+            }
+            
             assert(pair.a.image->IsLoaded());
             assert(pair.b.image->IsLoaded());
 
@@ -306,7 +313,7 @@ namespace optonaut {
 
                     if(distCur > distCand || picked == -1) {
                         distCur = distCand;
-                        picked = j;
+                        picked = (int)j;
                     }
                 }
                 cout << "Selection Point " << firstRing[i].closestPoint.globalId
@@ -320,9 +327,6 @@ namespace optonaut {
             }
 
             for(size_t i = 0; i < m; i++) {
-                if(!firstRing[i].image->image.IsLoaded()) {
-                    firstRing[i].image->image.Load();
-                }
                 ForwardToMonoQueueEx(firstRing[i]);
                 firstRing[i].image = NULL; //Decrement our ref to the loaded instance
             }
@@ -332,15 +336,17 @@ namespace optonaut {
         }
 
         void ForwardToMonoQueueEx(const SelectionInfo &in) {
-            //Stitch - case additional ring. 
-            monoQueue.Push(in);
             recordedImages++;
             
             if(recordedImages % 2 == 0) {
-                //Save some memory by sparse keyframing. 
-                assert(in.image->image.IsLoaded());
+                //Save some memory by sparse keyframing.
+                if(!in.image->image.IsLoaded()) {
+                    in.image->image.Load();
+                }
                 aligner->AddKeyframe(in.image);
             }
+
+            monoQueue.Push(in);
         }
 
         void FlushMonoQueue() {
@@ -369,7 +375,9 @@ namespace optonaut {
                 }
 
             } else {
-                AssertM(best.dist >= in.dist, "Recorder controller only returns better or equal matches");  
+                if(!isFinished) {
+                    AssertM(best.dist >= in.dist, "Recorder controller only returns better or equal matches");
+                }
             }
             //Forward all for testing.  
             //if(!firstRingFinished) {
