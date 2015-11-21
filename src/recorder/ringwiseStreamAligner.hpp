@@ -110,11 +110,11 @@ namespace optonaut {
         function<int(InputImageP)> alignOp = [&] (InputImageP next) -> int {
             STimer aTime;
             InputImageP closest = GetClosestKeyframe(next->adjustedExtrinsics);
-            aTime.Tick("Keyframe found");
+            //aTime.Tick("Keyframe found");
             if(closest != NULL) {
                 //Todo: Bias intensity is probably dependent on image size. 
                 CorrelationDiff corr = visual.Match(next, closest);
-                aTime.Tick("Aligned");
+                //aTime.Tick("Aligned");
 
                 double angleY = corr.horizontalAngularOffset;
                 
@@ -127,9 +127,9 @@ namespace optonaut {
                 } else {
                     lasty = cury;
                 }
-                cout << "AngularDiffBias: " << lasty << endl;
-                cout << "AbsDiffBias: " << corr.offset.x << endl;
-                cout << "Variance: " << corr.variance << endl;
+                //cout << "AngularDiffBias: " << lasty << endl;
+                //cout << "AbsDiffBias: " << corr.offset.x << endl;
+                //cout << "Variance: " << corr.variance << endl;
             }
 
             return lasty;

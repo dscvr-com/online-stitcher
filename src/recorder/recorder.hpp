@@ -41,6 +41,7 @@ namespace optonaut {
         
         CheckpointStore leftStore;
         CheckpointStore rightStore;
+        CheckpointStore commonStore;
         
         vector<InputImageP> leftImages;
         vector<InputImageP> rightImages;
@@ -90,12 +91,13 @@ namespace optonaut {
         static bool alignmentEnabled;
         
         Recorder(Mat base, Mat zeroWithoutBase, Mat intrinsics, 
-                CheckpointStore &leftStore, CheckpointStore &rightStore, 
+                CheckpointStore &leftStore, CheckpointStore &rightStore, CheckpointStore &commonStore,
                 int graphConfiguration = RecorderGraph::ModeAll, 
                 bool isAsync = true) :
             base(base),
             leftStore(leftStore),
             rightStore(rightStore),
+            commonStore(commonStore),
             stereoConverter(),
             isIdle(false),
             isFinished(false),
@@ -252,6 +254,8 @@ namespace optonaut {
                     firstRing.push_back(in);    
                 }
                 firstRingImagePool.push_back(in.image);
+                commonStore.SaveStitcherTemporaryImage(in.image->image);
+                in.image->image.Unload();
             } else if(!poolOnly) {
                 ForwardToMonoQueueEx(in);
             }
@@ -263,11 +267,11 @@ namespace optonaut {
 
             PairwiseCorrelator corr;
             auto result = corr.Match(firstRingImagePool.back(), firstRingImagePool.front()); 
-            int n = firstRingImagePool.size();
+            size_t n = firstRingImagePool.size();
 
             cout << "Y horizontal angular offset: " << result.horizontalAngularOffset << endl; 
 
-            for(int i = 0; i < n; i++) {
+            for(size_t i = 0; i < n; i++) {
                 double ydiff = result.horizontalAngularOffset * 
                     (1.0 - ((double)i) / ((double)n));
                 Mat correction;
@@ -285,11 +289,11 @@ namespace optonaut {
     
             //Re-select images.
            
-            int m = firstRing.size(); 
-            for(int i = 0; i < m; i++) {
+            size_t m = firstRing.size();
+            for(size_t i = 0; i < m; i++) {
                 int picked = -1;
                 double distCur = 100;
-                for(int j = 0; j < n; j++) {
+                for(size_t j = 0; j < n; j++) {
 
                     if(firstRingImagePool[j] == NULL)
                         continue;
@@ -314,6 +318,7 @@ namespace optonaut {
             }
 
             for(int i = 0; i < m; i++) {
+                firstRing[i].image->image.Load();
                 ForwardToMonoQueueEx(firstRing[i]);
             }
            

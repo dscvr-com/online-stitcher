@@ -4,6 +4,7 @@
 
 #include "../io/inputImage.hpp"
 #include "../common/image.hpp"
+#include "../common/assert.hpp"
 #include "../common/support.hpp"
 #include "support.hpp"
 
@@ -195,8 +196,11 @@ namespace optonaut {
         offset.at<double>(0, 2) = -roia.x; 
         offset.at<double>(1, 2) = -roia.y; 
         
-        hom = offset * hom; 
-
+        hom = offset * hom;
+        
+        AssertGTM(roia.width, 0, "Overlapping region exists");
+        AssertGTM(roia.height, 0, "Overlapping region exists");
+        
         warpPerspective(ai.data, overlapA, hom, roia.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
 
         overlapB = bi.data(roib);
