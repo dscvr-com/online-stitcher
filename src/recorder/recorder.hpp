@@ -66,6 +66,7 @@ namespace optonaut {
         AsyncQueue<StereoPair> stereoProcessor;
 
         vector<SelectionInfo> firstRing;
+        vector<InputImageP> firstRingImagePool;
         
         STimer monoTimer;
         STimer pipeTimer;
@@ -242,10 +243,16 @@ namespace optonaut {
             }
         }
         
-        void ForwardToMonoQueue(const SelectionInfo &in) {
+        void ForwardToMonoQueue(const SelectionInfo &in, bool poolOnly = false) {
             if(!firstRingFinished) {
-                firstRing.push_back(in);    
-            } else {
+                if(!poolOnly && 
+                    (firstRing.size() == 0 
+                        || firstRing.back().closestPoint.globalId != 
+                        in.closestPoint.globalId)) {
+                    firstRing.push_back(in);    
+                }
+                firstRingImagePool.push_back(in.image);
+            } else if(!poolOnly) {
                 ForwardToMonoQueueEx(in);
             }
         }
@@ -255,56 +262,62 @@ namespace optonaut {
             firstRingFinished = true;
 
             PairwiseCorrelator corr;
-            auto result = corr.Match(firstRing.back().image, firstRing.front().image); 
-            int n = firstRing.size();
+            auto result = corr.Match(firstRingImagePool.back(), firstRingImagePool.front()); 
+            int n = firstRingImagePool.size();
+
+            cout << "Y horizontal angular offset: " << result.horizontalAngularOffset << endl; 
 
             for(int i = 0; i < n; i++) {
                 double ydiff = result.horizontalAngularOffset * 
                     (1.0 - ((double)i) / ((double)n));
                 Mat correction;
                 CreateRotationY(ydiff, correction);
-                firstRing[i].image->adjustedExtrinsics = correction * 
-                    firstRing[i].image->adjustedExtrinsics;
+                firstRingImagePool[i]->adjustedExtrinsics = correction * 
+                    firstRingImagePool[i]->adjustedExtrinsics;
 
+                cout << "Applying correction of " << ydiff << " to image " << firstRingImagePool[i]->id << endl;
             }
 
-            auto images = fun::map<SelectionInfo, InputImageP>(
-                        firstRing, 
-                        [] (const SelectionInfo &p) -> InputImageP { 
-                            return p.image; 
-                        });
-            
             //Debug 
-            //SimpleSphereStitcher stitcher;
+            //SimpleSphereStitchrer stitcher;
             //auto scene = stitcher.Stitch(images);
             //imwrite("dbg/extracted_ring.jpg", scene->image.data);
     
             //Re-select images.
-            for(int i = 0; i < n; i++) {
+           
+            int m = firstRing.size(); 
+            for(int i = 0; i < m; i++) {
                 int picked = -1;
-                int distCur = 10;
+                double distCur = 100;
                 for(int j = 0; j < n; j++) {
 
-                    if(images[j] == NULL)
+                    if(firstRingImagePool[j] == NULL)
                         continue;
 
-                    double distCand = GetAngleOfRotation(
-                            images[j]->adjustedExtrinsics, 
-                            firstRing[i].closestPoint.extrinsics);
+                    double distCand = abs(GetAngleOfRotation(
+                            firstRingImagePool[j]->adjustedExtrinsics, 
+                            firstRing[i].closestPoint.extrinsics));
 
-                    if(distCur < distCand || picked == -1) {
+                    if(distCur > distCand || picked == -1) {
                         distCur = distCand;
-                        picked = i;
+                        picked = j;
                     }
                 }
-                AssertGTM(picked, -1, "Must pick an image."); 
-                firstRing[i].image = images[picked];
+                cout << "Selection Point " << firstRing[i].closestPoint.globalId
+                    << " reassigned image " << firstRing[i].image->id << " to " 
+                    << firstRingImagePool[picked]->id << " with dist: " 
+                    << distCur << endl;
+                AssertGTM(i, -1, "Must pick image"); 
+                firstRing[i].image = firstRingImagePool[picked];
                 firstRing[i].dist = distCur;
-                images[picked] = NULL;
+                firstRingImagePool[picked] = NULL;
+            }
+
+            for(int i = 0; i < m; i++) {
                 ForwardToMonoQueueEx(firstRing[i]);
             }
            
-
+            firstRingImagePool.clear();
             firstRing.clear();
         }
 
@@ -313,7 +326,7 @@ namespace optonaut {
             monoQueue.Push(in);
             recordedImages++;
             
-            if(recordedImages % 2 == 0) {     
+            if(recordedImages % 2 == 0) {
                 //Save some memory by sparse keyframing. 
                 aligner->AddKeyframe(in.image);
             }
@@ -331,11 +344,11 @@ namespace optonaut {
             //Invalid case
             if(!in.isValid)
                 return best;
-            
+          
             if(best.closestPoint.globalId != in.closestPoint.globalId) {
                 //We will not get a better match. Can forward best.  
                 ForwardToMonoQueue(best);
-
+                //ForwardToMonoQueue(in, true);
                 //We Finished a ring. Flush. 
                 if(best.closestPoint.ringId != in.closestPoint.ringId) { 
                     if(!firstRingFinished) {
@@ -347,6 +360,10 @@ namespace optonaut {
             } else {
                 AssertM(best.dist >= in.dist, "Recorder controller only returns better or equal matches");  
             }
+            //Forward all for testing.  
+            //if(!firstRingFinished) {
+            //    ForwardToMonoQueue(in);
+            //}
 
             return in; 
         }

@@ -37,7 +37,7 @@ void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &
         auto lt = system_clock::now();
         auto image = InputImageFromFile(files[i], false);
             
-        //image->intrinsics = iPhone6Intrinsics;
+        image->intrinsics = iPhone6Intrinsics;
         
         //Create stack-local ref to mat. Clear image mat.
         //This is to simulate hard memory management.

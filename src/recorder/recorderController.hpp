@@ -50,10 +50,6 @@ namespace optonaut {
         
         void MoveToNextRing(const Mat &cur) {
 
-            cout << "###############################" << endl;
-            cout << "Ring Jump." << endl;
-            cout << "###############################" << endl;
-            
             int ringCount = (int)graph.targets.size();
             int newRing = GetNextRing(); 
             
@@ -150,7 +146,7 @@ namespace optonaut {
                 currentDone = true;
             }
            
-            //If we are close enough, and we are closert to next than
+            //If we are close enough, and we are closer to next than
             //to current (e.g. current is next), go one step forward.  
             if(distNext < tolerance && next.globalId == current.globalId) {
                 SelectionPoint newNext;

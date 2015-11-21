@@ -15,7 +15,6 @@ namespace optonaut {
 	bool MatIs(const Mat &in, int rows, int cols, int type) {
 		return in.rows >= rows && in.cols >= cols && in.type() == type;
 	}
-
 	
     void ScaleIntrinsicsToImage(const Mat &intrinsics, const Image &image, Mat &scaled, double fupscaling) {
         ScaleIntrinsicsToImage(intrinsics, image.size(), scaled, fupscaling);

@@ -34,4 +34,8 @@ add_executable(ring-closure-test ringClosureTest.cpp)
 target_link_libraries(ring-closure-test ${OpenCV_LIBS})
 target_link_libraries(ring-closure-test optonaut-lib)
 
+add_executable(stereo-conversion-test stereoConversionTest.cpp)
+target_link_libraries(stereo-conversion-test ${OpenCV_LIBS})
+target_link_libraries(stereo-conversion-test optonaut-lib)
+
 add_subdirectory(test)
