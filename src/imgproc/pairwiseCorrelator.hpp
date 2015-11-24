@@ -52,6 +52,7 @@ public:
 
         if(wa.cols < 4 || wb.cols < 4) {
             result.valid = false;
+            cout << "No overlap warning" << endl;
             return result;
         }
 

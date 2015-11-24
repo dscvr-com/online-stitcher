@@ -30,14 +30,14 @@ void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &
         return;
     }
 
-    static const bool isAsync = false;
+    static const bool isAsync = true;
     shared_ptr<Recorder> recorder(NULL);
 
     for(size_t i = 0; i < files.size(); i++) {
         auto lt = system_clock::now();
         auto image = InputImageFromFile(files[i], false);
             
-        image->intrinsics = iPhone6Intrinsics;
+        //image->intrinsics = iPhone6Intrinsics;
         
         //Create stack-local ref to mat. Clear image mat.
         //This is to simulate hard memory management.
@@ -54,7 +54,7 @@ void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &
         image->dataRef.colorSpace = colorspace::RGB;
 
         if(i == 0) {
-            recorder = shared_ptr<Recorder>(new Recorder(Recorder::iosBase, Recorder::iosZero, image->intrinsics, leftStore, rightStore, commonStore, RecorderGraph::ModeTruncated, isAsync));
+            recorder = shared_ptr<Recorder>(new Recorder(Recorder::iosBase, Recorder::iosZero, image->intrinsics, leftStore, rightStore, commonStore, "", RecorderGraph::ModeTruncated, isAsync));
         }
 
         recorder->Push(image);

@@ -131,6 +131,8 @@ namespace optonaut {
                 //cout << "AngularDiffBias: " << lasty << endl;
                 //cout << "AbsDiffBias: " << corr.offset.x << endl;
                 //cout << "Variance: " << corr.variance << endl;
+            } else {
+                cout << "No keyframe warning" << endl;
             }
 
             return lasty;

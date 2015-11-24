@@ -64,6 +64,7 @@ namespace optonaut {
         
         uint32_t imagesToRecord;
         uint32_t recordedImages;
+        uint32_t keyframeCount;
         
         ReduceProcessor<SelectionInfo, SelectionInfo> preSelectorQueue;
         QueueProcessor<InputImageP> alignerQueue;
@@ -116,6 +117,7 @@ namespace optonaut {
             preController(preRecorderGraph),
             imagesToRecord(preRecorderGraph.Size()),
             recordedImages(0),
+            keyframeCount(0),
             preSelectorQueue(
                 std::bind(&Recorder::SelectBetterMatchForPreSelection,
                     this, placeholders::_1,
@@ -155,7 +157,15 @@ namespace optonaut {
         }
 
         void ForwardToStereoQueue(const SelectionInfo &a, const SelectionInfo &b) {
+
+            SelectionEdge dummy;
+            if(!recorderGraph.GetEdge(a.closestPoint, b.closestPoint, dummy)) {
+                cout << "Unordered warning." << endl;
+                return;
+            }
+
             StereoPair pair;
+            cout << "Pairing: " << a.closestPoint.globalId << " <> " << b.closestPoint.globalId << endl;
             AssertNEQ(a.image, InputImageP(NULL));
             AssertNEQ(b.image, InputImageP(NULL));
             pair.a = a;
@@ -299,8 +309,9 @@ namespace optonaut {
             cout << "Y horizontal angular offset: " << result.horizontalAngularOffset << endl; 
 
             for(size_t i = 0; i < n; i++) {
-                double ydiff = result.horizontalAngularOffset * 
-                    (1.0 - ((double)i) / ((double)n));
+                //double ydiff = result.horizontalAngularOffset * 
+                //    (1.0 - ((double)i) / ((double)n));
+                double ydiff = 0;
                 Mat correction;
                 CreateRotationY(ydiff, correction);
                 firstRingImagePool[i]->adjustedExtrinsics = correction * 
@@ -354,14 +365,16 @@ namespace optonaut {
         }
 
         void ForwardToMonoQueueEx(const SelectionInfo &in) {
-            
-            if(recordedImages % 2 == 0) {
+           
+            if(keyframeCount % 2 == 0) {
                 //Save some memory by sparse keyframing.
                 if(!in.image->image.IsLoaded()) {
                     in.image->image.Load();
                 }
                 aligner->AddKeyframe(in.image);
             }
+
+            keyframeCount++;
 
             monoQueue.Push(in);
         }
@@ -374,18 +387,19 @@ namespace optonaut {
             //Invalid case
             if(!in.isValid)
                 return best;
-           
+
             //Can do deffered loading here - we're still on main thread.  
             if(!in.image->IsLoaded()) {
                 in.image->LoadFromDataRef();
             }
+           
+            //Push images that get closet to the target towards the aligner.  
+            aligner->Push(in.image);
+            alignerQueue.Push(in.image);
             
             if(best.closestPoint.globalId != in.closestPoint.globalId) {
                 //This delays.
                 recordedImages++;
-                aligner->Push(best.image);
-                alignerQueue.Push(best.image);
-
                 if(preController.IsFinished()) {
                     isFinished = true;
                 }
@@ -402,7 +416,7 @@ namespace optonaut {
             //Invalid case
             if(!in.isValid)
                 return best;
-          
+            
             if(best.closestPoint.globalId != in.closestPoint.globalId) {
                 //We will not get a better match. Can forward best.  
                 ForwardToMonoQueue(best);

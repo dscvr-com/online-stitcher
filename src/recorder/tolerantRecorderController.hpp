@@ -1,6 +1,7 @@
 #include <opencv2/opencv.hpp>
 #include <math.h>
 #include <chrono>
+#include <unordered_set>
 
 #include "../common/image.hpp"
 #include "../math/support.hpp"
@@ -18,10 +19,11 @@ namespace optonaut {
 
     class TolerantRecorderController {
     private:
+        //unordered_set<int> done;
         SelectionInfo best;
-
         RecorderGraph &graph;
     public:
+        const double tolerance = M_PI / 16; //TODO CHANGE FOR RELEASE
 
         TolerantRecorderController(RecorderGraph &graph) : graph(graph) {
             best.isValid = false;
@@ -33,12 +35,24 @@ namespace optonaut {
             SelectionInfo current;
             current.dist = graph.FindClosestPoint(image->adjustedExtrinsics, current.closestPoint);
             current.image = image;
-            current.isValid = true;
+            
+            //Constraint at least a little. 
+            if(current.dist > tolerance) {
+                return best;    
+            }
 
+            //Avoid duplicates.
+            //if(done.find(current.closestPoint.globalId) != done.end()) {
+            //    return best;
+            //} 
+            
+            current.isValid = true;
+             
             if(!best.isValid || 
                     current.closestPoint.globalId != best.closestPoint.globalId ||
                     current.dist < best.dist) {
                 //cout << "Tolerant recorder found a better match" << endl;
+                //done.insert(best.closestPoint.globalId);
                 best = current;
             }
 

@@ -61,15 +61,15 @@ namespace optonaut {
             int dy = imgA->corner.y - imgB->corner.y;
             affine.at<float>(1, 2) = dy;
 
-            //TermCriteria termination(TermCriteria::COUNT + TermCriteria::EPS,
-            //        iterations, eps);
+            TermCriteria termination(TermCriteria::COUNT + TermCriteria::EPS,
+                    iterations, eps);
 
-            //try {
-            //    findTransformECC(imgA->image.data, imgB->image.data, affine, warp, termination);
-            //    dy = affine.at<float>(1, 2);
-            //} catch (Exception ex) {
-            //    // :(
-            //}
+            try {
+                findTransformECC(imgA->image.data, imgB->image.data, affine, warp, termination);
+                dy = affine.at<float>(1, 2);
+            } catch (Exception ex) {
+                // :(
+            }
 
             dyCache.push_back(dy);
         };
