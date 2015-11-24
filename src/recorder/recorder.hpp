@@ -57,13 +57,16 @@ namespace optonaut {
         RecorderGraphGenerator generator;
         RecorderGraph recorderGraph;
         RecorderController controller;
+        RecorderGraph preRecorderGraph;
+        RecorderController preController;
         
         uint32_t imagesToRecord;
         uint32_t recordedImages;
-
+        
+        ReduceProcessor<SelectionInfo, SelectionInfo> preSelectorQueue;
+        QueueProcessor<InputImageP> alignerQueue;
         ReduceProcessor<SelectionInfo, SelectionInfo> selectorQueue;
         RingProcessor<SelectionInfo> monoQueue;
-        QueueProcessor<InputImageP> alignerQueue;
         AsyncQueue<StereoPair> stereoProcessor;
 
         vector<SelectionInfo> firstRing;
@@ -105,10 +108,19 @@ namespace optonaut {
             generator(),
             recorderGraph(generator.Generate(intrinsics, graphConfiguration)),
             controller(recorderGraph),
-            imagesToRecord(recorderGraph.Size()),
+            preRecorderGraph(generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityQadruple)),
+            preController(preRecorderGraph),
+            imagesToRecord(preRecorderGraph.Size()),
             recordedImages(0),
+            preSelectorQueue(
+                std::bind(&Recorder::SelectBetterMatchForPreSelection,
+                    this, placeholders::_1,
+                    placeholders::_2), SelectionInfo()),
+            alignerQueue(15,
+                std::bind(&Recorder::ApplyAlignment,
+                    this, placeholders::_1)),
             selectorQueue(
-                std::bind(&Recorder::SelectBetterMatch,
+                std::bind(&Recorder::SelectBetterMatchForMonoQueue,
                     this, placeholders::_1,
                     placeholders::_2), SelectionInfo()),
             monoQueue(1,
@@ -116,9 +128,6 @@ namespace optonaut {
                     this, placeholders::_1,
                     placeholders::_2),
                 std::bind(&Recorder::FinishImage, 
-                    this, placeholders::_1)),
-            alignerQueue(60, 
-                std::bind(&Recorder::ApplyAlignment, 
                     this, placeholders::_1)),
             stereoProcessor(
                 std::bind(&Recorder::StitchImages, 
@@ -156,16 +165,16 @@ namespace optonaut {
         }
        
         //TODO: Rename/Remove all ball methods.  
-        Mat GetBallPosition() const {
-            return ConvertFromStitcher(controller.GetBallPosition());
+        Mat GetNextKeyframe() const {
+            return ConvertFromStitcher(preController.GetNextKeyframe());
         }
         
-        double GetDistanceToBall() const {
-            return controller.GetError();
+        double GetDistanceToNextKeyframe() const {
+            return preController.GetError();
         }
         
-        const Mat &GetAngularDistanceToBall() const {
-            return controller.GetErrorVector();
+        const Mat &GetAngularDistanceToNextKeyframe() const {
+            return preController.GetErrorVector();
         }
 
         //Methods already coordinates in input base. 
@@ -180,7 +189,7 @@ namespace optonaut {
 
         vector<SelectionPoint> GetSelectionPoints() const {
             vector<SelectionPoint> converted;
-            for(auto ring : recorderGraph.GetRings())
+            for(auto ring : preRecorderGraph.GetRings())
                 for(auto point : ring) {
                     SelectionPoint n;
                     n.globalId = point.globalId;
@@ -336,7 +345,6 @@ namespace optonaut {
         }
 
         void ForwardToMonoQueueEx(const SelectionInfo &in) {
-            recordedImages++;
             
             if(recordedImages % 2 == 0) {
                 //Save some memory by sparse keyframing.
@@ -352,8 +360,27 @@ namespace optonaut {
         void FlushMonoQueue() {
             monoQueue.Flush();
         }
-
-        SelectionInfo SelectBetterMatch(const SelectionInfo &best, const SelectionInfo &in) {
+        
+        SelectionInfo SelectBetterMatchForPreSelection(const SelectionInfo &best, const SelectionInfo &in) {
+            //Init case
+            if(!best.isValid)
+                return in;
+            
+            //Invalid case
+            if(!in.isValid)
+                return best;
+            
+            if(best.closestPoint.globalId != in.closestPoint.globalId) {
+                //This delays.
+                recordedImages++;
+                aligner->Push(best.image);
+                alignerQueue.Push(best.image);
+            }
+            
+            return in;
+        }
+        
+        SelectionInfo SelectBetterMatchForMonoQueue(const SelectionInfo &best, const SelectionInfo &in) {
             //Init case
             if(!best.isValid)
                 return in;
@@ -390,6 +417,7 @@ namespace optonaut {
         void ApplyAlignment(InputImageP image) {
 
             image->adjustedExtrinsics = aligner->GetCurrentBias() * image->originalExtrinsics;
+            image->vtag = aligner->GetCurrentVtag();
 
             if(!controller.IsInitialized())
                 controller.Initialize(image->adjustedExtrinsics);
@@ -401,7 +429,7 @@ namespace optonaut {
            
             selectorQueue.Push(current); 
             
-            if(recordedImages == imagesToRecord) {
+            if(controller.IsFinished()) {
                 //Special Case for last image. 
                 SelectionInfo last = selectorQueue.GetState();
                 monoQueue.Push(last);
@@ -425,22 +453,31 @@ namespace optonaut {
             ConvertToStitcher(image->originalExtrinsics, image->originalExtrinsics);
             image->adjustedExtrinsics = image->originalExtrinsics;
            
-            //Load all the images.  
+            //Load all the images. Woop woop memory.
             if(!image->IsLoaded()) {
                 image->LoadFromDataRef();
             }
             
-            aligner->Push(image);
-            alignerQueue.Push(image);
-            //ApplyAlignment(image);
+            //This preselects.
+            if(!preController.IsInitialized())
+                preController.Initialize(image->adjustedExtrinsics);
+            
+            SelectionInfo current = preController.Push(image, isIdle);
+            
+            if(isIdle)
+                return;
+            
+            preSelectorQueue.Push(current);
+
         }
 
         void Finish() {
             //cout << "Pipeline Finish called by " << std::this_thread::get_id() << endl;
             isFinished = true;
-
+            
             aligner->Finish();
             alignerQueue.Flush();
+            monoQueue.Flush();
             stereoProcessor.Finish();
            
             if(HasResults()) {
@@ -464,11 +501,11 @@ namespace optonaut {
                 
         bool AreAdjacent(SelectionPoint a, SelectionPoint b) {
             SelectionEdge dummy; 
-            return recorderGraph.GetEdge(a, b, dummy);
+            return preRecorderGraph.GetEdge(a, b, dummy);
         }
         
         SelectionInfo CurrentPoint() {
-            return selectorQueue.GetState();
+            return preSelectorQueue.GetState();
         }
         
         bool IsIdle() {

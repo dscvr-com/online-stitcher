@@ -37,6 +37,7 @@ namespace optonaut {
         deque<double> sangles;
 
         const bool async;
+        static const bool debug = false;
 	public:
 		RingwiseStreamAligner(RecorderGraph &graph, ExposureCompensator&, const bool async = true) :
             graph(graph), 
@@ -162,7 +163,7 @@ namespace optonaut {
             if((int)target == ring)
                 return;
             
-            static const int order = 60;
+            static const int order = 30;
             
             if(sangles.size() == order) {
                 cury = Mean(sangles, 1.0 / 3.0);
@@ -180,7 +181,7 @@ namespace optonaut {
                 }
             } else {
                 if(!next->IsLoaded()) {
-                    //Pre-load the image. 
+                    //Pre-load the image.
                     next->LoadFromDataRef();
                 }
                 alignOp(next);
@@ -195,7 +196,11 @@ namespace optonaut {
 
 		Mat GetCurrentBias() const {
 			return compassDrift;
-		}
+        }
+        
+        double GetCurrentVtag() const {
+            return cury;
+        }
 
         void Finish() {
             if(async) {
@@ -208,10 +213,12 @@ namespace optonaut {
             for(auto img : imgs) {
                 DrawBar(img->image.data, img->vtag);
             }
-            for(size_t i = 0; i < rings.size(); i++) {
-                SimpleSphereStitcher stitcher; 
-                auto res = stitcher.Stitch(rings[i]);
-                imwrite("dbg/keyframe_ring_" + ToString(i) + ".jpg", rings[i]);
+            if(debug) {
+                for(size_t i = 0; i < rings.size(); i++) {
+                    SimpleSphereStitcher stitcher; 
+                    auto res = stitcher.Stitch(rings[i]);
+                    imwrite("dbg/keyframe_ring_" + ToString(i) + ".jpg", rings[i]);
+                }
             }
         }
 	};

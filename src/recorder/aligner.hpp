@@ -23,6 +23,9 @@ namespace optonaut {
         virtual void Finish() = 0;
         virtual void AddKeyframe(InputImageP next) = 0;
         virtual std::vector<KeyframeInfo> GetClosestKeyframes(const cv::Mat &search, size_t count) const = 0;
+        virtual double GetCurrentVtag() const {
+            return 0;
+        }
         
         InputImageP GetClosestKeyframe(const cv::Mat &search) const {
             auto keyframes = GetClosestKeyframes(search, 1);

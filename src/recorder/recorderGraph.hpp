@@ -51,6 +51,10 @@ namespace optonaut {
         static const int ModeNoBot = 3;
         static const int ModeTinyDebug = 1337;
         
+        static const int DensityNormal = 1;
+        static const int DensityDouble = 2;
+        static const int DensityQadruple = 4;
+        
         vector<vector<SelectionEdge>> adj;
         vector<vector<SelectionPoint>> targets;
         Mat intrinsics;

@@ -135,6 +135,8 @@ namespace optonaut {
             } else {
                 ballPosition = next.extrinsics;
             }
+            
+            //TODO: Lerp position between next and prev, so we have correct resulst on upper/lower ring
             ExtractRotationVector(image->adjustedExtrinsics.inv() * current.extrinsics, errorVec);
 
             if(isIdle)
@@ -156,7 +158,9 @@ namespace optonaut {
                 } else {
                     int nextRing = GetNextRing();
                     if(nextRing < 0 || nextRing >= (int)graph.targets.size()) {
-                        cout << "Push after finish warning." << endl;
+                        if(isFinished)
+                            cout << "Push after finish warning." << endl;
+                        isFinished = true;
                     } else {
                         MoveToNextRing(image->adjustedExtrinsics);
                     }
@@ -170,7 +174,7 @@ namespace optonaut {
             return isFinished;
         }
         
-        const Mat &GetBallPosition() const {
+        const Mat &GetNextKeyframe() const {
             return ballPosition;
         }
         

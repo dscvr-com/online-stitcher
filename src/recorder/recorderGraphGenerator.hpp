@@ -22,8 +22,8 @@ class RecorderGraphGenerator {
 private:
 	//adj[n] contains m if m is right of n
 	//Horizontal and Vertical overlap in percent. 
-	const double hOverlap = 0.9;
-	const double vOverlap = 0.25;
+	const double hOverlap_ = 0.9;
+	const double vOverlap_ = 0.4;
 
     static const bool debug = false;
     
@@ -31,9 +31,12 @@ private:
 
 public:
     
-    RecorderGraph Generate(const Mat &intrinsics, const int mode = RecorderGraph::ModeAll) {
+    RecorderGraph Generate(const Mat &intrinsics, const int mode = RecorderGraph::ModeAll, const int density = RecorderGraph::DensityNormal) {
         
         RecorderGraph res;
+        
+        double hOverlap = 1.0 - (1.0 - hOverlap_) / density;
+        double vOverlap = vOverlap_;
 
 		this->intrinsics = intrinsics;
         double maxHFov = GetHorizontalFov(intrinsics);
@@ -57,7 +60,7 @@ public:
            //Configuration for ModeTruncated
            //Optimize for 3 rings.
            
-           vCount = vCount - 2; //Always skip out two rings.
+           vCount = 3; 
            //vFov stays the same.
            vStart = (M_PI - (vFov * 3)) / 2;
             
