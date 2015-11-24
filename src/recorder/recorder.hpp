@@ -122,7 +122,7 @@ namespace optonaut {
                 std::bind(&Recorder::SelectBetterMatchForPreSelection,
                     this, placeholders::_1,
                     placeholders::_2), SelectionInfo()),
-            alignerQueue(5,
+            alignerQueue(15,
                 std::bind(&Recorder::ApplyAlignment,
                     this, placeholders::_1)),
             selectorQueue(

@@ -165,7 +165,7 @@ namespace optonaut {
             if((int)target == ring)
                 return;
             
-            static const int order = 10;
+            static const int order = 30;
             
             if(sangles.size() >= order / 2) {
                 cury = Mean(sangles, 1.0 / 3.0);
