@@ -1,4 +1,5 @@
 #include "../io/inputImage.hpp"
+#include "../io/io.hpp"
 #include "../io/checkpointStore.hpp"
 #include "../stereo/monoStitcher.hpp"
 #include "../common/ringProcessor.hpp"
@@ -78,6 +79,8 @@ namespace optonaut {
         
         InputImageP last;
         
+        string debugPath;
+        
         InputImageP GetParentKeyframe(const Mat &extrinsics) {
             return aligner->GetClosestKeyframe(extrinsics);
         }
@@ -95,7 +98,7 @@ namespace optonaut {
         static bool alignmentEnabled;
         
         Recorder(Mat base, Mat zeroWithoutBase, Mat intrinsics, 
-                CheckpointStore &leftStore, CheckpointStore &rightStore, CheckpointStore &commonStore,
+                CheckpointStore &leftStore, CheckpointStore &rightStore, CheckpointStore &commonStore, string debugPath = "",
                 int graphConfiguration = RecorderGraph::ModeAll, 
                 bool isAsync = true) :
             base(base),
@@ -132,7 +135,8 @@ namespace optonaut {
                     this, placeholders::_1)),
             stereoProcessor(
                 std::bind(&Recorder::StitchImages, 
-                    this, placeholders::_1))
+                    this, placeholders::_1)),
+            debugPath(debugPath)
         {
             baseInv = base.inv();
             zero = zeroWithoutBase;
@@ -192,7 +196,8 @@ namespace optonaut {
 
         vector<SelectionPoint> GetSelectionPoints() const {
             vector<SelectionPoint> converted;
-            for(auto ring : preRecorderGraph.GetRings())
+            for(auto ring : preRecorderGraph.GetRings()) {
+                ring.push_back(ring.front());
                 for(auto point : ring) {
                     SelectionPoint n;
                     n.globalId = point.globalId;
@@ -201,6 +206,8 @@ namespace optonaut {
                     n.extrinsics = ConvertFromStitcher(point.extrinsics);
                     
                     converted.push_back(n);
+                }
+                
             }
             //cout << "returning " << converted.size() << " rings " << endl;
             return converted;
@@ -438,7 +445,13 @@ namespace optonaut {
             //cout << "Pipeline Push called by " << std::this_thread::get_id() << endl;
             
             last = image;
-
+            
+            if(debugPath != "" && !isIdle) {
+                static int debugCounter = 0;
+                image->LoadFromDataRef();
+                InputImageToFile(image, debugPath + "/" + ToString(debugCounter++) + ".jpg");
+            }
+            
             if(isFinished) {
                 cout << "Push after finish warning - this could be a racing condition" << endl;
                 return;
@@ -453,6 +466,7 @@ namespace optonaut {
             if(!preController.IsInitialized())
                 preController.Initialize(image->adjustedExtrinsics);
             
+            //Pass idle info, so we can get UI feedback without modifying state
             SelectionInfo current = preController.Push(image, isIdle);
             
             if(isIdle)
