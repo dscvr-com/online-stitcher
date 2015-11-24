@@ -10,6 +10,8 @@
 
 #define AssertEQ(x, y) AssertEQ_(x, y, "", #x" == "#y)
 #define AssertEQM(x, y, msg) AssertEQ_(x, y, msg, #x" == "#y)
+#define AssertNEQ(x, y) AssertNEQ_(x, y, "", #x" != "#y)
+#define AssertNEQM(x, y, msg) AssertNEQ_(x, y, msg, #x" != "#y)
 #define AssertGE(x, y) AssertGE_(x, y, "", #x" >= "#y)
 #define AssertGEM(x, y, msg) AssertGE_(x, y, msg, #x" >= "#y)
 #define AssertGT(x, y) AssertGT_(x, y, "", #x" > "#y)
@@ -36,36 +38,43 @@ namespace optonaut {
         }
     }
 
-    template <typename T, typename V>
-    inline void AssertEQ_(T a, V b, 
+    template <typename T>
+    inline void AssertEQ_(T a, T b, 
             std::string message, 
             std::string vars,
-            typename std::enable_if<!std::is_floating_point<T>::value >::type* = 0, 
-            typename std::enable_if<!std::is_floating_point<V>::value >::type* = 0) {
-        if(a != (T)b) {
+            typename std::enable_if<!std::is_floating_point<T>::value >::type* = 0) {
+        if(a != b) {
             PrintAndTerminate(message, vars, ToString(a) + " == " + ToString(b));
         }
     }
     
-    template <typename T, typename V>
-    inline void AssertGT_(T a, V b, std::string message, std::string vars) {
+    template <typename T>
+    inline void AssertNEQ_(T a, T b, 
+            std::string message, 
+            std::string vars) {
+        if(a == b) {
+            PrintAndTerminate(message, vars, ToString(a) + " != " + ToString(b));
+        }
+    }
+    
+    template <typename T>
+    inline void AssertGT_(T a, T b, std::string message, std::string vars) {
         if(a <= b) {
             PrintAndTerminate(message, vars, ToString(a) + " > " + ToString(b));
         }
     }
     
-    template <typename T, typename V>
-    inline void AssertGE_(T a, V b, std::string message, std::string vars) {
+    template <typename T>
+    inline void AssertGE_(T a, T b, std::string message, std::string vars) {
         if(a < b) {
             PrintAndTerminate(message, vars, ToString(a) + " >= " + ToString(b));
         }
     }
     
-    template<typename T, typename V>
-    inline void AssertEQ_(T a, V b, 
+    template<typename T>
+    inline void AssertEQ_(T a, T b, 
             std::string message, std::string vars,
-            typename std::enable_if<std::is_floating_point<T>::value >::type* = 0, 
-            typename std::enable_if<std::is_floating_point<V>::value >::type* = 0) {
+            typename std::enable_if<std::is_floating_point<T>::value >::type* = 0) {
         if(std::abs(a - b) > 0.00001) {
             PrintAndTerminate(message, vars, ToString(a) + " == " + ToString(b));
         }

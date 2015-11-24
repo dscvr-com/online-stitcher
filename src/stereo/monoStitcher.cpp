@@ -16,7 +16,7 @@
 #include "../common/assert.hpp"
 #include "../math/quat.hpp"
 #include "../math/support.hpp"
-#include "../recorder/recorderController.hpp"
+#include "../recorder/streamingRecorderController.hpp"
 #include "../stereo/monoStitcher.hpp"
 
 using namespace std;
@@ -55,8 +55,8 @@ Rect CornersToRoi(const vector<Point2f> &corners) {
     float y = min2(corners[2].y, corners[3].y);
     float width = max2(corners[1].x, corners[2].x) - x;
     float height = max2(corners[0].y, corners[1].y) - y;
-    AssertGTM(width, 0, "Transformation is mirrored.");
-    AssertGTM(height, 0, "Transformation is mirrored.");
+    AssertGTM(width, 0.0f, "Transformation is mirrored.");
+    AssertGTM(height, 0.0f, "Transformation is mirrored.");
     Rect roi(x, y, width, height); 
 
     return roi;

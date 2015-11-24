@@ -12,7 +12,8 @@
 
 #include "recorderGraph.hpp"
 #include "recorderGraphGenerator.hpp"
-#include "recorderController.hpp"
+#include "streamingRecorderController.hpp"
+#include "tolerantRecorderController.hpp"
 #include "asyncAligner.hpp"
 #include "trivialAligner.hpp"
 #include "ringwiseStreamAligner.hpp"
@@ -56,9 +57,9 @@ namespace optonaut {
         
         RecorderGraphGenerator generator;
         RecorderGraph recorderGraph;
-        RecorderController controller;
+        TolerantRecorderController controller;
         RecorderGraph preRecorderGraph;
-        RecorderController preController;
+        StreamingRecorderController preController;
         
         uint32_t imagesToRecord;
         uint32_t recordedImages;
@@ -116,7 +117,7 @@ namespace optonaut {
                 std::bind(&Recorder::SelectBetterMatchForPreSelection,
                     this, placeholders::_1,
                     placeholders::_2), SelectionInfo()),
-            alignerQueue(15,
+            alignerQueue(5,
                 std::bind(&Recorder::ApplyAlignment,
                     this, placeholders::_1)),
             selectorQueue(
@@ -151,6 +152,8 @@ namespace optonaut {
 
         void ForwardToStereoQueue(const SelectionInfo &a, const SelectionInfo &b) {
             StereoPair pair;
+            AssertNEQ(a.image, InputImageP(NULL));
+            AssertNEQ(b.image, InputImageP(NULL));
             pair.a = a;
             pair.b = b;
             stereoProcessor.Push(pair);
@@ -214,7 +217,6 @@ namespace optonaut {
         }   
         
         void StitchImages(const StereoPair &pair) {
-            cout << "Stitch" << endl;
             
             if(!pair.a.image->image.IsLoaded()) {
                 pair.a.image->image.Load();
@@ -357,10 +359,6 @@ namespace optonaut {
             monoQueue.Push(in);
         }
 
-        void FlushMonoQueue() {
-            monoQueue.Flush();
-        }
-        
         SelectionInfo SelectBetterMatchForPreSelection(const SelectionInfo &best, const SelectionInfo &in) {
             //Init case
             if(!best.isValid)
@@ -369,12 +367,21 @@ namespace optonaut {
             //Invalid case
             if(!in.isValid)
                 return best;
+           
+            //Can do deffered loading here - we're still on main thread.  
+            if(!in.image->IsLoaded()) {
+                in.image->LoadFromDataRef();
+            }
             
             if(best.closestPoint.globalId != in.closestPoint.globalId) {
                 //This delays.
                 recordedImages++;
                 aligner->Push(best.image);
                 alignerQueue.Push(best.image);
+
+                if(preController.IsFinished()) {
+                    isFinished = true;
+                }
             }
             
             return in;
@@ -398,7 +405,7 @@ namespace optonaut {
                     if(!firstRingFinished) {
                         FinishFirstRing();
                     }
-                    FlushMonoQueue();
+                    monoQueue.Flush();
                 }
 
             } else {
@@ -419,23 +426,12 @@ namespace optonaut {
             image->adjustedExtrinsics = aligner->GetCurrentBias() * image->originalExtrinsics;
             image->vtag = aligner->GetCurrentVtag();
 
-            if(!controller.IsInitialized())
-                controller.Initialize(image->adjustedExtrinsics);
-            
-            SelectionInfo current = controller.Push(image, isIdle);
+            SelectionInfo current = controller.Push(image);
 
             if(isIdle)
                 return;
            
             selectorQueue.Push(current); 
-            
-            if(controller.IsFinished()) {
-                //Special Case for last image. 
-                SelectionInfo last = selectorQueue.GetState();
-                monoQueue.Push(last);
-                FlushMonoQueue();
-                isFinished = true;
-            }
         }
     
         void Push(InputImageP image) {
@@ -453,11 +449,6 @@ namespace optonaut {
             ConvertToStitcher(image->originalExtrinsics, image->originalExtrinsics);
             image->adjustedExtrinsics = image->originalExtrinsics;
            
-            //Load all the images. Woop woop memory.
-            if(!image->IsLoaded()) {
-                image->LoadFromDataRef();
-            }
-            
             //This preselects.
             if(!preController.IsInitialized())
                 preController.Initialize(image->adjustedExtrinsics);
@@ -477,6 +468,8 @@ namespace optonaut {
             
             aligner->Finish();
             alignerQueue.Flush();
+            SelectionInfo last = selectorQueue.GetState();
+            monoQueue.Push(last);
             monoQueue.Flush();
             stereoProcessor.Finish();
            

@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
     RecorderGraph graph = generator.Generate(image0->intrinsics, 
                         RecorderGraph::ModeCenter);
     cout << "Graph generated" << endl;
-    RecorderController controller(graph);
+    StreamingRecorderController controller(graph);
 
     SelectionInfo currentBest;
         

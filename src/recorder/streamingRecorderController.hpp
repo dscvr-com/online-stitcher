@@ -11,8 +11,8 @@ using namespace std;
 
 #define _USE_MATH_DEFINES
 
-#ifndef OPTONAUT_RECORDER_CONTROLLER_HEADER
-#define OPTONAUT_RECORDER_CONTROLLER_HEADER
+#ifndef OPTONAUT_STREAMING_RECORDER_CONTROLLER_HEADER
+#define OPTONAUT_STREAMING_RECORDER_CONTROLLER_HEADER
 
 namespace optonaut {
 
@@ -27,7 +27,7 @@ namespace optonaut {
         }
     };
 
-    class RecorderController {
+    class StreamingRecorderController {
     private:
         RecorderGraph &graph;
         int currentRing;
@@ -82,7 +82,7 @@ namespace optonaut {
         }
 
     public:
-        RecorderController(RecorderGraph &graph): 
+        StreamingRecorderController(RecorderGraph &graph): 
             graph(graph), isFinished(false), isInitialized(false),
             ballPosition(Mat::eye(4, 4, CV_64F)), bestDist(1000), 
             error(-1), errorVec(3, 1, CV_64F) { }

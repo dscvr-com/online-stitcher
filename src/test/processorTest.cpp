@@ -77,7 +77,7 @@ int main(int, char**) {
 
     auto checkDelay = [&lastPushed, &lastReceived, &count](int in) {
         if(lastPushed != count - 1) {
-            AssertEQM(in, lastPushed - order, "Element is delayed");
+            AssertEQM(in, lastPushed - (int)order, "Element is delayed");
         }
 
         AssertEQM(in, lastReceived + 1, "Element is delayed in correct order");

@@ -145,7 +145,7 @@ namespace optonaut {
             if(graph.HasChildRing(ring)) { 
                 rings[ring].push_back(next);
             
-                cout << "Adding keyframe " << next->id << " to ring: " << ring << " count: " << rings[ring].size() << endl;
+                //cout << "Adding keyframe " << next->id << " to ring: " << ring << " count: " << rings[ring].size() << endl;
             }
         }
 
@@ -163,12 +163,12 @@ namespace optonaut {
             if((int)target == ring)
                 return;
             
-            static const int order = 30;
+            static const int order = 10;
             
-            if(sangles.size() == order) {
+            if(sangles.size() >= order / 2) {
                 cury = Mean(sangles, 1.0 / 3.0);
                 CreateRotationY(cury, compassDrift);
-                cout << "FilteredBias: " << cury << endl;
+                //cout << "FilteredBias: " << cury << endl;
             }
 
             if(async) {
