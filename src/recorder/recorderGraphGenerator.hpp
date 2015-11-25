@@ -31,7 +31,7 @@ private:
 
 public:
     
-    RecorderGraph Generate(const Mat &intrinsics, const int mode = RecorderGraph::ModeAll, const int density = RecorderGraph::DensityNormal) {
+    RecorderGraph Generate(const Mat &intrinsics, const int mode = RecorderGraph::ModeAll, const int density = RecorderGraph::DensityNormal, const int lastRingOverdrive = 0) {
         
         RecorderGraph res;
         
@@ -83,7 +83,7 @@ public:
             cout << "Center mode not possible with even number of rings." << endl;
             assert(false);
         }
-
+        
 		for(uint32_t i = 0; i < vCount; i++) {
 
             //Vertical center, bottom and top of ring
@@ -98,7 +98,13 @@ public:
             if(mode ==  RecorderGraph::ModeTinyDebug) {
                 hCount = 6;
             }
-
+            int ringOverdrive = 0;
+            
+            if(i == vCount -1) {
+                ringOverdrive = lastRingOverdrive;
+            }
+            
+            hCount = hCount + ringOverdrive;
 			res.targets.push_back(vector<SelectionPoint>(hCount));
 
             auto createEdge = [&res] (const SelectionPoint &a, const SelectionPoint &b) {
@@ -115,7 +121,7 @@ public:
             };
 
             RingProcessor<SelectionPoint> hqueue(1, createEdge, finish);
-                    
+ 
             for(uint32_t j = 0; j < hCount; j++) {
                 if(debug) {
                     cout << "Recorder Graph Pushing " << hLeft << ", " << vCenter << endl;

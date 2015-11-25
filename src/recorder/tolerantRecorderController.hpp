@@ -23,7 +23,7 @@ namespace optonaut {
         SelectionInfo best;
         RecorderGraph &graph;
     public:
-        const double tolerance = M_PI / 16; //TODO CHANGE FOR RELEASE
+        const double tolerance = M_PI / 8; //High tolerance, since we have to catch up with alignment
 
         TolerantRecorderController(RecorderGraph &graph) : graph(graph) {
             best.isValid = false;
