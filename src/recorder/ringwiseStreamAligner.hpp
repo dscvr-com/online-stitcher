@@ -114,7 +114,7 @@ namespace optonaut {
             //aTime.Tick("Keyframe found");
             if(closest != NULL) {
                 //Todo: Bias intensity is probably dependent on image size. 
-                CorrelationDiff corr = visual.Match(next, closest);
+                CorrelationDiff corr = visual.Match(CloneAndDownsample(next), closest);
                 //aTime.Tick("Aligned");
 
                 double angleY = corr.horizontalAngularOffset;
@@ -132,7 +132,7 @@ namespace optonaut {
                 //cout << "AbsDiffBias: " << corr.offset.x << endl;
                 //cout << "Variance: " << corr.variance << endl;
             } else {
-                cout << "No keyframe warning" << endl;
+                cout << "Warning: No keyframe." << endl;
             }
 
             return lasty;

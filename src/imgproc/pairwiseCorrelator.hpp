@@ -56,7 +56,7 @@ public:
             return result;
         }
 
-        PlanarCorrelationResult res = Aligner::Align(wa, wb, 0.25, 0.25, 1);
+        PlanarCorrelationResult res = Aligner::Align(wa, wb, 0.25, 0.25, 0);
         cv::Point correctedRes = res.offset + appliedBorder;
         
         double h = b->intrinsics.at<double>(0, 0) * (b->image.cols / (b->intrinsics.at<double>(0, 2) * 2));

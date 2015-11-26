@@ -51,10 +51,12 @@ namespace optonaut {
             m(), 
             sem() { }
        
-        void Push(InType in) {
+        int Push(InType in) {
+            int size = 0;
             {
                 unique_lock<mutex> lock(m);
                 inData.push_back(in);
+                size = inData.size();
                 sem.notify_one();
             }
             
@@ -64,6 +66,8 @@ namespace optonaut {
                 running = true;
                 worker = thread(&AsyncQueue::WorkerLoop, this); 
             }
+            
+            return size;
         }
         
         bool IsRunning() {

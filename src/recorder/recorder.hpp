@@ -67,10 +67,11 @@ namespace optonaut {
         uint32_t keyframeCount;
         
         ReduceProcessor<SelectionInfo, SelectionInfo> preSelectorQueue;
-        QueueProcessor<InputImageP> alignerQueue;
+        QueueProcessor<InputImageP> alignerDelayQueue;
         ReduceProcessor<SelectionInfo, SelectionInfo> selectorQueue;
-        RingProcessor<SelectionInfo> monoQueue;
-        AsyncQueue<StereoPair> stereoProcessor;
+        AsyncQueue<SelectionInfo> stereoConversionQueue;
+        RingProcessor<SelectionInfo> stereoRingBuffer;
+        AsyncQueue<StereoImage> saveQueue;
 
         vector<SelectionInfo> firstRing;
         vector<InputImageP> firstRingImagePool;
@@ -122,21 +123,24 @@ namespace optonaut {
                 std::bind(&Recorder::SelectBetterMatchForPreSelection,
                     this, placeholders::_1,
                     placeholders::_2), SelectionInfo()),
-            alignerQueue(15,
+            alignerDelayQueue(15,
                 std::bind(&Recorder::ApplyAlignment,
-                    this, placeholders::_1)),
+                          this, placeholders::_1)),
             selectorQueue(
                 std::bind(&Recorder::SelectBetterMatchForMonoQueue,
                     this, placeholders::_1,
-                    placeholders::_2), SelectionInfo()),
-            monoQueue(1,
-                std::bind(&Recorder::ForwardToStereoQueue, 
+                          placeholders::_2), SelectionInfo()),
+            stereoConversionQueue(
+                std::bind(&Recorder::ForwardToMonoQueue,
+                    this, placeholders::_1)),
+            stereoRingBuffer(1,
+                std::bind(&Recorder::ForwardToStereoProcess,
                     this, placeholders::_1,
                     placeholders::_2),
                 std::bind(&Recorder::FinishImage, 
                     this, placeholders::_1)),
-            stereoProcessor(
-                std::bind(&Recorder::StitchImages, 
+            saveQueue(
+                    std::bind(&Recorder::SaveStereoResult,
                     this, placeholders::_1)),
             debugPath(debugPath)
         {
@@ -150,27 +154,41 @@ namespace optonaut {
             //cout << "Zero: " << zero << endl;
         
             if(Recorder::alignmentEnabled) {
-                aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph, exposure, isAsync));
+                aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph, exposure, true));
             } else {
                 aligner = shared_ptr<Aligner>(new TrivialAligner());
             }
         }
+        
+        void ForwardToStereoConversionQueue(SelectionInfo in) {
+            int size = stereoConversionQueue.Push(in);
+            if(size > 100) {
+                cout << "Warning: Input Queue overflow: " <<  size << endl;
+                this_thread::sleep_for(chrono::seconds(1));
+            }
+        }
 
-        void ForwardToStereoQueue(const SelectionInfo &a, const SelectionInfo &b) {
+        void ForwardToAligner(InputImageP in) {
+            aligner->Push(in);
+            alignerDelayQueue.Push(in);
+        }
+
+        void ForwardToStereoProcess(const SelectionInfo &a, const SelectionInfo &b) {
 
             SelectionEdge dummy;
             if(!recorderGraph.GetEdge(a.closestPoint, b.closestPoint, dummy)) {
-                cout << "Unordered warning." << endl;
+                cout << "Warning: Unordered." << endl;
                 return;
             }
 
             StereoPair pair;
-            cout << "Pairing: " << a.closestPoint.globalId << " <> " << b.closestPoint.globalId << endl;
+            //cout << "Pairing: " << a.closestPoint.globalId << " <> " << b.closestPoint.globalId << endl;
             AssertNEQ(a.image, InputImageP(NULL));
             AssertNEQ(b.image, InputImageP(NULL));
             pair.a = a;
             pair.b = b;
-            stereoProcessor.Push(pair);
+        
+            ConvertToStereo(pair);
         }
         
         Mat ConvertFromStitcher(const Mat &in) const {
@@ -226,26 +244,30 @@ namespace optonaut {
         void Dispose() {
             //cout << "Pipeline Dispose called by " << std::this_thread::get_id() << endl;
             aligner->Dispose();
-            stereoProcessor.Dispose();
+            stereoConversionQueue.Dispose();
+            saveQueue.Dispose();
         }
         
         void FinishImage(const SelectionInfo &fin) {
             ExposureFeed(fin.image);
         }   
         
-        void StitchImages(const StereoPair &pair) {
+        void ConvertToStereo(const StereoPair &pair) {
             
-            if(!pair.a.image->image.IsLoaded()) {
+            monoTimer.Reset();
+            
+            if(!pair.a.image->IsLoaded()) {
                 pair.a.image->image.Load();
             }
-            if(!pair.b.image->image.IsLoaded()) {
+            if(!pair.b.image->IsLoaded()) {
                 pair.b.image->image.Load();
             }
+            monoTimer.Tick("Load Input");
+            
             
             assert(pair.a.image->IsLoaded());
             assert(pair.b.image->IsLoaded());
 
-            monoTimer.Reset();
             
             if(exposureEnabled)
                 exposure.Register(pair.a.image, pair.b.image);
@@ -257,16 +279,25 @@ namespace optonaut {
 
             assert(stereo.valid);
             monoTimer.Tick("Stereo Conv");
-
+            
+            int size = saveQueue.Push(stereo);
+            
+            if(size > 20) {
+                cout << "Warning: Output Queue overflow: " <<  size << endl;
+            }
+        }
+        
+        void SaveStereoResult(StereoImage stereo) {
+            STimer saveTimer;
             leftStore.SaveRectifiedImage(stereo.A);
             rightStore.SaveRectifiedImage(stereo.B);
             
             stereo.A->image.Unload();
             stereo.B->image.Unload();
-
+            
             leftImages.push_back(stereo.A);
             rightImages.push_back(stereo.B);
-            monoTimer.Tick("Stereo Store");
+            monoTimer.Tick("Saved");
         }
         
         void ExposureFeed(InputImageP a) {
@@ -280,18 +311,31 @@ namespace optonaut {
             }
         }
         
-        void ForwardToMonoQueue(const SelectionInfo &in, bool poolOnly = false) {
+        void ForwardToMonoQueue(const SelectionInfo &in) {
+            
+            static int lastRingId = -1;
+            
+            if(lastRingId == -1) {
+                lastRingId = in.closestPoint.ringId;
+            }
+            
+            if(lastRingId != in.closestPoint.ringId) {
+                if(!firstRingFinished) {
+                    FinishFirstRing();
+                }
+                stereoRingBuffer.Flush();
+            }
+            
             if(!firstRingFinished) {
-                if(!poolOnly && 
-                    (firstRing.size() == 0 
+                if(firstRing.size() == 0
                         || firstRing.back().closestPoint.globalId != 
-                        in.closestPoint.globalId)) {
+                        in.closestPoint.globalId) {
                     firstRing.push_back(in);    
                 }
                 firstRingImagePool.push_back(in.image);
                 commonStore.SaveStitcherTemporaryImage(in.image->image);
                 in.image->image.Unload();
-            } else if(!poolOnly) {
+            } else {
                 ForwardToMonoQueueEx(in);
             }
         }
@@ -317,7 +361,7 @@ namespace optonaut {
                 firstRingImagePool[i]->adjustedExtrinsics = correction * 
                     firstRingImagePool[i]->adjustedExtrinsics;
 
-                cout << "Applying correction of " << ydiff << " to image " << firstRingImagePool[i]->id << endl;
+                //cout << "Applying correction of " << ydiff << " to image " << firstRingImagePool[i]->id << endl;
             }
 
             //Debug 
@@ -345,10 +389,10 @@ namespace optonaut {
                         picked = (int)j;
                     }
                 }
-                cout << "Selection Point " << firstRing[i].closestPoint.globalId
-                    << " reassigned image " << firstRing[i].image->id << " to " 
-                    << firstRingImagePool[picked]->id << " with dist: " 
-                    << distCur << endl;
+                //cout << "Selection Point " << firstRing[i].closestPoint.globalId
+                //    << " reassigned image " << firstRing[i].image->id << " to "
+                //    << firstRingImagePool[picked]->id << " with dist: "
+                //    << distCur << endl;
                 AssertGTM(picked, -1, "Must pick image"); 
                 firstRing[i].image = firstRingImagePool[picked];
                 firstRing[i].dist = distCur;
@@ -371,12 +415,12 @@ namespace optonaut {
                 if(!in.image->image.IsLoaded()) {
                     in.image->image.Load();
                 }
-                aligner->AddKeyframe(in.image);
+                aligner->AddKeyframe(CloneAndDownsample(in.image));
             }
 
             keyframeCount++;
 
-            monoQueue.Push(in);
+            stereoRingBuffer.Push(in);
         }
 
         SelectionInfo SelectBetterMatchForPreSelection(const SelectionInfo &best, const SelectionInfo &in) {
@@ -394,8 +438,7 @@ namespace optonaut {
             }
            
             //Push images that get closet to the target towards the aligner.  
-            aligner->Push(in.image);
-            alignerQueue.Push(in.image);
+            ForwardToAligner(in.image);
             
             if(best.closestPoint.globalId != in.closestPoint.globalId) {
                 //This delays.
@@ -419,15 +462,9 @@ namespace optonaut {
             
             if(best.closestPoint.globalId != in.closestPoint.globalId) {
                 //We will not get a better match. Can forward best.  
-                ForwardToMonoQueue(best);
+                ForwardToStereoConversionQueue(best);
                 //ForwardToMonoQueue(in, true);
-                //We Finished a ring. Flush. 
-                if(best.closestPoint.ringId != in.closestPoint.ringId) { 
-                    if(!firstRingFinished) {
-                        FinishFirstRing();
-                    }
-                    monoQueue.Flush();
-                }
+                //We Finished a ring. Flush.
 
             } else {
                 if(!isFinished) {
@@ -466,10 +503,7 @@ namespace optonaut {
                 InputImageToFile(image, debugPath + "/" + ToString(debugCounter++) + ".jpg");
             }
             
-            if(isFinished) {
-                cout << "Push after finish warning - this could be a racing condition" << endl;
-                return;
-            }
+            AssertM(!isFinished, "Warning: Push after finish - this is probably a racing condition");
             
             //pipeTimer.Tick("Push");
             
@@ -495,11 +529,12 @@ namespace optonaut {
             isFinished = true;
             
             aligner->Finish();
-            alignerQueue.Flush();
+            alignerDelayQueue.Flush();
             SelectionInfo last = selectorQueue.GetState();
-            monoQueue.Push(last);
-            monoQueue.Flush();
-            stereoProcessor.Finish();
+            stereoConversionQueue.Finish();
+            stereoRingBuffer.Push(last);
+            stereoRingBuffer.Flush();
+            saveQueue.Finish();
            
             if(HasResults()) {
 

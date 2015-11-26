@@ -38,7 +38,7 @@ private:
     //TODO Make dependent of image size
     const double OutlinerTolerance = 155 * 155; 
 
-    static const bool debug = true;
+    static const bool debug = false;
 
     //Needed for bundle adj.
     map<InputImageP, size_t> imgToLocalId;
