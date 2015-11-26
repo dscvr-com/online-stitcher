@@ -18,6 +18,9 @@ stitcher/simpleSphereStitcher.cpp
 stitcher/simplePlaneStitcher.cpp
 )
 
+add_executable(to-polar toPol.cpp)
+target_link_libraries(to-polar ${OpenCV_LIBS})
+
 add_executable(optonaut-test stitcherTest.cpp)
 target_link_libraries(optonaut-test ${OpenCV_LIBS})
 target_link_libraries(optonaut-test optonaut-lib)
