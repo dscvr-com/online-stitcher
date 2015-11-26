@@ -154,7 +154,7 @@ namespace optonaut {
             //cout << "Zero: " << zero << endl;
         
             if(Recorder::alignmentEnabled) {
-                aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph, exposure, true));
+                aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph, exposure, isAsync));
             } else {
                 aligner = shared_ptr<Aligner>(new TrivialAligner());
             }
@@ -176,6 +176,7 @@ namespace optonaut {
         void ForwardToStereoProcess(const SelectionInfo &a, const SelectionInfo &b) {
 
             SelectionEdge dummy;
+            //cout << "Stereo Process received: " << a.closestPoint.globalId << " <> " << b.closestPoint.globalId << endl;
             if(!recorderGraph.GetEdge(a.closestPoint, b.closestPoint, dummy)) {
                 cout << "Warning: Unordered." << endl;
                 return;
@@ -319,11 +320,12 @@ namespace optonaut {
                 lastRingId = in.closestPoint.ringId;
             }
             
-            if(lastRingId != in.closestPoint.ringId) {
+            if(lastRingId != (int)in.closestPoint.ringId) {
                 if(!firstRingFinished) {
                     FinishFirstRing();
                 }
                 stereoRingBuffer.Flush();
+                lastRingId = in.closestPoint.ringId;
             }
             
             if(!firstRingFinished) {
