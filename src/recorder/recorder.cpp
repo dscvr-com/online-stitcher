@@ -42,7 +42,7 @@ namespace optonaut {
     Mat Recorder::iosZero = Recorder::iosBase * Mat(4, 4, CV_64F, iosZeroData) * Recorder::iosBase.inv();
 
     string Recorder::tempDirectory = "tmp/";
-    string Recorder::version = "0.6.0";
+    string Recorder::version = "0.7.0";
     
     bool Recorder::exposureEnabled = false;
     bool Recorder::alignmentEnabled = true;
