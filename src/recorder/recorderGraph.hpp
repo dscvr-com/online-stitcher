@@ -27,7 +27,7 @@ namespace optonaut {
         Mat extrinsics;
         
         SelectionPoint() : globalId(0),
-            localId(0), ringId(0), hPos(0), vPos(0), hFov(0), vFov(0) {
+            localId(0), ringId(0), hPos(0), vPos(0), hFov(0), vFov(0), extrinsics(0, 0, CV_64F) {
         }
     };
     
@@ -50,6 +50,10 @@ namespace optonaut {
         static const int ModeTruncated = 2;
         static const int ModeNoBot = 3;
         static const int ModeTinyDebug = 1337;
+        
+        static const int DensityNormal = 1;
+        static const int DensityDouble = 2;
+        static const int DensityQadruple = 4;
         
         vector<vector<SelectionEdge>> adj;
         vector<vector<SelectionPoint>> targets;

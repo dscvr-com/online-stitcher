@@ -8,6 +8,7 @@
 
 #include "inputImage.hpp"
 #include "../math/support.hpp"
+#include "../common/assert.hpp"
 
 
 using namespace std;
@@ -68,5 +69,25 @@ namespace optonaut {
         //InvalidateDataRef afterwards.
         dataRef.data = NULL;
         
+    }
+    
+    
+    InputImageP CloneAndDownsample(InputImageP image) {
+        InputImageP clone(new InputImage());
+        clone->originalExtrinsics = image->originalExtrinsics.clone();
+        clone->adjustedExtrinsics = image->adjustedExtrinsics.clone();
+        clone->intrinsics = image->intrinsics.clone();
+        clone->exposureInfo = image->exposureInfo;
+        clone->id = image->id;
+        
+        Mat downscaled;
+        
+        AssertM(image->IsLoaded(), "Image is loaded before downsampling");
+        
+        pyrDown(image->image.data, downscaled);
+        
+        clone->image = Image(downscaled);
+        
+        return clone;
     }
 }

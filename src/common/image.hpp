@@ -64,6 +64,8 @@ namespace optonaut {
             assert(cols != 0 && rows != 0);
         }
 	};
+
+    typedef std::shared_ptr<Image> ImageP;
 }
 
 

@@ -3,7 +3,7 @@
 #include "../common/progressCallback.hpp"
 #include "../io/checkpointStore.hpp"
 
-#include "multiRingStitcher.hpp"
+#include "multiringStitcher.hpp"
 
 #include <chrono>
 

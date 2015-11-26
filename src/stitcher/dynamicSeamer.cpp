@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "../math/support.hpp"
+#include "../imgproc/planarCorrelator.hpp"
 #include "../common/support.hpp"
 #include "../common/static_timer.hpp"
 #include "dynamicSeamer.hpp"
@@ -106,14 +107,7 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
                maskB.at<uchar>(yB, xB) == 0) {
                 invCost.at<uchar>(y, x) = 0;
             } else {
-                auto va = imgA.at<cv::Vec3b>(yA, xA);
-                auto vb = imgB.at<cv::Vec3b>(yB, xB);
-
-                float db = (float)va[0] - (float)vb[0];
-                float dr = (float)va[1] - (float)vb[1];
-                float dg = (float)va[2] - (float)vb[2];
-                
-                invCost.at<float>(y, x) = 255 - sqrt(db * db + dr * dr + dg * dg);
+                invCost.at<float>(y, x) = 255 - sqrt(LeastSquares<cv::Vec3b>::Calculate(imgA, imgB, xA, yA, xB, yB));
             }
             path.at<uchar>(y, x) = 0;
         }

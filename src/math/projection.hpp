@@ -4,6 +4,8 @@
 
 #include "../io/inputImage.hpp"
 #include "../common/image.hpp"
+#include "../common/assert.hpp"
+#include "../common/support.hpp"
 #include "support.hpp"
 
 #ifndef OPTONAUT_PROJECTION_HEADER
@@ -138,29 +140,80 @@ namespace optonaut {
         }
     } 
   
-    static inline void GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, const Image &bi, Mat &overlapA, Mat &overlapB, double vBuffer = 0) {
+    /**
+     * Gets the overlapping region between two images related by a perspective 
+     * transfoerm. The first image is distorted, so the overlapping area matches the 
+     * second image. 
+     *
+     * @param a Gives the transform of the first image.
+     * @param b Gives the transform of the second image. 
+     * @param ai The first image. 
+     * @param bi the second image. 
+     * @param overlapA On completion, is set to the overlapping, undistorted part of a
+     * @param overlapB On completion, is set to the overlapping, undistorted part of b
+     * @param buffer Additional image border to be included in the overlap, wherever possible, relative to the position of a.
+     *
+     * @returns The roi of the overlapping image area of b. 
+     */
+    static inline cv::Rect GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, const Image &bi, Mat &overlapA, Mat &overlapB, int buffer, cv::Point &appliedBorder) {
         Mat hom(3, 3, CV_64F);
         Mat rot(4, 4, CV_64F);
+        
+        AssertM(ai.IsLoaded(), "Input a exists");
+        AssertM(bi.IsLoaded(), "Input b exists");
 
         HomographyFromImages(a, b, hom, rot, ai.size());
 
+        Mat offset = Mat::eye(3, 3, CV_64F);
+
+        //Modify homography, so it includes buffer. 
         if(hom.at<double>(1, 2) < 0) {
-            hom.at<double>(1, 2) += a->image.rows * vBuffer; 
+            offset.at<double>(1, 2) += buffer; 
+            appliedBorder.y = buffer;
         } else {
-            hom.at<double>(1, 2) -= a->image.rows * vBuffer; 
+            offset.at<double>(1, 2) -= buffer; 
+            appliedBorder.y = -buffer;
+        }
+        
+        if(hom.at<double>(0, 2) < 0) {
+            offset.at<double>(0, 2) += buffer; 
+            appliedBorder.x = buffer;
+        } else {
+            offset.at<double>(0, 2) -= buffer; 
+            appliedBorder.x = -buffer;
         }
 
-        Mat wa;
-        warpPerspective(ai.data, wa, hom, cv::Size(ai.cols, ai.rows), INTER_LINEAR, BORDER_CONSTANT, 0);
-       
-        //Cut images, set homography to id.
+        hom = offset * hom; 
+
+        //Calculate scene corners and ROIs
         vector<Point2f> corners = GetSceneCorners(ai, hom);
         cv::Rect roi = GetInnerBoxForScene(corners);
         
-        roi = roi & cv::Rect(0, 0, bi.cols, bi.rows);
+        cv::Rect roib = cv::Rect(roi.x, roi.y, roi.width, roi.height);
+        cv::Rect roia = cv::Rect(roi.x, roi.y, roi.width, roi.height);
+
+        roia = roia & cv::Rect(0, 0, ai.cols, ai.rows);
+        roib = roib & cv::Rect(0, 0, bi.cols, bi.rows);
+            
+        //Warp image, modify homography to set target. 
+        offset.at<double>(0, 2) = -roia.x; 
+        offset.at<double>(1, 2) = -roia.y; 
         
-        overlapA = wa(roi);
-        overlapB = bi.data(roi);
+        hom = offset * hom;
+        if(roia.width == 0 || roia.height == 0) {
+            return roia;
+        }
+        
+        warpPerspective(ai.data, overlapA, hom, roia.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
+
+        overlapB = bi.data(roib);
+
+        return roib;
+    }
+ 
+    static inline void GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, const Image &bi, Mat &overlapA, Mat &overlapB) {
+        cv::Point dummy;
+        GetOverlappingRegion(a, b, ai, bi, overlapA, overlapB, 0, dummy);
     }
     
     static inline void GeoToRot(double hAngle, double vAngle, Mat &res) {

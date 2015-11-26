@@ -38,7 +38,7 @@ private:
     //TODO Make dependent of image size
     const double OutlinerTolerance = 155 * 155; 
 
-    static const bool debug = true;
+    static const bool debug = false;
 
     //Needed for bundle adj.
     map<InputImageP, size_t> imgToLocalId;
@@ -198,7 +198,8 @@ public:
                 From4DoubleTo3Double(info->rotation, rot3);
                 HomographyFromRotation(rot3, aK3, reHom);
 
-                DrawMatchingResults(info->homography, reHom, goodMatches, a->image.data, aFeatures, b->image.data, bFeatures, target);
+                assert(false);
+                //DrawMatchingResults(info->homography, reHom, goodMatches, a->image.data, aFeatures, b->image.data, bFeatures, target);
 
                 std::string filename = 
                     "dbg/Homogpraphy" + ToString(a->id) + "_" + ToString(b->id) + 

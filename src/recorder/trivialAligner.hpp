@@ -28,8 +28,8 @@ namespace optonaut {
             // *muha*
         }
         
-        Mat GetCurrentRotation() const {
-            return current;
+        Mat GetCurrentBias() const {
+            return Mat::eye(4, 4, CV_64F);
         }
         
         void AddKeyframe(InputImageP) { }

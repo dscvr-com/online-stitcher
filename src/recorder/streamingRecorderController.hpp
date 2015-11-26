@@ -11,8 +11,8 @@ using namespace std;
 
 #define _USE_MATH_DEFINES
 
-#ifndef OPTONAUT_RECORDER_CONTROLLER_HEADER
-#define OPTONAUT_RECORDER_CONTROLLER_HEADER
+#ifndef OPTONAUT_STREAMING_RECORDER_CONTROLLER_HEADER
+#define OPTONAUT_STREAMING_RECORDER_CONTROLLER_HEADER
 
 namespace optonaut {
 
@@ -27,7 +27,7 @@ namespace optonaut {
         }
     };
 
-    class RecorderController {
+    class StreamingRecorderController {
     private:
         RecorderGraph &graph;
         int currentRing;
@@ -46,10 +46,10 @@ namespace optonaut {
         
         //Tolerance, measured on sphere, for hits.
         //We sould calc this from buffer, overlap, fov
-        const double tolerance = M_PI / 32; //TODO CHANGE FOR RELEASE
+        const double tolerance = M_PI / 24; //Narrow tolerance.
         
         void MoveToNextRing(const Mat &cur) {
-            
+
             int ringCount = (int)graph.targets.size();
             int newRing = GetNextRing(); 
             
@@ -82,7 +82,7 @@ namespace optonaut {
         }
 
     public:
-        RecorderController(RecorderGraph &graph): 
+        StreamingRecorderController(RecorderGraph &graph): 
             graph(graph), isFinished(false), isInitialized(false),
             ballPosition(Mat::eye(4, 4, CV_64F)), bestDist(1000), 
             error(-1), errorVec(3, 1, CV_64F) { }
@@ -135,6 +135,8 @@ namespace optonaut {
             } else {
                 ballPosition = next.extrinsics;
             }
+            
+            //TODO: Lerp position between next and prev, so we have correct resulst on upper/lower ring
             ExtractRotationVector(image->adjustedExtrinsics.inv() * current.extrinsics, errorVec);
 
             if(isIdle)
@@ -146,7 +148,7 @@ namespace optonaut {
                 currentDone = true;
             }
            
-            //If we are close enough, and we are closert to next than
+            //If we are close enough, and we are closer to next than
             //to current (e.g. current is next), go one step forward.  
             if(distNext < tolerance && next.globalId == current.globalId) {
                 SelectionPoint newNext;
@@ -156,7 +158,9 @@ namespace optonaut {
                 } else {
                     int nextRing = GetNextRing();
                     if(nextRing < 0 || nextRing >= (int)graph.targets.size()) {
-                        cout << "Push after finish warning." << endl;
+                        if(isFinished)
+                            cout << "Push after finish warning." << endl;
+                        isFinished = true;
                     } else {
                         MoveToNextRing(image->adjustedExtrinsics);
                     }
@@ -170,7 +174,7 @@ namespace optonaut {
             return isFinished;
         }
         
-        const Mat &GetBallPosition() const {
+        const Mat &GetNextKeyframe() const {
             return ballPosition;
         }
         

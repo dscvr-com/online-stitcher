@@ -104,7 +104,7 @@ namespace optonaut {
 
         		if(visualAnchor == -1 || GetAngleOfRotation(visualDiff * sensorDiff.inv()) > 0.1) {
                     //Fallback to sensor. 
-	        		rPrevious.push_back(GetCurrentRotation() * sensorDiff);
+	        		rPrevious.push_back(GetCurrentBias() * sensorDiff);
                     sensor++;
 	        	} else {
                     if(GetAngleOfRotation(visualDiff * sensorDiff.inv()) > 0.1) {
@@ -147,7 +147,8 @@ namespace optonaut {
 
 		}
 
-		Mat GetCurrentRotation() const {
+		Mat GetCurrentBias() const {
+            assert(false); //Wrong semantics. 
 			return rPrevious.back();
 		}
         

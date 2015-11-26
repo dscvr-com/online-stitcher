@@ -19,12 +19,12 @@ public:
     template <bool vertical>
     static void Find(Mat& imageA, Mat &imageB, Mat &maskA, Mat &maskB, const Point &tlA, const Point &tlB, int border, int overlap, int id);
 
-    static inline void FindVerticalFromStitchingResult(StitchingResultP &a, StitchingResultP &b) {
+    static inline void FindVerticalFromStitchingResult(const StitchingResultP &a, const StitchingResultP &b) {
         Find<true>(a->image.data, b->image.data, a->mask.data, 
              b->mask.data, a->corner, b->corner, 0, 1, debugId++);
     }
 
-    static inline void FindHorizontalFromStitchingResult(StitchingResultP &a, StitchingResultP &b) {
+    static inline void FindHorizontalFromStitchingResult(const StitchingResultP &a, const StitchingResultP &b) {
 
         if(a->seamed && b->seamed)
              return;

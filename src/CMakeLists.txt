@@ -14,8 +14,28 @@ stereo/monoStitcher.cpp
 stitcher/dynamicSeamer.cpp
 stitcher/multiringStitcher.cpp
 stitcher/ringStitcher.cpp
+stitcher/simpleSphereStitcher.cpp
+stitcher/simplePlaneStitcher.cpp
 )
 
 add_executable(optonaut-test stitcherTest.cpp)
 target_link_libraries(optonaut-test ${OpenCV_LIBS})
 target_link_libraries(optonaut-test optonaut-lib)
+
+add_executable(aligner-test alignerTest.cpp)
+target_link_libraries(aligner-test ${OpenCV_LIBS})
+target_link_libraries(aligner-test optonaut-lib)
+
+add_executable(perspective-aligner-test perspectiveAlignerTest.cpp)
+target_link_libraries(perspective-aligner-test ${OpenCV_LIBS})
+target_link_libraries(perspective-aligner-test optonaut-lib)
+
+add_executable(ring-closure-test ringClosureTest.cpp)
+target_link_libraries(ring-closure-test ${OpenCV_LIBS})
+target_link_libraries(ring-closure-test optonaut-lib)
+
+add_executable(stereo-conversion-test stereoConversionTest.cpp)
+target_link_libraries(stereo-conversion-test ${OpenCV_LIBS})
+target_link_libraries(stereo-conversion-test optonaut-lib)
+
+add_subdirectory(test)

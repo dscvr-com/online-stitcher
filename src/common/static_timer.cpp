@@ -21,6 +21,9 @@ namespace optonaut {
         cout << chrono::duration_cast<chrono::milliseconds>(duration).count() << "ms" << endl;
 
         last = now;
-        
+    }
+
+    void STimer::Reset() {
+        last = chrono::high_resolution_clock::now();
     }
 }

@@ -1,4 +1,5 @@
 #include <thread>
+#include <condition_variable>
 #include "support.hpp"
 
 using namespace std;
@@ -13,13 +14,12 @@ namespace optonaut {
         function<void(InType)> core;
         deque<InType> inData;
         bool running;
+        bool isInitialized;
         bool cancel;
         thread worker;
 
         mutex m;
         condition_variable sem;
-
-        bool isInitialized;
 
         void WorkerLoop() {
     
@@ -42,20 +42,32 @@ namespace optonaut {
         }
 
 	public:
-		AsyncQueue(function<void(InType)> core) : core(core), running(false), isInitialized(false) { }
+		AsyncQueue(function<void(InType)> core) : 
+            core(core), 
+            inData(), 
+            running(false),
+            isInitialized(false), 
+            cancel(false),
+            m(), 
+            sem() { }
        
-        void Push(InType in) {
+        int Push(InType in) {
+            int size = 0;
+            {
+                unique_lock<mutex> lock(m);
+                inData.push_back(in);
+                size = inData.size();
+                sem.notify_one();
+            }
+            
             if(!isInitialized) {
+                cancel = false;
                 isInitialized = true;
                 running = true;
                 worker = thread(&AsyncQueue::WorkerLoop, this); 
             }
-        
-            {
-                unique_lock<mutex> lock(m);
-                inData.push_back(in);
-                sem.notify_one();
-            }
+            
+            return size;
         }
         
         bool IsRunning() {

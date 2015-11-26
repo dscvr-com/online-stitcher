@@ -8,6 +8,7 @@
 
 #include "recorder/recorder.hpp"
 #include "common/intrinsics.hpp"
+#include "common/backtrace.hpp"
 #include "stitcher/stitcher.hpp"
 #include "io/io.hpp"
 
@@ -22,9 +23,7 @@ bool CompareByFilename (const string &a, const string &b) {
 }
 
 
-void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &rightStore) {
-
-    namedWindow("Recorder", WINDOW_AUTOSIZE);
+void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &rightStore, CheckpointStore &commonStore) {
 
     if(files.size() == 0) {
         cout << "No Input." << endl;
@@ -38,7 +37,7 @@ void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &
         auto lt = system_clock::now();
         auto image = InputImageFromFile(files[i], false);
             
-        image->intrinsics = iPhone5Intrinsics;
+        //image->intrinsics = iPhone6Intrinsics;
         
         //Create stack-local ref to mat. Clear image mat.
         //This is to simulate hard memory management.
@@ -55,7 +54,7 @@ void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &
         image->dataRef.colorSpace = colorspace::RGB;
 
         if(i == 0) {
-            recorder = shared_ptr<Recorder>(new Recorder(Recorder::iosBase, Recorder::iosZero, image->intrinsics, leftStore, rightStore, RecorderGraph::ModeTruncated, isAsync));
+            recorder = shared_ptr<Recorder>(new Recorder(Recorder::iosBase, Recorder::iosZero, image->intrinsics, leftStore, rightStore, commonStore, "", RecorderGraph::ModeTruncated, isAsync));
         }
 
         recorder->Push(image);
@@ -70,16 +69,17 @@ void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &
         }
     }
 
-    destroyWindow("Recorder");
-
     recorder->Finish();
     recorder->Dispose();
 }
 
 int main(int argc, char** argv) {
     cv::ocl::setUseOpenCL(false);
+    RegisterCrashHandler();
+
     CheckpointStore leftStore("tmp/left/", "tmp/shared/");
     CheckpointStore rightStore("tmp/right/", "tmp/shared/");
+    CheckpointStore commonStore("tmp/common/", "tmp/shared/");
 
     cout << "Starting." << endl;
 
@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
 
     if(!leftStore.HasUnstitchedRecording()) {
         cout << "Recording." << endl;
-        Record(files, leftStore, rightStore);
+        Record(files, leftStore, rightStore, commonStore);
     }
 
     if(!leftStore.HasUnstitchedRecording()) {
@@ -113,7 +113,7 @@ int main(int argc, char** argv) {
 
     {
         cout << "Start left stitcher." << endl;
-        Stitcher leftStitcher(4096, 4096, leftStore);
+        Stitcher leftStitcher(leftStore);
         auto left = leftStitcher.Finish(callbacks.At(0), false, "dbg/left");
         imwrite("dbg/left.jpg", left->image.data);
         left->image.Unload();  
@@ -121,7 +121,7 @@ int main(int argc, char** argv) {
     }
     {
         cout << "Start right stitcher." << endl;
-        Stitcher rightStitcher(4096, 4096, rightStore);
+        Stitcher rightStitcher(rightStore);
         auto right = rightStitcher.Finish(callbacks.At(1), false, "dbg/right");
         imwrite("dbg/right.jpg", right->image.data);    
         right->image.Unload();  

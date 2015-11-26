@@ -224,7 +224,7 @@ namespace optonaut {
         } else {
             //External debug format
             assert(MatrixFromJson(doc["extrinsics"], result->originalExtrinsics) == 4);
-            result->adjustedExtrinsics = result->originalExtrinsics;
+            result->adjustedExtrinsics = result->originalExtrinsics.clone();
         }
  	}
     

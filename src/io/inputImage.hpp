@@ -47,7 +47,7 @@ namespace optonaut {
         
         ExposureInfo() : iso(0), exposureTime(0) { }
     };
-
+    
 	struct InputImage {
 		Image image;
         InputImageRef dataRef;
@@ -69,6 +69,8 @@ namespace optonaut {
 	};
     
     typedef std::shared_ptr<InputImage> InputImageP;
+    
+    InputImageP CloneAndDownsample(InputImageP image);
 }
 
 

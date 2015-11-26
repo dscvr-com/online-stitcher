@@ -5,6 +5,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "../common/image.hpp"
+#include "../stitcher/stitchingResult.hpp"
 
 #include "inputImage.hpp"
 

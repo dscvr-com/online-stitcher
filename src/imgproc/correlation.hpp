@@ -62,7 +62,7 @@ namespace optonaut {
             }
        }
 
-        double var = Deviation(values);
+        double var = Variance(values);
         
         return var;
     }
@@ -115,7 +115,7 @@ namespace optonaut {
             }
        }
 
-        double var = Deviation(values);
+        double var = Variance(values);
         
         return var;
     }

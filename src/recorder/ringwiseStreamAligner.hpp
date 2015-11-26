@@ -19,7 +19,6 @@ using namespace std;
 #ifndef OPTONAUT_RINGWISE_STREAM_ALIGNMENT_HEADER
 #define OPTONAUT_RINGWISE_STREAM_ALIGNMENT_HEADER
 
-
 namespace optonaut {
 	class RingwiseStreamAligner : public Aligner {
 	private:
@@ -32,20 +31,21 @@ namespace optonaut {
         shared_ptr<Worker> worker;
        
         double lasty;
-        double lastDx;
+        double cury;
 
         deque<InputImageP> pasts;
         deque<double> sangles;
 
         const bool async;
+        static const bool debug = false;
 	public:
-		RingwiseStreamAligner(RecorderGraph &graph, ExposureCompensator &exposure, const bool async = true) :
+		RingwiseStreamAligner(RecorderGraph &graph, ExposureCompensator&, const bool async = true) :
             graph(graph), 
-            visual(exposure),
+            //visual(exposure),
             rings(graph.GetRings().size()), 
             compassDrift(Mat::eye(4, 4, CV_64F)), 
             lasty(0),
-            lastDx(0),
+            cury(0),
             async(async)
         { 
             worker = shared_ptr<Worker>(new Worker(alignOp));
@@ -73,7 +73,6 @@ namespace optonaut {
         vector<KeyframeInfo> GetClosestKeyframes(const Mat &search, size_t count) const {
 
             int ring = graph.FindAssociatedRing(search);
-            
             
             if(ring == -1)
                 return { };
@@ -110,38 +109,30 @@ namespace optonaut {
         }
 
         function<int(InputImageP)> alignOp = [&] (InputImageP next) -> int {
+            STimer aTime;
             InputImageP closest = GetClosestKeyframe(next->adjustedExtrinsics);
-            
+            //aTime.Tick("Keyframe found");
             if(closest != NULL) {
                 //Todo: Bias intensity is probably dependent on image size. 
-                CorrelationDiff corr = visual.Match(next, closest, 
-                        75, 0, next->image.cols / 64);
-               
-                if(corr.valid) { 
-                    double dx = corr.offset.x;
-                    double width = next->image.cols;
-                    
-                    //cout << "dx: " << dx << ", width: " << width << endl; 
-                    lastDx = dx;
+                CorrelationDiff corr = visual.Match(CloneAndDownsample(next), closest);
+                //aTime.Tick("Aligned");
 
-                    double hx = next->intrinsics.at<double>(0, 0) / (next->intrinsics.at<double>(0, 2) * 2); 
-
-                    assert(dx <= width);
-
-                    double angleY = asin((dx / width) / hx);
-
-                    //Todo: Don't we have to include the diff between image/keyframe
-                    //in this calculation. 
-                    //(ej): No, we don't. The correlator includes the diff in 
-                    //the projection calculation, the diff is exlusive 
-                    //the previous compass drift. 
-                    //angleY += GetDistanceY(search, closest->adjustedExtrinsics);
-                    
-                    while(angleY < -M_PI)
-                        angleY = M_PI * 2 + angleY;
-                    
+                double angleY = corr.horizontalAngularOffset;
+                
+                while(angleY < -M_PI)
+                    angleY = M_PI * 2 + angleY;
+                
+                //Check variance. Value of 10^6 guessed via chart observation. 
+                if(corr.valid && corr.variance > 1000) { 
                     lasty = angleY;
+                } else {
+                    lasty = cury;
                 }
+                //cout << "AngularDiffBias: " << lasty << endl;
+                //cout << "AbsDiffBias: " << corr.offset.x << endl;
+                //cout << "Variance: " << corr.variance << endl;
+            } else {
+                cout << "Warning: No keyframe." << endl;
             }
 
             return lasty;
@@ -156,65 +147,62 @@ namespace optonaut {
             if(graph.HasChildRing(ring)) { 
                 rings[ring].push_back(next);
             
-                cout << "Adding keyframe " << next->id << " to ring: " << ring << " count: " << rings[ring].size() << endl;
+                //cout << "Adding keyframe " << next->id << " to ring: " << ring << " count: " << rings[ring].size() << endl;
             }
-
-
         }
 
 		void Push(InputImageP next) {
             last = next;
-            next->adjustedExtrinsics = compassDrift * next->originalExtrinsics;
-
+            
             int ring = graph.FindAssociatedRing(next->adjustedExtrinsics);
-           // cout << "Ring " << ring << endl;
+            // cout << "Ring " << ring << endl;
             if(ring == -1)
                 return;
-
+            
             size_t target = graph.GetParentRing(ring);
+            
+            // cout << "Target " << target << endl;
+            if((int)target == ring)
+                return;
+            
+            static const int order = 30;
+            
+            if(sangles.size() >= order / 2) {
+                cury = Mean(sangles, 1.0 / 3.0);
+                CreateRotationY(cury, compassDrift);
+                //cout << "FilteredBias: " << cury << endl;
+            }
 
-           // cout << "Target " << target << endl;
-
-            if((int)target != ring) {
-                if(async) {
-                    if(worker->Finished()) {
-                        if(!next->IsLoaded()) {
-                            //Pre-load the image. 
-                            next->LoadFromDataRef();
-                        }
-
-                        worker->Push(next);
+            if(async) {
+                if(worker->Finished()) {
+                    if(!next->IsLoaded()) {
+                        //Pre-load the image. 
+                        next->LoadFromDataRef();
                     }
-                } else {
-                    alignOp(next);
+                    worker->Push(next);
                 }
+            } else {
+                if(!next->IsLoaded()) {
+                    //Pre-load the image.
+                    next->LoadFromDataRef();
+                }
+                alignOp(next);
             }
-
-            double avg = 0;
-            
-            static const int order = 50;
-            
-            if(sangles.size() == order) {
-                avg = Average(sangles, 1.0 / 5.0);
-                CreateRotationY(avg, compassDrift);
                 
-                next->vtag = avg;
-            }
-
-            sangles.push_back(lasty + avg);
-            pasts.push_back(next); 
-
+            sangles.push_back(lasty);
+ 
             if(sangles.size() > order) {
-                sangles.pop_front();
-            }
-            if(pasts.size() > order) {
-                pasts.pop_front();
+               sangles.pop_front();
             }
         }
 
-		Mat GetCurrentRotation() const {
-			return compassDrift * last->originalExtrinsics;
-		}
+		Mat GetCurrentBias() const {
+			return compassDrift;
+        }
+        
+        double GetCurrentVtag() const {
+            return cury;
+        }
 
         void Finish() {
             if(async) {
@@ -226,6 +214,13 @@ namespace optonaut {
         void Postprocess(vector<InputImageP> imgs) const {
             for(auto img : imgs) {
                 DrawBar(img->image.data, img->vtag);
+            }
+            if(debug) {
+                for(size_t i = 0; i < rings.size(); i++) {
+                    SimpleSphereStitcher stitcher; 
+                    auto res = stitcher.Stitch(rings[i]);
+                    imwrite("dbg/keyframe_ring_" + ToString(i) + ".jpg", rings[i]);
+                }
             }
         }
 	};

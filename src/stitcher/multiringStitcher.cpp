@@ -1,6 +1,8 @@
 #include <vector>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
+//define private public, so we can access
+//opencv internal information and print it (to debug the multi-band blender ONLY)
 #define private public
 #include <opencv2/stitching.hpp>
 #undef private
@@ -13,7 +15,7 @@
 #include "../common/functional.hpp"
 #include "../imgproc/correlation.hpp"
 #include "ringStitcher.hpp"
-#include "multiRingStitcher.hpp"
+#include "multiringStitcher.hpp"
 #include "stitchingResult.hpp"
 #include "dynamicSeamer.hpp"
 
@@ -25,21 +27,21 @@ namespace optonaut {
     
     STimer stitcherTimer;
 
-    static void LoadSRP(StitchingResultP &a) {
+    static void LoadSRP(const StitchingResultP &a) {
         a->image.Load();
         a->mask.Load(CV_LOAD_IMAGE_GRAYSCALE);
     }
     
-    static void LoadSRPGrayscaleDropMask(StitchingResultP &a) {
+    static void LoadSRPGrayscaleDropMask(const StitchingResultP &a) {
         a->image.Load(CV_LOAD_IMAGE_GRAYSCALE);
     }
 
-    static void UnLoadSRP(StitchingResultP &a) {
+    static void UnLoadSRP(const StitchingResultP &a) {
         a->image.Unload();
         a->mask.Unload();
     } 
     
-    void UnLoadSRPStoreMask(CheckpointStore &store, StitchingResultP &a) {
+    void UnLoadSRPStoreMask(CheckpointStore &store, const StitchingResultP &a) {
         a->image.Unload();
         a->seamed = true;
         cout << "Saving mask" << a->id << endl;
@@ -49,7 +51,7 @@ namespace optonaut {
          
     void MultiRingStitcher::AdjustCorners(std::vector<StitchingResultP> &rings, ProgressCallback &progress) {
 
-        auto correlate = [this] (StitchingResultP &imgA, StitchingResultP &imgB) {
+        auto correlate = [this] (const StitchingResultP &imgA, const StitchingResultP &imgB) {
             const int warp = MOTION_TRANSLATION;
             Mat affine = Mat::eye(2, 3, CV_32F);
 
@@ -59,14 +61,14 @@ namespace optonaut {
             int dy = imgA->corner.y - imgB->corner.y;
             affine.at<float>(1, 2) = dy;
 
-            TermCriteria termination(TermCriteria::COUNT + TermCriteria::EPS, 
+            TermCriteria termination(TermCriteria::COUNT + TermCriteria::EPS,
                     iterations, eps);
 
             try {
                 findTransformECC(imgA->image.data, imgB->image.data, affine, warp, termination);
                 dy = affine.at<float>(1, 2);
             } catch (Exception ex) {
-                // :( 
+                // :(
             }
 
             dyCache.push_back(dy);
@@ -198,6 +200,11 @@ namespace optonaut {
                 (stitchedRings, [](const StitchingResultP &x) { return x->corner; }),
                 fun::map<StitchingResultP, Size>
                 (stitchedRings, [](const StitchingResultP &x) { return x->image.size(); }));
+        if(w == 0 && h == 0) {
+            w = inRoi.width;
+            h = inRoi.height;
+            margin = 0;
+        }
         Rect outRoi(0, 0, w, h);
 
         int sx = inRoi.x;
