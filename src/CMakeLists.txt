@@ -18,6 +18,13 @@ stitcher/simpleSphereStitcher.cpp
 stitcher/simplePlaneStitcher.cpp
 )
 
+set_target_properties(optonaut-lib PROPERTIES COMPILE_FLAGS "-Werror")
+
+add_executable(irrlicht-test irrlichtTest.cpp)
+target_link_libraries(irrlicht-test ${CMAKE_CURRENT_LIST_DIR}/../vendor/libIrrlicht.a)
+target_link_libraries(irrlicht-test ${OPENGL_LIBRARIES})
+target_link_libraries(irrlicht-test ${EXTRA_LIBS})
+
 add_executable(to-polar toPol.cpp)
 target_link_libraries(to-polar ${OpenCV_LIBS})
 
