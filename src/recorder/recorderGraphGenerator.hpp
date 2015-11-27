@@ -67,8 +67,9 @@ public:
         }
         else if(mode == RecorderGraph::ModeNoBot) {
             //Configuration for ModeNoBot
+            //vCount = vCount - 1;
             vCount = vCount - 1;
-            vStart = (M_PI - (vFov * 3)) / 2;
+            vStart = M_PI - (vFov * vCount);
             
         } else if(mode == RecorderGraph::ModeCenter) {
             vCount = 1;

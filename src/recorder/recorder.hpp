@@ -114,7 +114,7 @@ namespace optonaut {
             generator(),
             recorderGraph(generator.Generate(intrinsics, graphConfiguration)),
             controller(recorderGraph),
-            preRecorderGraph(generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityQadruple, 6)),
+            preRecorderGraph(generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityQadruple, 8)),
             preController(preRecorderGraph),
             imagesToRecord(preRecorderGraph.Size()),
             recordedImages(0),
@@ -412,15 +412,17 @@ namespace optonaut {
 
         void ForwardToMonoQueueEx(const SelectionInfo &in) {
            
-            if(keyframeCount % 2 == 0) {
-                //Save some memory by sparse keyframing.
-                if(!in.image->image.IsLoaded()) {
-                    in.image->image.Load();
+            if(recorderGraph.HasChildRing(in.closestPoint.ringId)) {
+                if(keyframeCount % 2 == 0) {
+                    //Save some memory by sparse keyframing.
+                    if(!in.image->image.IsLoaded()) {
+                        in.image->image.Load();
+                    }
+                    aligner->AddKeyframe(CloneAndDownsample(in.image));
                 }
-                aligner->AddKeyframe(CloneAndDownsample(in.image));
-            }
 
-            keyframeCount++;
+                keyframeCount++;
+            }
 
             stereoRingBuffer.Push(in);
         }
@@ -439,9 +441,11 @@ namespace optonaut {
                 in.image->LoadFromDataRef();
             }
            
-            //Push images that get closet to the target towards the aligner.  
-            ForwardToAligner(in.image);
-            
+            //Push images that get closer to the target towards the aligner.
+            //But only if we're not in debug.
+            if(debugPath == "") {
+                ForwardToAligner(in.image);
+            }
             if(best.closestPoint.globalId != in.closestPoint.globalId) {
                 //This delays.
                 recordedImages++;
@@ -537,7 +541,11 @@ namespace optonaut {
             stereoRingBuffer.Push(last);
             stereoRingBuffer.Flush();
             saveQueue.Finish();
-           
+            
+            if(debugPath != "") {
+                std::abort();
+            }
+            
             if(HasResults()) {
 
                 if(exposureEnabled)

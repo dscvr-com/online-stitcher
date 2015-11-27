@@ -137,7 +137,7 @@ namespace optonaut {
 
             return lasty;
         };
-
+                
         void AddKeyframe(InputImageP next) {
             int ring = graph.FindAssociatedRing(next->originalExtrinsics);
             
