@@ -55,6 +55,7 @@ namespace optonaut {
         bool isIdle;
         bool isFinished;
         bool firstRingFinished;
+        bool hasStarted;
         
         RecorderGraphGenerator generator;
         RecorderGraph recorderGraph;
@@ -65,6 +66,7 @@ namespace optonaut {
         uint32_t imagesToRecord;
         uint32_t recordedImages;
         uint32_t keyframeCount;
+        int lastRingId;
         
         ReduceProcessor<SelectionInfo, SelectionInfo> preSelectorQueue;
         QueueProcessor<InputImageP> alignerDelayQueue;
@@ -111,6 +113,7 @@ namespace optonaut {
             isIdle(false),
             isFinished(false),
             firstRingFinished(false),
+            hasStarted(false),
             generator(),
             recorderGraph(generator.Generate(intrinsics, graphConfiguration)),
             controller(recorderGraph),
@@ -119,6 +122,7 @@ namespace optonaut {
             imagesToRecord(preRecorderGraph.Size()),
             recordedImages(0),
             keyframeCount(0),
+            lastRingId(-1),
             preSelectorQueue(
                 std::bind(&Recorder::SelectBetterMatchForPreSelection,
                     this, placeholders::_1,
@@ -313,8 +317,6 @@ namespace optonaut {
         }
         
         void ForwardToMonoQueue(const SelectionInfo &in) {
-            
-            static int lastRingId = -1;
             
             if(lastRingId == -1) {
                 lastRingId = in.closestPoint.ringId;
@@ -517,7 +519,7 @@ namespace optonaut {
             image->adjustedExtrinsics = image->originalExtrinsics;
            
             //This preselects.
-            if(!preController.IsInitialized())
+            if(!preController.IsInitialized() || !hasStarted)
                 preController.Initialize(image->adjustedExtrinsics);
             
             //Pass idle info, so we can get UI feedback without modifying state
@@ -525,6 +527,8 @@ namespace optonaut {
             
             if(isIdle)
                 return;
+            
+            hasStarted = true;
             
             preSelectorQueue.Push(current);
 
@@ -570,12 +574,16 @@ namespace optonaut {
             return preRecorderGraph.GetEdge(a, b, dummy);
         }
         
-        SelectionInfo CurrentPoint() {
+        SelectionInfo LastKeyframe() {
             return preSelectorQueue.GetState();
         }
         
         bool IsIdle() {
             return isIdle;
+        }
+        
+        bool HasStarted() {
+            return hasStarted;
         }
         
         ExposureInfo GetExposureHint() {

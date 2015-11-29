@@ -92,7 +92,8 @@ namespace optonaut {
         }
         
         void Initialize(const Mat &initPosition) {
-            assert(!isInitialized);
+            //Allow re-initialization to force point position. 
+            //assert(!isInitialized);
             
             currentRing = (int)(graph.targets.size() - 1) / 2;
             MoveToClosestPoint(initPosition);
