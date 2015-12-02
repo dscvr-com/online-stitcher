@@ -17,35 +17,37 @@ stitcher/ringStitcher.cpp
 stitcher/simpleSphereStitcher.cpp
 stitcher/simplePlaneStitcher.cpp
 )
+target_link_libraries(optonaut-lib ${OpenCV_LIBS})
 
-set_target_properties(optonaut-lib PROPERTIES COMPILE_FLAGS "-Werror")
-
-add_executable(irrlicht-test irrlichtTest.cpp)
-target_link_libraries(irrlicht-test ${CMAKE_CURRENT_LIST_DIR}/../vendor/libIrrlicht.a)
-target_link_libraries(irrlicht-test ${OPENGL_LIBRARIES})
-target_link_libraries(irrlicht-test ${EXTRA_LIBS})
+add_library(visual-debug-hook
+debug/visualDebugHook.cpp
+)
+target_link_libraries(visual-debug-hook ${OpenCV_LIBS})
+target_link_libraries(visual-debug-hook optonaut-lib)
+target_link_libraries(visual-debug-hook ${OPENGL_LIBRARIES})
+target_link_libraries(visual-debug-hook ${EXTRA_LIBS})
+target_link_libraries(visual-debug-hook ${CMAKE_CURRENT_LIST_DIR}/../vendor/libIrrlicht.a)
 
 add_executable(to-polar toPol.cpp)
 target_link_libraries(to-polar ${OpenCV_LIBS})
 
 add_executable(optonaut-test stitcherTest.cpp)
-target_link_libraries(optonaut-test ${OpenCV_LIBS})
 target_link_libraries(optonaut-test optonaut-lib)
 
 add_executable(aligner-test alignerTest.cpp)
-target_link_libraries(aligner-test ${OpenCV_LIBS})
 target_link_libraries(aligner-test optonaut-lib)
 
 add_executable(perspective-aligner-test perspectiveAlignerTest.cpp)
-target_link_libraries(perspective-aligner-test ${OpenCV_LIBS})
 target_link_libraries(perspective-aligner-test optonaut-lib)
 
 add_executable(ring-closure-test ringClosureTest.cpp)
-target_link_libraries(ring-closure-test ${OpenCV_LIBS})
 target_link_libraries(ring-closure-test optonaut-lib)
 
+add_executable(debug-hook-test debugHookTest.cpp)
+target_link_libraries(debug-hook-test visual-debug-hook)
+
 add_executable(stereo-conversion-test stereoConversionTest.cpp)
-target_link_libraries(stereo-conversion-test ${OpenCV_LIBS})
 target_link_libraries(stereo-conversion-test optonaut-lib)
 
 add_subdirectory(test)
+add_subdirectory(debug)
