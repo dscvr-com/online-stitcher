@@ -14,6 +14,14 @@ using namespace gui;
 
 namespace optonaut {
 
+    static double baseData[] = 
+        {1, 0, 0, 0, 
+         0, 0, 1, 0,
+         0, 1, 0, 0,
+         0, 0, 0, 1};
+
+    static const Mat base(4, 4, CV_64F, baseData);
+
     vector3df IrrVectorFromCVVector(const Mat &vec, vector<int> remap = vector<int>()) {
         AssertM(MatIs(vec, 3, 1, CV_64F), "Given Mat is a Vector");
 
@@ -137,14 +145,6 @@ namespace optonaut {
     }
     
     void VisualDebugHook::RegisterImageRotationModel(const cv::Mat &image, const cv::Mat &extrinsics, const cv::Mat &intrinsics, float scale) {
-
-        static double baseData[] = 
-            {1, 0, 0, 0, 
-             0, 0, 1, 0,
-             0, 1, 0, 0,
-             0, 0, 0, 1};
-
-        static const Mat base(4, 4, CV_64F, baseData);
 
         double dist[] = {0, -intrinsics.at<double>(0, 0), 0, 1 };
         Mat pos = base * extrinsics.inv() * base.inv() * Mat(1, 4, CV_64F, dist).t();
