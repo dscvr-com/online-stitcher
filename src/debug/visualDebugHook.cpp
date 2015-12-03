@@ -35,6 +35,20 @@ namespace optonaut {
         texture->grab();
         return texture;
     }
+
+    void BRGToRGB(const cv::Mat &in, cv::Mat &out) {
+        AssertEQM(in.cols, out.cols, "In/out have the same width");
+        AssertEQM(in.rows, out.rows, "In/out have the same heigh");
+        AssertEQM(in.type(), out.type(), "In/out have the same type");
+
+        for(int i = 0; i < in.cols; i++) {
+            for(int j = 0; j < in.rows; j++) {
+                auto brg = in.at<cv::Vec3b>(j, i);
+                std::swap(brg[0], brg[2]);
+                out.at<cv::Vec3b>(j, i) = brg;
+            }
+        } 
+    }
             
     void VisualDebugHook::RegisterImageInternal(const DebugImage &in) {
         //std::unique_lock<std::mutex> lock(m);  
@@ -45,13 +59,15 @@ namespace optonaut {
                 core::dimension2d<u32>(1, 1));
 
         matrix4 upTransform;
-        upTransform.setRotationRadians(vector3df(M_PI_2, 0, 0));
+        upTransform.setRotationRadians(vector3df(0, 0, 0));
 
         meshManipulator->transform(planeMesh, upTransform); 
         
 	    IMeshSceneNode* planeNode = smgr->addMeshSceneNode(planeMesh);
         //Swap green and red channel. 
-        IImage* irrImage = driver->createImageFromData(ECF_R8G8B8, dimension2d<u32>(in.image.cols, in.image.rows), in.image.data);
+        Mat rgbImage(in.image.rows, in.image.cols, CV_8UC3);
+        BRGToRGB(in.image, rgbImage);
+        IImage* irrImage = driver->createImageFromData(ECF_R8G8B8, dimension2d<u32>(in.image.cols, in.image.rows), rgbImage.data);
         ITexture* texture = ImageToTexture(irrImage, "Unnamed Texture", driver); 
         
         planeNode->setMaterialTexture(0, texture);
@@ -77,7 +93,9 @@ namespace optonaut {
         geoCreator = smgr->getGeometryCreator();
         meshManipulator = smgr->getMeshManipulator();
 
-        smgr->addCameraSceneNode(0, vector3df(10,0,10), vector3df(0,0,0));
+        camera = smgr->addCameraSceneNode(0, vector3df(0,0,0), vector3df(10,0,0));
+
+        float camRotation = 0;
 
         for(auto img : asyncInput) {
             RegisterImageInternal(img);
@@ -85,7 +103,8 @@ namespace optonaut {
 
         while(device->run()) {
             driver->beginScene(true, true, SColor(255,100,101,140));
-
+            camRotation += 0.001f;
+            camera->setTarget(vector3df(sin(camRotation), 0, cos(camRotation)));
             smgr->drawAll();
             guienv->drawAll();
 
@@ -118,10 +137,19 @@ namespace optonaut {
     }
     
     void VisualDebugHook::RegisterImageRotationModel(const cv::Mat &image, const cv::Mat &extrinsics, const cv::Mat &intrinsics, float scale) {
-        double dist[] = {0, 0, intrinsics.at<double>(0, 0), 1 };
-        Mat pos = extrinsics.inv() * Mat(1, 4, CV_64F, dist).t();
+
+        static double baseData[] = 
+            {1, 0, 0, 0, 
+             0, 0, 1, 0,
+             0, 1, 0, 0,
+             0, 0, 0, 1};
+
+        static const Mat base(4, 4, CV_64F, baseData);
+
+        double dist[] = {0, -intrinsics.at<double>(0, 0), 0, 1 };
+        Mat pos = base * extrinsics.inv() * base.inv() * Mat(1, 4, CV_64F, dist).t();
         
-        RegisterImage(image, pos(Rect(0, 0, 1, 3)), extrinsics(Rect(0, 0, 3, 3)), scale * intrinsics.at<double>(0, 2)); 
+        RegisterImage(image, pos(Rect(0, 0, 1, 3)), (base * extrinsics * base.inv())(Rect(0, 0, 3, 3)), scale * intrinsics.at<double>(1, 2)); 
     }
     
     void VisualDebugHook::WaitForExit() {

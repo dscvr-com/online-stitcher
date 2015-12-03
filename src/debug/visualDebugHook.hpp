@@ -27,6 +27,7 @@ namespace optonaut {
             irr::gui::IGUIEnvironment* guienv;
             const irr::scene::IGeometryCreator* geoCreator;
             irr::scene::IMeshManipulator* meshManipulator;
+            irr::scene::ICameraSceneNode* camera;
 
             //std::thread worker;
             //std::mutex m;
