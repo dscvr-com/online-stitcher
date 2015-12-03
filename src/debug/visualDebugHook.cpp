@@ -14,13 +14,20 @@ using namespace gui;
 
 namespace optonaut {
 
-    vector3df IrrVectorFromCVVector(const Mat &vec) {
+    vector3df IrrVectorFromCVVector(const Mat &vec, vector<int> remap = vector<int>()) {
         AssertM(MatIs(vec, 3, 1, CV_64F), "Given Mat is a Vector");
 
-        return vector3df(
-            vec.at<double>(0),
-            vec.at<double>(1),
-            vec.at<double>(2));
+        if(remap.size() == 0) {
+            return vector3df(
+                vec.at<double>(0),
+                vec.at<double>(1),
+                vec.at<double>(2));
+        } else {
+            return vector3df(
+                vec.at<double>(remap[0]),
+                vec.at<double>(remap[1]),
+                vec.at<double>(remap[2]));
+        }
     }
 
     ITexture* ImageToTexture(video::IImage* image, core::stringc name, IVideoDriver *driver) {
@@ -36,8 +43,14 @@ namespace optonaut {
         IMesh* planeMesh = geoCreator->createPlaneMesh(
                 core::dimension2d<f32>(1 * in.scale, ratio * in.scale), 
                 core::dimension2d<u32>(1, 1));
+
+        matrix4 upTransform;
+        upTransform.setRotationRadians(vector3df(M_PI_2, 0, 0));
+
+        meshManipulator->transform(planeMesh, upTransform); 
         
 	    IMeshSceneNode* planeNode = smgr->addMeshSceneNode(planeMesh);
+        //Swap green and red channel. 
         IImage* irrImage = driver->createImageFromData(ECF_R8G8B8, dimension2d<u32>(in.image.cols, in.image.rows), in.image.data);
         ITexture* texture = ImageToTexture(irrImage, "Unnamed Texture", driver); 
         
@@ -48,8 +61,9 @@ namespace optonaut {
 
         planeNode->setPosition(IrrVectorFromCVVector(in.position));
 
-        Mat rvec; ExtractRotationVector(in.orientation, rvec);
-        planeNode->setRotation(IrrVectorFromCVVector(rvec));
+        Mat rvec; ExtractRotationVector(in.orientation.inv(), rvec);
+        cout << "Rotation: " << rvec << endl;
+        planeNode->setRotation(IrrVectorFromCVVector(rvec * 180.0 / M_PI, {0, 1, 2}));
     }
 
     void VisualDebugHook::Run() {
@@ -63,7 +77,7 @@ namespace optonaut {
         geoCreator = smgr->getGeometryCreator();
         meshManipulator = smgr->getMeshManipulator();
 
-        smgr->addCameraSceneNode(0, vector3df(0,10,0), vector3df(0,0,0));
+        smgr->addCameraSceneNode(0, vector3df(10,0,10), vector3df(0,0,0));
 
         for(auto img : asyncInput) {
             RegisterImageInternal(img);
@@ -104,10 +118,10 @@ namespace optonaut {
     }
     
     void VisualDebugHook::RegisterImageRotationModel(const cv::Mat &image, const cv::Mat &extrinsics, const cv::Mat &intrinsics, float scale) {
-        double dist[] = {intrinsics.at<double>(0, 0), 0, 0, 1 };
-        Mat pos = extrinsics * Mat(1, 4, CV_64F, dist).t();
+        double dist[] = {0, 0, intrinsics.at<double>(0, 0), 1 };
+        Mat pos = extrinsics.inv() * Mat(1, 4, CV_64F, dist).t();
         
-        RegisterImage(image, pos(Rect(0, 0, 1, 3)), extrinsics(Rect(0, 0, 3, 3)), scale); 
+        RegisterImage(image, pos(Rect(0, 0, 1, 3)), extrinsics(Rect(0, 0, 3, 3)), scale * intrinsics.at<double>(0, 2)); 
     }
     
     void VisualDebugHook::WaitForExit() {

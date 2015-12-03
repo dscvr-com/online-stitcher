@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
     
     VisualDebugHook debugger;
 
-    for(int i = 0; i < min(n, 100); i += 1) {
+    for(int i = 0; i < min(n, 250); i += 1) {
 
         cout << "Adding image " << i << endl;
 
