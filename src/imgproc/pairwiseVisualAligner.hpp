@@ -6,6 +6,7 @@
 #include <opencv2/stitching/detail/motion_estimators.hpp>
 
 #include "../common/drawing.hpp"
+#include "../common/static_timer.hpp"
 #include "../common/image.hpp"
 #include "../math/support.hpp"
 #include "../math/projection.hpp"
@@ -22,12 +23,18 @@ namespace optonaut {
 class MatchInfo {
 public:
 	bool valid;
-	Mat homography;
+	Mat F;
 	Mat rotation;
 	double error;
 
-	MatchInfo() : valid(false), homography(4, 4, CV_64F), rotation(4, 4, CV_64F) {}
+	MatchInfo() : valid(false), F(4, 4, CV_64F), rotation(4, 4, CV_64F) {}
 
+};
+
+class FeatureChainInfo {
+public:
+    size_t imageId;
+    size_t featureIndex;
 };
 
 class PairwiseVisualAligner {
@@ -38,12 +45,39 @@ private:
     //TODO Make dependent of image size
     const double OutlinerTolerance = 155 * 155; 
 
-    static const bool debug = false;
+    static const bool debug = true;
+    const size_t NO_CHAIN = (size_t)-1; 
 
     //Needed for bundle adj.
     map<InputImageP, size_t> imgToLocalId;
     vector<MatchesInfo> matches;
     vector<ImageFeatures> features;
+    vector<vector<size_t>> chainRefs;
+    vector<vector<FeatureChainInfo>> featureChains;
+
+    size_t CreateNewChain() {
+        size_t id = featureChains.size();
+        featureChains.push_back({});
+        return id;
+    }
+
+    void AllocateChainRefs(size_t imageId, size_t featureCount) {
+        assert(chainRefs.size() == imageId);
+        chainRefs.emplace_back(featureCount);
+        std::fill(chainRefs[imageId].begin(), chainRefs[imageId].end(), NO_CHAIN);
+    }
+
+    void AppendToFeatureChain(size_t trainImage, size_t trainFeature, size_t queryImage, size_t queryFeature) {
+        size_t chain = chainRefs[trainImage][trainFeature]; 
+        if(chain == NO_CHAIN) {
+            chain = CreateNewChain();
+            featureChains[chain].push_back({trainImage, trainFeature});
+            chainRefs[trainImage][trainFeature] = chain;
+        }
+
+        chainRefs[queryImage][queryFeature] = chain;
+        featureChains[chain].push_back({queryImage, queryFeature});
+    } 
 
     size_t GetImageId(InputImageP img) {
         if(imgToLocalId.find(img) == imgToLocalId.end()) {
@@ -74,13 +108,20 @@ public:
         detector->detectAndCompute(tmp, noArray(), f.keypoints, *descriptors);
 
         f.descriptors = descriptors->getUMat(ACCESS_READ);
+        AllocateChainRefs(id, f.keypoints.size());
 
         features.push_back(f);
+    }
+
+    vector<vector<FeatureChainInfo>> &GetFeatureChains() {
+        return featureChains;
     }
 
 	MatchInfo *FindCorrespondence(const InputImageP a, const InputImageP b) {
         assert(a != NULL);
         assert(b != NULL);
+        
+        STimer imageMatchingTimer;
 
 		MatchInfo* info = new MatchInfo();
         info->valid = false;
@@ -101,15 +142,17 @@ public:
         Mat estHom;
         
         HomographyFromImages(a, b, estHom, estRot);
+       
+        imageMatchingTimer.Tick("Feature Detection"); 
 
+        //Can we do local search here? 
 		BFMatcher matcher;
 		vector<vector<DMatch>> matches;
-		matcher.knnMatch(aFeatures.descriptors, bFeatures.descriptors, matches, 1);
+		matcher.knnMatch(aFeatures.descriptors, bFeatures.descriptors, matches, 2);
 
 		vector<DMatch> goodMatches;
 		for(size_t i = 0; i < matches.size(); i++) {
-			if(matches[i].size() > 0) {
-
+			if(matches[i].size() > 1 && matches[i][0].distance < matches[i][1].distance * 0.75 ) {
                 std::vector<Point2f> src(1);
                 std::vector<Point2f> est(1);
 
@@ -123,6 +166,8 @@ public:
 
                 if(dist < OutlinerTolerance) {
 				    goodMatches.push_back(matches[i][0]);
+                    AppendToFeatureChain(aId, matches[i][0].queryIdx, 
+                            bId, matches[i][0].trainIdx);
                 }
 			}
 		}
@@ -139,13 +184,16 @@ public:
 			aLocalFeatures.push_back(aFeatures.keypoints[goodMatches[i].queryIdx].pt);
 			bLocalFeatures.push_back(bFeatures.keypoints[goodMatches[i].trainIdx].pt);
 		}
-
+        
         MatchesInfo minfo;
         minfo.src_img_idx = (int)GetImageId(a);
         minfo.dst_img_idx = (int)GetImageId(b);
         minfo.matches = goodMatches;
+        imageMatchingTimer.Tick("Feature Maching");
 
-		info->homography = findHomography(aLocalFeatures, bLocalFeatures, CV_RANSAC, 3, minfo.inliers_mask);
+		info->F = findFundamentalMat(aLocalFeatures, bLocalFeatures, CV_RANSAC, 3, 0.99, minfo.inliers_mask);
+
+        imageMatchingTimer.Tick("Homography Estimation");
 
         int inlinerCount = 0;
 
@@ -156,63 +204,39 @@ public:
 
         minfo.num_inliers = inlinerCount;
         minfo.confidence = 0;
-        minfo.H = info->homography;
+        minfo.H = info->F;
 
         double inlinerRatio = inlinerCount;
         inlinerRatio /= goodMatches.size();
 
         Mat translation;
 
-		if(info->homography.cols != 0) {	
-            info->valid = DecomposeHomography(a, b, info->homography, info->rotation, translation);
- 		}
+        if(info->valid) {
+            minfo.confidence = 100;
+        }
+       
+        //debug
+        if(debug) {
+            Mat target; 
 
-        //TODO There is some kind of REPROJ technique to check the error here. 
-	
-	   	if(info->valid) {
+            vector<char> mask; //(minfo.inliers_mask.begin(), minfo.inliers_mask.end());
+            vector<DMatch> matches; // = minfo.matches;
 
-            //Check if the homography is a translation movement (the only thing we accept)
-            for(int i = 0; i < 2; i++) {
-                for(int j = 0; j < 2; j++) {
-                    double val = info->homography.at<double>(i, j);
-                    
-                    if((i == j && abs(1 - val) > 0.15) || 
-                       (i != j && abs(val) > 0.15)) {
-                        info->valid = false;
-                        break;
-                    }
-                }
-            }
+            drawMatches(a->image.data, features[GetImageId(a)].keypoints, b->image.data, features[GetImageId(b)].keypoints, matches, target, Scalar::all(-1), Scalar(0, 0, 255), mask, DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 
-            if(info->valid) {
-                minfo.confidence = 100;
-            }
-           
-            //debug
-            if(debug) {
-                Mat target; 
-
-                Mat aK3;
-                Mat reHom, rot3(3, 3, CV_64F);
-                ScaleIntrinsicsToImage(a->intrinsics, a->image.data, aK3);
-                From4DoubleTo3Double(info->rotation, rot3);
-                HomographyFromRotation(rot3, aK3, reHom);
-
-                assert(false);
-                //DrawMatchingResults(info->homography, reHom, goodMatches, a->image.data, aFeatures, b->image.data, bFeatures, target);
-
-                std::string filename = 
-                    "dbg/Homogpraphy" + ToString(a->id) + "_" + ToString(b->id) + 
-                    "(C " + ToString(goodMatches.size()) + 
-                    ", R " + ToString(inlinerRatio * 100) +  
-                    ", hom " + ToString(info->homography) + 
-                    ", used " + ToString(info->valid) + 
-                    ").jpg";
-                imwrite(filename, target);
-            }
-		}
+            std::string filename = 
+                "dbg/Homogpraphy" + ToString(a->id) + "_" + ToString(b->id) + 
+                "(C " + ToString(goodMatches.size()) + 
+                ", R " + ToString(inlinerRatio * 100) +  
+                ", used " + ToString(info->valid) + 
+                ").jpg";
+            imwrite(filename, target);
+        }
         
+        imageMatchingTimer.Tick("Debug Output");
+
         this->matches.push_back(minfo);
+        imageMatchingTimer.Tick("Result Storeage");
 
         return info;
     }

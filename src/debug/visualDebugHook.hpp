@@ -19,7 +19,7 @@ namespace optonaut {
         float scale;
     };
 
-    class VisualDebugHook : DebugHook {
+    class VisualDebugHook : public DebugHook {
         private: 
             irr::IrrlichtDevice *device; 
             irr::video::IVideoDriver* driver;

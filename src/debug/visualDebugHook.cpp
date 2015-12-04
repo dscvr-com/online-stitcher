@@ -146,10 +146,20 @@ namespace optonaut {
     
     void VisualDebugHook::RegisterImageRotationModel(const cv::Mat &image, const cv::Mat &extrinsics, const cv::Mat &intrinsics, float scale) {
 
-        double dist[] = {0, -intrinsics.at<double>(0, 0), 0, 1 };
-        Mat pos = base * extrinsics.inv() * base.inv() * Mat(1, 4, CV_64F, dist).t();
-        
-        RegisterImage(image, pos(Rect(0, 0, 1, 3)), (base * extrinsics * base.inv())(Rect(0, 0, 3, 3)), scale * intrinsics.at<double>(1, 2)); 
+        static int ctr = 0;
+
+        if(ctr % 10 == 0) {
+            double dist[] = {0, -intrinsics.at<double>(0, 0), 0, 1 };
+            Mat pos = base * extrinsics.inv() * base.inv() 
+                * Mat(1, 4, CV_64F, dist).t();
+            
+            RegisterImage(image, 
+                    pos(Rect(0, 0, 1, 3)), 
+                    (base * extrinsics * base.inv())(Rect(0, 0, 3, 3)), 
+                    scale * intrinsics.at<double>(1, 2)); 
+        }
+
+        ctr++;
     }
     
     void VisualDebugHook::WaitForExit() {

@@ -10,6 +10,7 @@
 #include "../common/progressCallback.hpp"
 #include "../common/reduceProcessor.hpp"
 #include "../stitcher/simpleSphereStitcher.hpp"
+#include "../debug/debugHook.hpp"
 
 #include "recorderGraph.hpp"
 #include "recorderGraphGenerator.hpp"
@@ -494,6 +495,13 @@ namespace optonaut {
 
             if(isIdle)
                 return;
+
+            if(DebugHook::Instance != NULL) {
+                DebugHook::Instance->RegisterImageRotationModel(
+                        image->image.data, 
+                        ConvertFromStitcher(image->adjustedExtrinsics), 
+                        image->intrinsics);
+            }
            
             selectorQueue.Push(current); 
         }
