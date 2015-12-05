@@ -4,14 +4,17 @@ project(optonaut-stitcher)
 include(GNUInstallDirs)
 
 find_package(OpenGL REQUIRED)
-include_directories(${OPENGL_INCLUDE_DIR})
+include_directories(SYSTEM ${OPENGL_INCLUDE_DIR})
 include_directories(SYSTEM src/lib/irrlicht)
+find_package(mrpt REQUIRED)
+include_directories(SYSTEM ${MRPT_INCLUDE_DIR})
+include_directories(SYSTEM src/lib/srba/include)
 
 INCLUDE_DIRECTORIES ( /System/Library/Frameworks )
 
-FIND_LIBRARY( COCOA_LIB Cocoa )
-FIND_LIBRARY( CARBON_LIB Carbon )
-FIND_LIBRARY( IOKIT_LIB IOKit )
+FIND_LIBRARY(COCOA_LIB Cocoa)
+FIND_LIBRARY(CARBON_LIB Carbon)
+FIND_LIBRARY(IOKIT_LIB IOKit)
 
 MARK_AS_ADVANCED (COCOA_LIB
     CARBON_LIB 

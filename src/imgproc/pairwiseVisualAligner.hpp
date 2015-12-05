@@ -88,6 +88,14 @@ private:
 
         return id;
     }
+
+    struct CompareById {
+        const size_t v;
+        CompareById(const size_t& v) : v(v) {}
+        bool operator()(const std::map<InputImageP, size_t>::value_type& p) {
+            return p.second == v;
+        }
+    };
 public:
 
 	PairwiseVisualAligner() : detector(AKAZE::create()) { }
@@ -113,8 +121,18 @@ public:
         features.push_back(f);
     }
 
-    vector<vector<FeatureChainInfo>> &GetFeatureChains() {
+    const vector<vector<FeatureChainInfo>> &GetFeatureChains() {
         return featureChains;
+    }
+
+    const vector<ImageFeatures> &GetFeatures() {
+        return features;
+    }
+    
+    InputImageP GetImageById(const size_t id) {
+        return std::find_if(imgToLocalId.begin(), 
+                imgToLocalId.end(), 
+                CompareById(id))->first;
     }
 
 	MatchInfo *FindCorrespondence(const InputImageP a, const InputImageP b) {

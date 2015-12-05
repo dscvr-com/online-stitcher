@@ -5,6 +5,7 @@
 #include <thread>
 #include <opencv2/stitching/detail/blenders.hpp>
 #include <opencv2/core/ocl.hpp>
+#include <srba.h>
 
 #include "common/intrinsics.hpp"
 #include "common/static_timer.hpp"
