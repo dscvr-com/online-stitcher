@@ -1,3 +1,6 @@
 [submodule "src/lib/control-system-cpp"]
 	path = src/lib/control-system-cpp
 	url = git@github.com:optonaut/control-system-cpp.git
+[submodule "src/lib/srba"]
+	path = src/lib/srba
+	url = git@github.com:MRPT/srba.git
