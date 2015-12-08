@@ -9,6 +9,8 @@ include_directories(SYSTEM src/lib/irrlicht)
 find_package(mrpt REQUIRED)
 include_directories(SYSTEM ${MRPT_INCLUDE_DIR})
 include_directories(SYSTEM src/lib/srba/include)
+include_directories(SYSTEM /usr/local/include/mrpt/graphslam/include)
+include_directories(SYSTEM /usr/local/include/mrpt/gui/include)
 
 INCLUDE_DIRECTORIES ( /System/Library/Frameworks )
 
@@ -23,5 +25,5 @@ SET(OSX_LIBS ${COCOA_LIB} ${CARBON_LIB} ${IOKIT_LIB})
 
 find_package( OpenCV REQUIRED )
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall -Wunreachable-code -std=c++1y -O0 -g -Werror")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall -Wunreachable-code -std=c++1y -O3 -g -Werror -DNS_BLOCK_ASSERTIONS")
 add_subdirectory(src)

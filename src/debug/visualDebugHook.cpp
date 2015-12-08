@@ -57,6 +57,14 @@ namespace optonaut {
             }
         } 
     }
+    
+    void VisualDebugHook::RegisterFeatureInternal(const DebugFeature &f) {
+        IMesh* sphereMesh = geoCreator->createSphereMesh(0.1);
+        meshManipulator->setVertexColors(sphereMesh, SColor(0, f.r, f.g, f.b));
+	    IMeshSceneNode* sphereNode = smgr->addMeshSceneNode(sphereMesh);
+        sphereNode->setPosition(vector3df(f.x, f.y, f.z));
+        sphereNode->setMaterialFlag(EMF_LIGHTING, false);
+    }
             
     void VisualDebugHook::RegisterImageInternal(const DebugImage &in) {
         //std::unique_lock<std::mutex> lock(m);  
@@ -109,10 +117,16 @@ namespace optonaut {
             RegisterImageInternal(img);
         }
 
+        for(auto feat : asyncFeatures) {
+            RegisterFeatureInternal(feat);
+        }
+
         while(device->run()) {
             driver->beginScene(true, true, SColor(255,100,101,140));
             camRotation += 0.001f;
-            camera->setTarget(vector3df(sin(camRotation), 0, cos(camRotation)));
+            //camera->setTarget(vector3df(sin(camRotation), 0, cos(camRotation)));
+            camera->setPosition(vector3df(sin(camRotation) * 10, 5, cos(camRotation) * 10));
+            camera->setTarget(vector3df(0, 0, 0));
             smgr->drawAll();
             guienv->drawAll();
 
@@ -161,8 +175,12 @@ namespace optonaut {
 
         ctr++;
     }
+            
+    void VisualDebugHook::PlaceFeature(double x, double y, double z, int r, int g, int b) {
+        asyncFeatures.push_back({x, y, z, r, g, b});
+    }
     
     void VisualDebugHook::WaitForExit() {
         //worker.join();
-    };
+    }
 }

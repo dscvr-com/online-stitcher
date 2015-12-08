@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
 
     // Old quadratic Optograph format, we need to cut black borders away. 
     if(in.cols == in.rows) {
-        in = in(Rect(0, 630, in.cols, in.rows - 630 * 2)); 
+       // in = in(Rect(0, 630, in.cols, in.rows - 630 * 2)); 
     }
 
     // Make our input panorama square
@@ -43,10 +43,10 @@ int main(int argc, char** argv) {
     in = in.t();
     flip(in, in, -1);
 
-    // Inverse log transform. Center around input center. Set radius so 
+    // Inverse linear transform. Center around input center. Set radius so 
     // result contains all of the input image. 
     linearPolar(in, pol, 
-            Point2f(in.cols / 2, in.rows / 2), (in.rows / 2) * sqrt(2), 
+            Point2f(in.cols / 2, in.rows / 2), (in.rows / 2), 
             CV_WARP_FILL_OUTLIERS | CV_INTER_LINEAR | CV_WARP_INVERSE_MAP);
 
     imwrite(argv[2], pol);

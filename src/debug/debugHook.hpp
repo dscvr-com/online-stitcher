@@ -34,7 +34,10 @@ namespace optonaut {
          */
         virtual void RegisterImageRotationModel(const cv::Mat &image, const cv::Mat &extrinsics, const cv::Mat &intrinsics, float scale = 1) = 0;
 
+        virtual void PlaceFeature(double x, double y, double z, int r = 0xFF, int g = 0x00, int b = 0x00) = 0;
+
         static DebugHook* Instance;
+
     };
 }
 

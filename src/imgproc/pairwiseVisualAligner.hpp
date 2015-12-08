@@ -46,7 +46,6 @@ private:
     const double OutlinerTolerance = 155 * 155; 
 
     static const bool debug = true;
-    const size_t NO_CHAIN = (size_t)-1; 
 
     //Needed for bundle adj.
     map<InputImageP, size_t> imgToLocalId;
@@ -98,6 +97,8 @@ private:
     };
 public:
 
+    const size_t NO_CHAIN = (size_t)-1; 
+
 	PairwiseVisualAligner() : detector(AKAZE::create()) { }
 
 	void FindKeyPoints(InputImageP img) {
@@ -123,6 +124,10 @@ public:
 
     const vector<vector<FeatureChainInfo>> &GetFeatureChains() {
         return featureChains;
+    }
+    
+    const vector<vector<size_t>> &GetChainRefs() {
+        return chainRefs;
     }
 
     const vector<ImageFeatures> &GetFeatures() {

@@ -30,6 +30,13 @@ target_link_libraries(visual-debug-hook ${OPENGL_LIBRARIES})
 target_link_libraries(visual-debug-hook ${OSX_LIBS})
 target_link_libraries(visual-debug-hook ${CMAKE_CURRENT_LIST_DIR}/../vendor/libIrrlicht.a)
 
+add_executable(feature-chain-test featureChainTest.cpp)
+target_link_libraries(feature-chain-test optonaut-lib)
+target_link_libraries(feature-chain-test osx-support)
+target_link_libraries(feature-chain-test ${MRPT_LIBRARIES})
+target_link_libraries(feature-chain-test /usr/local/lib/libmrpt-gui.dylib)
+target_link_libraries(feature-chain-test visual-debug-hook)
+
 add_executable(to-polar toPol.cpp)
 target_link_libraries(to-polar ${OpenCV_LIBS})
 
@@ -52,8 +59,6 @@ target_link_libraries(debug-hook-test visual-debug-hook)
 add_executable(stereo-conversion-test stereoConversionTest.cpp)
 target_link_libraries(stereo-conversion-test optonaut-lib)
 
-add_executable(feature-chain-test featureChainTest.cpp)
-target_link_libraries(feature-chain-test optonaut-lib)
-
 add_subdirectory(test)
 add_subdirectory(debug)
+add_subdirectory(osxsupport)
