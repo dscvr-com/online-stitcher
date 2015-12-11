@@ -29,7 +29,7 @@ target_link_libraries(visual-debug-hook ${EXTRA_LIBS})
 target_link_libraries(visual-debug-hook ${CMAKE_CURRENT_LIST_DIR}/../vendor/libIrrlicht.a)
 
 add_executable(to-polar toPol.cpp)
-target_link_libraries(to-polar ${OpenCV_LIBS})
+target_link_libraries(to-polar optonaut-lib)
 
 add_executable(optonaut-test stitcherTest.cpp)
 target_link_libraries(optonaut-test optonaut-lib)
