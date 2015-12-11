@@ -23,13 +23,18 @@ namespace optonaut {
 class MatchInfo {
 public:
 	bool valid;
-	Mat F;
+	Mat E;
 	Mat rotation;
 	double error;
+    MatchesInfo matches;
+    vector<Point2f> aLocalFeatures;
+    vector<Point2f> bLocalFeatures;
 
-	MatchInfo() : valid(false), F(4, 4, CV_64F), rotation(4, 4, CV_64F) {}
+	MatchInfo() : valid(false), E(4, 4, CV_64F), rotation(4, 4, CV_64F) {}
 
 };
+
+typedef std::shared_ptr<MatchInfo> MatchInfoP;
 
 class FeatureChainInfo {
 public:
@@ -50,7 +55,7 @@ private:
 
     //Needed for bundle adj.
     map<InputImageP, size_t> imgToLocalId;
-    vector<MatchesInfo> matches;
+    vector<MatchInfoP> matches;
     vector<ImageFeatures> features;
     vector<vector<size_t>> chainRefs;
     vector<vector<FeatureChainInfo>> featureChains;
@@ -117,13 +122,13 @@ public:
         return featureChains;
     }
 
-	MatchInfo *FindCorrespondence(const InputImageP a, const InputImageP b) {
+	MatchInfoP FindCorrespondence(const InputImageP a, const InputImageP b) {
         assert(a != NULL);
         assert(b != NULL);
         
         STimer imageMatchingTimer;
 
-		MatchInfo* info = new MatchInfo();
+		MatchInfoP info(new MatchInfo());
         info->valid = false;
 
         size_t aId = GetImageId(a);
@@ -177,12 +182,9 @@ public:
 			return info;
 		}
 
-		vector<Point2f> aLocalFeatures;
-		vector<Point2f> bLocalFeatures;
-
 		for(size_t i = 0; i < goodMatches.size(); i++) {
-			aLocalFeatures.push_back(aFeatures.keypoints[goodMatches[i].queryIdx].pt);
-			bLocalFeatures.push_back(bFeatures.keypoints[goodMatches[i].trainIdx].pt);
+			info->aLocalFeatures.push_back(aFeatures.keypoints[goodMatches[i].queryIdx].pt);
+			info->bLocalFeatures.push_back(bFeatures.keypoints[goodMatches[i].trainIdx].pt);
 		}
         
         MatchesInfo minfo;
@@ -190,8 +192,14 @@ public:
         minfo.dst_img_idx = (int)GetImageId(b);
         minfo.matches = goodMatches;
         imageMatchingTimer.Tick("Feature Maching");
+    
+        Mat scaledK;
+        ScaleIntrinsicsToImage(a->intrinsics, a->image.size(), scaledK);
 
-		info->F = findFundamentalMat(aLocalFeatures, bLocalFeatures, CV_RANSAC, 3, 0.99, minfo.inliers_mask);
+		info->E = findEssentialMat(info->aLocalFeatures, info->bLocalFeatures, 
+                scaledK.at<double>(0, 0), 
+                Point2d(scaledK.at<double>(0, 2), scaledK.at<double>(1, 2)), 
+                CV_RANSAC, 0.999, 1, minfo.inliers_mask);
 
         imageMatchingTimer.Tick("Homography Estimation");
 
@@ -204,7 +212,6 @@ public:
 
         minfo.num_inliers = inlinerCount;
         minfo.confidence = 0;
-        minfo.H = info->F;
 
         double inlinerRatio = inlinerCount;
         inlinerRatio /= goodMatches.size();
@@ -235,9 +242,10 @@ public:
         
         imageMatchingTimer.Tick("Debug Output");
 
-        this->matches.push_back(minfo);
+        info->matches = minfo;
         imageMatchingTimer.Tick("Result Storeage");
 
+        this->matches.push_back(info);
         return info;
     }
 
@@ -266,8 +274,9 @@ public:
 
         vector<MatchesInfo> fullMatches(images.size() * images.size());
 
+        // Expand sparse match list to full match matrix. 
         for(auto match : matches) {
-            fullMatches[match.src_img_idx * images.size() + match.dst_img_idx] = match;
+            fullMatches[match->matches.src_img_idx * images.size() + match->matches.dst_img_idx] = match->matches;
         }
 
         auto adjuster = BundleAdjusterRay();
