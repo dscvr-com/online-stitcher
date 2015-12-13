@@ -199,10 +199,31 @@ StitchingResultP RingStitcher::Stitch(const std::vector<InputImageP> &in, const 
         res->image = Image(warpedImage);
         res->id = img->id;
 
-        //Calculate Image Position (without wrapping aroing)
-        Point cornerTop = warper->warpRoi(Size(1, 1), 
-                intrinsicsList[i], cameras[i].R).tl();
-        res->corner = Point(cornerTop.x, corners[i].y);
+        //Calculate Image Position (without wrapping around)
+        Point tl = warper->warpPoint(Point(0, img->image.rows), K, 
+                cameras[i].R);
+        Point bl = warper->warpPoint(Point(0, 0), K, cameras[i].R);
+        Size fullRoi = warpedSizes[i];
+        Point cornerLeft;
+
+        if(abs(bl.x - tl.x) > fullRoi.width / 2) {
+            //Corner case. Difference between left corners
+            //is more than half the image. 
+            if(bl.x < tl.x) {
+                cornerLeft = tl;
+            } else {
+                cornerLeft = bl;
+            }
+        } else {
+            //Standard case. 
+            if(bl.x > tl.x) {
+                cornerLeft = tl;
+            } else {
+                cornerLeft = bl;
+            }
+        }
+
+        res->corner = Point(cornerLeft.x, corners[i].y);
         
         img->image.Unload(); 
         detailTimer.Tick("Image Warped");

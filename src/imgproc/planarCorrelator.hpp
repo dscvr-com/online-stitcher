@@ -102,7 +102,7 @@ class PyramidPlanarAligner {
         cv::Point res = PyramidPlanarAligner<Correlator>::AlignInternal(a, b, wx, wy, dskip, 0, pool);
 
         //debug - draw resulting image. 
-        if(debug && dskip > 0) {
+        if(debug) {
             static int dbgctr = 0;
             Mat eye = Mat::eye(3, 3, CV_64F);
             Mat hom = Mat::eye(3, 3, CV_64F);

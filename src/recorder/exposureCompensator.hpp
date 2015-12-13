@@ -18,7 +18,12 @@ namespace optonaut {
         double iTo; //Overlapping area birghtness other.
 
         ExposureDiff() : n(0), iFrom(0), iTo(0) { }
+        
+        friend ostream& operator<< (ostream& os, const ExposureDiff& e) {
+            return os << e.iFrom << " -> " << e.iTo;
+        }
     };
+    
 
     class ExposureCompensator : public ImageCorrespondenceGraph<ExposureDiff> {
         private: 
@@ -40,18 +45,21 @@ namespace optonaut {
             }
         
             ExposureDiff Register(InputImageP a, InputImageP b) {
-                Mat ga, gb;
-                GetOverlappingRegion(a, b, a->image, b->image, ga, gb);
+                return ImageCorrespondenceGraph<ExposureDiff>::Register(a, b);
+            }
+
+            virtual ExposureDiff GetCorrespondence(InputImageP imgA, InputImageP imgB,  ExposureDiff &aToB, ExposureDiff &bToA) {
+
+                Mat a, b;
+                GetOverlappingRegion(imgA, imgB, imgA->image, imgB->image, a, b);
                 
-                if(ga.cols < 1 || ga.rows < 1) {
+                if(a.cols < 1 || a.rows < 1) {
                     ExposureDiff zero;
+                    aToB.n = 0;
+                    bToA.n = 0;
                     return zero;
                 }
 
-                return ImageCorrespondenceGraph<ExposureDiff>::Register(ga, a->id, gb, b->id);
-            }
-
-            virtual ExposureDiff GetCorrespondence(const Mat &a, size_t aId, const Mat &b, size_t bId, ExposureDiff &aToB, ExposureDiff &bToA) {
                 assert(a.cols == b.cols && a.rows == b.rows);
                 assert(a.type() == b.type());
 
@@ -95,19 +103,11 @@ namespace optonaut {
                     a.copyTo(target(cv::Rect(0, 0, a.cols, a.rows)));
                     b.copyTo(target(cv::Rect(a.cols, 0, a.cols, a.rows)));
 
-                    imwrite("dbg/corr" + ToString(aId) + "_" + ToString(bId) + "_sa_" + ToString(sumA / size) + "_sb_" + ToString(sumB / size) +  ".jpg", target);
+                    imwrite("dbg/corr" + ToString(imgA->id) + "_" + ToString(imgB->id) + "_sa_" + ToString(sumA / size) + "_sb_" + ToString(sumB / size) +  ".jpg", target);
                 }
                 
                 return aToB;
             };
-
-            void PrintCorrespondence() {
-                for(auto &adj : relations.GetEdges()) {
-                    for(auto &edge : adj.second) {
-                        cout << edge.from << " -> " << edge.to << ": " << edge.value.iFrom << " -> " << edge.value.iTo << endl;
-                    }
-                }
-            }
 
             void FindGains() {
 

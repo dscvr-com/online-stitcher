@@ -190,7 +190,6 @@ namespace optonaut {
             return size;
         }
         
-        
         vector<vector<InputImageP>> SplitIntoRings(vector<InputImageP> &imgs) const {
             vector<vector<InputImageP>> rings(this->GetRings().size());
             
