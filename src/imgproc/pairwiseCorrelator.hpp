@@ -24,11 +24,18 @@ public:
 	bool valid;
     int overlap;
     Point2f offset;
-    double horizontalAngularOffset;
-    double verticalAngularOffset;
+    Point2f angularOffset;
+    int rejectionReason;
     double variance;
+    int inverseTestDifference;
 
-	CorrelationDiff() : valid(false), offset(0, 0), horizontalAngularOffset(0) {}
+	CorrelationDiff() : 
+        valid(false), 
+        offset(0, 0), 
+        angularOffset(0, 0), 
+        rejectionReason(-1),
+        variance(0),
+        inverseTestDifference(0) {}
 
 };
 
@@ -39,6 +46,11 @@ private:
     typedef PyramidPlanarAligner<NormedCorrelator<LeastSquares<Vec3b>>> Aligner;
 public:
     PairwiseCorrelator() { }
+
+    static const int RejectionUnknown = -1;
+    static const int RejectionNone = 0;
+    static const int RejectionNoOverlap = 1;
+    static const int RejectionInverseTest = 2;
    
     // Note: An outlier threshold of 2 is fine (1 pixel in each dimension), since
     // we don't do sub-pixel alignment.  
@@ -64,6 +76,7 @@ public:
         if(wa.cols < minWidth || wb.cols < minWidth || 
                 wa.rows < minHeight || wb.rows < minHeight) {
             result.valid = false;
+            result.rejectionReason = RejectionNoOverlap;
             return result;
         }
 
@@ -77,6 +90,8 @@ public:
         if(diffSum > outlierThreshold) {
             //cout << "Planar Correlator Discarding: " << res.offset << " <-> " << res2.offset << " (" << diffSum << ")" << endl;
             result.valid = false;
+            result.rejectionReason = RejectionInverseTest;
+            result.inverseTestDifference = diffSum;
             return result;
         }
 
@@ -90,8 +105,8 @@ public:
         double olYB = (overlappingRoi.y - b->image.rows / 2) / h;
        
         result.overlap = wa.cols * wa.rows; 
-        result.horizontalAngularOffset = atan(olXA) - atan(olXB);
-        result.verticalAngularOffset = atan(olYA) - atan(olYB);
+        result.angularOffset.x = atan(olXA) - atan(olXB);
+        result.angularOffset.y = atan(olYA) - atan(olYB);
         result.offset = correctedRes;
         result.valid = true;
         result.variance = res.variance;

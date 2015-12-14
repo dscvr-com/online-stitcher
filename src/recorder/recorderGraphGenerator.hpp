@@ -31,7 +31,9 @@ private:
 
 public:
     
-    RecorderGraph Generate(const Mat &intrinsics, const int mode = RecorderGraph::ModeAll, const int density = RecorderGraph::DensityNormal, const int lastRingOverdrive = 0) {
+    RecorderGraph Generate(const Mat &intrinsics, const int mode = RecorderGraph::ModeAll, const float density = RecorderGraph::DensityNormal, const int lastRingOverdrive = 0) {
+        AssertWGEM(density, 1.f, 
+                "Reducing recorder graph density below one is potentially unsafe.");
         
         RecorderGraph res;
         

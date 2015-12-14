@@ -103,7 +103,7 @@ int main(int argc, char** argv) {
     n = ring.size();
 
     for(int i = 0; i < n; i++) {
-        double ydiff = result.horizontalAngularOffset * (1.0 - ((double)i) / ((double)n));
+        double ydiff = result.angularOffset.x * (1.0 - ((double)i) / ((double)n));
         Mat correction;
         CreateRotationY(ydiff, correction);
         ring[i]->adjustedExtrinsics = correction * ring[i]->adjustedExtrinsics;

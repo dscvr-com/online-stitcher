@@ -117,7 +117,7 @@ namespace optonaut {
                 CorrelationDiff corr = visual.Match(CloneAndDownsample(next), closest);
                 //aTime.Tick("Aligned");
 
-                double angleY = corr.horizontalAngularOffset;
+                double angleY = corr.angularOffset.x;
                 
                 while(angleY < -M_PI)
                     angleY = M_PI * 2 + angleY;
@@ -211,10 +211,10 @@ namespace optonaut {
             rings.clear();
         }
 
-        void Postprocess(vector<InputImageP> imgs) const {
-            for(auto img : imgs) {
-                DrawBar(img->image.data, img->vtag);
-            }
+        void Postprocess(vector<InputImageP>) const {
+            //for(auto img : imgs) {
+            //    DrawBar(img->image.data, img->vtag);
+            //}
             if(debug) {
                 for(size_t i = 0; i < rings.size(); i++) {
                     SimpleSphereStitcher stitcher; 

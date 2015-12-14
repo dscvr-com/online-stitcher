@@ -1,6 +1,7 @@
-
 #include <opencv2/opencv.hpp>
 #include <math.h>
+#include <list>
+#include <vector>
 
 #include "../io/inputImage.hpp"
 #include "../common/image.hpp"
@@ -189,8 +190,39 @@ namespace optonaut {
             
             return size;
         }
+
+        vector<InputImageP> SelectBestMatches(const vector<InputImageP> &_imgs) const {
+
+            std::list<InputImageP> imgs(_imgs.begin(), _imgs.end());
+            vector<InputImageP> res;
+
+            for(auto &ring : targets) {
+                for(auto target : ring) {
+                    auto compare = [&target](
+                            const InputImageP &a, 
+                            const InputImageP &b) {
+                        auto dA = GetAngleOfRotation(a->adjustedExtrinsics.inv() * 
+                                target.extrinsics);
+                        auto dB = GetAngleOfRotation(b->adjustedExtrinsics.inv() * 
+                                target.extrinsics);
+
+                        return dA < dB;
+                    };
+
+                    auto it = std::min_element(imgs.begin(), imgs.end(), compare);
+                    InputImageP min = *it;
+                    min->ringId = target.ringId;
+                    min->localId = target.localId;
+                    min->globalId = target.globalId;
+
+                    res.push_back(min);
+                }
+            }
+
+            return res;
+        }
         
-        vector<vector<InputImageP>> SplitIntoRings(vector<InputImageP> &imgs) const {
+        vector<vector<InputImageP>> SplitIntoRings(const vector<InputImageP> &imgs) const {
             vector<vector<InputImageP>> rings(this->GetRings().size());
             
             for(auto img : imgs) {

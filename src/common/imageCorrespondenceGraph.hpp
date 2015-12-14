@@ -36,6 +36,10 @@ namespace optonaut {
                 
                 return res;
             }
+
+            const map<size_t, vector<Edge<ValueType>>> &GetEdges() const {
+                return relations.GetEdges();
+            }
             
             void PrintCorrespondence() {
                 for(auto &adj : relations.GetEdges()) {

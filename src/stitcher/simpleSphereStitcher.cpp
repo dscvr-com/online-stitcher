@@ -170,22 +170,27 @@ StitchingResultP SimpleSphereStitcher::Stitch(const std::vector<InputImageP> &in
 	//flip(res->image, res->image, -1);
 	//flip(res->mask, res->mask, -1);
 
-    res->corner.x = corners[0].x;
-    res->corner.y = corners[0].y;
-
-    for(size_t i = 1; i < n; i++) {
-        res->corner.x = min(res->corner.x, corners[i].x);
-        res->corner.y = min(res->corner.y, corners[i].y);
-    }
+    res->corner.x = resultRoi.x;
+    res->corner.y = resultRoi.y;
 
 	return res;
 }
 
-cv::Point2f SimpleSphereStitcher::Warp(const cv::Mat &intrinsics, const cv::Mat &extrinsics, const Size &imageSize) {
+cv::Rect SimpleSphereStitcher::Warp(const cv::Mat &intrinsics, const cv::Mat &extrinsics, const Size &imageSize) {
    Mat sk, r, k;
    From4DoubleTo3Float(extrinsics, r);
    ScaleIntrinsicsToImage(intrinsics, imageSize, sk);
    From3DoubleTo3Float(sk, k);
-   return warper.warpPoint(Point(0, 0), k, r); 
+   return warper.warpRoi(imageSize, k, r); 
+}
+        
+cv::Point SimpleSphereStitcher::WarpPoint(const cv::Mat &intrinsics, const cv::Mat &extrinsics, const Size &imageSize, const Point &point) {
+   Mat sk, r, k;
+   From4DoubleTo3Float(extrinsics, r);
+   ScaleIntrinsicsToImage(intrinsics, imageSize, sk);
+   From3DoubleTo3Float(sk, k);
+   k.at<float>(0, 2) = 0;
+   k.at<float>(1, 2) = 0;
+   return warper.warpPoint(point, k, r); 
 }
 }
