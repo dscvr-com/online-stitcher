@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
 
     for(int k = 0; k < 10000; k++) {
         AlignmentGraph aligner;
-        int matches = 0, outliers = 0, forced = 0;
+        int matches = 0, outliers = 0, forced = 0, noOverlap = 0;
         for(int i = 0; i < n; i++) {
             for(int j = 0; j < i; j++) {
                 auto corr = aligner.Register(images[i], images[j]);
@@ -87,6 +87,9 @@ int main(int argc, char** argv) {
                         PairwiseCorrelator::RejectionInverseTest) {
                    outliers++; 
                    //cout << "Outlier: " << images[i]->id << " <-> " << images[j]->id << ": " << corr.error << endl;
+                } else if(corr.rejectionReason == 
+                        PairwiseCorrelator::RejectionNoOverlap) {
+                   noOverlap++; 
                 }
                 if(corr.forced) {
                     forced++;
@@ -96,14 +99,10 @@ int main(int argc, char** argv) {
 
         aligner.FindAlignment();
 
-        for(auto img : images) {
-            aligner.Apply(img);
-            img->adjustedExtrinsics.copyTo(img->originalExtrinsics);
-        }
-            
         cout << "Pass " << k << ", matches: " << matches << 
             " (real: " << (matches - forced) << ")" << 
-            ", outliers: " << outliers << ", forced: " << forced<< endl;
+            ", outliers: " << outliers << ", no overlap: " << noOverlap << 
+            ", forced: " << forced<< endl;
 
         res = debugger.Stitch(images);
         for(auto adj : aligner.GetEdges()) {
@@ -151,6 +150,11 @@ int main(int argc, char** argv) {
             }
         }
         imwrite("dbg/aligned_" + ToString(k) + ".jpg", res->image.data);
+        
+        for(auto img : images) {
+            aligner.Apply(img);
+            img->adjustedExtrinsics.copyTo(img->originalExtrinsics);
+        }
     }
 
     return 0;

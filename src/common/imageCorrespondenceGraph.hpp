@@ -20,6 +20,9 @@ namespace optonaut {
             static const bool debug = true;
 
         public:
+            typedef typename SparseGraph<ValueType>::Edge Edge;
+            typedef typename SparseGraph<ValueType>::Edges Edges;
+            typedef typename SparseGraph<ValueType>::AdjList AdjList;
             ImageCorrespondenceGraph() { }
 
             ValueType Register(InputImageP a, InputImageP b) {
@@ -37,7 +40,7 @@ namespace optonaut {
                 return res;
             }
 
-            const map<size_t, vector<Edge<ValueType>>> &GetEdges() const {
+            const AdjList &GetEdges() const {
                 return relations.GetEdges();
             }
             

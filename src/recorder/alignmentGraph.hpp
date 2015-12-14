@@ -126,9 +126,33 @@ namespace optonaut {
                 double beta = 1 / alpha;
                 double error = 0;
                 double weightSum = 0;
+                double edgeCount = 0;
+
+                const double quartil = 0.25;
 
                 for(auto &adj : relations.GetEdges()) {
-                    for(auto &edge : adj.second) {
+
+                    Edges correlatorEdges = fun::filter<Edge>(adj.second, 
+                        [] (auto a) {
+                            return !a.value.forced && a.value.overlap > 0; 
+                        }); 
+
+                    Edges forcedEdges = fun::filter<Edge>(adj.second, 
+                        [] (auto a) {
+                            return a.value.forced && a.value.overlap > 0; 
+                        }); 
+
+                    std::sort(correlatorEdges.begin(), correlatorEdges.end(), 
+                        [] (auto a, auto b) {
+                            return a.value.dphi < b.value.dphi;
+                        });
+
+                    for(size_t i = correlatorEdges.size() * quartil; i < 
+                        correlatorEdges.size() * (1.0f - quartil); i++) {
+                        forcedEdges.push_back(correlatorEdges[i]);
+                    }
+
+                    for(auto &edge : forcedEdges) {
                         //Use non-linear weights - less penalty for less overlap. 
                         if(edge.value.overlap > 0) {
                             double weight = edge.value.overlap;
@@ -142,11 +166,12 @@ namespace optonaut {
 
                             error += weight * abs(edge.value.dphi);
                             weightSum += weight;
+                            edgeCount++;
                         }
                     }
                 }
 
-                cout << "Error: " << (error / weightSum) << endl;
+                cout << "Error: " << (error / relations.GetEdges().size()) << endl;
                 
                 solve(O, R, x, DECOMP_SVD);
                 

@@ -19,6 +19,19 @@ namespace fun {
         return out;
     }
 
+    template <typename In> 
+    vector<In> filter(const vector<In> &input, std::function<bool(const In&)> a) {
+        vector<In> out;
+
+        for(size_t i = 0; i < input.size(); i++) {
+            if(a(input[i])) {
+                out.push_back(input[i]);
+            }
+        }
+
+        return out;
+    }
+
     template <typename In>
     vector<In> inverse(const vector<const In> &input) {
         vector<In> out(input.size());
