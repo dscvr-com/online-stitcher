@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
             }
         }
 
-        aligner.FindAlignment();
+        AlignmentGraph::Edges edges = aligner.FindAlignment();
 
         cout << "Pass " << k << ", matches: " << matches << 
             " (real: " << (matches - forced) << ")" << 
@@ -105,47 +105,53 @@ int main(int argc, char** argv) {
             ", forced: " << forced<< endl;
 
         res = debugger.Stitch(images);
-        for(auto adj : aligner.GetEdges()) {
-            for(auto edge : adj.second) {
-               if(edge.value.valid) {
-                   InputImageP a = imageById[edge.from]; 
-                   InputImageP b = imageById[edge.to]; 
+        for(auto edge : edges) {
+           if(edge.value.valid) {
+               InputImageP a = imageById[edge.from]; 
+               InputImageP b = imageById[edge.to]; 
 
-                   if(a->ringId != 1 && a->ringId != b->ringId)
-                       continue; //Only draw cross-lines if origin at ring 0
+               if(a->ringId != 1 && a->ringId != b->ringId)
+                   continue; //Only draw cross-lines if origin at ring 0
 
-                   Point imgCenter = res->corner;
+               Point imgCenter = res->corner;
 
-                   Point aCenter = debugger.WarpPoint(a->intrinsics, 
-                           a->adjustedExtrinsics, 
-                           a->image.size(), Point(0, 0)) - imgCenter;
-                   Point bCenter = debugger.WarpPoint(b->intrinsics, 
-                           b->adjustedExtrinsics, 
-                           b->image.size(), Point(0, 0)) - imgCenter;
+               Point aCenter = debugger.WarpPoint(a->intrinsics, 
+                       a->adjustedExtrinsics, 
+                       a->image.size(), Point(0, 0)) - imgCenter;
+               Point bCenter = debugger.WarpPoint(b->intrinsics, 
+                       b->adjustedExtrinsics, 
+                       b->image.size(), Point(0, 0)) - imgCenter;
 
-                   //Make sure a is always left. 
-                   if(aCenter.x > bCenter.x) {
-                        swap(aCenter, bCenter);
-                   }
+               //Make sure a is always left. 
+               if(aCenter.x > bCenter.x) {
+                    swap(aCenter, bCenter);
+               }
 
-                   double dPhi = edge.value.dphi * 10;
-    
-                   Scalar color(255 * min(1.0, max(0.0, -dPhi)), 
-                               0, 
-                               255 * min(1.0, max(0.0, dPhi)));
-                   if(edge.value.forced) {
-                        color = Scalar(0xc0, 0xc0, 0xc0);
-                   }
+               double dPhi = edge.value.dphi * 10;
 
-                   if(bCenter.x - aCenter.x > res->image.cols / 2) {
-                        cv::line(res->image.data, 
-                           aCenter, bCenter - Point(res->image.cols, 0), color, 3);
-                        cv::line(res->image.data, 
-                           aCenter + Point(res->image.cols, 0), bCenter, color, 3);
-                   } else {
-                        cv::line(res->image.data, 
-                           aCenter, bCenter, color, 3);
-                   }
+               Scalar color(255 * min(1.0, max(0.0, -dPhi)), 
+                           0, 
+                           255 * min(1.0, max(0.0, dPhi)));
+               if(edge.value.forced) {
+                    color = Scalar(0xc0, 0xc0, 0xc0);
+               }
+               
+               int thickness = 6;
+
+               if(edge.value.quartil) {
+                    thickness = 3;
+               }
+
+               if(bCenter.x - aCenter.x > res->image.cols / 2) {
+                    cv::line(res->image.data, 
+                       aCenter, bCenter - Point(res->image.cols, 0), 
+                       color, thickness);
+                    cv::line(res->image.data, 
+                       aCenter + Point(res->image.cols, 0), bCenter,
+                       color, thickness);
+               } else {
+                    cv::line(res->image.data, 
+                       aCenter, bCenter, color, thickness);
                }
             }
         }

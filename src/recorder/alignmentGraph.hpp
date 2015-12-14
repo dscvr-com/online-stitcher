@@ -19,6 +19,7 @@ namespace optonaut {
         int overlap;
         int error; 
         int rejectionReason;
+        bool quartil;
         bool forced;
 
         AlignmentDiff() : 
@@ -27,6 +28,7 @@ namespace optonaut {
             overlap(0), 
             error(0),
             rejectionReason(0),
+            quartil(false),
             forced(false) { }
         
         friend ostream& operator<< (ostream& os, const AlignmentDiff& e) {
@@ -96,8 +98,9 @@ namespace optonaut {
                 return aToB;
             };
 
-            void FindAlignment() {
+            Edges FindAlignment() {
                 size_t maxId = 0;
+                Edges allEdges;
 
                 for(auto &adj : relations.GetEdges()) {
                     maxId = max(maxId, adj.first);
@@ -147,9 +150,14 @@ namespace optonaut {
                             return a.value.dphi < b.value.dphi;
                         });
 
-                    for(size_t i = correlatorEdges.size() * quartil; i < 
-                        correlatorEdges.size() * (1.0f - quartil); i++) {
-                        forcedEdges.push_back(correlatorEdges[i]);
+                    for(size_t i = 0; i < correlatorEdges.size(); i++) {
+                        if(i < correlatorEdges.size() * quartil 
+                                || i > correlatorEdges.size() * (1.0f - quartil)) {
+                            correlatorEdges[i].value.quartil = true;
+                            allEdges.push_back(correlatorEdges[i]);
+                        } else {
+                            forcedEdges.push_back(correlatorEdges[i]);
+                        }
                     }
 
                     for(auto &edge : forcedEdges) {
@@ -167,6 +175,8 @@ namespace optonaut {
                             error += weight * abs(edge.value.dphi);
                             weightSum += weight;
                             edgeCount++;
+
+                            allEdges.push_back(edge);
                         }
                     }
                 }
@@ -182,6 +192,7 @@ namespace optonaut {
                     //cout << invmap[i] << " alignment: " << x.at<double>(i, 0) << endl;
                 }
 
+                return allEdges;
             }
 
             void Apply(InputImageP in) const {
