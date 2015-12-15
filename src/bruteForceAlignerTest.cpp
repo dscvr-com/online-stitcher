@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
     auto res = debugger.Stitch(images);
     imwrite("dbg/aa_input.jpg", res->image.data);
 
-    for(int k = 0; k < 10000; k++) {
+    for(int k = 0; k < 250; k++) {
         AlignmentGraph aligner;
         int matches = 0, outliers = 0, forced = 0, noOverlap = 0;
         for(int i = 0; i < n; i++) {
@@ -103,7 +103,7 @@ int main(int argc, char** argv) {
             " (real: " << (matches - forced) << ")" << 
             ", outliers: " << outliers << ", no overlap: " << noOverlap << 
             ", forced: " << forced<< endl;
-
+        
         res = debugger.Stitch(images);
         for(auto edge : edges) {
            if(edge.value.valid) {
@@ -161,7 +161,8 @@ int main(int argc, char** argv) {
             aligner.Apply(img);
             img->adjustedExtrinsics.copyTo(img->originalExtrinsics);
         }
+        
     }
-
+        
     return 0;
 }

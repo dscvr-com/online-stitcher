@@ -66,7 +66,8 @@ namespace optonaut {
                         || areNeighbors) {
                     int minSize = min(imgA->image.cols, imgA->image.rows) / 1.8;
 
-                    auto res = aligner.Match(imgA, imgB, minSize, minSize);
+                    auto res = aligner.Match(imgA, imgB, minSize, 
+                            minSize, Point2f(1, 128));
                     
                     if(!res.valid && areNeighbors) {
                         res.valid = true;
@@ -84,8 +85,8 @@ namespace optonaut {
                     bToA.valid = res.valid;
                     aToB.rejectionReason = res.rejectionReason;
                     bToA.rejectionReason = res.rejectionReason;
-                    aToB.error = res.inverseTestDifference;
-                    bToA.error = res.inverseTestDifference;
+                    aToB.error = res.inverseTestDifference.x;
+                    bToA.error = res.inverseTestDifference.x;
                 } else {
                     aToB.dphi = 0;
                     bToA.dphi = 0;
@@ -150,9 +151,10 @@ namespace optonaut {
                             return a.value.dphi < b.value.dphi;
                         });
 
-                    for(size_t i = 0; i < correlatorEdges.size(); i++) {
-                        if(i < correlatorEdges.size() * quartil 
-                                || i > correlatorEdges.size() * (1.0f - quartil)) {
+                    size_t m = correlatorEdges.size();
+
+                    for(size_t i = 0; i < m; i++) {
+                        if(i < m * quartil || i >= m * (1.0f - quartil)) {
                             correlatorEdges[i].value.quartil = true;
                             allEdges.push_back(correlatorEdges[i]);
                         } else {

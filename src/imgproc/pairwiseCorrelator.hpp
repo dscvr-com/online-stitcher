@@ -27,7 +27,7 @@ public:
     Point2f angularOffset;
     int rejectionReason;
     double variance;
-    int inverseTestDifference;
+    Point2f inverseTestDifference;
 
 	CorrelationDiff() : 
         valid(false), 
@@ -35,7 +35,7 @@ public:
         angularOffset(0, 0), 
         rejectionReason(-1),
         variance(0),
-        inverseTestDifference(0) {}
+        inverseTestDifference(0, 0) {}
 
 };
 
@@ -54,7 +54,7 @@ public:
    
     // Note: An outlier threshold of 2 is fine (1 pixel in each dimension), since
     // we don't do sub-pixel alignment.  
-    CorrelationDiff Match(const InputImageP a, const InputImageP b, int minWidth = 0, int minHeight = 0, int outlierThreshold = 2) {
+    CorrelationDiff Match(const InputImageP a, const InputImageP b, int minWidth = 0, int minHeight = 0, Point2f outlierThreshold = Point2f(1, 1)) {
 
         STimer cTimer;
         CorrelationDiff result;
@@ -86,12 +86,11 @@ public:
         auto diff = res.offset + res2.offset;
 
         //Inverse match not consistent - invalid. 
-        int diffSum = diff.x * diff.x + diff.y * diff.y;
-        if(diffSum > outlierThreshold) {
+        if(abs(diff.x) > outlierThreshold.x || abs(diff.y) > outlierThreshold.y) {
             //cout << "Planar Correlator Discarding: " << res.offset << " <-> " << res2.offset << " (" << diffSum << ")" << endl;
             result.valid = false;
             result.rejectionReason = RejectionInverseTest;
-            result.inverseTestDifference = diffSum;
+            result.inverseTestDifference = diff;
             return result;
         }
 
