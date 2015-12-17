@@ -197,7 +197,8 @@ namespace optonaut {
             vector<InputImageP> res;
 
             for(auto &ring : targets) {
-                for(auto target : ring) {
+                for(size_t i = 0; i < ring.size(); i++) {
+                    auto target = ring[i];
                     auto compare = [&target](
                             const InputImageP &a, 
                             const InputImageP &b) {
@@ -214,6 +215,7 @@ namespace optonaut {
                     min->ringId = target.ringId;
                     min->localId = target.localId;
                     min->globalId = target.globalId;
+                    min->ringSize = ring.size(); 
 
                     res.push_back(min);
                 }

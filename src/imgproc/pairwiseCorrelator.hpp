@@ -54,7 +54,7 @@ public:
    
     // Note: An outlier threshold of 2 is fine (1 pixel in each dimension), since
     // we don't do sub-pixel alignment.  
-    CorrelationDiff Match(const InputImageP a, const InputImageP b, int minWidth = 0, int minHeight = 0, Point2f outlierThreshold = Point2f(1, 1)) {
+    CorrelationDiff Match(const InputImageP a, const InputImageP b, int minWidth = 0, int minHeight = 0) {
 
         STimer cTimer;
         CorrelationDiff result;
@@ -80,19 +80,9 @@ public:
             return result;
         }
 
-        PlanarCorrelationResult res = Aligner::Align(wa, wb, 0.25, 0.25, 0);
-        PlanarCorrelationResult res2 = Aligner::Align(wb, wa, 0.25, 0.25, 0);
+        Mat corr; //Debug stuff
 
-        auto diff = res.offset + res2.offset;
-
-        //Inverse match not consistent - invalid. 
-        if(abs(diff.x) > outlierThreshold.x || abs(diff.y) > outlierThreshold.y) {
-            //cout << "Planar Correlator Discarding: " << res.offset << " <-> " << res2.offset << " (" << diffSum << ")" << endl;
-            result.valid = false;
-            result.rejectionReason = RejectionInverseTest;
-            result.inverseTestDifference = diff;
-            return result;
-        }
+        PlanarCorrelationResult res = Aligner::Align(wa, wb, corr, 0.5, 0.5, 0);
 
         cv::Point correctedRes = res.offset + appliedBorder;
         

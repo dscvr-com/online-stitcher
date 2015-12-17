@@ -132,15 +132,19 @@ int main(int argc, char** argv) {
                Scalar color(255 * min(1.0, max(0.0, -dPhi)), 
                            0, 
                            255 * min(1.0, max(0.0, dPhi)));
-               if(edge.value.forced) {
-                    color = Scalar(0xc0, 0xc0, 0xc0);
-               }
                
                int thickness = 6;
 
                if(edge.value.quartil) {
-                    thickness = 3;
+                    thickness = 2;
                }
+
+               if(edge.value.forced) {
+                   continue;
+                   // color = Scalar(0xc0, 0xc0, 0xc0);
+                   // thickness = 2;
+               }
+               
 
                if(bCenter.x - aCenter.x > res->image.cols / 2) {
                     cv::line(res->image.data, 
@@ -153,6 +157,8 @@ int main(int argc, char** argv) {
                     cv::line(res->image.data, 
                        aCenter, bCenter, color, thickness);
                }
+
+               cv::circle(res->image.data, aCenter, 8, Scalar(0xc0, 0xc0, 0x00), -1);
             }
         }
         imwrite("dbg/aligned_" + ToString(k) + ".jpg", res->image.data);

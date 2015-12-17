@@ -1,6 +1,7 @@
 #include "../common/support.hpp"
 #include "../common/drawing.hpp"
 #include "../math/stat.hpp"
+#include "../common/assert.hpp"
 
 #ifndef OPTONAUT_PLANAR_CORRELATOR_HEADER
 #define OPTONAUT_PLANAR_CORRELATOR_HEADER
@@ -32,18 +33,20 @@ class BruteForcePlanarAligner {
         OnlineVariance<double> var;
 
         if(debug) {
-            corr = Mat(wy * 2, wx * 2, CV_32F);
+            corr = Mat(wy * 2 + 1, wx * 2 + 1, CV_32F);
 	        corr.setTo(Scalar::all(0));
         }
 
         AssertGTM(wx, 0, "Correlation window exists.");
         AssertGTM(wy, 0, "Correlation window exists.");
 
-        for(int dx = -wx; dx < wx; dx++) {
-            for(int dy = -wy; dy < wy; dy++) {
+        for(int dx = -wx; dx <= wx; dx++) {
+            for(int dy = -wy; dy <= wy; dy++) {
                 float res = Correlator::Calculate(a, b, dx + ox, dy + oy);
                 var.Push(res);
                 if(debug) {
+                    AssertGTM(corr.rows, dy + wy, "Correlation matrix too small.");
+                    AssertGTM(corr.cols, dx + wx, "Correlation matrix too small.");
                     corr.at<float>(dy + wy, dx + wx) = res; 
                 }
                 if(res < min) {
@@ -62,11 +65,11 @@ class BruteForcePlanarAligner {
 template <typename Correlator>
 class PyramidPlanarAligner {
     private:
-    static inline cv::Point AlignInternal(const Mat &a, const Mat &b, double wx, double wy, int dskip, int depth, VariancePool<double> &pool) {
+
+    static inline cv::Point AlignInternal(const Mat &a, const Mat &b, Mat &corr, int &corrXOff, int corrYOff, double wx, double wy, int dskip, int depth, VariancePool<double> &pool) {
         const int minSize = 4;
 
         cv::Point res;
-        Mat corr(0, 0, CV_32F);
 
         if(a.cols > minSize / wx && b.cols > minSize / wx 
                 && a.rows > minSize / wy && b.rows > minSize / wy) {
@@ -75,13 +78,44 @@ class PyramidPlanarAligner {
             pyrDown(a, ta);
             pyrDown(b, tb);
 
-            cv::Point guess = PyramidPlanarAligner<Correlator>::AlignInternal(ta, tb, wx, wy, dskip - 1, depth + 1, pool);
+            cv::Point guess = PyramidPlanarAligner<Correlator>::AlignInternal(ta, tb, corr, corrXOff, corrYOff, wx, wy, dskip - 1, depth + 1, pool);
+    
+            if(debug) {
+                pyrUp(corr, corr);
+            }
+
             if(dskip > 0) {
                 res = guess * 2;
             } else {
+
+                Mat corrBf;
+
                 PlanarCorrelationResult detailedRes = 
-                    BruteForcePlanarAligner<Correlator>::Align(a, b, corr, 2, 2, 
-                                                        guess.x * 2, guess.y * 2);
+                    BruteForcePlanarAligner<Correlator>::Align(
+                            a, b, corrBf, 2, 2, guess.x * 2, guess.y * 2);
+
+                if(debug) {
+
+                    Rect roi(guess.x * 2 - corrBf.cols / 2 + corr.cols / 2 + corrXOff,
+                             guess.y * 2 - corrBf.rows / 2 + corr.rows / 2 + corrYOff,
+                             corrBf.cols, corrBf.rows);
+
+                    corrXOff -= min(roi.x, 0),
+                    corrYOff -= min(roi.y, 0),
+                    copyMakeBorder(corr,
+                                   corr,
+                                   -min(roi.y, 0),
+                                   -min(corr.rows - (roi.y + roi.height), 0),
+                                   -min(roi.x, 0),
+                                   -min(corr.cols - (roi.x + roi.width), 0),
+                                   BORDER_CONSTANT, Scalar::all(0));
+                    
+                    roi.y = max(roi.y, 0);
+                    roi.x = max(roi.x, 0);
+
+
+                    corrBf.copyTo(corr(roi));
+                }
 
                 res = detailedRes.offset;
                 pool.Push(detailedRes.variance, detailedRes.n * pow(2, depth));
@@ -97,9 +131,11 @@ class PyramidPlanarAligner {
         return res;
     }
     public:
-    static inline PlanarCorrelationResult Align(const Mat &a, const Mat &b, double wx = 0.5, double wy = 0.5, int dskip = 0) {
+    static inline PlanarCorrelationResult Align(const Mat &a, const Mat &b, Mat &corr, double wx = 0.5, double wy = 0.5, int dskip = 0) {
         VariancePool<double> pool;
-        cv::Point res = PyramidPlanarAligner<Correlator>::AlignInternal(a, b, wx, wy, dskip, 0, pool);
+        int corrXOff = 0;
+        int corrYOff = 0;
+        cv::Point res = PyramidPlanarAligner<Correlator>::AlignInternal(a, b, corr, corrXOff, corrYOff, wx, wy, dskip, 0, pool);
 
         //debug - draw resulting image. 
         if(debug) {
@@ -203,7 +239,7 @@ class LeastSquares {
     public:
     static inline float Calculate(const Mat &a, const Mat &b, int xa, int ya, int xb, int yb) {
         float diff = AbsoluteDifference<T>::Calculate(a, b, xa, ya, xb, yb);
-        return diff * diff;
+        return (diff * diff);
     }
     static inline float Sign() {
         return 1;

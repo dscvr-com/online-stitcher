@@ -60,6 +60,7 @@ namespace optonaut {
         int ringId;
         int localId;
         int globalId;
+        int ringSize;
 
         InputImage() : originalExtrinsics(4, 4, CV_64F), adjustedExtrinsics(4, 4, CV_64F), intrinsics(3, 3, CV_64F), ringId(-1), localId(-1), globalId(-1) {
         }

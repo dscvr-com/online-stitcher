@@ -59,41 +59,39 @@ namespace optonaut {
         
             virtual AlignmentDiff GetCorrespondence(InputImageP imgA, InputImageP imgB, AlignmentDiff &aToB, AlignmentDiff &bToA) {
 
-                bool areNeighbors = abs(imgA->localId - imgB->localId) <= 1
+                int dist = min(abs(imgA->localId - imgB->localId),
+                       imgA->ringSize - (int)abs(imgA->localId - imgB->localId));
+
+                bool areNeighbors = 
+                    dist % imgA->ringSize <= 3
                     && imgA->ringId == imgB->ringId;
 
                 if(imgA->ringId != imgB->ringId 
                         || areNeighbors) {
                     int minSize = min(imgA->image.cols, imgA->image.rows) / 1.8;
 
-                    auto res = aligner.Match(imgA, imgB, minSize, 
-                            minSize, Point2f(1, 128));
+                    auto res = aligner.Match(imgB, imgA, minSize, minSize);
                     
                     if(!res.valid && areNeighbors) {
                         res.valid = true;
                         res.angularOffset.x = 0;
                         res.overlap = imgA->image.cols * imgA->image.rows / 2;
                         aToB.forced = true;
-                        bToA.forced = true;
                     }
 
                     aToB.dphi = res.angularOffset.x;
-                    bToA.dphi = -res.angularOffset.x;
                     aToB.overlap = res.overlap;
-                    bToA.overlap = res.overlap;
                     aToB.valid = res.valid;
-                    bToA.valid = res.valid;
                     aToB.rejectionReason = res.rejectionReason;
-                    bToA.rejectionReason = res.rejectionReason;
                     aToB.error = res.inverseTestDifference.x;
-                    bToA.error = res.inverseTestDifference.x;
+                    bToA = aToB;
+                    aToB.dphi *= -1;
                 } else {
                     aToB.dphi = 0;
-                    bToA.dphi = 0;
                     aToB.overlap = 0;
-                    bToA.overlap = 0;
                     aToB.valid = false;
-                    bToA.valid = false;
+
+                    bToA = aToB;
                 }
                 
                 return aToB;
@@ -126,7 +124,7 @@ namespace optonaut {
                 Mat x = Mat::zeros(n, 1, CV_64F);
 
                 //Alpha - damping for our regression. 
-                double alpha = 3;
+                double alpha = 2;
                 double beta = 1 / alpha;
                 double error = 0;
                 double weightSum = 0;
