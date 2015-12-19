@@ -36,7 +36,7 @@ namespace optonaut {
 
         }
         
-        const AdjList &GetEdges() const {
+        AdjList &GetEdges() {
             return adj;
         }
 

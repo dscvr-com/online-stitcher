@@ -183,8 +183,10 @@ StitchingResultP RingStitcher::Stitch(const std::vector<InputImageP> &in, const 
         stageProgress.At(1)((float)i / (float)n);
         
         InputImageP img = in[i];
+        bool autoUnload = false;
         if(!img->image.IsLoaded()) {
             img->image.Load();
+            autoUnload = true;
         }
         detailTimer.Tick("Image Loaded");
         
@@ -224,8 +226,11 @@ StitchingResultP RingStitcher::Stitch(const std::vector<InputImageP> &in, const 
         }
 
         res->corner = Point(cornerLeft.x, corners[i].y);
-        
-        img->image.Unload(); 
+       
+        if(autoUnload) { 
+            img->image.Unload(); 
+        }
+
         detailTimer.Tick("Image Warped");
         queue.Push(res);
         detailTimer.Tick("Image Seamed And and Fed");

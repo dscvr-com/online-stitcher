@@ -9,8 +9,8 @@
 namespace optonaut {
 namespace fun {
     template <typename In, typename Out> 
-    vector<Out> map(const vector<In> &input, std::function<Out(const In&)> conv) {
-        vector<Out> out(input.size());
+    std::vector<Out> map(const std::vector<In> &input, std::function<Out(const In&)> conv) {
+        std::vector<Out> out(input.size());
 
         for(size_t i = 0; i < input.size(); i++) {
             out[i] = conv(input[i]);
@@ -20,8 +20,8 @@ namespace fun {
     }
 
     template <typename In> 
-    vector<In> filter(const vector<In> &input, std::function<bool(const In&)> a) {
-        vector<In> out;
+    std::vector<In> filter(const std::vector<In> &input, std::function<bool(const In&)> a) {
+        std::vector<In> out;
 
         for(size_t i = 0; i < input.size(); i++) {
             if(a(input[i])) {
@@ -33,8 +33,8 @@ namespace fun {
     }
 
     template <typename In>
-    vector<In> inverse(const vector<const In> &input) {
-        vector<In> out(input.size());
+    std::vector<In> inverse(const std::vector<const In> &input) {
+        std::vector<In> out(input.size());
 
         for(size_t i = 0; i < input.size(); i++) {
             out[i] = input[input.size() - 1 - i];
@@ -44,8 +44,8 @@ namespace fun {
     }
     
     template <typename In, typename Key>
-    vector<In> orderby(const vector<In> &input, std::function<Key(const In&)> extractor) {
-        vector<In> out = input;
+    std::vector<In> orderby(const std::vector<In> &input, std::function<Key(const In&)> extractor) {
+        std::vector<In> out = input;
 
         std::sort(out.begin(), out.end(), [&extractor] (In &a, In &b) {
                     return extractor(a) < extractor(b);

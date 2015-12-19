@@ -93,7 +93,7 @@ StitchingResultP SimpleSphereStitcher::Stitch(const std::vector<InputImageP> &in
 
             //Prevent warping around. 
             if(abs(predictedCorners[i].x - corners[i].x) > 3) {
-
+                
                 AssertGTM(predictedSizes[i].width, 
                     predictedSizes[i].height * 4, 
                     "Is Corner Case");

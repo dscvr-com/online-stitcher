@@ -62,8 +62,10 @@ namespace optonaut {
                 int dist = min(abs(imgA->localId - imgB->localId),
                        imgA->ringSize - (int)abs(imgA->localId - imgB->localId));
 
+                dist = dist % imgA->ringSize;
+
                 bool areNeighbors = 
-                    dist % imgA->ringSize <= 3
+                    dist <= 1
                     && imgA->ringId == imgB->ringId;
 
                 if(imgA->ringId != imgB->ringId 
@@ -73,9 +75,23 @@ namespace optonaut {
                     auto res = aligner.Match(imgB, imgA, minSize, minSize);
                     
                     if(!res.valid && areNeighbors) {
+                        Mat rvec;
+                        ExtractRotationVector(imgA->adjustedExtrinsics.inv() * 
+                                imgB->adjustedExtrinsics, rvec);
+
+                        double angularDist = rvec.at<double>(1);
+                        double maxDist = dist * (M_PI * 2 / imgA->ringSize);
+
+                        cout << imgA->id << " <> " << imgB->id << ": " << abs(angularDist) << " - " << maxDist << endl;
+                        //3=avg distance between targets
+                        angularDist = maxDist - angularDist; 
+
                         res.valid = true;
-                        res.angularOffset.x = 0;
-                        res.overlap = imgA->image.cols * imgA->image.rows / 2;
+                        //Get angular offset by distance.
+                        res.angularOffset.x = angularDist;
+                        //res.angularOffset.x = 0;
+                        res.overlap = imgA->image.cols * imgA->image.rows * 0.5 *
+                            (1 + abs(angularDist)) * (1 + abs(angularDist));
                         aToB.forced = true;
                     }
 
@@ -84,15 +100,14 @@ namespace optonaut {
                     aToB.valid = res.valid;
                     aToB.rejectionReason = res.rejectionReason;
                     aToB.error = res.inverseTestDifference.x;
-                    bToA = aToB;
-                    aToB.dphi *= -1;
                 } else {
                     aToB.dphi = 0;
                     aToB.overlap = 0;
                     aToB.valid = false;
-
-                    bToA = aToB;
                 }
+                    
+                bToA = aToB;
+                aToB.dphi *= -1;
                 
                 return aToB;
             };
@@ -114,81 +129,97 @@ namespace optonaut {
                 }
 
                 int n = (int)invmap.size();
+
+                Mat res = Mat::zeros(n, 1, CV_64F);
                 
-                //Build equation systen
-                //R = sum of relative offsets.
-                //O = matrix of observation weights.
-                //x = result, optimal relative offset. 
-                Mat R = Mat::zeros(n, 1, CV_64F);
-                Mat O = Mat::zeros(n, n, CV_64F);
-                Mat x = Mat::zeros(n, 1, CV_64F);
+                for(int i = 0; i < 1; i++) { 
+                    //Build equation systen
+                    //R = sum of relative offsets.
+                    //O = matrix of observation weights.
+                    //x = result, optimal relative offset. 
+                    Mat R, O, x;
+                    R = Mat::zeros(n, 1, CV_64F);
+                    O = Mat::zeros(n, n, CV_64F);
+                    x = Mat::zeros(n, 1, CV_64F);
 
-                //Alpha - damping for our regression. 
-                double alpha = 2;
-                double beta = 1 / alpha;
-                double error = 0;
-                double weightSum = 0;
-                double edgeCount = 0;
+                    //Alpha - damping for our regression. 
+                    double alpha = 5;
+                    double beta = 1 / alpha;
+                    double error = 0;
+                    double weightSum = 0;
+                    double edgeCount = 0;
 
-                const double quartil = 0.25;
+                    const double quartil = 0.25;
 
-                for(auto &adj : relations.GetEdges()) {
+                    for(auto &adj : relations.GetEdges()) {
 
-                    Edges correlatorEdges = fun::filter<Edge>(adj.second, 
-                        [] (auto a) {
-                            return !a.value.forced && a.value.overlap > 0; 
-                        }); 
+                        Edges correlatorEdges = fun::filter<Edge>(adj.second, 
+                            [] (auto a) {
+                                return !a.value.forced && a.value.overlap > 0; 
+                            }); 
 
-                    Edges forcedEdges = fun::filter<Edge>(adj.second, 
-                        [] (auto a) {
-                            return a.value.forced && a.value.overlap > 0; 
-                        }); 
+                        Edges forcedEdges = fun::filter<Edge>(adj.second, 
+                            [] (auto a) {
+                                return a.value.forced && a.value.overlap > 0; 
+                            }); 
 
-                    std::sort(correlatorEdges.begin(), correlatorEdges.end(), 
-                        [] (auto a, auto b) {
-                            return a.value.dphi < b.value.dphi;
-                        });
+                        std::sort(correlatorEdges.begin(), correlatorEdges.end(), 
+                            [] (auto a, auto b) {
+                                return a.value.dphi < b.value.dphi;
+                            });
 
-                    size_t m = correlatorEdges.size();
+                        size_t m = correlatorEdges.size();
 
-                    for(size_t i = 0; i < m; i++) {
-                        if(i < m * quartil || i >= m * (1.0f - quartil)) {
-                            correlatorEdges[i].value.quartil = true;
-                            allEdges.push_back(correlatorEdges[i]);
-                        } else {
-                            forcedEdges.push_back(correlatorEdges[i]);
+                        for(size_t i = 0; i < m; i++) {
+                            if(i < m * quartil || i >= m * (1.0f - quartil)) {
+                                correlatorEdges[i].value.quartil = true;
+                                allEdges.push_back(correlatorEdges[i]);
+                            } else {
+                                forcedEdges.push_back(correlatorEdges[i]);
+                            }
+                        }
+
+                        for(auto &edge : forcedEdges) {
+                            //Use non-linear weights - less penalty for less overlap. 
+                            if(edge.value.overlap > 0) {
+                                double weight = edge.value.overlap;
+
+                                O.at<double>(remap[edge.from], remap[edge.to]) += 
+                                    beta * weight;
+                                O.at<double>(remap[edge.from], remap[edge.from]) += 
+                                    alpha * weight;
+                                R.at<double>(remap[edge.from]) += 
+                                    2 * weight * edge.value.dphi;
+
+                                if(!edge.value.forced) {
+                                    error += weight * abs(edge.value.dphi);
+                                    weightSum += weight;
+                                    edgeCount++;
+                                }
+
+                                allEdges.push_back(edge);
+                            }
                         }
                     }
 
-                    for(auto &edge : forcedEdges) {
-                        //Use non-linear weights - less penalty for less overlap. 
-                        if(edge.value.overlap > 0) {
-                            double weight = edge.value.overlap;
+                    cout << "Error: "<<(error / relations.GetEdges().size()) << endl;
+               
+                    solve(O, R, x, DECOMP_SVD);
 
-                            O.at<double>(remap[edge.from], remap[edge.to]) += 
-                                beta * weight;
-                            O.at<double>(remap[edge.from], remap[edge.from]) += 
-                                alpha * weight;
-                            R.at<double>(remap[edge.from]) += 
-                                2 * weight * edge.value.dphi;
+                    res = res + x;
 
-                            error += weight * abs(edge.value.dphi);
-                            weightSum += weight;
-                            edgeCount++;
-
-                            allEdges.push_back(edge);
-                        }
+                    for(auto &adj : relations.GetEdges()) {
+                       for(auto &edge : adj.second) {
+                            edge.value.dphi -= x.at<double>(remap[edge.from]);
+                            edge.value.dphi += x.at<double>(remap[edge.to]);
+                       } 
                     }
                 }
-
-                cout << "Error: " << (error / relations.GetEdges().size()) << endl;
-                
-                solve(O, R, x, DECOMP_SVD);
                 
                 assert((int)invmap.size() == n);
 
                 for (int i = 0; i < n; ++i) {
-                    this->alignmentCorrections[invmap[i]] = x.at<double>(i, 0);
+                    this->alignmentCorrections[invmap[i]] = res.at<double>(i, 0);
                     //cout << invmap[i] << " alignment: " << x.at<double>(i, 0) << endl;
                 }
 
