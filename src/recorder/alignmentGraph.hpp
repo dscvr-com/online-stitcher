@@ -59,6 +59,9 @@ namespace optonaut {
         
             virtual AlignmentDiff GetCorrespondence(InputImageP imgA, InputImageP imgB, AlignmentDiff &aToB, AlignmentDiff &bToA) {
 
+                const bool dampUncorrelatedNeighbors = false;
+                const bool dampAllNeighbors = false;
+
                 int dist = min(abs(imgA->localId - imgB->localId),
                        imgA->ringSize - (int)abs(imgA->localId - imgB->localId));
 
@@ -67,36 +70,31 @@ namespace optonaut {
                 bool areNeighbors = 
                     dist <= 1
                     && imgA->ringId == imgB->ringId;
+                        
+                Mat rvec;
+                ExtractRotationVector(imgA->adjustedExtrinsics.inv() * 
+                        imgB->adjustedExtrinsics, rvec);
+
+                double angularDist = rvec.at<double>(1);
+                double maxDist = dist * (M_PI * 2 / imgA->ringSize);
+                double angularDiff = maxDist - angularDist; 
 
                 if(imgA->ringId != imgB->ringId 
                         || areNeighbors) {
                     int minSize = min(imgA->image.cols, imgA->image.rows) / 1.8;
 
                     auto res = aligner.Match(imgB, imgA, minSize, minSize);
-                    
-                    if(!res.valid && areNeighbors) {
-                        Mat rvec;
-                        ExtractRotationVector(imgA->adjustedExtrinsics.inv() * 
-                                imgB->adjustedExtrinsics, rvec);
 
-                        double angularDist = rvec.at<double>(1);
-                        double maxDist = dist * (M_PI * 2 / imgA->ringSize);
-
-                        cout << imgA->id << " <> " << imgB->id << ": " << abs(angularDist) << " - " << maxDist << endl;
-                        //3=avg distance between targets
-                        angularDist = maxDist - angularDist; 
-
+                    if(!res.valid && areNeighbors && dampUncorrelatedNeighbors) {
                         res.valid = true;
-                        //Get angular offset by distance.
-                        res.angularOffset.x = angularDist;
-                        //res.angularOffset.x = 0;
+                        res.angularOffset.x = angularDiff / 2;
                         res.overlap = imgA->image.cols * imgA->image.rows * 0.5 *
-                            (1 + abs(angularDist)) * (1 + abs(angularDist));
+                            (1 + abs(angularDiff)) * (1 + abs(angularDiff));
                         aToB.forced = true;
                     }
 
                     aToB.dphi = res.angularOffset.x;
-                    aToB.overlap = res.overlap;
+                    aToB.overlap = res.correlationCoefficient;
                     aToB.valid = res.valid;
                     aToB.rejectionReason = res.rejectionReason;
                     aToB.error = res.inverseTestDifference.x;
@@ -108,6 +106,19 @@ namespace optonaut {
                     
                 bToA = aToB;
                 aToB.dphi *= -1;
+
+                if(dampAllNeighbors && areNeighbors) {
+                    AlignmentDiff aToBDamp, bToADamp; 
+                    aToBDamp.dphi = -angularDiff; 
+                    aToBDamp.overlap = imgA->image.cols * imgA->image.rows * 0.1 *
+                            (1 + abs(angularDiff)) * (1 + abs(angularDiff));
+                    aToBDamp.forced = true;
+                    aToBDamp.valid = true;
+                    bToADamp = aToBDamp;
+                    bToADamp.dphi *= -1;
+
+                    InsertCorrespondence(imgA->id, imgB->id, aToBDamp, bToADamp);
+                }
                 
                 return aToB;
             };
@@ -143,44 +154,48 @@ namespace optonaut {
                     x = Mat::zeros(n, 1, CV_64F);
 
                     //Alpha - damping for our regression. 
-                    double alpha = 5;
+                    double alpha = 4;
                     double beta = 1 / alpha;
                     double error = 0;
                     double weightSum = 0;
                     double edgeCount = 0;
 
-                    const double quartil = 0.25;
+                    const double quartil = 0.1;
 
                     for(auto &adj : relations.GetEdges()) {
 
                         Edges correlatorEdges = fun::filter<Edge>(adj.second, 
                             [] (auto a) {
-                                return !a.value.forced && a.value.overlap > 0; 
+                                return !a.value.forced && a.value.overlap > 0
+                                && a.value.valid; 
                             }); 
 
                         Edges forcedEdges = fun::filter<Edge>(adj.second, 
                             [] (auto a) {
-                                return a.value.forced && a.value.overlap > 0; 
+                                return a.value.forced && a.value.overlap > 0 
+                                && a.value.valid; 
                             }); 
 
                         std::sort(correlatorEdges.begin(), correlatorEdges.end(), 
-                            [] (auto a, auto b) {
+                            [] (const auto &a, const auto &b) {
                                 return a.value.dphi < b.value.dphi;
                             });
 
                         size_t m = correlatorEdges.size();
 
                         for(size_t i = 0; i < m; i++) {
-                            if(i < m * quartil || i >= m * (1.0f - quartil)) {
+                            if(i < (double)m * quartil || 
+                                    i >= (double)m * (1.0 - quartil)) {
                                 correlatorEdges[i].value.quartil = true;
                                 allEdges.push_back(correlatorEdges[i]);
                             } else {
                                 forcedEdges.push_back(correlatorEdges[i]);
                             }
                         }
-
+                        
                         for(auto &edge : forcedEdges) {
                             //Use non-linear weights - less penalty for less overlap. 
+                            assert(!edge.value.quartil);
                             if(edge.value.overlap > 0) {
                                 double weight = edge.value.overlap;
 

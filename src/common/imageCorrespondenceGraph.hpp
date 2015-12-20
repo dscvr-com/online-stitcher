@@ -31,13 +31,18 @@ namespace optonaut {
 
                 auto res = GetCorrespondence(a, b, aToB, bToA);
                
-                {
-                    unique_lock<mutex> lock(graphLock); 
-                    relations.Insert(a->id, b->id, aToB);
-                    relations.Insert(b->id, a->id, bToA);
-                }
+                InsertCorrespondence(a->id, b->id, aToB, bToA);
                 
                 return res;
+            }
+
+            void InsertCorrespondence(int aId, int bId, 
+                    const ValueType &aToB, const ValueType &bToA) {
+                {
+                    unique_lock<mutex> lock(graphLock); 
+                    relations.Insert(aId, bId, aToB);
+                    relations.Insert(bId, aId, bToA);
+                }
             }
 
             const AdjList &GetEdges() const {

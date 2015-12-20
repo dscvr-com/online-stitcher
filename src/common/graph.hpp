@@ -17,7 +17,7 @@ namespace optonaut {
 
         ValueType value;
         
-        _Edge(size_t from, size_t to, ValueType value) : 
+        _Edge(size_t from, size_t to, const ValueType &value) : 
             from(from), to(to), value(value) {
             
         }
@@ -40,7 +40,7 @@ namespace optonaut {
             return adj;
         }
 
-        void Insert(size_t from, size_t to, ValueType &value) {
+        void Insert(size_t from, size_t to, const ValueType &value) {
             adj[from].push_back(Edge(from, to, value));
         }
     };

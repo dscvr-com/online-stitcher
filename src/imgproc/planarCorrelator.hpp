@@ -1,7 +1,10 @@
+#include <memory>
+
 #include "../common/support.hpp"
 #include "../common/drawing.hpp"
 #include "../math/stat.hpp"
 #include "../common/assert.hpp"
+#include "../stitcher/simplePlaneStitcher.hpp"
 
 #ifndef OPTONAUT_PLANAR_CORRELATOR_HEADER
 #define OPTONAUT_PLANAR_CORRELATOR_HEADER
@@ -16,7 +19,9 @@ static const bool debug = false;
 struct PlanarCorrelationResult {
     cv::Point offset;
     size_t n; 
+    double cost;
     double variance;
+    double topDeviation;
 };
 
 template <typename Correlator>
@@ -40,10 +45,13 @@ class BruteForcePlanarAligner {
         AssertGTM(wx, 0, "Correlation window exists.");
         AssertGTM(wy, 0, "Correlation window exists.");
 
+        float costSum = 0;
+
         for(int dx = -wx; dx <= wx; dx++) {
             for(int dy = -wy; dy <= wy; dy++) {
                 float res = Correlator::Calculate(a, b, dx + ox, dy + oy);
                 var.Push(res);
+                costSum += res;
                 if(debug) {
                     AssertGTM(corr.rows, dy + wy, "Correlation matrix too small.");
                     AssertGTM(corr.cols, dx + wx, "Correlation matrix too small.");
@@ -57,8 +65,10 @@ class BruteForcePlanarAligner {
             }
         }
 
+        double variance = var.Result();
+        size_t count = static_cast<size_t>(wx * 2 + wy * 2);
 
-        return { cv::Point(mx + ox, my + oy), static_cast<size_t>(wx * 2 + wy * 2), var.Result() };
+        return { cv::Point(mx + ox, my + oy), count, costSum, variance, sqrt(variance / count)};
     }
 };
 
@@ -118,14 +128,18 @@ class PyramidPlanarAligner {
                 }
 
                 res = detailedRes.offset;
-                pool.Push(detailedRes.variance, detailedRes.n * pow(2, depth));
+                auto weight = pow(2, depth);
+                pool.Push(detailedRes.variance, detailedRes.n * weight, 
+                        detailedRes.cost * weight);
             }
         } else {
             PlanarCorrelationResult detailedRes = 
                 BruteForcePlanarAligner<Correlator>::Align(a, b, corr, wx, wy);
                 
             res = detailedRes.offset;
-            pool.Push(detailedRes.variance, detailedRes.n * pow(2, depth));
+            auto weight = pow(2, depth);
+            pool.Push(detailedRes.variance, detailedRes.n * weight, 
+                    detailedRes.cost * weight);
         }
         
         return res;
@@ -145,20 +159,53 @@ class PyramidPlanarAligner {
             hom.at<double>(0, 2) = res.x;
             hom.at<double>(1, 2) = res.y;
 
-            Mat target(max(a.rows, a.rows), a.cols + b.cols, CV_8UC3);
+            SimplePlaneStitcher stitcher;
 
-            DrawMatchingResults(hom, eye, a, b, target);
+            auto target = stitcher.Stitch(
+                    {std::make_shared<Image>(Image(a)), 
+                    std::make_shared<Image>(Image(b))}, 
+                    {res, Point(0, 0)});
+
+            //DrawMatchingResults(hom, eye, a, b, target);
+            //std::string filename =  
+            //        "pcc_" + ToString(dbgctr) + 
+            //        "_x_" + ToString(res.x) + 
+            //        "_cc_" + ToString(sqrt(pool.Result()) / pool.Count()) + 
+            //        "_tc_" + ToString(pool.GetMeasurements().back().sum / 
+            //                pool.GetMeasurements().back().n);
             std::string filename =  
-                    "dbg/pcc_" + ToString(dbgctr) + 
-                    "_x_" + ToString(res.x) + 
-                    "_var_" + ToString(pool.Result()) + 
-                    ".jpg";
+                        ToString(sqrt(pool.GetMeasurements().back().s) / 
+                            pool.GetMeasurements().back().n);
 
-            imwrite(filename, target);
+            int maxX = max(a.cols, b.cols) * wx;
+            int maxY = max(a.rows, b.rows) * wy;
+
+            if(res.x < -maxX || res.x > maxX || res.y < -maxY || res.y > maxY) {
+               filename = filename + "_reject"; 
+            }
+
+            imwrite("dbg/" + filename + ".jpg", target->image.data);
+
+            
+            //float max = 255;
+
+            //for(int i = 0; i < corr.cols; i++) {
+            //    for(int j = 0; j < corr.rows; j++) {
+            //        if(corr.at<float>(j, i) > max) {
+            //            max = corr.at<float>(j, i);
+            //        }
+            //    }
+            //}
+            //
+            //imwrite("dbg/" + filename + "_corr.jpg", corr / max * 255);
+
             dbgctr++;
         }
+        
+        double topDeviation = sqrt(pool.GetMeasurements().back().s) / 
+                            pool.GetMeasurements().back().n;
 
-        return { res, pool.Count(), pool.Result() };
+        return { res, pool.Count(), pool.Sum(), pool.Result(), topDeviation };
     }
 };
 

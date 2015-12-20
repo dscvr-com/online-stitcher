@@ -217,6 +217,8 @@ namespace optonaut {
                     min->globalId = target.globalId;
                     min->ringSize = ring.size(); 
 
+                    imgs.erase(it);
+
                     res.push_back(min);
                 }
             }

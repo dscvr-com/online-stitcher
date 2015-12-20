@@ -42,7 +42,7 @@ namespace optonaut {
         if(message != "")
             std::cerr << message << " ";
         if(vars != "")
-            std::cerr << std::endl << "Expresssion: " << vars << " ";
+            std::cerr << std::endl << "Expression: " << vars << " ";
         if(values != "")
             std::cerr << "(" << values << ")";
 

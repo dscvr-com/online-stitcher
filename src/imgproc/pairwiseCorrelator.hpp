@@ -26,7 +26,7 @@ public:
     Point2f offset;
     Point2f angularOffset;
     int rejectionReason;
-    double variance;
+    double correlationCoefficient;
     Point2f inverseTestDifference;
 
 	CorrelationDiff() : 
@@ -34,7 +34,7 @@ public:
         offset(0, 0), 
         angularOffset(0, 0), 
         rejectionReason(-1),
-        variance(0),
+        correlationCoefficient(0),
         inverseTestDifference(0, 0) {}
 
 };
@@ -51,6 +51,7 @@ public:
     static const int RejectionNone = 0;
     static const int RejectionNoOverlap = 1;
     static const int RejectionInverseTest = 2;
+    static const int RejectionOutOfWindow = 3;
    
     // Note: An outlier threshold of 2 is fine (1 pixel in each dimension), since
     // we don't do sub-pixel alignment.  
@@ -80,9 +81,27 @@ public:
             return result;
         }
 
+        float w = 0.5;
+
         Mat corr; //Debug stuff
 
-        PlanarCorrelationResult res = Aligner::Align(wa, wb, corr, 0.5, 0.5, 0);
+        PlanarCorrelationResult res = Aligner::Align(wa, wb, corr, w, w, 0);
+
+        int maxX = max(wa.cols, wb.cols) * w;
+        int maxY = max(wa.rows, wb.rows) * w;
+
+        if(res.offset.x < -maxX || res.offset.x > maxX 
+                || res.offset.y < -maxY || res.offset.y > maxY) {
+            result.valid = false;
+            result.rejectionReason = RejectionOutOfWindow;
+            return result;
+        }
+
+        if(res.topDeviation < 1.5) {
+            result.valid = false;
+            result.rejectionReason = RejectionInverseTest;
+            return result;
+        }
 
         cv::Point correctedRes = res.offset + appliedBorder;
         
@@ -98,7 +117,7 @@ public:
         result.angularOffset.y = atan(olYA) - atan(olYB);
         result.offset = correctedRes;
         result.valid = true;
-        result.variance = res.variance;
+        result.correlationCoefficient = sqrt(res.variance) / res.n;
         cTimer.Tick("Correalted");
 
         return result;

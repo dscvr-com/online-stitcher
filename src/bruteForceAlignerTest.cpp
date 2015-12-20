@@ -30,6 +30,7 @@ bool CompareByFilename (const string &a, const string &b) {
 int main(int argc, char** argv) {
     cv::ocl::setUseOpenCL(false);
     bool drawWeights = true;
+    bool drawDebug = false;
     bool outputUnalignedStereo = false;
 
     int n = argc - 1;
@@ -59,7 +60,7 @@ int main(int argc, char** argv) {
     }
 
     RecorderGraphGenerator gen;
-    RecorderGraph graph = gen.Generate(images[0]->intrinsics, RecorderGraph::ModeTruncated, 1.0, 0);
+    RecorderGraph graph = gen.Generate(images[0]->intrinsics, RecorderGraph::ModeTruncated, 0.5, 0);
     RecorderGraph halfGraph = gen.Generate(images[0]->intrinsics, RecorderGraph::ModeTruncated, 0.5, 0);
 
     images = graph.SelectBestMatches(images);
@@ -70,6 +71,7 @@ int main(int argc, char** argv) {
     map<size_t, InputImageP> imageById;
 
     for(auto img : images) {
+        Assert(!img->IsLoaded());
         img->image.Load();
         pyrDown(img->image.data, img->image.data);
         pyrDown(img->image.data, img->image.data);
@@ -86,9 +88,11 @@ int main(int argc, char** argv) {
         imwrite("dbg/stereo_una_left.jpg", stereoRes.first->image.data);
         imwrite("dbg/stereo_una_right.jpg", stereoRes.second->image.data);
     }
-    auto res = debugger.Stitch(images);
-    imwrite("dbg/aa_input.jpg", res->image.data);
 
+    if(drawDebug) {
+        auto res = debugger.Stitch(images);
+        imwrite("dbg/aa_input.jpg", res->image.data);
+    }
     for(int k = 0; k < 10; k++) {
         AlignmentGraph aligner;
         int matches = 0, outliers = 0, forced = 0, noOverlap = 0;
@@ -98,6 +102,8 @@ int main(int argc, char** argv) {
                 if(corr.valid) {
                    matches++; 
                 } else if(corr.rejectionReason == 
+                        PairwiseCorrelator::RejectionOutOfWindow ||
+                        corr.rejectionReason == 
                         PairwiseCorrelator::RejectionInverseTest) {
                    outliers++; 
                    //cout << "Outlier: " << images[i]->id << " <-> " << images[j]->id << ": " << corr.error << endl;
@@ -116,68 +122,70 @@ int main(int argc, char** argv) {
             " (real: " << (matches - forced) << ")" << 
             ", outliers: " << outliers << ", no overlap: " << noOverlap << 
             ", forced: " << forced<< endl;
-        
-        res = debugger.Stitch(images);
+       
+        if(drawDebug) { 
+            auto res = debugger.Stitch(images);
 
-        if(drawWeights) { 
-            for(auto edge : edges) {
-               if(edge.value.valid) {
-                   InputImageP a = imageById[edge.from]; 
-                   InputImageP b = imageById[edge.to]; 
+            if(drawWeights) { 
+                for(auto edge : edges) {
+                   if(edge.value.valid) {
+                       InputImageP a = imageById[edge.from]; 
+                       InputImageP b = imageById[edge.to]; 
 
-                   if(a->ringId != 1 && a->ringId != b->ringId)
-                       continue; //Only draw cross-lines if origin at ring 0
+                       if(a->ringId != 1 && a->ringId != b->ringId)
+                           continue; //Only draw cross-lines if origin at ring 0
 
-                   Point imgCenter = res->corner;
+                       Point imgCenter = res->corner;
 
-                   Point aCenter = debugger.WarpPoint(a->intrinsics, 
-                           a->adjustedExtrinsics, 
-                           a->image.size(), Point(0, 0)) - imgCenter;
-                   Point bCenter = debugger.WarpPoint(b->intrinsics, 
-                           b->adjustedExtrinsics, 
-                           b->image.size(), Point(0, 0)) - imgCenter;
+                       Point aCenter = debugger.WarpPoint(a->intrinsics, 
+                               a->adjustedExtrinsics, 
+                               a->image.size(), Point(0, 0)) - imgCenter;
+                       Point bCenter = debugger.WarpPoint(b->intrinsics, 
+                               b->adjustedExtrinsics, 
+                               b->image.size(), Point(0, 0)) - imgCenter;
 
-                   //Make sure a is always left. 
-                   if(aCenter.x > bCenter.x) {
-                        swap(aCenter, bCenter);
-                   }
+                       //Make sure a is always left. 
+                       if(aCenter.x > bCenter.x) {
+                            swap(aCenter, bCenter);
+                       }
 
-                   double dPhi = edge.value.dphi * 10;
+                       double dPhi = edge.value.dphi * 10;
 
-                   Scalar color(255 * min(1.0, max(0.0, -dPhi)), 
-                               0, 
-                               255 * min(1.0, max(0.0, dPhi)));
-                   
-                   int thickness = 6;
+                       Scalar color(255 * min(1.0, max(0.0, -dPhi)), 
+                                   0, 
+                                   255 * min(1.0, max(0.0, dPhi)));
+                       
+                       int thickness = 6;
 
-                   if(edge.value.quartil) {
-                        thickness = 2;
-                   }
+                       if(edge.value.quartil) {
+                            thickness = 2;
+                       }
 
-                   if(edge.value.forced) {
-                       continue;
-                       // color = Scalar(0xc0, 0xc0, 0xc0);
-                       // thickness = 2;
-                   }
-                   
+                       if(edge.value.forced) {
+                           continue;
+                           // color = Scalar(0xc0, 0xc0, 0xc0);
+                           // thickness = 2;
+                       }
+                       
 
-                   if(bCenter.x - aCenter.x > res->image.cols / 2) {
-                        cv::line(res->image.data, 
-                           aCenter, bCenter - Point(res->image.cols, 0), 
-                           color, thickness);
-                        cv::line(res->image.data, 
-                           aCenter + Point(res->image.cols, 0), bCenter,
-                           color, thickness);
-                   } else {
-                        cv::line(res->image.data, 
-                           aCenter, bCenter, color, thickness);
-                   }
+                       if(bCenter.x - aCenter.x > res->image.cols / 2) {
+                            cv::line(res->image.data, 
+                               aCenter, bCenter - Point(res->image.cols, 0), 
+                               color, thickness);
+                            cv::line(res->image.data, 
+                               aCenter + Point(res->image.cols, 0), bCenter,
+                               color, thickness);
+                       } else {
+                            cv::line(res->image.data, 
+                               aCenter, bCenter, color, thickness);
+                       }
 
-                   cv::circle(res->image.data, aCenter, 8, Scalar(0xc0, 0xc0, 0x00), -1);
+                       cv::circle(res->image.data, aCenter, 8, Scalar(0xc0, 0xc0, 0x00), -1);
+                    }
                 }
             }
+            imwrite("dbg/aligned_" + ToString(k) + ".jpg", res->image.data);
         }
-        imwrite("dbg/aligned_" + ToString(k) + ".jpg", res->image.data);
         
         for(auto img : images) {
             aligner.Apply(img);

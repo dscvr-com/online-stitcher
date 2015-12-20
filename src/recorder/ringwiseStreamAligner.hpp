@@ -123,7 +123,7 @@ namespace optonaut {
                     angleY = M_PI * 2 + angleY;
                 
                 //Check variance. Value of 10^6 guessed via chart observation. 
-                if(corr.valid && corr.variance > 1000) { 
+                if(corr.valid && corr.correlationCoefficient > 1000) { 
                     lasty = angleY;
                 } else {
                     lasty = cury;
