@@ -42,8 +42,11 @@ namespace optonaut {
         }
     };
     
-    //Todo - Declare Friend with recorder Graph Generator, then make props private
     class RecorderGraph {
+    private: 
+        vector<vector<SelectionEdge>> adj;
+        vector<vector<SelectionPoint>> targets;
+        vector<SelectionPoint*> targetsById;
     public:
         
         static const int ModeAll = 0;
@@ -56,10 +59,40 @@ namespace optonaut {
         static const int DensityDouble = 2;
         static const int DensityQadruple = 4;
         
-        vector<vector<SelectionEdge>> adj;
-        vector<vector<SelectionPoint>> targets;
-        Mat intrinsics;
-        
+        const Mat intrinsics;
+        const uint32_t ringCount;
+
+        RecorderGraph(uint32_t ringCount, const Mat &intrinsics)
+            : intrinsics(intrinsics), ringCount(ringCount) {
+            targets.reserve(ringCount); 
+        }
+
+        uint32_t AddNewRing(uint32_t ringSize) {
+            AssertGT((size_t)ringCount, targets.size()); 
+            targets.push_back(vector<SelectionPoint>(ringSize));
+
+            return (uint32_t)targets.size() - 1;
+        }
+
+        void AddNewNode(const SelectionPoint &point) {
+            //Check for index consistency. 
+            AssertGT(targets.size(), (size_t)point.ringId); 
+            AssertGT(targets[point.ringId].size(), (size_t)point.localId);
+            while(targetsById.size() <= point.globalId) {
+                targetsById.push_back(NULL);
+            }
+
+            targets[point.ringId][point.localId] = point;
+            targetsById[point.globalId] = &(targets[point.ringId][point.localId]);
+        } 
+
+        void AddEdge(const SelectionEdge &edge) {
+            while(adj.size() <= edge.from) {
+                adj.push_back(vector<SelectionEdge>());
+            }
+            adj[edge.from].push_back(edge);
+        }
+       
         const vector<vector<SelectionPoint>> &GetRings() const {
             return targets;
         }
@@ -106,13 +139,10 @@ namespace optonaut {
         }
         
         bool GetPointById(uint32_t id, SelectionPoint &point) const {
-            for(auto &ring : targets) {
-                for(auto target : ring) {
-                    if(target.globalId == id) {
-                        point = target;
-                        return true;
-                    }
-                }
+            
+            if(id < targetsById.size()) {
+                point = *(targetsById[id]);
+                return true;
             }
             
             return false;

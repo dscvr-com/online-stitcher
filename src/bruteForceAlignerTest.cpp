@@ -59,9 +59,8 @@ int main(int argc, char** argv) {
         images.push_back(img);
     }
 
-    RecorderGraphGenerator gen;
-    RecorderGraph graph = gen.Generate(images[0]->intrinsics, RecorderGraph::ModeTruncated, 0.5, 0);
-    RecorderGraph halfGraph = gen.Generate(images[0]->intrinsics, RecorderGraph::ModeTruncated, 0.5, 0);
+    RecorderGraph graph = RecorderGraphGenerator::Generate(images[0]->intrinsics, RecorderGraph::ModeTruncated, 0.5, 0);
+    RecorderGraph halfGraph = RecorderGraphGenerator::Generate(images[0]->intrinsics, RecorderGraph::ModeTruncated, 0.5, 0);
 
     images = graph.SelectBestMatches(images);
     n = images.size();

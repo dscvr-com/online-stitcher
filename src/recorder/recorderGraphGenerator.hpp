@@ -5,6 +5,7 @@
 #include "../math/support.hpp"
 #include "../math/projection.hpp"
 #include "../common/ringProcessor.hpp"
+#include "../common/biMap.hpp"
 #include "recorderGraph.hpp"
 
 using namespace cv;
@@ -22,25 +23,67 @@ class RecorderGraphGenerator {
 private:
 	//adj[n] contains m if m is right of n
 	//Horizontal and Vertical overlap in percent. 
-	const double hOverlap_ = 0.9;
-	const double vOverlap_ = 0.25;
+	static constexpr double hOverlap_ = 0.9;
+	static constexpr double vOverlap_ = 0.25;
 
     static const bool debug = false;
     
-    Mat intrinsics;
+    static void CreateEdge(RecorderGraph &res, 
+            const SelectionPoint &a, const SelectionPoint &b) {
+        SelectionEdge edge;
+        edge.from = a.globalId;
+        edge.to = b.globalId;
+        edge.recorded = false;
 
+        res.AddEdge(edge);
+    };
+
+    static void AddNode(RecorderGraph &res, const SelectionPoint &a) {
+        res.AddNewNode(a); 
+    };
 public:
+
+    static RecorderGraph Sparse(const RecorderGraph &in, BiMap<uint32_t, uint32_t> &denseToSparse, int skip) {
+
+        RecorderGraph sparse(in.ringCount, in.intrinsics);
+
+        size_t globalId = 0;
+        size_t localId = 0;
+
+        const auto &rings = in.GetRings();
+        for(size_t i = 0; i < rings.size(); i++) {
+            sparse.AddNewRing(rings[i].size() / skip);
+            localId = 0;
+            
+            RingProcessor<SelectionPoint> hqueue(1, 
+                    bind(CreateEdge, sparse, placeholders::_1, placeholders::_2),
+                    bind(AddNode, sparse, placeholders::_1));
+
+            for(size_t j = 0; j < rings[i].size(); j += skip) {
+                SelectionPoint copy = rings[i][j];
+                
+                denseToSparse.Insert(copy.globalId, globalId);
+
+                copy.localId = localId;
+                copy.globalId = globalId;
+
+                hqueue.Push(copy);
+
+                localId++;
+                globalId++;
+            }
+        }
+
+        return sparse;
+    }
     
-    RecorderGraph Generate(const Mat &intrinsics, const int mode = RecorderGraph::ModeAll, const float density = RecorderGraph::DensityNormal, const int lastRingOverdrive = 0) {
+    static RecorderGraph Generate(const Mat &intrinsics, const int mode = RecorderGraph::ModeAll, const float density = RecorderGraph::DensityNormal, const int lastRingOverdrive = 0) {
         AssertWGEM(density, 1.f, 
                 "Reducing recorder graph density below one is potentially unsafe.");
-        
-        RecorderGraph res;
         
         double hOverlap = 1.0 - (1.0 - hOverlap_) / density;
         double vOverlap = vOverlap_;
 
-		this->intrinsics = intrinsics;
         double maxHFov = GetHorizontalFov(intrinsics);
         double maxVFov = GetVerticalFov(intrinsics); 
 		double hFov = maxHFov * (1.0 - hOverlap);
@@ -87,6 +130,8 @@ public:
             assert(false);
         }
         
+        RecorderGraph res(vCount, intrinsics);
+        
 		for(uint32_t i = 0; i < vCount; i++) {
 
             //Vertical center, bottom and top of ring
@@ -108,30 +153,17 @@ public:
             }
             
             hCount = hCount + ringOverdrive;
-			res.targets.push_back(vector<SelectionPoint>(hCount));
+            AssertEQ(i, res.AddNewRing(hCount));
 
-            auto createEdge = [&res] (const SelectionPoint &a, const SelectionPoint &b) {
-                SelectionEdge edge;
-                edge.from = a.globalId;
-                edge.to = b.globalId;
-                edge.recorded = false;
-
-                res.adj[edge.from].push_back(edge);
-            };
-
-            auto finish = [&res] (const SelectionPoint &a) {
-                res.targets[a.ringId][a.localId] = a;
-            };
-
-            RingProcessor<SelectionPoint> hqueue(1, createEdge, finish);
+            RingProcessor<SelectionPoint> hqueue(1, 
+                    bind(CreateEdge, std::ref(res), placeholders::_1, placeholders::_2),
+                    bind(AddNode, std::ref(res), placeholders::_1));
  
             for(uint32_t j = 0; j < hCount; j++) {
                 if(debug) {
                     cout << "Recorder Graph Pushing " << hLeft << ", " << vCenter << endl;
                 }
 
-                res.adj.push_back(vector<SelectionEdge>());
-                
                 hLeft = j * hFov;
                 
                 SelectionPoint p;
