@@ -29,8 +29,8 @@ bool CompareByFilename (const string &a, const string &b) {
 
 int main(int argc, char** argv) {
     cv::ocl::setUseOpenCL(false);
-    bool drawWeights = true;
-    bool drawDebug = false;
+    bool drawWeights = false;
+    bool drawDebug = true;
     bool outputUnalignedStereo = false;
 
     int n = argc - 1;
