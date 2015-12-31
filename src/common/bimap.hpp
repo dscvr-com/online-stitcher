@@ -18,20 +18,20 @@ namespace optonaut {
             backward[val] = key;
         } 
 
-        bool GetValue(const T &key, V &value) {
+        bool GetValue(const T &key, V &value) const {
             auto it = forward.find(key);
             if(it != forward.end()) {
-                value = *it;
+                value = it->second;
                 return true;
             }
 
             return false;
         }
         
-        bool GetKey(const V &value, T &key) {
+        bool GetKey(const V &value, T &key) const {
             auto it = backward.find(value);
             if(it != backward.end()) {
-                key = *it;
+                key = *it->first;
                 return true;
             }
 

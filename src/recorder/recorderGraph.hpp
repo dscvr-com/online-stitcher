@@ -5,6 +5,7 @@
 
 #include "../io/inputImage.hpp"
 #include "../common/image.hpp"
+#include "../common/biMap.hpp"
 #include "../math/support.hpp"
 
 using namespace cv;
@@ -21,6 +22,7 @@ namespace optonaut {
         uint32_t globalId;
         uint32_t localId;
         uint32_t ringId;
+        uint32_t ringSize;
         double hPos;
         double vPos;
         double hFov;
@@ -28,7 +30,8 @@ namespace optonaut {
         Mat extrinsics;
         
         SelectionPoint() : globalId(0),
-            localId(0), ringId(0), hPos(0), vPos(0), hFov(0), vFov(0), extrinsics(0, 0, CV_64F) {
+            localId(0), ringId(0), ringSize(0), hPos(0), vPos(0), hFov(0), 
+            vFov(0), extrinsics(0, 0, CV_64F) {
         }
     };
     
@@ -221,7 +224,8 @@ namespace optonaut {
             return size;
         }
 
-        vector<InputImageP> SelectBestMatches(const vector<InputImageP> &_imgs) const {
+        vector<InputImageP> SelectBestMatches(const vector<InputImageP> &_imgs, 
+                BiMap<size_t, uint32_t> &imagesToTargets) const {
 
             std::list<InputImageP> imgs(_imgs.begin(), _imgs.end());
             vector<InputImageP> res;
@@ -242,12 +246,9 @@ namespace optonaut {
 
                     auto it = std::min_element(imgs.begin(), imgs.end(), compare);
                     InputImageP min = *it;
-                    min->ringId = target.ringId;
-                    min->localId = target.localId;
-                    min->globalId = target.globalId;
-                    min->ringSize = ring.size(); 
 
                     imgs.erase(it);
+                    imagesToTargets.Insert(min->id, target.globalId);
 
                     res.push_back(min);
                 }

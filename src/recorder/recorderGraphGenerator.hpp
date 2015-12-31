@@ -74,6 +74,7 @@ public:
 
                 copy.localId = localId;
                 copy.globalId = globalId;
+                copy.ringSize = newRingSize;
 
                 hqueue.Push(copy);
 
@@ -188,6 +189,7 @@ public:
                 p.localId = j;
                 p.vFov = vFov;
                 p.hFov = hFov;
+                p.ringSize = hCount;
                 
                 GeoToRot(hLeft, vCenter, p.extrinsics);
                 

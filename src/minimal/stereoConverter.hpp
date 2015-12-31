@@ -53,12 +53,16 @@ class StereoConverter {
                                     ForwardToStereoProcess,
                                     FinishImage);
 
-        vector<InputImageP> best = graph.SelectBestMatches(images); 
+        BiMap<size_t, uint32_t> imagesToTargets;
+
+        vector<InputImageP> best = graph.SelectBestMatches(images, imagesToTargets); 
         int lastRingId = -1;
         for(auto img : best) {
             SelectionPoint target; 
             //Reassign points
-            graph.GetPointById(img->globalId, target);
+            uint32_t pointId; 
+            Assert(imagesToTargets.GetValue(img->id, pointId));
+            Assert(graph.GetPointById(pointId, target));
             
             SelectionInfo info;
             info.isValid = true;

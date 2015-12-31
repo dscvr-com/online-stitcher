@@ -60,12 +60,12 @@ int main(int argc, char** argv) {
     }
 
     BiMap<uint32_t, uint32_t> fullToHalf; 
+    BiMap<size_t, uint32_t> imagesToTargets; 
 
     RecorderGraph fullGraph = RecorderGraphGenerator::Generate(images[0]->intrinsics, RecorderGraph::ModeTruncated, 2, 0, 4);
-    RecorderGraph graph = RecorderGraphGenerator::Sparse(fullGraph, fullToHalf, 4);
-    RecorderGraph halfGraph = graph; 
-    
-    images = graph.SelectBestMatches(images);
+    RecorderGraph halfGraph = RecorderGraphGenerator::Sparse(fullGraph, fullToHalf, 4);
+
+    images = halfGraph.SelectBestMatches(images, imagesToTargets);
     n = images.size();
     
     cout << "Selecting " << n << " images for further processing." << endl;
@@ -96,11 +96,12 @@ int main(int argc, char** argv) {
         imwrite("dbg/aa_input.jpg", res->image.data);
     }
     for(int k = 0; k < 10; k++) {
-        AlignmentGraph aligner;
+        AlignmentGraph aligner(halfGraph, imagesToTargets);
         int matches = 0, outliers = 0, forced = 0, noOverlap = 0;
         for(int i = 0; i < n; i++) {
             for(int j = 0; j < i; j++) {
                 auto corr = aligner.Register(images[i], images[j]);
+
                 if(corr.valid) {
                    matches++; 
                 } else if(corr.rejectionReason == 
@@ -134,7 +135,14 @@ int main(int argc, char** argv) {
                        InputImageP a = imageById[edge.from]; 
                        InputImageP b = imageById[edge.to]; 
 
-                       if(a->ringId != 1 && a->ringId != b->ringId)
+                       uint32_t pidA, pidB;
+                       Assert(imagesToTargets.GetValue(a->id, pidA));
+                       Assert(imagesToTargets.GetValue(b->id, pidB));
+                       SelectionPoint tA, tB;
+                       Assert(halfGraph.GetPointById(pidA, tA));
+                       Assert(halfGraph.GetPointById(pidB, tB));
+
+                       if(tA.ringId != 1 && tA.ringId != tB.ringId)
                            continue; //Only draw cross-lines if origin at ring 0
 
                        Point imgCenter = res->corner;
@@ -182,7 +190,8 @@ int main(int argc, char** argv) {
                                aCenter, bCenter, color, thickness);
                        }
 
-                       cv::circle(res->image.data, aCenter, 8, Scalar(0xc0, 0xc0, 0x00), -1);
+                       cv::circle(res->image.data, aCenter, 8, 
+                               Scalar(0xc0, 0xc0, 0x00), -1);
                     }
                 }
             }

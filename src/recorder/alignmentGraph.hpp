@@ -40,11 +40,20 @@ namespace optonaut {
     class AlignmentGraph: public ImageCorrespondenceGraph<AlignmentDiff> {
         private: 
             PairwiseCorrelator aligner;
+            const RecorderGraph &graph; 
+            const BiMap<size_t, uint32_t> &imagesToTargets;
             static const bool debug = false;
             map<size_t, double> alignmentCorrections;
         public:
-            AlignmentGraph() { }
-            AlignmentGraph(AlignmentGraph &ref) {
+            AlignmentGraph(const RecorderGraph &graph, 
+                    const BiMap<size_t, uint32_t> &imagesToTargets) : 
+                graph(graph), 
+                imagesToTargets(imagesToTargets)
+            { }
+            AlignmentGraph(AlignmentGraph &ref) : 
+                graph(ref.graph), 
+                imagesToTargets(ref.imagesToTargets)
+            {
                 SetAlignment(ref.GetAlignment());
             }
         
@@ -62,24 +71,33 @@ namespace optonaut {
                 const bool dampUncorrelatedNeighbors = false;
                 const bool dampAllNeighbors = false;
 
-                int dist = min(abs(imgA->localId - imgB->localId),
-                       imgA->ringSize - (int)abs(imgA->localId - imgB->localId));
+                uint32_t pidA, pidB;
+                SelectionPoint tA, tB;
 
-                dist = dist % imgA->ringSize;
+                Assert(imagesToTargets.GetValue(imgA->id, pidA));
+                Assert(imagesToTargets.GetValue(imgB->id, pidB));
+
+                Assert(graph.GetPointById(pidA, tA));
+                Assert(graph.GetPointById(pidB, tB));
+
+                int dist = min(abs((int)tA.localId - (int)tB.localId),
+                       (int)tA.ringSize - abs((int)tA.localId - (int)tB.localId));
+
+                dist = dist % tA.ringSize;
 
                 bool areNeighbors = 
                     dist <= 1
-                    && imgA->ringId == imgB->ringId;
+                    && tA.ringId == tB.ringId;
                         
                 Mat rvec;
                 ExtractRotationVector(imgA->adjustedExtrinsics.inv() * 
                         imgB->adjustedExtrinsics, rvec);
 
                 double angularDist = rvec.at<double>(1);
-                double maxDist = dist * (M_PI * 2 / imgA->ringSize);
+                double maxDist = dist * (M_PI * 2 / tA.ringSize);
                 double angularDiff = maxDist - angularDist; 
 
-                if(imgA->ringId != imgB->ringId 
+                if(tA.ringId != tB.ringId 
                         || areNeighbors) {
                     int minSize = min(imgA->image.cols, imgA->image.rows) / 1.8;
 
