@@ -52,12 +52,20 @@ public:
 
         const auto &rings = in.GetRings();
         for(size_t i = 0; i < rings.size(); i++) {
-            sparse.AddNewRing(rings[i].size() / skip);
-            localId = 0;
+
+            int newRingSize = rings[i].size() / skip;
+
+            AssertEQM(newRingSize * skip, (int)rings[i].size(), 
+                    "Ring size divisible by skip factor");
+
+            AssertEQ((uint32_t)i, sparse.AddNewRing(rings[i].size() / skip));
             
             RingProcessor<SelectionPoint> hqueue(1, 
-                    bind(CreateEdge, sparse, placeholders::_1, placeholders::_2),
-                    bind(AddNode, sparse, placeholders::_1));
+                    bind(CreateEdge, std::ref(sparse), 
+                        placeholders::_1, placeholders::_2),
+                    bind(AddNode, std::ref(sparse), placeholders::_1));
+
+            localId = 0;
 
             for(size_t j = 0; j < rings[i].size(); j += skip) {
                 SelectionPoint copy = rings[i][j];
@@ -72,12 +80,14 @@ public:
                 localId++;
                 globalId++;
             }
+
+            hqueue.Flush();
         }
 
         return sparse;
     }
     
-    static RecorderGraph Generate(const Mat &intrinsics, const int mode = RecorderGraph::ModeAll, const float density = RecorderGraph::DensityNormal, const int lastRingOverdrive = 0) {
+    static RecorderGraph Generate(const Mat &intrinsics, const int mode = RecorderGraph::ModeAll, const float density = RecorderGraph::DensityNormal, const int lastRingOverdrive = 0, const int divider = 1) {
         AssertWGEM(density, 1.f, 
                 "Reducing recorder graph density below one is potentially unsafe.");
         
@@ -138,6 +148,10 @@ public:
 			double vCenter = i * vFov + vFov / 2.0 - M_PI / 2.0 + vStart;
 
 			uint32_t hCount = hCenterCount * cos(vCenter);
+           
+            if(hCount % divider != 0) { 
+                hCount += divider - (hCount % divider);
+            }
 			hFov = M_PI * 2 / hCount;
 
             double hLeft = 0;

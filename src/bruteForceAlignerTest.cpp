@@ -59,9 +59,12 @@ int main(int argc, char** argv) {
         images.push_back(img);
     }
 
-    RecorderGraph graph = RecorderGraphGenerator::Generate(images[0]->intrinsics, RecorderGraph::ModeTruncated, 0.5, 0);
-    RecorderGraph halfGraph = RecorderGraphGenerator::Generate(images[0]->intrinsics, RecorderGraph::ModeTruncated, 0.5, 0);
+    BiMap<uint32_t, uint32_t> fullToHalf; 
 
+    RecorderGraph fullGraph = RecorderGraphGenerator::Generate(images[0]->intrinsics, RecorderGraph::ModeTruncated, 2, 0, 4);
+    RecorderGraph graph = RecorderGraphGenerator::Sparse(fullGraph, fullToHalf, 4);
+    RecorderGraph halfGraph = graph; 
+    
     images = graph.SelectBestMatches(images);
     n = images.size();
     
