@@ -126,6 +126,16 @@ namespace optonaut {
                 }
             }
         }
+
+        bool GetNext(const SelectionPoint &current, SelectionPoint &next) const {
+            auto it = adj[current.globalId].begin();
+
+            if(it == adj[current.globalId].end()) {
+                return false;
+            } else {
+                return GetPointById(it->to, next);
+            }
+        }
         
         bool GetNextForRecording(const SelectionPoint &current, SelectionPoint &next) const {
             auto it = adj[current.globalId].begin();

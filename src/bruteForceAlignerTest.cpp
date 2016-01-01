@@ -29,7 +29,7 @@ bool CompareByFilename (const string &a, const string &b) {
 
 int main(int argc, char** argv) {
     cv::ocl::setUseOpenCL(false);
-    bool drawWeights = false;
+    bool drawWeights = true;
     bool drawDebug = true;
     bool outputUnalignedStereo = false;
 
@@ -43,56 +43,71 @@ int main(int argc, char** argv) {
 
     std::sort(files.begin(), files.end(), CompareByFilename);
 
-    vector<InputImageP> images;
+    vector<InputImageP> allImages;
     SimpleSphereStitcher debugger;
 
     auto base = Recorder::iosBase;
     auto zero = Recorder::iosZero;
     auto baseInv = base.t();
+    map<size_t, InputImageP> imageById;
+
     
     for(int i = 0; i < n; i += 1) {
         auto img = InputImageFromFile(files[i], true); 
         img->originalExtrinsics = base * zero * 
             img->originalExtrinsics.inv() * baseInv;
         img->adjustedExtrinsics = img->originalExtrinsics;
+        imageById[img->id] = img;
 
-        images.push_back(img);
+        allImages.push_back(img);
     }
+    
+    RecorderGraph fullGraph = RecorderGraphGenerator::Generate(
+            allImages[0]->intrinsics, 
+            RecorderGraph::ModeTruncated, 
+            2, 0, 4);
 
     BiMap<uint32_t, uint32_t> fullToHalf; 
+    BiMap<size_t, uint32_t> fullImagesToTargets; 
     BiMap<size_t, uint32_t> imagesToTargets; 
+    auto fullImages = fullGraph.SelectBestMatches(allImages, fullImagesToTargets);
+    vector<InputImageP> halfImages;
 
-    RecorderGraph fullGraph = RecorderGraphGenerator::Generate(images[0]->intrinsics, RecorderGraph::ModeTruncated, 2, 0, 4);
-    RecorderGraph halfGraph = RecorderGraphGenerator::Sparse(fullGraph, fullToHalf, 4);
+    RecorderGraph halfGraph = RecorderGraphGenerator::Sparse(
+            fullGraph, 
+            fullImagesToTargets,
+            imagesToTargets,
+            fullToHalf, 4);
 
-    images = halfGraph.SelectBestMatches(images, imagesToTargets);
-    n = images.size();
+    //Iterate over imagesToTArgets and fill halfImages
+    
+    for(auto pair : imagesToTargets) {
+        halfImages.push_back(imageById.at(pair.first));
+    }
+
+    n = halfImages.size();
     
     cout << "Selecting " << n << " images for further processing." << endl;
 
-    map<size_t, InputImageP> imageById;
-
-    for(auto img : images) {
+    for(auto img : halfImages) {
         Assert(!img->IsLoaded());
         img->image.Load();
         pyrDown(img->image.data, img->image.data);
         pyrDown(img->image.data, img->image.data);
         img->image = Image(img->image.data);
-
-        imageById[img->id] = img;
     }
 
     std::pair<StitchingResultP, StitchingResultP> stereoRes; 
     
     if(outputUnalignedStereo) {
-        stereoRes = minimal::StereoConverter::Stitch(images, halfGraph);
+        stereoRes = minimal::StereoConverter::Stitch(halfImages, halfGraph);
 
         imwrite("dbg/stereo_una_left.jpg", stereoRes.first->image.data);
         imwrite("dbg/stereo_una_right.jpg", stereoRes.second->image.data);
     }
 
     if(drawDebug) {
-        auto res = debugger.Stitch(images);
+        auto res = debugger.Stitch(halfImages);
         imwrite("dbg/aa_input.jpg", res->image.data);
     }
     for(int k = 0; k < 10; k++) {
@@ -100,7 +115,7 @@ int main(int argc, char** argv) {
         int matches = 0, outliers = 0, forced = 0, noOverlap = 0;
         for(int i = 0; i < n; i++) {
             for(int j = 0; j < i; j++) {
-                auto corr = aligner.Register(images[i], images[j]);
+                auto corr = aligner.Register(halfImages[i], halfImages[j]);
 
                 if(corr.valid) {
                    matches++; 
@@ -127,7 +142,9 @@ int main(int argc, char** argv) {
             ", forced: " << forced<< endl;
        
         if(drawDebug) { 
-            auto res = debugger.Stitch(images);
+            auto res = debugger.Stitch(halfImages);
+            Point imgCenter = res->corner;
+
 
             if(drawWeights) { 
                 for(auto edge : edges) {
@@ -144,8 +161,6 @@ int main(int argc, char** argv) {
 
                        if(tA.ringId != 1 && tA.ringId != tB.ringId)
                            continue; //Only draw cross-lines if origin at ring 0
-
-                       Point imgCenter = res->corner;
 
                        Point aCenter = debugger.WarpPoint(a->intrinsics, 
                                a->adjustedExtrinsics, 
@@ -171,40 +186,42 @@ int main(int argc, char** argv) {
                             thickness = 2;
                        }
 
-                       if(edge.value.forced) {
-                           continue;
-                           // color = Scalar(0xc0, 0xc0, 0xc0);
-                           // thickness = 2;
-                       }
-                       
-
-                       if(bCenter.x - aCenter.x > res->image.cols / 2) {
-                            cv::line(res->image.data, 
-                               aCenter, bCenter - Point(res->image.cols, 0), 
-                               color, thickness);
-                            cv::line(res->image.data, 
-                               aCenter + Point(res->image.cols, 0), bCenter,
-                               color, thickness);
-                       } else {
-                            cv::line(res->image.data, 
-                               aCenter, bCenter, color, thickness);
-                       }
-
-                       cv::circle(res->image.data, aCenter, 8, 
-                               Scalar(0xc0, 0xc0, 0x00), -1);
+                       //if(!edge.value.forced) {
+                           if(bCenter.x - aCenter.x > res->image.cols / 2) {
+                                cv::line(res->image.data, 
+                                   aCenter, bCenter - Point(res->image.cols, 0), 
+                                   color, thickness);
+                                cv::line(res->image.data, 
+                                   aCenter + Point(res->image.cols, 0), bCenter,
+                                   color, thickness);
+                           } else {
+                                cv::line(res->image.data, 
+                                   aCenter, bCenter, color, thickness);
+                           }
+                       //}
                     }
+                }
+
+                for(auto img : halfImages) {
+
+                    Point center = debugger.WarpPoint(img->intrinsics, 
+                               img->adjustedExtrinsics, 
+                               img->image.size(), Point(0, 0)) - imgCenter;
+
+                    cv::circle(res->image.data, center, 8, 
+                        Scalar(0xc0, 0xc0, 0x00), -1);
                 }
             }
             imwrite("dbg/aligned_" + ToString(k) + ".jpg", res->image.data);
         }
         
-        for(auto img : images) {
+        for(auto img : halfImages) {
             aligner.Apply(img);
             img->adjustedExtrinsics.copyTo(img->originalExtrinsics);
         }
     }
 
-    stereoRes = minimal::StereoConverter::Stitch(images, halfGraph);
+    stereoRes = minimal::StereoConverter::Stitch(halfImages, halfGraph);
 
     imwrite("dbg/stereo_left.jpg", stereoRes.first->image.data);
     imwrite("dbg/stereo_right.jpg", stereoRes.second->image.data);

@@ -43,7 +43,82 @@ private:
     };
 public:
 
-    static RecorderGraph Sparse(const RecorderGraph &in, BiMap<uint32_t, uint32_t> &denseToSparse, int skip) {
+    static void AdjustFromSparse(
+            const vector<InputImageP> &sparseImages, 
+            const RecorderGraph &sparse, 
+            const BiMap<size_t, uint32_t> sparseImagesToTargets,
+            vector<InputImageP> &,
+            const RecorderGraph &dense, 
+            const BiMap<size_t, uint32_t> denseImagesToTargets,
+            const BiMap<uint32_t, uint32_t> &) {
+
+        for(auto ring : sparse.GetRings()) {
+            for(auto cur : ring) {
+                SelectionPoint next;
+                Assert(sparse.GetNext(cur, next));
+
+                auto imgA = ImageFromTarget(sparseImages, 
+                        sparseImagesToTargets, cur.globalId);
+                auto imgB = ImageFromTarget(sparseImages, 
+                        sparseImagesToTargets, next.globalId);
+
+                SelectionPoint tdA = TargetFromImage(dense, 
+                        denseImagesToTargets, imgA->id);
+                SelectionPoint tdB = TargetFromImage(dense, 
+                        denseImagesToTargets, imgB->id);
+
+                vector<SelectionPoint> chain; 
+                chain.push_back(tdA);
+                
+                while(chain.back().globalId != tdB.globalId) {
+                    SelectionPoint next;
+                    Assert(dense.GetNext(chain.back(), next));
+                    chain.push_back(next);
+                }
+
+                chain.push_back(tdB);
+                
+                // For each pair (cur, next) in sparse
+                // 1) Get corresponding targets in dense. Done.  
+                // 2) Find targets in between. Done.
+                // 3) Interpolate images in between. 
+            }
+        }
+    }
+
+    static SelectionPoint TargetFromImage(const RecorderGraph &in, 
+            const BiMap<size_t, uint32_t> &imagesToTargets, 
+            size_t imageId) {
+        uint32_t pid;
+        SelectionPoint p;
+
+        Assert(imagesToTargets.GetValue(imageId, pid));
+        Assert(in.GetPointById(pid, p));
+
+        return p;
+    }
+
+    //Assert: in Sorted!
+    static InputImageP ImageFromTarget(const vector<InputImageP> &in, 
+            const BiMap<size_t, uint32_t> &imagesToTargets, 
+            uint32_t pid) {
+        size_t id;
+
+        Assert(imagesToTargets.GetKey(pid, id));
+        auto it = std::find_if(in.begin(), in.end(), [id](const InputImageP &img) {
+                        return (int)id == img->id;
+                    });
+
+        Assert(it != in.end());
+
+        return *it;
+    }
+
+    static RecorderGraph Sparse(const RecorderGraph &in, 
+            const BiMap<size_t, uint32_t> &denseImages, 
+            BiMap<size_t, uint32_t> &sparseImagesToTargets,
+            BiMap<uint32_t, uint32_t> &denseToSparse, 
+            int skip) {
 
         RecorderGraph sparse(in.ringCount, in.intrinsics);
 
@@ -69,8 +144,11 @@ public:
 
             for(size_t j = 0; j < rings[i].size(); j += skip) {
                 SelectionPoint copy = rings[i][j];
+                size_t imageId;
+                Assert(denseImages.GetKey(copy.globalId, imageId));
                 
                 denseToSparse.Insert(copy.globalId, globalId);
+                sparseImagesToTargets.Insert(imageId, globalId);
 
                 copy.localId = localId;
                 copy.globalId = globalId;

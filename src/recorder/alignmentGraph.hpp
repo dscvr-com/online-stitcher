@@ -105,8 +105,8 @@ namespace optonaut {
 
                     if(!res.valid && areNeighbors && dampUncorrelatedNeighbors) {
                         res.valid = true;
-                        res.angularOffset.x = angularDiff / 2;
-                        res.overlap = imgA->image.cols * imgA->image.rows * 0.5 *
+                        res.angularOffset.x = angularDiff / 8;
+                        res.overlap = imgA->image.cols * imgA->image.rows * 0.01 *
                             (1 + abs(angularDiff)) * (1 + abs(angularDiff));
                         aToB.forced = true;
                     }
@@ -127,8 +127,8 @@ namespace optonaut {
 
                 if(dampAllNeighbors && areNeighbors) {
                     AlignmentDiff aToBDamp, bToADamp; 
-                    aToBDamp.dphi = -angularDiff; 
-                    aToBDamp.overlap = imgA->image.cols * imgA->image.rows * 0.1 *
+                    aToBDamp.dphi = -angularDiff / 8; 
+                    aToBDamp.overlap = imgA->image.cols * imgA->image.rows * 0.01 *
                             (1 + abs(angularDiff)) * (1 + abs(angularDiff));
                     aToBDamp.forced = true;
                     aToBDamp.valid = true;

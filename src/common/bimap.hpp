@@ -31,11 +31,19 @@ namespace optonaut {
         bool GetKey(const V &value, T &key) const {
             auto it = backward.find(value);
             if(it != backward.end()) {
-                key = *it->first;
+                key = it->second;
                 return true;
             }
 
             return false;
+        }
+
+        auto begin() const {
+            return forward.begin();
+        }
+
+        auto end() const {
+            return forward.end();
         }
         
     };
