@@ -98,7 +98,6 @@ public:
         return p;
     }
 
-    //Assert: in Sorted!
     static InputImageP ImageFromTarget(const vector<InputImageP> &in, 
             const BiMap<size_t, uint32_t> &imagesToTargets, 
             uint32_t pid) {
