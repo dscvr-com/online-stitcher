@@ -77,7 +77,17 @@ namespace optonaut {
                     iterations, eps);
 
             try {
-                findTransformECC(imgA->image.data, imgB->image.data, affine, warp, termination);
+
+                if(imgA->image.data.type() != CV_8UC1) {
+                    Mat grayA, grayB;
+
+                    cvtColor(imgA->image.data, grayA, CV_BGR2GRAY);
+                    cvtColor(imgB->image.data, grayB, CV_BGR2GRAY);
+                    
+                    findTransformECC(grayA, grayB, affine, warp, termination);
+                } else {
+                    findTransformECC(imgA->image.data, imgB->image.data, affine, warp, termination);
+                }
                 dy = affine.at<float>(1, 2);
             } catch (Exception ex) {
                 // :(

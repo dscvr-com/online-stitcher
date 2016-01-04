@@ -29,7 +29,7 @@ bool CompareByFilename (const string &a, const string &b) {
 
 int main(int argc, char** argv) {
     cv::ocl::setUseOpenCL(false);
-    bool drawWeights = true;
+    bool drawWeights = false;
     bool drawDebug = true;
     bool outputUnalignedStereo = false;
 
@@ -110,7 +110,7 @@ int main(int argc, char** argv) {
         auto res = debugger.Stitch(halfImages);
         imwrite("dbg/aa_input.jpg", res->image.data);
     }
-    for(int k = 0; k < 10; k++) {
+    for(int k = 0; k < 15; k++) {
         AlignmentGraph aligner(halfGraph, imagesToTargets);
         int matches = 0, outliers = 0, forced = 0, noOverlap = 0;
         for(int i = 0; i < n; i++) {
@@ -186,19 +186,17 @@ int main(int argc, char** argv) {
                             thickness = 2;
                        }
 
-                       //if(!edge.value.forced) {
-                           if(bCenter.x - aCenter.x > res->image.cols / 2) {
-                                cv::line(res->image.data, 
-                                   aCenter, bCenter - Point(res->image.cols, 0), 
-                                   color, thickness);
-                                cv::line(res->image.data, 
-                                   aCenter + Point(res->image.cols, 0), bCenter,
-                                   color, thickness);
-                           } else {
-                                cv::line(res->image.data, 
-                                   aCenter, bCenter, color, thickness);
-                           }
-                       //}
+                       if(bCenter.x - aCenter.x > res->image.cols / 2) {
+                            cv::line(res->image.data, 
+                               aCenter, bCenter - Point(res->image.cols, 0), 
+                               color, thickness);
+                            cv::line(res->image.data, 
+                               aCenter + Point(res->image.cols, 0), bCenter,
+                               color, thickness);
+                       } else {
+                            cv::line(res->image.data, 
+                               aCenter, bCenter, color, thickness);
+                       }
                     }
                 }
 
@@ -232,17 +230,27 @@ int main(int argc, char** argv) {
         }
     }
    
-   //Todo: Remove all unused parameters.  
+   //TODO: Remove all unused parameters. 
+   //TODO: This sparse code seems broken.  
     auto adjustedImages = RecorderGraphGenerator::AdjustFromSparse(
             halfImages, 
             halfGraph , 
             imagesToTargets,
-            allImages,
+            fullImages,
             fullGraph, 
             fullImagesToTargets,
             fullToHalf);
+
+    BiMap<uint32_t, uint32_t> fullToFinal; 
+    BiMap<size_t, uint32_t> finalImagesToTargets; 
     
-    auto finalImages = fullGraph.SelectBestMatches(adjustedImages, fullImagesToTargets);
+    RecorderGraph finalGraph = RecorderGraphGenerator::Sparse(
+            fullGraph, 
+            fullImagesToTargets,
+            finalImagesToTargets,
+            fullToFinal, 2);
+    
+    auto finalImages = finalGraph.SelectBestMatches(adjustedImages, finalImagesToTargets);
     
     for(auto img : finalImages) {
         if(!img->IsLoaded()) {
@@ -254,7 +262,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    stereoRes = minimal::StereoConverter::Stitch(finalImages, fullGraph);
+    stereoRes = minimal::StereoConverter::Stitch(finalImages, finalGraph);
 
     imwrite("dbg/stereo_left.jpg", stereoRes.first->image.data);
     imwrite("dbg/stereo_right.jpg", stereoRes.second->image.data);

@@ -41,45 +41,68 @@ private:
     static void AddNode(RecorderGraph &res, const SelectionPoint &a) {
         res.AddNewNode(a); 
     };
+
+    static void PushBy(InputImageP aligned, InputImageP unaligned, const vector<InputImageP> &chain, vector<InputImageP> &res) {
+        Mat diff = aligned->adjustedExtrinsics * 
+            unaligned->originalExtrinsics.inv();
+
+        for(auto img : chain) {
+            img->adjustedExtrinsics = diff * img->originalExtrinsics;
+            res.push_back(img);
+        }
+    }
 public:
 
     static vector<InputImageP> AdjustFromSparse(
-            const vector<InputImageP> &sparseImages, 
+            vector<InputImageP> sparseImages, 
             const RecorderGraph &sparse, 
-            const BiMap<size_t, uint32_t> &,
-            vector<InputImageP> &denseImages,
+            const BiMap<size_t, uint32_t> &sparseImagesToTargets,
+            vector<InputImageP> denseImages,
             const RecorderGraph &dense, 
-            const BiMap<size_t, uint32_t> &,
+            const BiMap<size_t, uint32_t> &denseImagesToTargets,
             const BiMap<uint32_t, uint32_t> &) {
-                
-        auto sparseRings = sparse.SplitIntoRings(sparseImages);
-        auto denseRings = dense.SplitIntoRings(denseImages);
-
+          
         vector<InputImageP> res;
 
-        //TODO: Handle correct warping around first - last image. 
+        auto sortById = [](const InputImageP &a, const InputImageP &b) {
+            return a->id < b->id;
+        };
 
-        for(size_t i = 0; i < sparseRings.size(); i++) {
-            size_t dj = 0;
-            for(size_t sj = 0; sj < sparseRings[i].size() - 1; sj++) {
+        std::sort(sparseImages.begin(), sparseImages.end(), sortById);
+        std::sort(denseImages.begin(), denseImages.end(), sortById);
+            
+        size_t dj = 0;
+        vector<InputImageP> prePreChain;
+                
+        while(dj < denseImages.size() && 
+                denseImages[dj]->id != sparseImages[0]->id) { 
+            prePreChain.push_back(denseImages[dj]);
+            dj++; 
+        }
+            
+        if(prePreChain.size() != 0) {
+            PushBy(sparseImages.front(), prePreChain.back(), prePreChain, res);
+        }
+
+        for(size_t sj = 0; sj < sparseImages.size() - 1; sj++) {
+            auto start = sparseImages[sj];    
+            auto end = sparseImages[sj + 1];
+
+            auto tStart = TargetFromImage(sparse, sparseImagesToTargets, start->id); 
+            auto tEnd = TargetFromImage(sparse, sparseImagesToTargets, end->id); 
+
+            if(tStart.ringId == tEnd.ringId) {
+                // Case 1: start/end are on the same ring. Just use slerp.
                 vector<InputImageP> denseChain;
-                auto start = sparseRings[i][sj];    
-                auto end = sparseRings[i][sj + 1];
-                while(dj < denseRings[i].size() && 
-                        denseRings[i][dj]->id != start->id) { 
-                    dj++; 
-                    AssertWM(false, "Images in dense before sparse start.");
-                }
-                // TODO: This is not the right place to do this. 
-                //if(abs(GetAngleOfRotation(start->adjustedExtrinsics, 
-                //                end->adjustedExtrinsics)) > M_PI / 16) {
-                //    continue;
-                //}
-                while(dj < denseRings[i].size() && 
-                        denseRings[i][dj]->id != end->id) { 
-                    denseChain.push_back(denseRings[i][dj]);
+
+                while(dj < denseImages.size() && 
+                        denseImages[dj]->id != end->id) { 
+                    denseChain.push_back(denseImages[dj]);
+                    AssertGTM(end->id, denseImages[dj]->id, 
+                            "Did not find sparse image in dense");
                     dj++; 
                 }
+                denseChain.push_back(denseImages[dj]);
 
                 size_t n = denseChain.size(); 
                 
@@ -91,13 +114,55 @@ public:
 
                     res.push_back(denseChain[k]);
                 }
+            } else {
+                // Case 2: start/end are not on the same ring. Can't slerp.
+                // Split chain into pre and post, then move images according to diff. 
+                vector<InputImageP> preChain;
+                vector<InputImageP> postChain;
+
+                while(dj < denseImages.size() && 
+                        denseImages[dj]->id != end->id) { 
+                    
+                    AssertGTM(end->id, denseImages[dj]->id, 
+                            "Did not find sparse image in dense");
+
+                    auto tDense = TargetFromImage(dense, denseImagesToTargets, 
+                            denseImages[dj]->id);
+
+                    if(tDense.ringId == tStart.ringId) {
+                        preChain.push_back(denseImages[dj]);
+                    } else {
+                        AssertEQM(tDense.ringId, tEnd.ringId, 
+                                "Image belongs either to start or end part.");
+                        postChain.push_back(denseImages[dj]);
+                    }
+                    dj++; 
+                }
+
+                if(preChain.size() > 0) {
+                    PushBy(start, preChain.back(), preChain, res);
+                }
+
+                if(postChain.size() > 0) {
+                    PushBy(end, postChain.front(), postChain, res);
+                }
             }
+        }
+        
+        vector<InputImageP> postPostChain;
+                
+        while(dj < denseImages.size()) {
+            postPostChain.push_back(denseImages[dj]);
+            dj++; 
+        }
+        
+        if(postPostChain.size() != 0) {
+            PushBy(sparseImages.back(), postPostChain.front(), postPostChain, res);
         }
 
         return res;
 
-        // Note: Make interpolation dependent on input order
-        // not on graphs. 
+        //Attempt #2 - use graph structure to align images. 
         /*
         for(auto ring : sparse.GetRings()) {
             for(auto cur : ring) {
