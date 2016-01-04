@@ -237,6 +237,8 @@ namespace optonaut {
         vector<InputImageP> SelectBestMatches(const vector<InputImageP> &_imgs, 
                 BiMap<size_t, uint32_t> &imagesToTargets) const {
 
+            const double thresh = M_PI / 16;
+
             std::list<InputImageP> imgs(_imgs.begin(), _imgs.end());
             vector<InputImageP> res;
 
@@ -254,8 +256,19 @@ namespace optonaut {
                         return dA < dB;
                     };
 
+                    //Todo - keep track of max distance!
                     auto it = std::min_element(imgs.begin(), imgs.end(), compare);
                     InputImageP min = *it;
+
+                    //If this assertion fires, we have less images than targets. 
+                    AssertM(it != imgs.end(), "Found Match.");
+                    
+                    double dist = GetAngleOfRotation(target.extrinsics,
+                            min->adjustedExtrinsics);
+
+                    if(abs(dist) > thresh)
+                        continue;
+
 
                     imgs.erase(it);
                     imagesToTargets.Insert(min->id, target.globalId);

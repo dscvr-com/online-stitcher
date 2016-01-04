@@ -43,15 +43,62 @@ private:
     };
 public:
 
-    static void AdjustFromSparse(
+    static vector<InputImageP> AdjustFromSparse(
             const vector<InputImageP> &sparseImages, 
             const RecorderGraph &sparse, 
-            const BiMap<size_t, uint32_t> sparseImagesToTargets,
-            vector<InputImageP> &,
+            const BiMap<size_t, uint32_t> &,
+            vector<InputImageP> &denseImages,
             const RecorderGraph &dense, 
-            const BiMap<size_t, uint32_t> denseImagesToTargets,
+            const BiMap<size_t, uint32_t> &,
             const BiMap<uint32_t, uint32_t> &) {
+                
+        auto sparseRings = sparse.SplitIntoRings(sparseImages);
+        auto denseRings = dense.SplitIntoRings(denseImages);
 
+        vector<InputImageP> res;
+
+        //TODO: Handle correct warping around first - last image. 
+
+        for(size_t i = 0; i < sparseRings.size(); i++) {
+            size_t dj = 0;
+            for(size_t sj = 0; sj < sparseRings[i].size() - 1; sj++) {
+                vector<InputImageP> denseChain;
+                auto start = sparseRings[i][sj];    
+                auto end = sparseRings[i][sj + 1];
+                while(dj < denseRings[i].size() && 
+                        denseRings[i][dj]->id != start->id) { 
+                    dj++; 
+                    AssertWM(false, "Images in dense before sparse start.");
+                }
+                // TODO: This is not the right place to do this. 
+                //if(abs(GetAngleOfRotation(start->adjustedExtrinsics, 
+                //                end->adjustedExtrinsics)) > M_PI / 16) {
+                //    continue;
+                //}
+                while(dj < denseRings[i].size() && 
+                        denseRings[i][dj]->id != end->id) { 
+                    denseChain.push_back(denseRings[i][dj]);
+                    dj++; 
+                }
+
+                size_t n = denseChain.size(); 
+                
+                for(size_t k = 0; k < n; k++) {
+                    Slerp(start->adjustedExtrinsics,
+                            end->adjustedExtrinsics,
+                            (double)k / (double)(n - 1),
+                            denseChain[k]->adjustedExtrinsics);
+
+                    res.push_back(denseChain[k]);
+                }
+            }
+        }
+
+        return res;
+
+        // Note: Make interpolation dependent on input order
+        // not on graphs. 
+        /*
         for(auto ring : sparse.GetRings()) {
             for(auto cur : ring) {
                 SelectionPoint next;
@@ -84,6 +131,7 @@ public:
                 // 3) Interpolate images in between. 
             }
         }
+        */
     }
 
     static SelectionPoint TargetFromImage(const RecorderGraph &in, 

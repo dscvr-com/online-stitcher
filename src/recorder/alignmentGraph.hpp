@@ -68,7 +68,7 @@ namespace optonaut {
         
             virtual AlignmentDiff GetCorrespondence(InputImageP imgA, InputImageP imgB, AlignmentDiff &aToB, AlignmentDiff &bToA) {
 
-                const bool dampUncorrelatedNeighbors = false;
+                const bool dampUncorrelatedNeighbors = true;
                 const bool dampAllNeighbors = false;
 
                 uint32_t pidA, pidB;
@@ -105,8 +105,8 @@ namespace optonaut {
 
                     if(!res.valid && areNeighbors && dampUncorrelatedNeighbors) {
                         res.valid = true;
-                        res.angularOffset.x = angularDiff / 8;
-                        res.overlap = imgA->image.cols * imgA->image.rows * 0.01 *
+                        res.angularOffset.x = 0;
+                        res.overlap = imgA->image.cols * imgA->image.rows * 100 *
                             (1 + abs(angularDiff)) * (1 + abs(angularDiff));
                         aToB.forced = true;
                     }
@@ -126,6 +126,9 @@ namespace optonaut {
                 aToB.dphi *= -1;
 
                 if(dampAllNeighbors && areNeighbors) {
+
+                    AssertM(false, "All neighbor damping implementation possibly incorrect - dphi is relative, also we should only damp successively recorded images");
+
                     AlignmentDiff aToBDamp, bToADamp; 
                     aToBDamp.dphi = -angularDiff / 8; 
                     aToBDamp.overlap = imgA->image.cols * imgA->image.rows * 0.01 *
@@ -194,16 +197,16 @@ namespace optonaut {
                                 && a.value.valid; 
                             }); 
 
+                        //Reject upper quartil only and sort by absolute delta. 
                         std::sort(correlatorEdges.begin(), correlatorEdges.end(), 
                             [] (const auto &a, const auto &b) {
-                                return a.value.dphi < b.value.dphi;
+                                return abs(a.value.dphi) < abs(b.value.dphi);
                             });
 
                         size_t m = correlatorEdges.size();
 
                         for(size_t i = 0; i < m; i++) {
-                            if(i < (double)m * quartil || 
-                                    i >= (double)m * (1.0 - quartil)) {
+                            if(i >= (double)m * (1.0 - quartil)) {
                                 correlatorEdges[i].value.quartil = true;
                                 allEdges.push_back(correlatorEdges[i]);
                             } else {
