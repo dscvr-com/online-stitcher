@@ -47,5 +47,9 @@ Example:
 ```
 
 ## Notes on compiling on Mac
+Build Flags used for OpenCV
+```
+cmake -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules -DWITH_OPENGL=ON -DWITH_OPENEXR=OFF -DBUILD_TIFF=OFF -DWITH_CUDA=OFF -DWITH_NVCUVID=OFF -DBUILD_PNG=OFF ..
+```
 
 Please set the environment variable OpenCV_DIR to the path of opencv. 

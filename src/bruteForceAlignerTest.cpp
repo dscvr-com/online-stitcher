@@ -27,6 +27,7 @@ using namespace std::chrono;
 
 int main(int argc, char** argv) {
     cv::ocl::setUseOpenCL(false);
+    cout << cv::getBuildInformation() << endl;
     bool outputUnalignedStereo = false;
 
     auto allImages = minimal::ImagePreperation::LoadAndPrepareArgs(argc, argv);
