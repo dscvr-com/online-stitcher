@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
             fullGraph, 
             fullImagesToTargets,
             imagesToTargets,
-            fullToHalf, 4);
+            fullToHalf, 2);
 
     //Iterate over imagesToTArgets and fill halfImages
     
@@ -232,6 +232,7 @@ int main(int argc, char** argv) {
    
    //TODO: Remove all unused parameters. 
    //TODO: This sparse code seems broken.  
+   /*
     auto adjustedImages = RecorderGraphGenerator::AdjustFromSparse(
             halfImages, 
             halfGraph , 
@@ -263,7 +264,13 @@ int main(int argc, char** argv) {
     }
 
     stereoRes = minimal::StereoConverter::Stitch(finalImages, finalGraph);
+*/
 
+    RecorderGraph finalGraph = halfGraph;
+    auto finalImages = halfGraph.SelectBestMatches(halfImages, imagesToTargets); 
+    
+    stereoRes = minimal::StereoConverter::Stitch(finalImages, finalGraph);
+    
     imwrite("dbg/stereo_left.jpg", stereoRes.first->image.data);
     imwrite("dbg/stereo_right.jpg", stereoRes.second->image.data);
         

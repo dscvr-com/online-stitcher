@@ -260,8 +260,8 @@ namespace optonaut {
                     auto it = std::min_element(imgs.begin(), imgs.end(), compare);
                     InputImageP min = *it;
 
-                    //If this assertion fires, we have less images than targets. 
-                    AssertM(it != imgs.end(), "Found Match.");
+                    if(it == imgs.end())
+                        continue;
                     
                     double dist = GetAngleOfRotation(target.extrinsics,
                             min->adjustedExtrinsics);
