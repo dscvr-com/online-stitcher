@@ -2,6 +2,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "../common/image.hpp"
+#include "../common/static_timer.hpp"
 #include "../common/drawing.hpp"
 #include "../imgproc/planarCorrelator.hpp"
 #include "../math/support.hpp"

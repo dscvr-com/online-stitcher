@@ -3,8 +3,10 @@
 
 #include "../common/imageCorrespondenceGraph.hpp"
 #include "../common/support.hpp"
+#include "../common/functional.hpp"
 #include "../math/projection.hpp"
 #include "../imgproc/pairwiseCorrelator.hpp"
+#include "../recorder/recorderGraph.hpp"
 
 using namespace cv;
 using namespace std;
@@ -144,7 +146,7 @@ namespace optonaut {
                 return aToB;
             };
 
-            Edges FindAlignment() {
+            Edges FindAlignment(double &outError) {
                 size_t maxId = 0;
                 Edges allEdges;
 
@@ -238,7 +240,7 @@ namespace optonaut {
                         }
                     }
 
-                    cout << "Error: "<<(error / relations.GetEdges().size()) << endl;
+                    outError = error / relations.GetEdges().size();
                
                     solve(O, R, x, DECOMP_SVD);
 

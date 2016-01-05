@@ -29,6 +29,7 @@
 #define AssertWGTM(x, y, msg) AssertGT_(x, y, msg, #x" > "#y, true)
 #define AssertW(x) Assert_(x, "", #x, true)
 #define AssertWM(x, msg) Assert_(x, msg, #x, true)
+#define AssertFalseInProduction(x) AssertFalseInProduction_(x, #x)
 
 namespace optonaut {
 
@@ -128,6 +129,18 @@ namespace optonaut {
                     ToString(a) + " == " + ToString(b), isWarning);
         }
     }
-}
 
-#endif  
+    #if __APPLE__
+        #include "TargetConditionals.h"
+        #if TARGET_OS_IPHONE
+        inline void AssertFalseInProduction_(bool val, std::string var) {
+            Assert(!val, "", var, false);
+        }
+        #else
+            inline void AssertFalseInProduction_(bool, std::string) { }
+        #endif
+    #else
+        inline void AssertFalseInProduction_(bool, std::string) { }
+    #endif
+}
+#endif

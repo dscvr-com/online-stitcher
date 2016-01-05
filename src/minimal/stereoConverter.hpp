@@ -22,6 +22,16 @@ namespace optonaut {
 namespace minimal {
 class StereoConverter {
     public:
+    static void StitchAndWrite(const vector<InputImageP> &images, 
+            const RecorderGraph &graph, const string &name) {
+        std::pair<StitchingResultP, StitchingResultP> stereoRes; 
+        
+        stereoRes = Stitch(images, graph);
+
+        imwrite("dbg/stereo_" + name + "_left.jpg", stereoRes.first->image.data);
+        imwrite("dbg/stereo_" + name + "_right.jpg", stereoRes.second->image.data);
+    }
+
     static std::pair<StitchingResultP, StitchingResultP>
     Stitch(const vector<InputImageP> &images, const RecorderGraph &graph) {
     
