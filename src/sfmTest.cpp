@@ -40,7 +40,7 @@ int main(int argc, char** argv) {
     cv::ocl::setUseOpenCL(false);
 
     auto images = minimal::ImagePreperation::LoadAndPrepareArgs(
-            argc, argv, true, 200);
+            argc, argv, true, 20, 1);
     images = minimal::ImagePreperation::CreateMinifiedCopy(images);
     int n = images.size();
 
@@ -87,7 +87,9 @@ int main(int argc, char** argv) {
 
     bool isProjective = true;
     vector<Mat> rEst, tEst, triangulated;
-    reconstruct(trackingFeatures, rEst, tEst, images[0]->intrinsics, triangulated, isProjective); 
+    Mat K;
+    ScaleIntrinsicsToImage(images[0]->intrinsics, images[0]->image.size(), K);
+    reconstruct(trackingFeatures, rEst, tEst, K, triangulated, isProjective); 
 
     VisualDebugHook debugger;
     
