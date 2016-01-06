@@ -55,6 +55,10 @@ target_link_libraries(stereo-conversion-test optonaut-lib)
 add_executable(feature-chain-test featureChainTest.cpp)
 target_link_libraries(feature-chain-test optonaut-lib)
 
+add_executable(sfm-test sfmTest.cpp)
+target_link_libraries(sfm-test optonaut-lib)
+target_link_libraries(sfm-test visual-debug-hook)
+
 add_executable(brute-force-aligner-test bruteForceAlignerTest.cpp)
 target_link_libraries(brute-force-aligner-test optonaut-lib)
 

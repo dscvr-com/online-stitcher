@@ -122,6 +122,17 @@ public:
         return featureChains;
     }
 
+    ImageFeatures& GetFeaturesByImage(const InputImageP a) {
+        size_t aId = GetImageId(a);
+        AssertGT(features.size(), aId);
+        return features[aId];
+    }
+    
+    ImageFeatures& GetFeaturesById(size_t aId) {
+        AssertGT(features.size(), aId);
+        return features[aId];
+    }
+
 	MatchInfoP FindCorrespondence(const InputImageP a, const InputImageP b) {
         assert(a != NULL);
         assert(b != NULL);

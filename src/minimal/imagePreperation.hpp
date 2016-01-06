@@ -71,7 +71,7 @@ namespace minimal {
        
         static std::vector<InputImageP> LoadAndPrepare(
                 std::vector<std::string> files, 
-                bool shallow = true) {
+                bool shallow = true, int limit = -1) {
             
             std::sort(files.begin(), files.end(), CompareByFilename);
 
@@ -82,6 +82,10 @@ namespace minimal {
             auto baseInv = base.t();
 
             int n = files.size();
+
+            if(limit > 0) {
+                n = std::min(limit, n);
+            }
             
             for(int i = 0; i < n; i += 1) {
                 auto img = InputImageFromFile(files[i], shallow); 
@@ -104,8 +108,9 @@ namespace minimal {
         }
 
         static std::vector<InputImageP> LoadAndPrepareArgs(
-                const int argc, char** argv, bool shallow = true) {
+                const int argc, char** argv, bool shallow = true, int limit = -1) {
             int n = argc - 1;
+
             vector<string> files;
 
             for(int i = 0; i < n; i++) {
@@ -113,7 +118,7 @@ namespace minimal {
                 files.push_back(imageName);
             }
 
-            return LoadAndPrepare(files, shallow);
+            return LoadAndPrepare(files, shallow, limit);
         }
 
         static std::map<size_t, InputImageP> CreateImageMap(

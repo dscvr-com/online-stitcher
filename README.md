@@ -53,3 +53,5 @@ cmake -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules -DWITH_OPENGL=ON 
 ```
 
 Please set the environment variable OpenCV_DIR to the path of opencv. 
+
+Please keep track of all the dependencies when compiling OpenCV. Ceres solver is especially important for SFM. 

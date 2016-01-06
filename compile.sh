@@ -18,7 +18,7 @@ mkdir tmp
 echo "-- Compiling."
 cd build
 cmake .. $@
-make $MAKEOPTS 
+make -j4 $MAKEOPTS 
 
 echo "-- Executing Tests."
 cd ../

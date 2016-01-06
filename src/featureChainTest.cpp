@@ -5,6 +5,7 @@
 #include <thread>
 #include <opencv2/stitching/detail/blenders.hpp>
 #include <opencv2/core/ocl.hpp>
+#include <opencv2/sfm.hpp>
 
 #include "common/intrinsics.hpp"
 #include "common/static_timer.hpp"
@@ -13,7 +14,6 @@
 #include "math/projection.hpp"
 #include "stitcher/simpleSphereStitcher.hpp"
 #include "stitcher/simplePlaneStitcher.hpp"
-#include "imgproc/pairwiseVisualAligner.hpp"
 
 using namespace std;
 using namespace cv;
