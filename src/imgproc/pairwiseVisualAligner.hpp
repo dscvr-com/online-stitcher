@@ -24,6 +24,16 @@ using namespace cv::xfeatures2d;
 
 namespace optonaut {
 
+struct FeatureId {
+    size_t imageId;
+    size_t featureIndex;
+
+    bool operator<(const FeatureId &n) const {
+        return std::tie(this->imageId, this->featureIndex) <
+            std::tie(n.imageId, n.featureIndex); 
+    }
+};
+
 class MatchInfo {
 public:
 	bool valid;
@@ -31,20 +41,16 @@ public:
 	Mat rotation;
 	double error;
     MatchesInfo matches;
+
     vector<Point2f> aLocalFeatures;
+    vector<FeatureId> aGlobalFeatures;
     vector<Point2f> bLocalFeatures;
+    vector<FeatureId> bGlobalFeatures;
 
 	MatchInfo() : valid(false), E(4, 4, CV_64F), rotation(4, 4, CV_64F) {}
-
 };
 
 typedef std::shared_ptr<MatchInfo> MatchInfoP;
-
-class FeatureChainInfo {
-public:
-    size_t imageId;
-    size_t featureIndex;
-};
 
 template <typename Extractor, typename Matcher>
 inline Matcher InstantiateMatcher() {
@@ -66,7 +72,7 @@ private:
     vector<MatchInfoP> matches;
     vector<ImageFeatures> features;
     vector<vector<size_t>> chainRefs;
-    vector<vector<FeatureChainInfo>> featureChains;
+    vector<vector<FeatureId>> featureChains;
 
     size_t CreateNewChain() {
         size_t id = featureChains.size();
@@ -252,7 +258,7 @@ public:
         features.push_back(f);
     }
 
-    vector<vector<FeatureChainInfo>> &GetFeatureChains() {
+    vector<vector<FeatureId>> &GetFeatureChains() {
         return featureChains;
     }
 
@@ -417,21 +423,30 @@ public:
 
         vector<Point2f> aInliers; 
         vector<Point2f> bInliers; 
+        
+        vector<FeatureId> aGlobalFeatures; 
+        vector<FeatureId> bGlobalFeatures; 
 
         for(size_t i = 0; i < minfo.inliers_mask.size(); i++) {
             if(minfo.inliers_mask[i] != 0) {
                 aInliers.push_back(info->aLocalFeatures[i]);
                 bInliers.push_back(info->bLocalFeatures[i]);
+
+                aGlobalFeatures.push_back({aId, (size_t)goodMatches[i].queryIdx});
+                bGlobalFeatures.push_back({bId, (size_t)goodMatches[i].trainIdx});
                 
                 AppendToFeatureChain(aId, goodMatches[i].queryIdx, 
                     bId, goodMatches[i].trainIdx);
             }
         }
-        
-        t.Tick("Chain Registration");
 
+        info->aGlobalFeatures = aGlobalFeatures;
+        info->bGlobalFeatures = bGlobalFeatures;
+        
         info->aLocalFeatures = aInliers;
         info->bLocalFeatures = bInliers;
+        
+        t.Tick("Chain Registration");
 
         minfo.num_inliers = inlinerCount;
         minfo.confidence = 0;

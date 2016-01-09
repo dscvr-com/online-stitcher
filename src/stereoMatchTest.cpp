@@ -23,7 +23,20 @@ using namespace cv;
 using namespace optonaut;
 using namespace std::chrono;
 
-static const bool showTriangulation = true;
+struct Point3D {
+    Point3f pt;
+    Vec3b color;
+    vector<FeatureId> features; 
+
+    Point3D(Point3f pt) : pt(pt) { }
+};
+
+struct Pose {
+    Mat R;
+    Mat t;
+
+    Pose(Mat R, Mat t) : R(R), t(t) { }
+};
 
 bool CompareByFilename (const string &a, const string &b) {
     return IdFromFileName(a) < IdFromFileName(b);
@@ -34,93 +47,168 @@ PairwiseVisualAligner aligner(
     SURF::create().dynamicCast<DescriptorExtractor>(), 
     new BFMatcher()); 
 
-void MatchImages(const InputImageP &a, const InputImageP &b) {
+vector<Point3D> cloud;
+std::map<FeatureId, size_t> featuresToPoints;
+std::map<int, Pose> posesPerImage;
 
-    cout << "Receiving: " << a->id << " " << b->id << endl;
-    AssertNEQ(a->id, b->id);
-    
-    auto c = aligner.FindCorrespondence(a, b); 
-    
-    if(!showTriangulation) {
-        return;
-    }
-
-    Mat R, t;
-
-    Mat scaledK;
-    Mat scaledKAsFloat;
-    ScaleIntrinsicsToImage(a->intrinsics, a->image.size(), scaledK);
-    From3DoubleTo3Float(scaledK, scaledKAsFloat);
+void RecoverPoseStereo(
+        const MatchInfoP &c,
+        const Mat &K,
+        Mat &R, Mat &t) {
 
     AssertGT(c->aLocalFeatures.size(), (size_t)0);    
     AssertGT(c->bLocalFeatures.size(), (size_t)0);    
 
     recoverPose(c->E, c->aLocalFeatures, c->bLocalFeatures, R, t, 
-           scaledK.at<double>(0, 0), 
-           Point2d(scaledK.at<double>(0, 2), scaledK.at<double>(1, 2)), 
+           K.at<float>(0, 0), 
+           Point2d(K.at<float>(0, 2), K.at<float>(1, 2)), 
            noArray());
 
-    AssertGEM(1.0, std::abs(determinant(R)), "Recovered rotation is valid.");
+    AssertGEM(1.0, std::abs(determinant(R)) - 0.00001, "Recovered rotation is valid.");
 
     cout << "t: " << t.t() << endl;
     cout << "R: " << R << endl;
+}
 
-    float distortion[] = {0, 0, 0, 0};
+void RecoverPosePnP(
+        const MatchInfoP &c,
+        const Mat &K,
+        Mat &R, Mat &t) {
 
-    //float distortion[] = {0.0439, -0.0119, 0, 0};
-    Mat Rect1, Rect2, P1, P2, Q, Distortion = Mat(4, 1, CV_32F, distortion);
+    vector<Point3f> subcloud;
+    vector<Point2f> subfeatures;
 
-    stereoRectify(scaledKAsFloat, Distortion, scaledKAsFloat, Distortion,
+    for(size_t i = 0; i < c->aGlobalFeatures.size(); i++) {
+        auto it = featuresToPoints.find(c->aGlobalFeatures[i]);
+
+        if (it != featuresToPoints.end()) {
+            subcloud.push_back(cloud[it->second].pt);
+            subfeatures.push_back(c->aLocalFeatures[i]);
+        }
+    }
+
+    Mat rvec;
+
+    //TODO - param tuning. Can also use original guess. 
+    solvePnPRansac(subcloud, subfeatures, K, R, rvec, t);
+    R = Mat::eye(3, 3, CV_64F);
+    Rodrigues(rvec, R);
+
+    R = R.inv();
+    t = -t;
+}
+
+inline void AddPoint(float x, float y, float z, Vec3b color, 
+        const FeatureId &a, const FeatureId &b) {
+
+    auto it = featuresToPoints.find(a); 
+    size_t i;
+    if(it == featuresToPoints.end()) {
+        auto pt = Point3D(Point3f(x, y, z));
+        pt.features.push_back(a);
+        pt.features.push_back(b);
+        pt.color = color;
+        i = cloud.size();
+        cloud.push_back(pt);
+    } else {
+        i = it->second;
+        //AssertEQ(x, cloud[i].pt.x);
+        //AssertEQ(x, cloud[i].pt.y);
+        //AssertEQ(x, cloud[i].pt.z);
+        cloud[i].features.push_back(a);
+        cloud[i].features.push_back(b);
+    }
+    featuresToPoints.insert(make_pair(a, i));
+    featuresToPoints.insert(make_pair(b, i));
+}
+
+void TriangulateAndAdd(
+        const InputImageP &a, const InputImageP &,
+        const MatchInfoP &c,
+        const Mat &K, const Mat &D,
+        const Mat &diffR, const Mat &diffT,
+        const Mat &originR, const Mat &originT
+        ) {
+
+    Mat Rect1, Rect2, P1, P2, Q;
+
+    stereoRectify(K, D, K, D,
            a->image.size(), 
-           R, t, Rect1, Rect2, P1, P2, Q);
+           diffR, diffT, Rect1, Rect2, P1, P2, Q);
     
-    //fisheye::undistortPoints(c->aLocalFeatures, c->aLocalFeatures, scaledKAsFloat, 
-    //        Distortion);
-    
-    //fisheye::undistortPoints(c->bLocalFeatures, c->bLocalFeatures, scaledKAsFloat, 
-    //        Distortion);
-
     Mat triangulated;
 
     triangulatePoints(P1, P2, c->aLocalFeatures, c->bLocalFeatures, triangulated);
 
-    VisualDebugHook debugger;
-
-    float ax = 0;
-    float az = 0;
-    float ay = 0;
-
-    const float scale = 0.5;
-    const float depth = 1;
+    AssertEQ(triangulated.rows, 4);
     
     for(int i = 0; i < triangulated.cols; i++) {
-        ax += triangulated.at<float>(0, i) / triangulated.at<float>(3, i);
-        ay += triangulated.at<float>(1, i) / triangulated.at<float>(3, i);
-        az += triangulated.at<float>(2, i) / triangulated.at<float>(3, i);
+        float x = triangulated.at<float>(0, i) / triangulated.at<float>(3, i);
+        float y = triangulated.at<float>(1, i) / triangulated.at<float>(3, i);
+        float z = triangulated.at<float>(2, i) / triangulated.at<float>(3, i);
+
+        Mat point(Vec3d(x, y, z));
+
+        point = originR.inv() * point;
+        point = point - originT;
+
+        FeatureId aFeature = c->aGlobalFeatures[i];
+        FeatureId bFeature = c->bGlobalFeatures[i];
+
+        AddPoint(point.at<double>(0), point.at<double>(1), point.at<double>(2), 
+                a->image.data.at<Vec3b>(c->aLocalFeatures[i]), aFeature, bFeature);
     }
+}
 
-    ax /= triangulated.cols;
-    ay /= triangulated.cols;
-    az /= triangulated.cols;
+void MatchImages(const InputImageP &a, const InputImageP &b) {
 
-    AssertEQ(triangulated.rows, 4);
+    cout << "Receiving: " << a->id << " " << b->id << endl;
+    AssertNEQ(a->id, b->id);
+    
+    MatchInfoP c = aligner.FindCorrespondence(a, b); 
+    
+    Mat scaledK;
+    Mat K;
 
-    for(int i = 0; i < triangulated.cols; i++) {
-        cout << triangulated.at<float>(0, i) / triangulated.at<float>(3, i) << ", " <<
-                triangulated.at<float>(1, i) / triangulated.at<float>(3, i) << ", " <<
-                triangulated.at<float>(2, i) / triangulated.at<float>(3, i) << ", " <<
-                triangulated.at<float>(3, i) << endl; 
+    ScaleIntrinsicsToImage(a->intrinsics, a->image.size(), scaledK);
+    From3DoubleTo3Float(scaledK, K);
+
+    float distortion[] = {0, 0, 0, 0};
+    Mat D = Mat(4, 1, CV_32F, distortion);
+
+    Mat R, t;
+
+    if(cloud.size() == 0) {
+        RecoverPoseStereo(c, K, R, t);
+        posesPerImage.insert(
+                make_pair(
+                    a->id, 
+                    Pose(Mat::eye(3, 3, CV_64F), Mat::zeros(3, 1, CV_64F))
+                    ));
+    } else {
+        RecoverPosePnP(c, K, R, t);
+    }
+    
+    Pose origin = posesPerImage.at(a->id);
+    Pose next = Pose(origin.R * R, origin.t + t);
+
+    posesPerImage.insert(make_pair(b->id, next));
+
+    TriangulateAndAdd(a, b, c, K, D, R, t, origin.R, origin.t);
+}
+
+void ShowCloud() {
+    VisualDebugHook debugger;
+
+    const float scale = 0.5;
+
+    for(size_t i = 0; i < cloud.size(); i++) {
+
+        Point3D p = cloud[i];
 
         debugger.PlaceFeature(
-                (triangulated.at<float>(0, i) / 
-                 triangulated.at<float>(3, i) - ax) * scale,
-                (triangulated.at<float>(1, i) / 
-                 triangulated.at<float>(3, i) - ay) * scale,
-                (triangulated.at<float>(2, i) / 
-                 triangulated.at<float>(3, i) - az) * scale * depth,
-                a->image.data.at<Vec3b>(c->aLocalFeatures[i])[2],
-                a->image.data.at<Vec3b>(c->aLocalFeatures[i])[1],
-                a->image.data.at<Vec3b>(c->aLocalFeatures[i])[0]);
+                p.pt.x * scale, p.pt.y * scale, p.pt.z * scale,
+                p.color[2], p.color[1], p.color[0]); 
     }
 
     debugger.Draw();
@@ -158,9 +246,11 @@ int main(int argc, char** argv) {
 
         cout << "Pushing " << img->id << endl;
         combiner.Push(img);
-        if(i % 2 == 1)
-            combiner.Flush();
     }
+
+    //combiner.Flush();
+
+    ShowCloud();
 
     return 0;
 }
