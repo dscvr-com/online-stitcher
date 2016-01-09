@@ -167,23 +167,12 @@ private:
 
         // Draw Flow Field LK
         /*
-        Mat ga, gb; 
-        vector<Point2f> flowB(matchesA.size());
-
-        cvtColor(a->image.data, ga, CV_RGB2GRAY);
-        cvtColor(b->image.data, gb, CV_RGB2GRAY);
-
-        vector<uchar> status; 
-        vector<float> error;
-        calcOpticalFlowPyrLK(ga, gb, matchesA, flowB,
-            status, error);
-        
-        for(size_t i = 0; i < matchesA.size(); i++) {
-            if(status[i] == 1) {
-                cv::arrowedLine(debugTarget, matchesA[i] + o, flowB[i] + o, 
-                        Scalar(0x00, 0x00, 0xFF), 2, 8, 0, 0.1);
+            for(size_t i = 0; i < matchesA.size(); i++) {
+                if(status[i] == 1) {
+                    cv::arrowedLine(debugTarget, matchesA[i] + o, flowB[i] + o, 
+                            Scalar(0x00, 0x00, 0xFF), 2, 8, 0, 0.1);
+                }
             }
-        }A
         */
         
         // Draw detected matches
@@ -281,6 +270,7 @@ public:
 	MatchInfoP FindCorrespondence(const InputImageP a, const InputImageP b) {
         assert(a != NULL);
         assert(b != NULL);
+        AllocateDebug(a, b);
         
 		MatchInfoP info(new MatchInfo());
         info->valid = false;
@@ -304,70 +294,106 @@ public:
        
         STimer t;
 
-        //Can we do local search here? 
-		vector<vector<DMatch>> matches;
-		matcher->knnMatch(aFeatures.descriptors, bFeatures.descriptors, matches, 2);
-        t.Tick("Feature Matching Match");
+        bool useFlowField = false;
+        vector<DMatch> goodMatches;
+        
+        if(!useFlowField) {
+            //Can we do local search here? 
+            vector<vector<DMatch>> matches;
 
-        //TODO: this is probably non-optimal
-        // Use estimated-offset/4 as a good measure for rejecting early outliers. 
-		vector<DMatch> goodMatches;
-		for(size_t i = 0; i < matches.size(); i++) {
+            matcher->knnMatch(aFeatures.descriptors, bFeatures.descriptors, 
+                    matches, 2);
+            t.Tick("Feature KNN Match");
 
-            bool isMatch = matches[i].size() > 0;
+            for(size_t i = 0; i < matches.size(); i++) {
 
-            if(!isMatch)
-                continue;
+                bool isMatch = matches[i].size() > 0;
 
-            bool ratioTest = matches[i][0].distance < matches[i][1].distance * 0.75;
+                if(!isMatch)
+                    continue;
 
-            if(!ratioTest)
-                continue;
+                if(matches[i].size() > 1) {
+                    bool ratioTest = 
+                        matches[i][0].distance < matches[i][1].distance * 0.75;
 
-            std::vector<Point2f> src(1);
-            std::vector<Point2f> est(1);
+                    if(!ratioTest)
+                        continue;
+                }
 
-            src[0] = aFeatures.keypoints[matches[i][0].queryIdx].pt;
-            Point2f dst = bFeatures.keypoints[matches[i][0].trainIdx].pt;
+                std::vector<Point2f> src(1);
+                std::vector<Point2f> est(1);
 
-            perspectiveTransform(src, est, estHom);
+                src[0] = aFeatures.keypoints[matches[i][0].queryIdx].pt;
+                Point2f dst = bFeatures.keypoints[matches[i][0].trainIdx].pt;
 
-            Point2f resudialDistVec = est[0] - dst;
-            Point2f estDistVec = est[0] - src[0];
+                perspectiveTransform(src, est, estHom);
 
-            // Distance between estimation and matched feature
-            double resudialDist = resudialDistVec.x * resudialDistVec.x + 
-                resudialDistVec.y * resudialDistVec.y;
-           
-            // ESTIMATED distance between keypoints in both images.  
-            double estDist = estDistVec.x * estDistVec.x + 
-                estDistVec.y * estDistVec.y;
+                Point2f resudialDistVec = est[0] - dst;
+                Point2f estDistVec = est[0] - src[0];
 
-            bool estimatedPoseCheck = estDist > resudialDist * 5;
+                // Distance between estimation and matched feature
+                double resudialDist = resudialDistVec.x * resudialDistVec.x + 
+                    resudialDistVec.y * resudialDistVec.y;
+               
+                // ESTIMATED distance between keypoints in both images.  
+                double estDist = estDistVec.x * estDistVec.x + 
+                    estDistVec.y * estDistVec.y;
 
-            if(!estimatedPoseCheck)
-                continue;
-				    
-            goodMatches.push_back(matches[i][0]);
+                bool estimatedPoseCheck = estDist > resudialDist * 5;
 
-		}
-        t.Tick("Outlier Rejection");
+                if(!estimatedPoseCheck)
+                    continue;
+                        
+                goodMatches.push_back(matches[i][0]);
 
-        AllocateDebug(a, b);
+            }
 
-		if(goodMatches.size() == 0) {
-			cout << "Homography: no matches. " << endl;
-            DrawImageFeaturesDebug(a, aFeatures.keypoints, b, bFeatures.keypoints);
-            WriteDebug(a, b);
-			return info;
-		}
+            t.Tick("Rich Feature Outlier Rejection");
 
-		for(size_t i = 0; i < goodMatches.size(); i++) {
-			info->aLocalFeatures.push_back(
-                    aFeatures.keypoints[goodMatches[i].queryIdx].pt);
-			info->bLocalFeatures.push_back(
-                    bFeatures.keypoints[goodMatches[i].trainIdx].pt);
-		}
+            if(goodMatches.size() == 0) {
+                cout << "Homography: no matches. " << endl;
+                DrawImageFeaturesDebug(a, aFeatures.keypoints, 
+                        b, bFeatures.keypoints);
+                WriteDebug(a, b);
+                return info;
+            }
+
+            for(size_t i = 0; i < goodMatches.size(); i++) {
+                info->aLocalFeatures.push_back(
+                        aFeatures.keypoints[goodMatches[i].queryIdx].pt);
+                info->bLocalFeatures.push_back(
+                        bFeatures.keypoints[goodMatches[i].trainIdx].pt);
+            }
+        } else {
+            Mat ga, gb; 
+            
+            vector<Point2f> flowA(fun::map<KeyPoint, Point2f>(aFeatures.keypoints, 
+                        [](auto k) { return k.pt; }));
+            vector<Point2f> flowB(flowA.size());
+
+            cvtColor(a->image.data, ga, CV_RGB2GRAY);
+            cvtColor(b->image.data, gb, CV_RGB2GRAY);
+
+            vector<uchar> status; 
+            vector<float> error;
+            calcOpticalFlowPyrLK(ga, gb, flowA, flowB,
+                status, error);
+
+            t.Tick("Feature Flowfield Match");
+
+            info->aLocalFeatures = flowA;
+            info->bLocalFeatures = flowB;
+
+            for(size_t i = 0; i < flowA.size(); i++) {
+                goodMatches.emplace_back(i, i, 0);
+            }
+
+            //This is wrong if we build bigger chains!
+            vector<KeyPoint> keypoints;
+            KeyPoint::convert(flowB, keypoints);
+            bFeatures.keypoints = keypoints;
+
+        }
         
         MatchesInfo minfo;
         minfo.src_img_idx = (int)GetImageId(a);
@@ -383,7 +409,7 @@ public:
 	    info->E = findEssentialMat(info->aLocalFeatures, info->bLocalFeatures, 
                 scaledK.at<double>(0, 0), 
                 Point2d(scaledK.at<double>(0, 2), scaledK.at<double>(1, 2)), 
-                CV_RANSAC, 0.999, 1, minfo.inliers_mask);
+                CV_RANSAC, 0.999, 0.5, minfo.inliers_mask);
 
         t.Tick("Homography Estimation");
 
@@ -397,8 +423,8 @@ public:
                 aInliers.push_back(info->aLocalFeatures[i]);
                 bInliers.push_back(info->bLocalFeatures[i]);
                 
-                AppendToFeatureChain(aId, matches[i][0].queryIdx, 
-                    bId, matches[i][0].trainIdx);
+                AppendToFeatureChain(aId, goodMatches[i].queryIdx, 
+                    bId, goodMatches[i].trainIdx);
             }
         }
         
