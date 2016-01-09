@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
 
     auto images = minimal::ImagePreperation::LoadAndPrepareArgs(
             argc, argv, true, 20, 1);
-    images = minimal::ImagePreperation::CreateMinifiedCopy(images);
+    images = minimal::ImagePreperation::CreateMinifiedCopy(images, 1);
     int n = images.size();
 
     std::map<size_t, int> imagesToLocalId;
@@ -59,6 +59,7 @@ int main(int argc, char** argv) {
         cout << "Pushing " << img->id << endl;
         combiner.Push(img);
     }
+    combiner.Flush();
 
     auto chains = aligner.GetFeatureChains(); 
     int k = chains.size(); 

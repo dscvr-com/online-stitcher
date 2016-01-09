@@ -59,7 +59,7 @@ namespace optonaut {
     }
     
     void VisualDebugHook::RegisterFeatureInternal(const DebugFeature &f) {
-        IMesh* sphereMesh = geoCreator->createSphereMesh(0.08);
+        IMesh* sphereMesh = geoCreator->createSphereMesh(0.03);
         meshManipulator->setVertexColors(sphereMesh, SColor(0, f.r, f.g, f.b));
 	    IMeshSceneNode* sphereNode = smgr->addMeshSceneNode(sphereMesh);
         sphereNode->setPosition(vector3df(f.x, f.y, f.z));

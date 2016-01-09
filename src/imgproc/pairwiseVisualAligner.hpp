@@ -1,4 +1,7 @@
+#include <type_traits>
+
 #include <opencv2/features2d.hpp>
+#include <opencv2/xfeatures2d.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/stitching/detail/matchers.hpp>
@@ -14,6 +17,7 @@
 using namespace cv;
 using namespace std;
 using namespace cv::detail;
+using namespace cv::xfeatures2d;
 
 #ifndef OPTONAUT_PAIRWISE_VISUAL_ALIGNMENT_HEADER
 #define OPTONAUT_PAIRWISE_VISUAL_ALIGNMENT_HEADER
@@ -42,13 +46,17 @@ public:
     size_t featureIndex;
 };
 
+template <typename Extractor, typename Matcher>
+inline Matcher InstantiateMatcher() {
+    return Matcher();
+}
+
 class PairwiseVisualAligner {
 
 private:
-	Ptr<AKAZE> detector;
-
-    //TODO Make dependent of image size
-    const double OutlinerTolerance = 155 * 155; 
+	Ptr<FeatureDetector> detector;
+	Ptr<DescriptorExtractor> extractor;
+    Ptr<DescriptorMatcher> matcher;
 
     static const bool debug = true;
     const size_t NO_CHAIN = (size_t)-1; 
@@ -93,9 +101,124 @@ private:
 
         return id;
     }
+
+    Mat debugTarget;
+
+    void AllocateDebug(const InputImageP &a, const InputImageP &b) {
+        if(!debug) return;
+        AssertEQ(a->image.size(), b->image.size());
+        debugTarget = Mat::zeros(Size(a->image.cols * 3, a->image.rows), CV_8UC3); 
+    }
+
+    void DrawImageFeaturesDebug(const InputImageP &a, 
+            const vector<KeyPoint> &keypoints1, const InputImageP &b, 
+            const vector<KeyPoint> &keypoints2) {
+        if(!debug) return;
+            vector<char> mask; 
+            vector<DMatch> matches; 
+        
+            a->image.data.copyTo(
+                debugTarget(Rect(0, 0, a->image.cols, a->image.rows)));
+
+            b->image.data.copyTo(
+                debugTarget(Rect(a->image.cols, 0, a->image.cols, a->image.rows)));
+
+            drawMatches(a->image.data, keypoints1, 
+                    b->image.data, keypoints2, 
+                    matches, debugTarget, Scalar::all(-1), Scalar(0, 0, 255), 
+                    mask, DrawMatchesFlags::DRAW_RICH_KEYPOINTS | 
+                    DrawMatchesFlags::DRAW_OVER_OUTIMG);
+    }
+
+    void DrawFlowFieldDebug(const InputImageP &a, 
+            const vector<Point2f> &matchesA, const InputImageP &b, 
+            const vector<Point2f> &matchesB) {
+        if(!debug) return;
+        AssertEQ(a->image.size(), b->image.size());
+        AssertEQ(matchesA.size(), matchesB.size());
+
+        Point2f o(a->image.cols * 2, 0);
+
+        // Draw homography flow field
+        Mat estRot; 
+        Mat estHom;
+        
+        HomographyFromImages(a, b, estHom, estRot);
+
+        a->image.data.copyTo(
+                debugTarget(Rect(o.x, 0, a->image.cols, a->image.rows)));
+
+        // Green: Flow field from features
+        // Blue: Flow field from homography
+        // Red: Flow field LK
+
+        
+        for(size_t i = 0; i < matchesA.size(); i++) {
+            std::vector<Point2f> src(1);
+            std::vector<Point2f> est(1);
+
+            src[0] = matchesA[i];
+
+            perspectiveTransform(src, est, estHom);
+            
+            cv::arrowedLine(debugTarget, matchesA[i] + o, est[0] + o, 
+                    Scalar(0xFF, 0x00, 0x00), 2, 8, 0, 0.1);
+		}
+
+        // Draw Flow Field LK
+        /*
+        Mat ga, gb; 
+        vector<Point2f> flowB(matchesA.size());
+
+        cvtColor(a->image.data, ga, CV_RGB2GRAY);
+        cvtColor(b->image.data, gb, CV_RGB2GRAY);
+
+        vector<uchar> status; 
+        vector<float> error;
+        calcOpticalFlowPyrLK(ga, gb, matchesA, flowB,
+            status, error);
+        
+        for(size_t i = 0; i < matchesA.size(); i++) {
+            if(status[i] == 1) {
+                cv::arrowedLine(debugTarget, matchesA[i] + o, flowB[i] + o, 
+                        Scalar(0x00, 0x00, 0xFF), 2, 8, 0, 0.1);
+            }
+        }A
+        */
+        
+        // Draw detected matches
+        for(size_t i = 0; i < matchesA.size(); i++) {
+            cv::arrowedLine(debugTarget, matchesA[i] + o, matchesB[i] + o, 
+                    Scalar(0x00, 0xFF, 0x00), 2, 8, 0, 0.1);
+        }
+        
+    }
+
+    void WriteDebug(const InputImageP &a, const InputImageP &b) {
+        if(!debug) return;
+        std::string filename = 
+            "dbg/Homogpraphy_(" + ToString(a->id) + "_" + ToString(b->id) + ").jpg";
+        imwrite(filename, debugTarget);
+    }
+   
 public:
 
-	PairwiseVisualAligner() : detector(AKAZE::create()) { }
+	PairwiseVisualAligner() : 
+        detector(AKAZE::create()), 
+        extractor(AKAZE::create()),
+        matcher(new BFMatcher())
+    { 
+    }
+	
+    PairwiseVisualAligner(Ptr<FeatureDetector> detector,
+            Ptr<DescriptorExtractor> extractor,
+            Ptr<DescriptorMatcher> matcher) : 
+        detector(detector), 
+        extractor(extractor),
+        matcher(matcher)
+    { 
+    }
+
 
 	void FindKeyPoints(InputImageP img) {
         size_t id = GetImageId(img);
@@ -107,12 +230,34 @@ public:
         Mat tmp = img->image.data;
 
         f.img_idx = (int)id;
-        Mat *descriptors = new Mat();
         f.img_size = img->image.data.size();
+        STimer t;
+        
+        //int keyPtDiameter = 15;
+        // DAISY
+        // for(int x = keyPtDiameter; x < tmp.cols - keyPtDiameter; x += 1) {
+        //      for(int y = keyPtDiameter; y < tmp.rows - keyPtDiameter; y += 1) {
+        //            f.keypoints.push_back(KeyPoint(x, y, 15)); 
+        //            //Last param is daisy keypoint diameter param
+        //        }
+        //    }
 
-        detector->detectAndCompute(tmp, noArray(), f.keypoints, *descriptors);
+        //    detector->compute(tmp, f.keypoints, f.descriptors);
+        //    t.Tick("Feature Detection and Description");
+        if (detector == extractor) {
+            Mat descriptors; 
+            detector->detectAndCompute(tmp, noArray(), f.keypoints, descriptors);
+            f.descriptors = descriptors.getUMat(ACCESS_READ);
+            t.Tick("Feature Detection and Description");
+        } else { 
+            detector->detect(tmp, f.keypoints);
+            t.Tick("Feature Detection");
+            Mat descriptors; 
+            extractor->compute(tmp, f.keypoints, descriptors);
+            f.descriptors = descriptors.getUMat(ACCESS_READ);
+            t.Tick("Feature Description");
+        } 
 
-        f.descriptors = descriptors->getUMat(ACCESS_READ);
         AllocateChainRefs(id, f.keypoints.size());
 
         features.push_back(f);
@@ -137,8 +282,6 @@ public:
         assert(a != NULL);
         assert(b != NULL);
         
-        STimer imageMatchingTimer;
-
 		MatchInfoP info(new MatchInfo());
         info->valid = false;
 
@@ -159,67 +302,110 @@ public:
         
         HomographyFromImages(a, b, estHom, estRot);
        
-        imageMatchingTimer.Tick("Feature Detection"); 
+        STimer t;
 
         //Can we do local search here? 
-		BFMatcher matcher;
 		vector<vector<DMatch>> matches;
-		matcher.knnMatch(aFeatures.descriptors, bFeatures.descriptors, matches, 2);
+		matcher->knnMatch(aFeatures.descriptors, bFeatures.descriptors, matches, 2);
+        t.Tick("Feature Matching Match");
 
+        //TODO: this is probably non-optimal
+        // Use estimated-offset/4 as a good measure for rejecting early outliers. 
 		vector<DMatch> goodMatches;
 		for(size_t i = 0; i < matches.size(); i++) {
-			if(matches[i].size() > 1 && matches[i][0].distance < matches[i][1].distance * 0.75 ) {
-                std::vector<Point2f> src(1);
-                std::vector<Point2f> est(1);
 
-                src[0] = aFeatures.keypoints[matches[i][0].queryIdx].pt;
-                Point2f dst = bFeatures.keypoints[matches[i][0].trainIdx].pt;
+            bool isMatch = matches[i].size() > 0;
 
-                perspectiveTransform(src, est, estHom);
+            if(!isMatch)
+                continue;
 
-                Point2f distVec = est[0] - dst;
-                double dist = distVec.x * distVec.x + distVec.y * distVec.y;
+            bool ratioTest = matches[i][0].distance < matches[i][1].distance * 0.75;
 
-                if(dist < OutlinerTolerance) {
-				    goodMatches.push_back(matches[i][0]);
-                    AppendToFeatureChain(aId, matches[i][0].queryIdx, 
-                            bId, matches[i][0].trainIdx);
-                }
-			}
+            if(!ratioTest)
+                continue;
+
+            std::vector<Point2f> src(1);
+            std::vector<Point2f> est(1);
+
+            src[0] = aFeatures.keypoints[matches[i][0].queryIdx].pt;
+            Point2f dst = bFeatures.keypoints[matches[i][0].trainIdx].pt;
+
+            perspectiveTransform(src, est, estHom);
+
+            Point2f resudialDistVec = est[0] - dst;
+            Point2f estDistVec = est[0] - src[0];
+
+            // Distance between estimation and matched feature
+            double resudialDist = resudialDistVec.x * resudialDistVec.x + 
+                resudialDistVec.y * resudialDistVec.y;
+           
+            // ESTIMATED distance between keypoints in both images.  
+            double estDist = estDistVec.x * estDistVec.x + 
+                estDistVec.y * estDistVec.y;
+
+            bool estimatedPoseCheck = estDist > resudialDist * 5;
+
+            if(!estimatedPoseCheck)
+                continue;
+				    
+            goodMatches.push_back(matches[i][0]);
+
 		}
+        t.Tick("Outlier Rejection");
+
+        AllocateDebug(a, b);
 
 		if(goodMatches.size() == 0) {
 			cout << "Homography: no matches. " << endl;
+            DrawImageFeaturesDebug(a, aFeatures.keypoints, b, bFeatures.keypoints);
+            WriteDebug(a, b);
 			return info;
 		}
 
 		for(size_t i = 0; i < goodMatches.size(); i++) {
-			info->aLocalFeatures.push_back(aFeatures.keypoints[goodMatches[i].queryIdx].pt);
-			info->bLocalFeatures.push_back(bFeatures.keypoints[goodMatches[i].trainIdx].pt);
+			info->aLocalFeatures.push_back(
+                    aFeatures.keypoints[goodMatches[i].queryIdx].pt);
+			info->bLocalFeatures.push_back(
+                    bFeatures.keypoints[goodMatches[i].trainIdx].pt);
 		}
         
         MatchesInfo minfo;
         minfo.src_img_idx = (int)GetImageId(a);
         minfo.dst_img_idx = (int)GetImageId(b);
         minfo.matches = goodMatches;
-        imageMatchingTimer.Tick("Feature Maching");
     
         Mat scaledK;
         ScaleIntrinsicsToImage(a->intrinsics, a->image.size(), scaledK);
+		
+        //info->E = findFundamentalMat(info->aLocalFeatures, info->bLocalFeatures, 
+        //        CV_RANSAC, 1, 0.99, minfo.inliers_mask);
 
-		info->E = findEssentialMat(info->aLocalFeatures, info->bLocalFeatures, 
+	    info->E = findEssentialMat(info->aLocalFeatures, info->bLocalFeatures, 
                 scaledK.at<double>(0, 0), 
                 Point2d(scaledK.at<double>(0, 2), scaledK.at<double>(1, 2)), 
                 CV_RANSAC, 0.999, 1, minfo.inliers_mask);
 
-        imageMatchingTimer.Tick("Homography Estimation");
+        t.Tick("Homography Estimation");
 
         int inlinerCount = 0;
 
+        vector<Point2f> aInliers; 
+        vector<Point2f> bInliers; 
+
         for(size_t i = 0; i < minfo.inliers_mask.size(); i++) {
-            if(minfo.inliers_mask[i] == 1)
-                inlinerCount++;
+            if(minfo.inliers_mask[i] != 0) {
+                aInliers.push_back(info->aLocalFeatures[i]);
+                bInliers.push_back(info->bLocalFeatures[i]);
+                
+                AppendToFeatureChain(aId, matches[i][0].queryIdx, 
+                    bId, matches[i][0].trainIdx);
+            }
         }
+        
+        t.Tick("Chain Registration");
+
+        info->aLocalFeatures = aInliers;
+        info->bLocalFeatures = bInliers;
 
         minfo.num_inliers = inlinerCount;
         minfo.confidence = 0;
@@ -233,28 +419,13 @@ public:
             minfo.confidence = 100;
         }
        
-        //debug
-        if(debug) {
-            Mat target; 
-
-            vector<char> mask; //(minfo.inliers_mask.begin(), minfo.inliers_mask.end());
-            vector<DMatch> matches; // = minfo.matches;
-
-            drawMatches(a->image.data, features[GetImageId(a)].keypoints, b->image.data, features[GetImageId(b)].keypoints, matches, target, Scalar::all(-1), Scalar(0, 0, 255), mask, DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-
-            std::string filename = 
-                "dbg/Homogpraphy" + ToString(a->id) + "_" + ToString(b->id) + 
-                "(C " + ToString(goodMatches.size()) + 
-                ", R " + ToString(inlinerRatio * 100) +  
-                ", used " + ToString(info->valid) + 
-                ").jpg";
-            imwrite(filename, target);
-        }
+        DrawImageFeaturesDebug(a, aFeatures.keypoints, b, bFeatures.keypoints);
+        DrawFlowFieldDebug(a, info->aLocalFeatures, b, info->bLocalFeatures);
+        WriteDebug(a, b);
         
-        imageMatchingTimer.Tick("Debug Output");
+        t.Tick("Debug Output");
 
         info->matches = minfo;
-        imageMatchingTimer.Tick("Result Storeage");
 
         this->matches.push_back(info);
         return info;
