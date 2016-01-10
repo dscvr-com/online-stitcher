@@ -31,6 +31,9 @@ target_link_libraries(visual-debug-hook ${CMAKE_CURRENT_LIST_DIR}/../vendor/libI
 add_executable(to-polar toPol.cpp)
 target_link_libraries(to-polar optonaut-lib)
 
+add_executable(to-cube-map toCubeMap.cpp)
+target_link_libraries(to-cube-map optonaut-lib)
+
 add_executable(optonaut-test stitcherTest.cpp)
 target_link_libraries(optonaut-test optonaut-lib)
 
