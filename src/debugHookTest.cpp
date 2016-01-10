@@ -2,6 +2,7 @@
 #include <algorithm>
 #include "io/io.hpp"
 #include "debug/visualDebugHook.hpp"
+#include "minimal/imagePreperation.hpp"
 
 using namespace std;
 using namespace cv;
@@ -13,24 +14,21 @@ bool CompareByFilename (const string &a, const string &b) {
 }
 
 int main(int argc, char** argv) {
-    int n = argc - 1;
-    vector<string> files;
-
-    for(int i = 0; i < n; i++) {
-        string imageName(argv[i + 1]);
-        files.push_back(imageName);
-    }
-
-    std::sort(files.begin(), files.end(), CompareByFilename);
     
+    auto images = minimal::ImagePreperation::LoadAndPrepareArgs(
+            argc, argv, false, 3, 100);
     VisualDebugHook debugger;
 
-    for(int i = 0; i < min(n, 250); i += 1) {
+    size_t n = images.size();
+
+    for(size_t i = 0; i < n; i += 1) {
+
+        auto img = images[i];
 
         cout << "Adding image " << i << endl;
 
-        auto img = InputImageFromFile(files[i], false);
         debugger.RegisterImageRotationModel(img->image.data, img->originalExtrinsics, img->intrinsics);
+        debugger.RegisterCamera(img->originalExtrinsics, 0, 0, 0);
 
     }
     debugger.Draw();

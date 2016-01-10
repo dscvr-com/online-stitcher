@@ -16,8 +16,8 @@ namespace optonaut {
 
     static double baseData[] = 
         {1, 0, 0, 0, 
+         0, -1, 0, 0,
          0, 0, 1, 0,
-         0, 1, 0, 0,
          0, 0, 0, 1};
 
     static const Mat base(4, 4, CV_64F, baseData);
@@ -65,7 +65,22 @@ namespace optonaut {
         sphereNode->setPosition(vector3df(f.x, f.y, f.z));
         sphereNode->setMaterialFlag(EMF_LIGHTING, false);
     }
-            
+    
+    void VisualDebugHook::RegisterCameraInternal(const DebugCamera &cam) {
+        IMeshSceneNode* cameraNode = smgr->addMeshSceneNode(cameraMesh);
+
+        cameraNode->setMaterialFlag(EMF_LIGHTING, false);
+        cameraNode->setMaterialFlag(video::EMF_WIREFRAME, true);
+        cameraNode->setMaterialFlag(video::EMF_BACK_FACE_CULLING, true);
+
+        cameraNode->setPosition(vector3df(cam.x, cam.y, cam.z));
+        cameraNode->setScale(vector3df(0.5, 0.5, 0.5));
+        
+        Mat rvec; ExtractRotationVector(cam.orientation.inv(), rvec);
+        cameraNode->setRotation(IrrVectorFromCVVector(rvec * 180.0 / M_PI, 
+                    {0, 1, 2}));
+    }
+
     void VisualDebugHook::RegisterImageInternal(const DebugImage &in) {
         //std::unique_lock<std::mutex> lock(m);  
 
@@ -75,7 +90,7 @@ namespace optonaut {
                 core::dimension2d<u32>(1, 1));
 
         matrix4 upTransform;
-        upTransform.setRotationRadians(vector3df(0, 0, 0));
+        upTransform.setRotationRadians(vector3df(M_PI / -2, 0, 0));
 
         meshManipulator->transform(planeMesh, upTransform); 
         
@@ -94,7 +109,6 @@ namespace optonaut {
         planeNode->setPosition(IrrVectorFromCVVector(in.position));
 
         Mat rvec; ExtractRotationVector(in.orientation.inv(), rvec);
-        cout << "Rotation: " << rvec << endl;
         planeNode->setRotation(IrrVectorFromCVVector(rvec * 180.0 / M_PI, {0, 1, 2}));
     }
 
@@ -109,8 +123,11 @@ namespace optonaut {
         geoCreator = smgr->getGeometryCreator();
         meshManipulator = smgr->getMeshManipulator();
 
-        camera = smgr->addCameraSceneNode(0, vector3df(0,0,0), vector3df(10,0,0));
-
+        camera = smgr->addCameraSceneNode(0, vector3df(0,0,0), vector3df(1,0,0));
+        
+        cameraMesh = smgr->getMesh("src/debug/camera.3ds");
+        meshManipulator->setVertexColors(cameraMesh, SColor(0,255, 0x0, 0x0));
+        
         float camRotation = 0;
 
         for(auto img : asyncInput) {
@@ -120,12 +137,16 @@ namespace optonaut {
         for(auto feat : asyncFeatures) {
             RegisterFeatureInternal(feat);
         }
+        
+        for(auto cam : asyncCameras) {
+            RegisterCameraInternal(cam);
+        }
 
         while(device->run()) {
             driver->beginScene(true, true, SColor(255,0,0,0));
             camRotation += 0.01f;
             //camera->setTarget(vector3df(sin(camRotation), 0, cos(camRotation)));
-            camera->setPosition(vector3df(sin(camRotation) * 10, 0, cos(camRotation) * 10));
+            camera->setPosition(vector3df(sin(camRotation) * 50, 0, cos(camRotation) * 50));
             camera->setTarget(vector3df(0, 0, 0));
             smgr->drawAll();
             guienv->drawAll();
@@ -154,26 +175,33 @@ namespace optonaut {
         asyncInput.push_back({image, position, orientation, scale});
     }
     
+    void VisualDebugHook::RegisterCamera(const cv::Mat &orientation, 
+                    double x, double y, double z) {
+        asyncCameras.push_back({base * orientation.inv() * base.t(), x, -y, z});
+    }
+    
     void VisualDebugHook::RegisterImage(const cv::Mat &image, const cv::Mat &position, float scale) {
-       RegisterImage(image, position(Rect(0, 3, 1, 3)), position(Rect(0, 0, 3, 3)), scale); 
+        Mat pconv(3, 1, CV_64F);
+        position(Rect(0, 3, 1, 3)).copyTo(pconv);
+
+        pconv.at<double>(1) *= -1;
+        
+
+        RegisterImage(image, 
+               pconv,
+               base * position(Rect(0, 0, 3, 3)) * base.t(), scale); 
     }
     
     void VisualDebugHook::RegisterImageRotationModel(const cv::Mat &image, const cv::Mat &extrinsics, const cv::Mat &intrinsics, float scale) {
 
-        static int ctr = 0;
-
-        if(ctr % 10 == 0) {
-            double dist[] = {0, -intrinsics.at<double>(0, 0), 0, 1 };
-            Mat pos = base * extrinsics.inv() * base.inv() 
-                * Mat(1, 4, CV_64F, dist).t();
-            
-            RegisterImage(image, 
-                    pos(Rect(0, 0, 1, 3)), 
-                    (base * extrinsics * base.inv())(Rect(0, 0, 3, 3)), 
-                    scale * intrinsics.at<double>(1, 2)); 
-        }
-
-        ctr++;
+        double dist[] = {0, 0, intrinsics.at<double>(0, 0), 1 };
+        Mat pos = base * extrinsics * base.t() 
+            * Mat(1, 4, CV_64F, dist).t();
+       
+        RegisterImage(image, 
+                pos(Rect(0, 0, 1, 3)), 
+                (base * extrinsics.t() * base.t())(Rect(0, 0, 3, 3)), 
+                scale * intrinsics.at<double>(1, 2)); 
     }
             
     void VisualDebugHook::PlaceFeature(double x, double y, double z, int r, int g, int b) {

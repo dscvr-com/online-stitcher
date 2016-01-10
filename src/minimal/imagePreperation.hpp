@@ -3,6 +3,8 @@
 
 #include "../common/assert.hpp"
 #include "../io/inputImage.hpp"
+#include "../recorder/recorder.hpp"
+#include "../common/assert.hpp"
 
 #ifndef OPTONAUT_MINIMAL_IMAGE_PREPERATION_HEADER
 #define OPTONAUT_MINIMAL_IMAGE_PREPERATION_HEADER
@@ -10,7 +12,7 @@
 namespace optonaut {
 namespace minimal {
 
-    bool CompareByFilename (const string &a, const string &b) {
+    bool CompareByFilename (const std::string &a, const std::string &b) {
         return IdFromFileName(a) < IdFromFileName(b);
     }
 
@@ -33,7 +35,7 @@ namespace minimal {
                     img->image.Load();
                 }
 
-                Mat small;
+                cv::Mat small;
 
                 pyrDown(img->image.data, small);
 
@@ -75,19 +77,18 @@ namespace minimal {
             
             std::sort(files.begin(), files.end(), CompareByFilename);
 
-            vector<InputImageP> allImages;
+            std::vector<InputImageP> allImages;
 
-            auto base = Recorder::iosBase;
+            auto base = optonaut::Recorder::iosBase;
             auto zero = Recorder::iosZero;
             auto baseInv = base.t();
 
             int n = files.size();
+            limit = limit * step;
 
             if(limit > 0) {
                 n = std::min(limit, n);
             }
-
-            n = n * step;
             
             for(int i = 0; i < n; i += step) {
                 auto img = InputImageFromFile(files[i], shallow); 
@@ -114,20 +115,31 @@ namespace minimal {
                 int limit = -1, int step = 1) {
             int n = argc - 1;
 
-            vector<string> files;
+            std::vector<std::string> files;
 
             for(int i = 0; i < n; i++) {
-                string imageName(argv[i + 1]);
-                files.push_back(imageName);
+                std::string imageName(argv[i + 1]);
+
+                if(imageName == "-n") {
+                    AssertGT(n, i + 1);
+                    limit = ParseInt(std::string(argv[i + 2]));
+                    i++;
+                } else if (imageName == "-s") {
+                    AssertGT(n, i + 1);
+                    step = ParseInt(std::string(argv[i + 2]));
+                    i++;
+                } else {
+                    files.push_back(imageName);
+                }
             }
 
             return LoadAndPrepare(files, shallow, limit, step);
         }
 
         static std::map<size_t, InputImageP> CreateImageMap(
-                const vector<InputImageP> &images) {
+                const std::vector<InputImageP> &images) {
             
-            map<size_t, InputImageP> imageById;
+            std::map<size_t, InputImageP> imageById;
 
             for(auto img : images) {
                 imageById[img->id] = img;

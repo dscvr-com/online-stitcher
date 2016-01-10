@@ -311,6 +311,9 @@ public:
                     matches, 2);
             t.Tick("Feature KNN Match");
 
+            int ratioFail = 0;
+            int estimationFail = 0;
+
             for(size_t i = 0; i < matches.size(); i++) {
 
                 bool isMatch = matches[i].size() > 0;
@@ -322,8 +325,10 @@ public:
                     bool ratioTest = 
                         matches[i][0].distance < matches[i][1].distance * 0.75;
 
-                    if(!ratioTest)
+                    if(!ratioTest) {
+                        ratioFail++;
                         continue;
+                    }
                 }
 
                 std::vector<Point2f> src(1);
@@ -345,14 +350,21 @@ public:
                 double estDist = estDistVec.x * estDistVec.x + 
                     estDistVec.y * estDistVec.y;
 
-                bool estimatedPoseCheck = estDist > resudialDist * 5;
+                //TODO - also check direction + find good params. 
+                bool estimatedPoseCheck = estDist > resudialDist * 2;
 
-                if(!estimatedPoseCheck)
+                if(!estimatedPoseCheck) {
+                    estimationFail++;
                     continue;
+                }
                         
                 goodMatches.push_back(matches[i][0]);
 
             }
+
+            cout << "Ratio Fail: " << ratioFail
+                 << ", Estimation Fail: " << estimationFail 
+                 << ", Good: " << goodMatches.size() << endl;; 
 
             t.Tick("Rich Feature Outlier Rejection");
 
@@ -450,6 +462,8 @@ public:
 
         minfo.num_inliers = inlinerCount;
         minfo.confidence = 0;
+
+        cout << "RANSAC kept " << inlinerCount << " good matches." << endl;
 
         double inlinerRatio = inlinerCount;
         inlinerRatio /= goodMatches.size();
