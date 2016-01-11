@@ -72,9 +72,9 @@ inline void createCubeMapFace(const Mat &optograph, Mat &face, int faceId = 0, c
             if(ftv == 0) {
                 // Center faces
                 u = atan2(nx, ak);
-                v = atan2(ny, ak) * cos(u);
+                v = atan2(ny * cos(u), ak);
                 u += ftu; 
-            } else if(ftv > 0) {
+            } else if(ftv > 0) { 
                 // Bottom face 
                 float d = sqrt(nx * nx + ny * ny);
                 v = M_PI / 2 - atan2(d, ak);
