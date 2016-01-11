@@ -67,6 +67,15 @@ namespace optonaut {
     }
     
     void VisualDebugHook::RegisterCameraInternal(const DebugCamera &cam) {
+
+        IAnimatedMesh* cameraMesh = smgr->getMesh("src/debug/camera.3ds");
+        std::string newMeshName = "cam-mesh-" + ToString(cam.camId);
+        smgr->getMeshCache()->renameMesh(cameraMesh, newMeshName.c_str()); 
+        cameraMesh = smgr->getMesh(newMeshName.c_str());
+
+        meshManipulator->setVertexColors(cameraMesh, 
+                SColor(0, std::min(0xFF, (int)cam.camId), 0x00, 0xFF));
+
         IMeshSceneNode* cameraNode = smgr->addMeshSceneNode(cameraMesh);
 
         cameraNode->setMaterialFlag(EMF_LIGHTING, false);
@@ -125,9 +134,6 @@ namespace optonaut {
 
         camera = smgr->addCameraSceneNode(0, vector3df(0,0,0), vector3df(1,0,0));
         
-        cameraMesh = smgr->getMesh("src/debug/camera.3ds");
-        meshManipulator->setVertexColors(cameraMesh, SColor(0,255, 0x0, 0x0));
-        
         float camRotation = 0;
 
         for(auto img : asyncInput) {
@@ -176,8 +182,9 @@ namespace optonaut {
     }
     
     void VisualDebugHook::RegisterCamera(const cv::Mat &orientation, 
-                    double x, double y, double z) {
-        asyncCameras.push_back({base * orientation.inv() * base.t(), x, -y, z});
+                    double x, double y, double z, size_t camId) {
+        asyncCameras.push_back({base * orientation.inv() * base.t(), 
+                x, -y, z, camId});
     }
     
     void VisualDebugHook::RegisterImage(const cv::Mat &image, const cv::Mat &position, float scale) {

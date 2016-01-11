@@ -28,7 +28,7 @@ int main(int argc, char** argv) {
         cout << "Adding image " << i << endl;
 
         debugger.RegisterImageRotationModel(img->image.data, img->originalExtrinsics, img->intrinsics);
-        debugger.RegisterCamera(img->originalExtrinsics, 0, 0, 0);
+        debugger.RegisterCamera(img->originalExtrinsics, 0, 0, 0, i);
 
     }
     debugger.Draw();

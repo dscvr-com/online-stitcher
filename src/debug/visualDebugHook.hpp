@@ -27,6 +27,7 @@ namespace optonaut {
     struct DebugCamera {
         cv::Mat orientation; 
         double x, y, z;
+        size_t camId;
     };
 
     class VisualDebugHook : public DebugHook {
@@ -38,7 +39,6 @@ namespace optonaut {
             const irr::scene::IGeometryCreator* geoCreator;
             irr::scene::IMeshManipulator* meshManipulator;
             irr::scene::ICameraSceneNode* camera;
-            irr::scene::IAnimatedMesh* cameraMesh;
 
             //std::thread worker;
             //std::mutex m;
@@ -59,7 +59,7 @@ namespace optonaut {
             void RegisterImage(const cv::Mat &image, const cv::Mat &position, float scale = 1);
             void RegisterImageRotationModel(const cv::Mat &image, const cv::Mat &extrinsics, const cv::Mat &intrinsics, float scale = 1);
             void RegisterCamera(const cv::Mat &orientation, 
-                    double x, double y, double z);
+                    double x, double y, double z, size_t camId);
 
             void PlaceFeature(double x, double y, double z, int r = 0xFF, int g = 0x00, int b = 0x00);
             

@@ -36,6 +36,8 @@ struct Pose {
     Mat t;
 
     Pose(Mat R, Mat t) : R(R), t(t) { }
+
+    Pose() : R(Mat::eye(3, 3, CV_64F)), t(Mat::zeros(3, 1, CV_64F)) { }
 };
 
 bool CompareByFilename (const string &a, const string &b) {
@@ -159,7 +161,7 @@ void TriangulateAndAdd(
         float y = triangulated.at<float>(1, i) / w; 
         float z = triangulated.at<float>(2, i) / w; 
 
-        Mat point(Vec3d(x, y, z));
+    Mat point(Vec3d(x, y, z));
         
         point = originR * point;
         point = point + originT;
@@ -180,10 +182,10 @@ void TriangulateAndAdd(
     Mat proj = Mat::eye(3, 4, CV_64F);
 
     if(matches.size() > 0) {
-        std::vector<uchar> inliers(matches.size());
-        AssertEQ(originalPoints.size(), matches.size());
-    
-        estimateAffine3D(matches, originalPoints, proj, inliers, 1, 0.99);
+    //    std::vector<uchar> inliers(matches.size());
+    //    AssertEQ(originalPoints.size(), matches.size());
+    //
+    //    estimateAffine3D(matches, originalPoints, proj, inliers, 1, 0.99);
     }
 
     Mat nR = proj(Rect(0, 0, 3, 3));
@@ -223,20 +225,19 @@ void MatchImages(const InputImageP &a, const InputImageP &b) {
     Mat D = Mat(4, 1, CV_32F, distortion);
 
     Mat R, t;
+    Pose origin; 
 
     if(cloud.size() == 0) {
         RecoverPoseStereo(c, K, R, t);
-        posesPerImage.insert(
-                make_pair(
-                    a->id, 
-                    Pose(Mat::eye(3, 3, CV_64F), Mat::zeros(3, 1, CV_64F))
-                    ));
+        origin = Pose(Mat::eye(3, 3, CV_64F), Mat::zeros(3, 1, CV_64F));
+        posesPerImage.insert(make_pair(a->id, origin));
     } else {
+        origin = posesPerImage.at(a->id);
         RecoverPosePnP(c, K, R, t);
+        R = R * origin.R.t();
+        t = t - origin.t;
     }
 
-    Pose origin = posesPerImage.at(a->id);
-    
     TriangulateAndAdd(a, b, c, K, D, R, t, origin.R, origin.t);
     
     Pose next = Pose(origin.R * R, origin.t + t);
@@ -258,6 +259,8 @@ void ShowCloud() {
                 p.color[2], p.color[1], p.color[0]); 
     }
 
+    int c = 0;
+
     for(auto pair : posesPerImage) {
         Mat &t = pair.second.t;
 
@@ -269,7 +272,10 @@ void ShowCloud() {
         From3DoubleTo4Double(pair.second.R, R);
        
         debugger.RegisterCamera(
-                R, t.at<double>(0), t.at<double>(1), t.at<double>(2));
+                R, t.at<double>(0), t.at<double>(1), t.at<double>(2), 
+                255 * ((float)c / (float)(posesPerImage.size() - 1)));
+
+        c++;
     }
 
     debugger.Draw();
