@@ -15,7 +15,7 @@ namespace optonaut {
 	bool MatIs(const Mat &in, int rows, int cols, int type) {
 		return in.rows >= rows && in.cols >= cols && in.type() == type;
 	}
-	
+
     void ScaleIntrinsicsToImage(const Mat &intrinsics, const Image &image, Mat &scaled, double fupscaling) {
         ScaleIntrinsicsToImage(intrinsics, image.size(), scaled, fupscaling);
     }
@@ -125,19 +125,38 @@ namespace optonaut {
     void Slerp(const Mat &a, const Mat &b, const double t, Mat &out) {
         //cout << a << endl;
         //cout << b << endl;
-        assert(false); //Buggy.
+        
         assert(MatIs(a, 4, 4, CV_64F));
         assert(MatIs(b, 4, 4, CV_64F));
 
-
         Mat q(4, 1, CV_64F);
-        Mat r(4, 1, CV_64F);
-        Mat v(4, 4, CV_64F);
-        quat::FromMat(a.inv() * b, q);
-        quat::Mult(q, t, r);
-        quat::ToMat(r, v);
-        out = a * v;
-        //cout << out << endl;
+        Mat k(4, 1, CV_64F);
+        
+        quat::FromMat(a, q);
+        quat::FromMat(b, k);
+
+        double dot = quat::Dot(q, k);
+        dot = std::min(1.0, std::max(dot, -1.0));
+
+        double omega = acos(dot);
+
+        if (std::abs(omega) < 1e-10) {
+            omega = 1e-10;
+        }
+
+        double som = sin(omega);
+        double st0 = sin((1-t) * omega) / som;
+        double st1 = sin(t * omega) / som;
+
+        double quatData[] = {
+            q.at<double>(0) * st0 + k.at<double>(0) * st1,
+            q.at<double>(1) * st0 + k.at<double>(1) * st1,
+            q.at<double>(2) * st0 + k.at<double>(2) * st1,
+            q.at<double>(3) * st0 + k.at<double>(3) * st1};
+
+        Mat resQuat(4, 1, CV_64F, quatData);
+
+        quat::ToMat(resQuat, out);
     }
 
 	double GetAngleOfRotation(const Mat &r) {

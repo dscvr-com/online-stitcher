@@ -2,6 +2,7 @@
 #include <vector>
 #include <memory>
 #include <opencv2/opencv.hpp>
+#include "../common/assert.hpp"
 
 #ifndef OPTONAUT_IMAGE_HEADER
 #define OPTONAUT_IMAGE_HEADER
@@ -54,7 +55,7 @@ namespace optonaut {
         }
 
         void Load(int flags = cv::IMREAD_COLOR) {
-            assert(source != "");
+            AssertNEQM(source, std::string(""), "Image has source.");
 
             cv::Mat n = cv::imread(source, flags);
             std::swap(data, n);

@@ -16,20 +16,26 @@ namespace optonaut {
         size_t n = 0; 
         T mean = 0;
         T m2 = 0;
+        T sum = 0;
 
     public: 
-        void Push(T x) {
+        void Push(const T &x) {
             n++;
+            sum += x;
             T delta = x - mean; 
             mean = mean + delta / n;
             m2 = m2 + delta * (x - mean);
         }
 
-        T Result() {
+        T Result() const {
             AssertGTM(n, (size_t)0, "Variance is undefined");
             if(n == 1)
                 return 0;
             return m2 / (n - 1);
+        }
+
+        T Sum() const {
+            return sum;
         }
     };
 
@@ -41,19 +47,34 @@ namespace optonaut {
         struct Measurement {
             T s;
             size_t n;
+            T sum;
 
-            Measurement(T s, size_t n) : s(s), n(n) {}
+            Measurement(T s, size_t n, T sum) : s(s), n(n), sum(sum) {}
         };
 
         std::vector<Measurement> measurements;
     public:
 
-        void Push(T variance, size_t poolSize) {
-            measurements.emplace_back(variance, poolSize);
+        void Push(T variance, size_t poolSize, T sum) {
+            measurements.emplace_back(variance, poolSize, sum);
         }
 
         size_t Count() const {
             return measurements.size();
+        }
+
+        const std::vector<Measurement> &GetMeasurements() const {
+            return measurements;
+        }
+
+        T Sum() const {
+            T sum = 0;
+
+            for(auto m : measurements) {
+                sum += m.sum;
+            }
+
+            return sum;
         }
 
         T Result() const {

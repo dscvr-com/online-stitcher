@@ -36,27 +36,48 @@ namespace optonaut {
             ringAdjustmentPath(sharedPath + "offsets.json"),
             c(0) { }
         
-        void SaveRectifiedImage(InputImageP image);
+        virtual void SaveRectifiedImage(InputImageP image);
         
-        void SaveStitcherTemporaryImage(Image &image);
+        virtual void SaveStitcherTemporaryImage(Image &image);
         
-        void SaveStitcherInput(const std::vector<std::vector<InputImageP>> &rings, const std::map<size_t, double> &exposure);
+        virtual void SaveStitcherInput(const std::vector<std::vector<InputImageP>> &rings, const std::map<size_t, double> &exposure);
         
-        void SaveRing(int ringId, StitchingResultP image);
-        void SaveRingMask(int ringId, StitchingResultP image);
-        StitchingResultP LoadRing(int ringId);
+        virtual void SaveRing(int ringId, StitchingResultP image);
+        virtual void SaveRingMask(int ringId, StitchingResultP image);
+        virtual StitchingResultP LoadRing(int ringId);
         
-        void SaveOptograph(StitchingResultP image);
-        StitchingResultP LoadOptograph();
+        virtual void SaveOptograph(StitchingResultP image);
+        virtual StitchingResultP LoadOptograph();
 
-        void LoadStitcherInput(std::vector<std::vector<InputImageP>> &rings, std::map<size_t, double> &exposure);
+        virtual void LoadStitcherInput(std::vector<std::vector<InputImageP>> &rings, std::map<size_t, double> &exposure);
 
-        void SaveRingAdjustment(const std::vector<int> &vals);
-        void LoadRingAdjustment(std::vector<int> &vals);
+        virtual void SaveRingAdjustment(const std::vector<int> &vals);
+        virtual void LoadRingAdjustment(std::vector<int> &vals);
         
-        void Clear();
+        virtual void Clear();
         
-        bool HasUnstitchedRecording();
+        virtual bool HasUnstitchedRecording();
+
+        virtual bool SupportsPaging() { return true; }
+    };
+
+    class DummyCheckpointStore : public CheckpointStore {
+        public:
+        DummyCheckpointStore() : CheckpointStore("", "") { }
+        virtual void SaveRectifiedImage(InputImageP) { }
+        virtual void SaveStitcherTemporaryImage(Image &) { }
+        virtual void SaveStitcherInput(const std::vector<std::vector<InputImageP>> &, const std::map<size_t, double> &) { }
+        virtual void SaveRing(int, StitchingResultP) { }
+        virtual void SaveRingMask(int, StitchingResultP) { }
+        virtual StitchingResultP LoadRing(int) { return NULL; }
+        virtual void SaveOptograph(StitchingResultP) { }
+        virtual StitchingResultP LoadOptograph() { return NULL; }
+        virtual void LoadStitcherInput(std::vector<std::vector<InputImageP>> &, std::map<size_t, double> &) { }
+        virtual void SaveRingAdjustment(const std::vector<int> &) { }
+        virtual void LoadRingAdjustment(std::vector<int> &) { }
+        virtual void Clear() { }
+        virtual bool HasUnstitchedRecording() { return false; }
+        virtual bool SupportsPaging() { return false; }
     };
 }
 

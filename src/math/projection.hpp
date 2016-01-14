@@ -76,6 +76,14 @@ namespace optonaut {
         ScaleIntrinsicsToImage(a->intrinsics, scale, aK3);
 
         HomographyFromRotation(R3, aK3, hom);
+
+        hom.at<double>(0, 2) += rot.at<double>(0, 3);
+        hom.at<double>(1, 2) += rot.at<double>(1, 3);
+
+        AssertWEQM(rot.at<double>(0, 3), 0.0, "Given transformation is translating along x axis. Please double check result.");
+        AssertWEQM(rot.at<double>(1, 3), 0.0, "Given transformation is translating along y axis. Please double check result.");
+
+        AssertEQM(rot.at<double>(2, 3), 0.0, "Given transformation is translating along z axis. This is not supported for generating homographies.");
     }
     
     static inline void HomographyFromImages(const InputImageP a, const InputImageP b, Mat &hom, Mat &rot) {

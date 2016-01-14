@@ -58,7 +58,7 @@ namespace optonaut {
 				Mat visualDiff = Mat::eye(4, 4, CV_64F);
 
 				for(size_t i = 0; i < previous.size(); i++) {
-	        		MatchInfo* hom = visual.FindCorrespondence(previous[i], next);
+	        		MatchInfoP hom = visual.FindCorrespondence(previous[i], next);
 	        		if(hom->valid) { //Basic validity
 
 		        		Mat rotation(4, 4, CV_64F);
@@ -72,7 +72,6 @@ namespace optonaut {
                             visualDiff = rotation;
                         }
 		        	}
-		        	delete hom;
 				}
 
 				if(visualAnchor != -1) {

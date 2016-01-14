@@ -11,13 +11,14 @@ using namespace std;
 namespace optonaut {
     
     template <typename ValueType>
-    struct Edge {
+    struct _Edge {
         size_t from;
         size_t to;
 
         ValueType value;
         
-        Edge(size_t from, size_t to, ValueType value) : from(from), to(to), value(value) {
+        _Edge(size_t from, size_t to, const ValueType &value) : 
+            from(from), to(to), value(value) {
             
         }
     };
@@ -25,18 +26,22 @@ namespace optonaut {
     template <typename ValueType>
     class SparseGraph {
     public:
-        map<size_t, vector<Edge<ValueType>>> adj;
+        typedef _Edge<ValueType> Edge;
+        typedef vector<Edge> Edges;
+        typedef map<size_t, Edges> AdjList;
+
+        AdjList adj;
 
         SparseGraph() : adj() {
 
         }
         
-        const map<size_t, vector<Edge<ValueType>>> &GetEdges() const {
+        AdjList &GetEdges() {
             return adj;
         }
 
-        void Insert(size_t from, size_t to, ValueType &value) {
-            adj[from].push_back(Edge<ValueType>(from, to, value));
+        void Insert(size_t from, size_t to, const ValueType &value) {
+            adj[from].push_back(Edge(from, to, value));
         }
     };
 }

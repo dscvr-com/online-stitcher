@@ -50,7 +50,7 @@ namespace optonaut {
         
         void MoveToNextRing(const Mat &cur) {
 
-            int ringCount = (int)graph.targets.size();
+            int ringCount = (int)graph.ringCount;
             int newRing = GetNextRing(); 
             
             assert(newRing >= 0 && newRing < ringCount);
@@ -61,7 +61,7 @@ namespace optonaut {
 
         int GetNextRing() {
             //Moves from center outward, toggling between top and bottom, top ring comes before bottom ring.
-            int ringCount = (int)graph.targets.size();
+            int ringCount = (int)graph.ringCount;
             int centerRing = (ringCount - 1) / 2;
             
             int newRing = currentRing - centerRing;
@@ -95,7 +95,7 @@ namespace optonaut {
             //Allow re-initialization to force point position. 
             //assert(!isInitialized);
             
-            currentRing = (int)(graph.targets.size() - 1) / 2;
+            currentRing = (int)(graph.ringCount - 1) / 2;
             MoveToClosestPoint(initPosition);
             current = next;
             currentDone = false;
@@ -158,7 +158,7 @@ namespace optonaut {
                     next = newNext;
                 } else {
                     int nextRing = GetNextRing();
-                    if(nextRing < 0 || nextRing >= (int)graph.targets.size()) {
+                    if(nextRing < 0 || nextRing >= (int)graph.ringCount) {
                         if(isFinished)
                             cout << "Push after finish warning." << endl;
                         isFinished = true;

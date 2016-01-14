@@ -27,26 +27,38 @@ namespace optonaut {
     
     STimer stitcherTimer;
 
-    static void LoadSRP(const StitchingResultP &a) {
-        a->image.Load();
-        a->mask.Load(CV_LOAD_IMAGE_GRAYSCALE);
+    void LoadSRP(CheckpointStore&, const StitchingResultP &a) {
+        if(!a->image.IsLoaded()) {
+            a->image.Load();
+            a->mask.Load(CV_LOAD_IMAGE_GRAYSCALE);
+        }
     }
     
-    static void LoadSRPGrayscaleDropMask(const StitchingResultP &a) {
-        a->image.Load(CV_LOAD_IMAGE_GRAYSCALE);
+    void LoadSRPGrayscaleDropMask(CheckpointStore&, 
+            const StitchingResultP &a) {
+        if(!a->image.IsLoaded()) {
+            a->image.Load(CV_LOAD_IMAGE_GRAYSCALE);
+        }
     }
 
-    static void UnLoadSRP(const StitchingResultP &a) {
-        a->image.Unload();
-        a->mask.Unload();
+    void UnLoadSRP(CheckpointStore &store, const StitchingResultP &a) {
+        assert(!store.SupportsPaging());
+        if(store.SupportsPaging()) {
+            a->image.Unload();
+            a->mask.Unload();
+        }
     } 
     
     void UnLoadSRPStoreMask(CheckpointStore &store, const StitchingResultP &a) {
-        a->image.Unload();
+        if(store.SupportsPaging()) {
+            a->image.Unload();
+        }
         a->seamed = true;
         cout << "Saving mask" << a->id << endl;
-        store.SaveRingMask(a->id, a);
-        a->mask.Unload();
+        if(store.SupportsPaging()) {
+            store.SaveRingMask(a->id, a);
+            a->mask.Unload();
+        }
     }
          
     void MultiRingStitcher::AdjustCorners(std::vector<StitchingResultP> &rings, ProgressCallback &progress) {
@@ -65,7 +77,17 @@ namespace optonaut {
                     iterations, eps);
 
             try {
-                findTransformECC(imgA->image.data, imgB->image.data, affine, warp, termination);
+
+                if(imgA->image.data.type() != CV_8UC1) {
+                    Mat grayA, grayB;
+
+                    cvtColor(imgA->image.data, grayA, CV_BGR2GRAY);
+                    cvtColor(imgB->image.data, grayB, CV_BGR2GRAY);
+                    
+                    findTransformECC(grayA, grayB, affine, warp, termination);
+                } else {
+                    findTransformECC(imgA->image.data, imgB->image.data, affine, warp, termination);
+                }
                 dy = affine.at<float>(1, 2);
             } catch (Exception ex) {
                 // :(
@@ -77,7 +99,11 @@ namespace optonaut {
         store.LoadRingAdjustment(dyCache);
 
         if(dyCache.size() == 0) {
-            RingProcessor<StitchingResultP> queue(1, 0, LoadSRPGrayscaleDropMask, correlate, UnLoadSRP);
+            assert(!store.SupportsPaging());
+            RingProcessor<StitchingResultP> queue(1, 0, 
+                std::bind(&LoadSRPGrayscaleDropMask, std::ref(store), std::placeholders::_1), 
+                correlate, 
+                std::bind(&UnLoadSRP, std::ref(store), std::placeholders::_1));
             queue.Process(rings, progress);
             store.SaveRingAdjustment(dyCache);
         }
@@ -89,9 +115,9 @@ namespace optonaut {
 
     void FindSeams(std::vector<StitchingResultP> &rings, CheckpointStore &store) {
         RingProcessor<StitchingResultP> queue(1, 0, 
-                LoadSRP, 
+                std::bind(&LoadSRP, std::ref(store), std::placeholders::_1), 
                 DynamicSeamer::FindHorizontalFromStitchingResult, 
-                std::bind(&UnLoadSRPStoreMask, store, std::placeholders::_1));
+                std::bind(&UnLoadSRPStoreMask, std::ref(store), std::placeholders::_1));
 
         auto ordered = fun::orderby<StitchingResultP, int>(rings, [](const StitchingResultP &x) {
             return (int)x->corner.x; 
@@ -123,10 +149,12 @@ namespace optonaut {
         res = stitcher.Stitch(ring, exposure, progress, ev, debug, debugName);
         res->id = ringId;
 
-        store.SaveRing(ringId, res);
+        if(store.SupportsPaging()) {
+            store.SaveRing(ringId, res);
 
-        res->image.Unload();
-        res->mask.Unload();
+            res->image.Unload();
+            res->mask.Unload();
+        }
 
         return res;
     }
@@ -171,9 +199,14 @@ namespace optonaut {
             }
 
             if(debugName != "") {
-                res->image.Load();
-                imwrite(debugName + "_ring_" + ToString(i) + "_ev_" + ToString(ev) + ".jpg",  res->image.data); 
-                res->image.Unload();
+                if(!res->image.IsLoaded()) {
+                    res->image.Load();
+                }
+                imwrite(debugName + "_ring_" + ToString(i) + "_ev_" + 
+                        ToString(ev) + ".jpg",  res->image.data); 
+                if(store.SupportsPaging()) {
+                    res->image.Unload();
+                }
 
             }
             stitcherTimer.Tick("Ring Finished");
@@ -223,15 +256,23 @@ namespace optonaut {
             Mat resizedImage;
             Mat resizedMask;
 
-            res->image.Load();
+            if(!res->image.IsLoaded()) {
+                res->image.Load();
+            }
             assert(res->image.type() == CV_8UC3);
             resize(res->image.data, resizedImage, cv::Size(0, 0), dx, dy);
-            res->image.Unload();
+            if(store.SupportsPaging()) {
+                res->image.Unload();
+            }
 
-            res->mask.Load(IMREAD_GRAYSCALE);
+            if(!res->image.IsLoaded()) {
+                res->mask.Load(IMREAD_GRAYSCALE);
+            }
             assert(res->mask.type() == CV_8U);
             resize(res->mask.data, resizedMask, cv::Size(0, 0), dx, dy);
-            res->mask.Unload();
+            if(store.SupportsPaging()) {
+                res->mask.Unload();
+            }
 
             Mat warpedImageAsShort;
             resizedImage.convertTo(warpedImageAsShort, CV_16S);

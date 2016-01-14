@@ -4,6 +4,7 @@
 #define OPTONAUT_DEBUG_HOOK
 
 namespace optonaut {
+
     class DebugHook {
     public: 
         /**
@@ -32,6 +33,8 @@ namespace optonaut {
          * @param intrinsics  Intrinsic camera params. 
          */
         virtual void RegisterImageRotationModel(const cv::Mat &image, const cv::Mat &extrinsics, const cv::Mat &intrinsics, float scale = 1) = 0;
+
+        static DebugHook* Instance;
     };
 }
 

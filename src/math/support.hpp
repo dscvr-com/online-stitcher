@@ -9,6 +9,18 @@
 namespace optonaut {
 
 	bool MatIs(const cv::Mat &in, int rows, int cols, int type);
+    
+    template <typename T>
+    void AssertMatEQ(const cv::Mat &a, const cv::Mat &b) {
+        AssertEQ(a.cols, b.cols);
+        AssertEQ(a.rows, b.rows);
+
+        for(int i = 0; i < a.cols; i++) {
+            for(int j = 0; j < a.rows; j++) {
+                AssertEQ(a.at<T>(j, i), b.at<T>(j, i));
+            }
+        }
+    }
 
 	void ScaleIntrinsicsToImage(const cv::Mat &intrinsics, const cv::Size &image, cv::Mat &scaled, double fupscaling = 1);
 	void ScaleIntrinsicsToImage(const cv::Mat &intrinsics, const Image &image, cv::Mat &scaled, double fupscaling = 1);

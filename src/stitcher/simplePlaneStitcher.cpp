@@ -27,7 +27,7 @@ StitchingResultP SimplePlaneStitcher::Stitch(const std::vector<ImageP> &in, cons
     vector<Mat> masks(n);
 
     for(size_t i = 0; i < n; i++) {
-        cout << "Creare mask " << i << " size: " << images[i].size() << endl;
+        //cout << "Creare mask " << i << " size: " << images[i].size() << endl;
         masks[i] = Mat(sizes[i], CV_8U);
         masks[i].setTo(Scalar::all(255));
     }
@@ -40,7 +40,7 @@ StitchingResultP SimplePlaneStitcher::Stitch(const std::vector<ImageP> &in, cons
 
 	for (size_t i = 0; i < n; i++)
 	{
-        cout << "Blending image " << i << endl;
+        //cout << "Blending image " << i << endl;
         images[i].convertTo(imageAsShort, CV_16S);
 		blender->feed(imageAsShort, masks[i], corners[i]);
 	}

@@ -135,8 +135,8 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
     Mat k;
     stereo.valid = false;
 
-	assert(a.image->image.cols == b.image->image.cols);
-	assert(a.image->image.rows == b.image->image.rows);
+	AssertEQ(a.image->image.cols, b.image->image.cols);
+	AssertEQ(a.image->image.rows, b.image->image.rows);
 
     StereoTarget target;
     vector<Mat> targetArea;

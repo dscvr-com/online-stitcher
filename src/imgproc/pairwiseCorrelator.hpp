@@ -2,6 +2,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "../common/image.hpp"
+#include "../common/static_timer.hpp"
 #include "../common/drawing.hpp"
 #include "../imgproc/planarCorrelator.hpp"
 #include "../math/support.hpp"
@@ -22,11 +23,20 @@ namespace optonaut {
 class CorrelationDiff {
 public:
 	bool valid;
+    int overlap;
     Point2f offset;
-    double horizontalAngularOffset;
-    double variance;
+    Point2f angularOffset;
+    int rejectionReason;
+    double correlationCoefficient;
+    Point2f inverseTestDifference;
 
-	CorrelationDiff() : valid(false), offset(0, 0), horizontalAngularOffset(0) {}
+	CorrelationDiff() : 
+        valid(false), 
+        offset(0, 0), 
+        angularOffset(0, 0), 
+        rejectionReason(-1),
+        correlationCoefficient(0),
+        inverseTestDifference(0, 0) {}
 
 };
 
@@ -38,7 +48,15 @@ private:
 public:
     PairwiseCorrelator() { }
 
-    CorrelationDiff Match(const InputImageP a, const InputImageP b) {
+    static const int RejectionUnknown = -1;
+    static const int RejectionNone = 0;
+    static const int RejectionNoOverlap = 1;
+    static const int RejectionInverseTest = 2;
+    static const int RejectionOutOfWindow = 3;
+   
+    // Note: An outlier threshold of 2 is fine (1 pixel in each dimension), since
+    // we don't do sub-pixel alignment.  
+    CorrelationDiff Match(const InputImageP a, const InputImageP b, int minWidth = 0, int minHeight = 0) {
 
         STimer cTimer;
         CorrelationDiff result;
@@ -50,23 +68,57 @@ public:
 
         cTimer.Tick("Overlap found");
 
-        if(wa.cols < 4 || wb.cols < 4) {
+        if(minWidth < 4)
+            minWidth = 4;
+
+        if(minHeight < 4)
+            minHeight = 4;
+
+        //Overlap too small - invalid. 
+        if(wa.cols < minWidth || wb.cols < minWidth || 
+                wa.rows < minHeight || wb.rows < minHeight) {
             result.valid = false;
-            cout << "No overlap warning" << endl;
+            result.rejectionReason = RejectionNoOverlap;
             return result;
         }
 
-        PlanarCorrelationResult res = Aligner::Align(wa, wb, 0.25, 0.25, 0);
+        float w = 0.5;
+
+        Mat corr; //Debug stuff
+
+        PlanarCorrelationResult res = Aligner::Align(wa, wb, corr, w, w, 0);
+
+        int maxX = max(wa.cols, wb.cols) * w;
+        int maxY = max(wa.rows, wb.rows) * w;
+
+        if(res.offset.x < -maxX || res.offset.x > maxX 
+                || res.offset.y < -maxY || res.offset.y > maxY) {
+            result.valid = false;
+            result.rejectionReason = RejectionOutOfWindow;
+            return result;
+        }
+
+        if(res.topDeviation < 1.5) {
+            result.valid = false;
+            result.rejectionReason = RejectionInverseTest;
+            return result;
+        }
+
         cv::Point correctedRes = res.offset + appliedBorder;
         
         double h = b->intrinsics.at<double>(0, 0) * (b->image.cols / (b->intrinsics.at<double>(0, 2) * 2));
         double olXA = (overlappingRoi.x + correctedRes.x - b->image.cols / 2) / h;
         double olXB = (overlappingRoi.x - b->image.cols / 2) / h;
         
-        result.horizontalAngularOffset = sin(olXA) - sin(olXB);
+        double olYA = (overlappingRoi.y + correctedRes.y - b->image.rows / 2) / h;
+        double olYB = (overlappingRoi.y - b->image.rows / 2) / h;
+       
+        result.overlap = wa.cols * wa.rows; 
+        result.angularOffset.x = atan(olXA) - atan(olXB);
+        result.angularOffset.y = atan(olYA) - atan(olYB);
         result.offset = correctedRes;
         result.valid = true;
-        result.variance = res.variance;
+        result.correlationCoefficient = sqrt(res.variance) / res.n;
         cTimer.Tick("Correalted");
 
         return result;

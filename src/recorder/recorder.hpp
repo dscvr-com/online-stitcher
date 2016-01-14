@@ -10,6 +10,7 @@
 #include "../common/progressCallback.hpp"
 #include "../common/reduceProcessor.hpp"
 #include "../stitcher/simpleSphereStitcher.hpp"
+#include "../debug/debugHook.hpp"
 
 #include "recorderGraph.hpp"
 #include "recorderGraphGenerator.hpp"
@@ -354,7 +355,7 @@ namespace optonaut {
             auto result = corr.Match(firstRingImagePool.back(), firstRingImagePool.front()); 
             size_t n = firstRingImagePool.size();
 
-            cout << "Y horizontal angular offset: " << result.horizontalAngularOffset << endl; 
+            cout << "Y horizontal angular offset: " << result.angularOffset.x << endl;
 
             for(size_t i = 0; i < n; i++) {
                 //double ydiff = result.horizontalAngularOffset * 
@@ -490,12 +491,18 @@ namespace optonaut {
         void ApplyAlignment(InputImageP image) {
 
             image->adjustedExtrinsics = aligner->GetCurrentBias() * image->originalExtrinsics;
-            image->vtag = aligner->GetCurrentVtag();
 
             SelectionInfo current = controller.Push(image);
 
             if(isIdle)
                 return;
+
+            if(DebugHook::Instance != NULL) {
+                DebugHook::Instance->RegisterImageRotationModel(
+                        image->image.data, 
+                        ConvertFromStitcher(image->adjustedExtrinsics), 
+                        image->intrinsics);
+            }
            
             selectorQueue.Push(current); 
         }

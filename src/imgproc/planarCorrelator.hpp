@@ -1,6 +1,10 @@
+#include <memory>
+
 #include "../common/support.hpp"
 #include "../common/drawing.hpp"
 #include "../math/stat.hpp"
+#include "../common/assert.hpp"
+#include "../stitcher/simplePlaneStitcher.hpp"
 
 #ifndef OPTONAUT_PLANAR_CORRELATOR_HEADER
 #define OPTONAUT_PLANAR_CORRELATOR_HEADER
@@ -15,7 +19,9 @@ static const bool debug = false;
 struct PlanarCorrelationResult {
     cv::Point offset;
     size_t n; 
+    double cost;
     double variance;
+    double topDeviation;
 };
 
 template <typename Correlator>
@@ -32,18 +38,23 @@ class BruteForcePlanarAligner {
         OnlineVariance<double> var;
 
         if(debug) {
-            corr = Mat(wy * 2, wx * 2, CV_32F);
+            corr = Mat(wy * 2 + 1, wx * 2 + 1, CV_32F);
 	        corr.setTo(Scalar::all(0));
         }
 
         AssertGTM(wx, 0, "Correlation window exists.");
         AssertGTM(wy, 0, "Correlation window exists.");
 
-        for(int dx = -wx; dx < wx; dx++) {
-            for(int dy = -wy; dy < wy; dy++) {
+        float costSum = 0;
+
+        for(int dx = -wx; dx <= wx; dx++) {
+            for(int dy = -wy; dy <= wy; dy++) {
                 float res = Correlator::Calculate(a, b, dx + ox, dy + oy);
                 var.Push(res);
+                costSum += res;
                 if(debug) {
+                    AssertGTM(corr.rows, dy + wy, "Correlation matrix too small.");
+                    AssertGTM(corr.cols, dx + wx, "Correlation matrix too small.");
                     corr.at<float>(dy + wy, dx + wx) = res; 
                 }
                 if(res < min) {
@@ -54,19 +65,21 @@ class BruteForcePlanarAligner {
             }
         }
 
+        double variance = var.Result();
+        size_t count = static_cast<size_t>(wx * 2 + wy * 2);
 
-        return { cv::Point(mx + ox, my + oy), static_cast<size_t>(wx * 2 + wy * 2), var.Result() };
+        return { cv::Point(mx + ox, my + oy), count, costSum, variance, sqrt(variance / count)};
     }
 };
 
 template <typename Correlator>
 class PyramidPlanarAligner {
     private:
-    static inline cv::Point AlignInternal(const Mat &a, const Mat &b, double wx, double wy, int dskip, int depth, VariancePool<double> &pool) {
+
+    static inline cv::Point AlignInternal(const Mat &a, const Mat &b, Mat &corr, int &corrXOff, int corrYOff, double wx, double wy, int dskip, int depth, VariancePool<double> &pool) {
         const int minSize = 4;
 
         cv::Point res;
-        Mat corr(0, 0, CV_32F);
 
         if(a.cols > minSize / wx && b.cols > minSize / wx 
                 && a.rows > minSize / wy && b.rows > minSize / wy) {
@@ -75,54 +88,124 @@ class PyramidPlanarAligner {
             pyrDown(a, ta);
             pyrDown(b, tb);
 
-            cv::Point guess = PyramidPlanarAligner<Correlator>::AlignInternal(ta, tb, wx, wy, dskip - 1, depth + 1, pool);
+            cv::Point guess = PyramidPlanarAligner<Correlator>::AlignInternal(ta, tb, corr, corrXOff, corrYOff, wx, wy, dskip - 1, depth + 1, pool);
+    
+            if(debug) {
+                pyrUp(corr, corr);
+            }
+
             if(dskip > 0) {
                 res = guess * 2;
             } else {
+
+                Mat corrBf;
+
                 PlanarCorrelationResult detailedRes = 
-                    BruteForcePlanarAligner<Correlator>::Align(a, b, corr, 2, 2, 
-                                                        guess.x * 2, guess.y * 2);
+                    BruteForcePlanarAligner<Correlator>::Align(
+                            a, b, corrBf, 2, 2, guess.x * 2, guess.y * 2);
+
+                if(debug) {
+
+                    Rect roi(guess.x * 2 - corrBf.cols / 2 + corr.cols / 2 + corrXOff,
+                             guess.y * 2 - corrBf.rows / 2 + corr.rows / 2 + corrYOff,
+                             corrBf.cols, corrBf.rows);
+
+                    corrXOff -= min(roi.x, 0),
+                    corrYOff -= min(roi.y, 0),
+                    copyMakeBorder(corr,
+                                   corr,
+                                   -min(roi.y, 0),
+                                   -min(corr.rows - (roi.y + roi.height), 0),
+                                   -min(roi.x, 0),
+                                   -min(corr.cols - (roi.x + roi.width), 0),
+                                   BORDER_CONSTANT, Scalar::all(0));
+                    
+                    roi.y = max(roi.y, 0);
+                    roi.x = max(roi.x, 0);
+
+
+                    corrBf.copyTo(corr(roi));
+                }
 
                 res = detailedRes.offset;
-                pool.Push(detailedRes.variance, detailedRes.n * pow(2, depth));
+                auto weight = pow(2, depth);
+                pool.Push(detailedRes.variance, detailedRes.n * weight, 
+                        detailedRes.cost * weight);
             }
         } else {
             PlanarCorrelationResult detailedRes = 
                 BruteForcePlanarAligner<Correlator>::Align(a, b, corr, wx, wy);
                 
             res = detailedRes.offset;
-            pool.Push(detailedRes.variance, detailedRes.n * pow(2, depth));
+            auto weight = pow(2, depth);
+            pool.Push(detailedRes.variance, detailedRes.n * weight, 
+                    detailedRes.cost * weight);
         }
         
         return res;
     }
     public:
-    static inline PlanarCorrelationResult Align(const Mat &a, const Mat &b, double wx = 0.5, double wy = 0.5, int dskip = 0) {
+    static inline PlanarCorrelationResult Align(const Mat &a, const Mat &b, Mat &corr, double wx = 0.5, double wy = 0.5, int dskip = 0) {
         VariancePool<double> pool;
-        cv::Point res = PyramidPlanarAligner<Correlator>::AlignInternal(a, b, wx, wy, dskip, 0, pool);
+        int corrXOff = 0;
+        int corrYOff = 0;
+        cv::Point res = PyramidPlanarAligner<Correlator>::AlignInternal(a, b, corr, corrXOff, corrYOff, wx, wy, dskip, 0, pool);
 
         //debug - draw resulting image. 
-        if(debug && dskip > 0) {
+        if(debug) {
             static int dbgctr = 0;
             Mat eye = Mat::eye(3, 3, CV_64F);
             Mat hom = Mat::eye(3, 3, CV_64F);
             hom.at<double>(0, 2) = res.x;
             hom.at<double>(1, 2) = res.y;
 
-            Mat target(max(a.rows, a.rows), a.cols + b.cols, CV_8UC3);
+            SimplePlaneStitcher stitcher;
 
-            DrawMatchingResults(hom, eye, a, b, target);
+            auto target = stitcher.Stitch(
+                    {std::make_shared<Image>(Image(a)), 
+                    std::make_shared<Image>(Image(b))}, 
+                    {res, Point(0, 0)});
+
+            //DrawMatchingResults(hom, eye, a, b, target);
+            //std::string filename =  
+            //        "pcc_" + ToString(dbgctr) + 
+            //        "_x_" + ToString(res.x) + 
+            //        "_cc_" + ToString(sqrt(pool.Result()) / pool.Count()) + 
+            //        "_tc_" + ToString(pool.GetMeasurements().back().sum / 
+            //                pool.GetMeasurements().back().n);
             std::string filename =  
-                    "dbg/pcc_" + ToString(dbgctr) + 
-                    "_x_" + ToString(res.x) + 
-                    "_var_" + ToString(pool.Result()) + 
-                    ".jpg";
+                        ToString(sqrt(pool.GetMeasurements().back().s) / 
+                            pool.GetMeasurements().back().n);
 
-            imwrite(filename, target);
+            int maxX = max(a.cols, b.cols) * wx;
+            int maxY = max(a.rows, b.rows) * wy;
+
+            if(res.x < -maxX || res.x > maxX || res.y < -maxY || res.y > maxY) {
+               filename = filename + "_reject"; 
+            }
+
+            imwrite("dbg/" + filename + ".jpg", target->image.data);
+
+            
+            //float max = 255;
+
+            //for(int i = 0; i < corr.cols; i++) {
+            //    for(int j = 0; j < corr.rows; j++) {
+            //        if(corr.at<float>(j, i) > max) {
+            //            max = corr.at<float>(j, i);
+            //        }
+            //    }
+            //}
+            //
+            //imwrite("dbg/" + filename + "_corr.jpg", corr / max * 255);
+
             dbgctr++;
         }
+        
+        double topDeviation = sqrt(pool.GetMeasurements().back().s) / 
+                            pool.GetMeasurements().back().n;
 
-        return { res, pool.Count(), pool.Result() };
+        return { res, pool.Count(), pool.Sum(), pool.Result(), topDeviation };
     }
 };
 
@@ -203,7 +286,7 @@ class LeastSquares {
     public:
     static inline float Calculate(const Mat &a, const Mat &b, int xa, int ya, int xb, int yb) {
         float diff = AbsoluteDifference<T>::Calculate(a, b, xa, ya, xb, yb);
-        return diff * diff;
+        return (diff * diff);
     }
     static inline float Sign() {
         return 1;

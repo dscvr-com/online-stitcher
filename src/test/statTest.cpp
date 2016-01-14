@@ -16,25 +16,31 @@ int main(int, char**) {
     vector<double> expectedVariances = {1, 1.66667, 4.5, 4.3, 2.5};
     double expectedPooledVar = 2.76429;
     VariancePool<double> pool;
+    double sumSum = 0;
 
     for(size_t i = 0; i < in.size(); i++) {
         auto set = in[i];
         double variance = Variance(set); 
         double mean = Mean(set);
+        double sum = 0;
         OnlineVariance<double> onlineVariance;
 
         for(auto d : set) {
             onlineVariance.Push(d);
+            sum += d;
+            sumSum += d;
         } 
 
         AssertEQ(variance, expectedVariances[i]);
         AssertEQ(mean, expectedMeans[i]);
         AssertEQ(onlineVariance.Result(), expectedVariances[i]);
+        AssertEQ(sum, onlineVariance.Sum());
 
-        pool.Push(variance, set.size());
+        pool.Push(variance, set.size(), onlineVariance.Sum());
     }
 
     AssertEQ(expectedPooledVar, pool.Result());
+    AssertEQ(sumSum, pool.Sum());
 
     cout << "[\u2713] Statistics module." << endl;
 }

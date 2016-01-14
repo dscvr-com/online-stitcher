@@ -1,4 +1,5 @@
 #include <vector>
+#include <map>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/stitching/detail/warpers.hpp>
 #include <opencv2/opencv.hpp>
@@ -15,6 +16,9 @@ namespace optonaut {
 class SimpleSphereStitcher {
     private: 
         cv::detail::SphericalWarper warper; //Random warper scale. 
+        std::map<size_t, cv::Mat> imageCache;
+        std::map<size_t, cv::Mat> maskCache;
+        std::map<size_t, cv::Point> cornerCache;
 	public:
 
         SimpleSphereStitcher() : warper(800) {
@@ -22,7 +26,10 @@ class SimpleSphereStitcher {
         }
 
 		StitchingResultP Stitch(const std::vector<InputImageP> &images, bool debug = false);
-        cv::Point2f Warp(const cv::Mat &intrinsics, const cv::Mat &extrinsics, const cv::Size &imageSize);
+        cv::Rect Warp(const cv::Mat &intrinsics, const cv::Mat &extrinsics, const cv::Size &imageSize);
+       
+        // Point is relative to image center.  
+        cv::Point WarpPoint(const cv::Mat &intrinsics, const cv::Mat &extrinsics, const cv::Size &imageSize, const cv::Point &point);
 };
 }
 

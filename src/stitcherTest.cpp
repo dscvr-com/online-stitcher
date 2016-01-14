@@ -10,6 +10,7 @@
 #include "common/intrinsics.hpp"
 #include "common/backtrace.hpp"
 #include "stitcher/stitcher.hpp"
+#include "debug/visualDebugHook.hpp"
 #include "io/io.hpp"
 
 using namespace std;
@@ -32,6 +33,9 @@ void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &
 
     static const bool isAsync = true;
     shared_ptr<Recorder> recorder(NULL);
+
+    VisualDebugHook hook;
+    //DebugHook::Instance = &hook;
 
     for(size_t i = 0; i < files.size(); i++) {
         auto lt = system_clock::now();
@@ -70,6 +74,10 @@ void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &
     }
 
     recorder->Finish();
+
+    //hook.Draw();
+    //hook.WaitForExit();
+
     recorder->Dispose();
 }
 

@@ -16,16 +16,18 @@ stitcher/multiringStitcher.cpp
 stitcher/ringStitcher.cpp
 stitcher/simpleSphereStitcher.cpp
 stitcher/simplePlaneStitcher.cpp
+debug/debugHook.cpp
 )
 target_link_libraries(optonaut-lib ${OpenCV_LIBS})
 
 add_library(visual-debug-hook
 debug/visualDebugHook.cpp
 )
+
 target_link_libraries(visual-debug-hook ${OpenCV_LIBS})
 target_link_libraries(visual-debug-hook optonaut-lib)
 target_link_libraries(visual-debug-hook ${OPENGL_LIBRARIES})
-target_link_libraries(visual-debug-hook ${EXTRA_LIBS})
+target_link_libraries(visual-debug-hook ${OSX_LIBS})
 target_link_libraries(visual-debug-hook ${CMAKE_CURRENT_LIST_DIR}/../vendor/libIrrlicht.a)
 
 add_executable(to-polar toPol.cpp)
@@ -36,6 +38,7 @@ target_link_libraries(to-cube-map optonaut-lib)
 
 add_executable(optonaut-test stitcherTest.cpp)
 target_link_libraries(optonaut-test optonaut-lib)
+target_link_libraries(optonaut-test visual-debug-hook)
 
 add_executable(aligner-test alignerTest.cpp)
 target_link_libraries(aligner-test optonaut-lib)
@@ -51,6 +54,23 @@ target_link_libraries(debug-hook-test visual-debug-hook)
 
 add_executable(stereo-conversion-test stereoConversionTest.cpp)
 target_link_libraries(stereo-conversion-test optonaut-lib)
+
+add_executable(feature-chain-test featureChainTest.cpp)
+target_link_libraries(feature-chain-test optonaut-lib)
+
+add_executable(minimal-feature-test minimalFeatureTest.cpp)
+target_link_libraries(minimal-feature-test optonaut-lib)
+
+add_executable(sfm-test sfmTest.cpp)
+target_link_libraries(sfm-test optonaut-lib)
+target_link_libraries(sfm-test visual-debug-hook)
+
+add_executable(brute-force-aligner-test bruteForceAlignerTest.cpp)
+target_link_libraries(brute-force-aligner-test optonaut-lib)
+
+add_executable(stereo-match-test stereoMatchTest.cpp)
+target_link_libraries(stereo-match-test optonaut-lib)
+target_link_libraries(stereo-match-test visual-debug-hook)
 
 add_subdirectory(test)
 add_subdirectory(debug)

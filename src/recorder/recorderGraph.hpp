@@ -1,9 +1,11 @@
-
 #include <opencv2/opencv.hpp>
 #include <math.h>
+#include <list>
+#include <vector>
 
 #include "../io/inputImage.hpp"
 #include "../common/image.hpp"
+#include "../common/biMap.hpp"
 #include "../math/support.hpp"
 
 using namespace cv;
@@ -20,6 +22,7 @@ namespace optonaut {
         uint32_t globalId;
         uint32_t localId;
         uint32_t ringId;
+        uint32_t ringSize;
         double hPos;
         double vPos;
         double hFov;
@@ -27,7 +30,8 @@ namespace optonaut {
         Mat extrinsics;
         
         SelectionPoint() : globalId(0),
-            localId(0), ringId(0), hPos(0), vPos(0), hFov(0), vFov(0), extrinsics(0, 0, CV_64F) {
+            localId(0), ringId(0), ringSize(0), hPos(0), vPos(0), hFov(0), 
+            vFov(0), extrinsics(0, 0, CV_64F) {
         }
     };
     
@@ -41,8 +45,11 @@ namespace optonaut {
         }
     };
     
-    //Todo - Declare Friend with recorder Graph Generator, then make props private
     class RecorderGraph {
+    private: 
+        vector<vector<SelectionEdge>> adj;
+        vector<vector<SelectionPoint>> targets;
+        vector<SelectionPoint*> targetsById;
     public:
         
         static const int ModeAll = 0;
@@ -55,10 +62,40 @@ namespace optonaut {
         static const int DensityDouble = 2;
         static const int DensityQadruple = 4;
         
-        vector<vector<SelectionEdge>> adj;
-        vector<vector<SelectionPoint>> targets;
-        Mat intrinsics;
-        
+        const Mat intrinsics;
+        const uint32_t ringCount;
+
+        RecorderGraph(uint32_t ringCount, const Mat &intrinsics)
+            : intrinsics(intrinsics), ringCount(ringCount) {
+            targets.reserve(ringCount); 
+        }
+
+        uint32_t AddNewRing(uint32_t ringSize) {
+            AssertGT((size_t)ringCount, targets.size()); 
+            targets.push_back(vector<SelectionPoint>(ringSize));
+
+            return (uint32_t)targets.size() - 1;
+        }
+
+        void AddNewNode(const SelectionPoint &point) {
+            //Check for index consistency. 
+            AssertGT(targets.size(), (size_t)point.ringId); 
+            AssertGT(targets[point.ringId].size(), (size_t)point.localId);
+            while(targetsById.size() <= point.globalId) {
+                targetsById.push_back(NULL);
+            }
+
+            targets[point.ringId][point.localId] = point;
+            targetsById[point.globalId] = &(targets[point.ringId][point.localId]);
+        } 
+
+        void AddEdge(const SelectionEdge &edge) {
+            while(adj.size() <= edge.from) {
+                adj.push_back(vector<SelectionEdge>());
+            }
+            adj[edge.from].push_back(edge);
+        }
+       
         const vector<vector<SelectionPoint>> &GetRings() const {
             return targets;
         }
@@ -89,6 +126,16 @@ namespace optonaut {
                 }
             }
         }
+
+        bool GetNext(const SelectionPoint &current, SelectionPoint &next) const {
+            auto it = adj[current.globalId].begin();
+
+            if(it == adj[current.globalId].end()) {
+                return false;
+            } else {
+                return GetPointById(it->to, next);
+            }
+        }
         
         bool GetNextForRecording(const SelectionPoint &current, SelectionPoint &next) const {
             auto it = adj[current.globalId].begin();
@@ -105,13 +152,10 @@ namespace optonaut {
         }
         
         bool GetPointById(uint32_t id, SelectionPoint &point) const {
-            for(auto &ring : targets) {
-                for(auto target : ring) {
-                    if(target.globalId == id) {
-                        point = target;
-                        return true;
-                    }
-                }
+            
+            if(id < targetsById.size()) {
+                point = *(targetsById[id]);
+                return true;
             }
             
             return false;
@@ -189,9 +233,54 @@ namespace optonaut {
             
             return size;
         }
+
+        vector<InputImageP> SelectBestMatches(const vector<InputImageP> &_imgs, 
+                BiMap<size_t, uint32_t> &imagesToTargets) const {
+
+            const double thresh = M_PI / 16;
+
+            std::list<InputImageP> imgs(_imgs.begin(), _imgs.end());
+            vector<InputImageP> res;
+
+            for(auto &ring : targets) {
+                for(size_t i = 0; i < ring.size(); i++) {
+                    auto target = ring[i];
+                    auto compare = [&target](
+                            const InputImageP &a, 
+                            const InputImageP &b) {
+                        auto dA = GetAngleOfRotation(a->adjustedExtrinsics.inv() * 
+                                target.extrinsics);
+                        auto dB = GetAngleOfRotation(b->adjustedExtrinsics.inv() * 
+                                target.extrinsics);
+
+                        return dA < dB;
+                    };
+
+                    //Todo - keep track of max distance!
+                    auto it = std::min_element(imgs.begin(), imgs.end(), compare);
+                    InputImageP min = *it;
+
+                    if(it == imgs.end())
+                        continue;
+                    
+                    double dist = GetAngleOfRotation(target.extrinsics,
+                            min->adjustedExtrinsics);
+
+                    if(abs(dist) > thresh)
+                        continue;
+
+
+                    imgs.erase(it);
+                    imagesToTargets.Insert(min->id, target.globalId);
+
+                    res.push_back(min);
+                }
+            }
+
+            return res;
+        }
         
-        
-        vector<vector<InputImageP>> SplitIntoRings(vector<InputImageP> &imgs) const {
+        vector<vector<InputImageP>> SplitIntoRings(const vector<InputImageP> &imgs) const {
             vector<vector<InputImageP>> rings(this->GetRings().size());
             
             for(auto img : imgs) {

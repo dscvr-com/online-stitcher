@@ -56,9 +56,8 @@ namespace optonaut {
 		cv::Mat intrinsics;
         ExposureInfo exposureInfo;
 		int id;
-        double vtag;
 
-        InputImage() : originalExtrinsics(4, 4, CV_64F), adjustedExtrinsics(4, 4, CV_64F), intrinsics(3, 3, CV_64F), vtag(0) {
+        InputImage() : originalExtrinsics(4, 4, CV_64F), adjustedExtrinsics(4, 4, CV_64F), intrinsics(3, 3, CV_64F) {
         }
 
         bool IsLoaded() {
