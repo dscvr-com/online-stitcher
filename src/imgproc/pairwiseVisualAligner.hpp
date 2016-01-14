@@ -449,6 +449,8 @@ public:
                 
                 AppendToFeatureChain(aId, goodMatches[i].queryIdx, 
                     bId, goodMatches[i].trainIdx);
+
+                inlinerCount++;
             }
         }
 

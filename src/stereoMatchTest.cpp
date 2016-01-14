@@ -31,6 +31,40 @@ struct Point3D {
     Point3D(Point3f pt) : pt(pt) { }
 };
 
+void ToPoseMat(const Mat &R, const Mat &t, Mat &q) {
+    Assert(MatIs(R, 3, 3, CV_64F));
+    Assert(MatIs(t, 3, 1, CV_64F));
+    
+    q = Mat::eye(4, 4, CV_64F);
+
+    Rect rotation = Rect(0, 0, 3, 3);
+    Rect translation = Rect(3, 0, 1, 3);
+    
+    R.copyTo(q(rotation));
+    t.copyTo(q(translation));
+}
+
+void FromPoseMat(const Mat &q, Mat &R, Mat &t) {
+    Assert(MatIs(q, 4, 4, CV_64F));
+
+    R = Mat::eye(3, 3, CV_64F);
+    t = Mat::zeros(3, 1, CV_64F);
+    
+    Rect rotation = Rect(0, 0, 3, 3);
+    Rect translation = Rect(3, 0, 1, 3);
+    
+    q(rotation).copyTo(R);
+    q(translation).copyTo(t);
+}
+
+void InvertPose(const Mat &R, const Mat &t, Mat &iR, Mat &it) {
+
+    Mat q;
+    ToPoseMat(R, t, q);
+    q = q.inv();
+    FromPoseMat(q, iR, it);
+}
+
 struct Pose {
     Mat R;
     Mat t;
@@ -61,23 +95,29 @@ void RecoverPoseStereo(
     AssertGT(c->aLocalFeatures.size(), (size_t)0);    
     AssertGT(c->bLocalFeatures.size(), (size_t)0);    
 
+    double focal = K.at<double>(0, 0);
+    Point2d pp(K.at<double>(0, 2), K.at<double>(1, 2));
+
     recoverPose(c->E, c->aLocalFeatures, c->bLocalFeatures, R, t, 
-           K.at<float>(0, 0), 
-           Point2d(K.at<float>(0, 2), K.at<float>(1, 2)), 
+           focal, pp,
            noArray());
 
-    AssertGEM(1.0, std::abs(determinant(R)) - 0.00001, "Recovered rotation is valid.");
+    AssertGEM(1.0, std::abs(determinant(R)) - 0.00001, 
+            "Recovered rotation is valid.");
 
     cout << "### Recovered Stereo" << endl;
     cout << "t: " << t.t() << endl;
     cout << "R: " << R << endl;
-    //R = R.inv();
-    //t = -t;
+    cout << "f: " << focal << endl;
+    cout << "PP: " << pp << endl;
+    
+    //InvertPose(R, t, R, t);
 }
 
 void RecoverPosePnP(
         const MatchInfoP &c,
         const Mat &K,
+        const Mat &D,
         Mat &R, Mat &t) {
 
     vector<Point3f> subcloud;
@@ -95,15 +135,15 @@ void RecoverPosePnP(
     Mat rvec;
 
     //TODO - param tuning. Can also use original guess. 
-    solvePnPRansac(subcloud, subfeatures, K, R, rvec, t);
+    solvePnPRansac(subcloud, subfeatures, K, D, rvec, t, false, 2000, 1, 0.999);
     R = Mat::eye(3, 3, CV_64F);
     Rodrigues(rvec, R);
 
-    cout << "### Recovered Stereo PNP" << endl;
+    cout << "### Recovered PNP" << endl;
     cout << "t: " << t.t() << endl;
     cout << "R: " << R << endl;
-    //R = R;
-    //t = t;
+
+    //InvertPose(R, t, R, t);
 }
 
 inline void AddNewPoint(float x, float y, float z, Vec3b color, 
@@ -161,7 +201,7 @@ void TriangulateAndAdd(
         float y = triangulated.at<float>(1, i) / w; 
         float z = triangulated.at<float>(2, i) / w; 
 
-    Mat point(Vec3d(x, y, z));
+        Mat point(Vec3d(x, y, z));
         
         point = originR * point;
         point = point + originT;
@@ -216,31 +256,27 @@ void MatchImages(const InputImageP &a, const InputImageP &b) {
     MatchInfoP c = aligner.FindCorrespondence(a, b); 
     
     Mat scaledK;
-    Mat K;
 
     ScaleIntrinsicsToImage(a->intrinsics, a->image.size(), scaledK);
-    From3DoubleTo3Float(scaledK, K);
 
-    float distortion[] = {0, 0, 0, 0};
-    Mat D = Mat(4, 1, CV_32F, distortion);
+    double distortion[] = {0, 0, 0, 0};
+    Mat D = Mat(4, 1, CV_64F, distortion);
 
     Mat R, t;
     Pose origin; 
 
     if(cloud.size() == 0) {
-        RecoverPoseStereo(c, K, R, t);
+        RecoverPoseStereo(c, scaledK, R, t);
         origin = Pose(Mat::eye(3, 3, CV_64F), Mat::zeros(3, 1, CV_64F));
         posesPerImage.insert(make_pair(a->id, origin));
     } else {
         origin = posesPerImage.at(a->id);
-        RecoverPosePnP(c, K, R, t);
-        R = R * origin.R.t();
-        t = t - origin.t;
+        RecoverPosePnP(c, scaledK, D, R, t);
     }
 
-    TriangulateAndAdd(a, b, c, K, D, R, t, origin.R, origin.t);
+    TriangulateAndAdd(a, b, c, scaledK, D, R, t, origin.R, origin.t);
     
-    Pose next = Pose(origin.R * R, origin.t + t);
+    Pose next = Pose(R, t);
 
     posesPerImage.insert(make_pair(b->id, next));
 }
@@ -302,8 +338,8 @@ int main(int argc, char** argv) {
         static const bool undistort = true;
 
         if(undistort) {
-            float distortion[] = {0.0439, -0.0119, 0, 0};
-            Mat Rect1, Rect2, P1, P2, Q, Distortion = Mat(4, 1, CV_32F, distortion);
+            double distortion[] = {0.0184, 0.1045, 0, 0};
+            Mat Rect1, Rect2, P1, P2, Q, Distortion = Mat(4, 1, CV_64F, distortion);
 
             Mat scaledK;
             ScaleIntrinsicsToImage(img->intrinsics, img->image.size(), scaledK);
