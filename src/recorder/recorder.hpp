@@ -116,9 +116,9 @@ namespace optonaut {
             firstRingFinished(false),
             hasStarted(false),
             generator(),
-            recorderGraph(generator.Generate(intrinsics, graphConfiguration)),
+            recorderGraph(generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityNormal)),
             controller(recorderGraph),
-            preRecorderGraph(generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityQadruple, 8)),
+            preRecorderGraph(generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityDouble, 8)),
             preController(preRecorderGraph),
             imagesToRecord(preRecorderGraph.Size()),
             recordedImages(0),
@@ -352,27 +352,28 @@ namespace optonaut {
             PairwiseCorrelator corr;
             firstRingImagePool.back()->image.Load();
             firstRingImagePool.front()->image.Load();
-            auto result = corr.Match(firstRingImagePool.back(), firstRingImagePool.front()); 
+            auto result = corr.Match(firstRingImagePool.back(), firstRingImagePool.front(), 0, 0, true); 
             size_t n = firstRingImagePool.size();
+
+            if(!result.valid) {
+                cout << "Ring closure rejection because: " << result.rejectionReason << endl;
+            }
 
             cout << "Y horizontal angular offset: " << result.angularOffset.x << endl;
 
+            // TODO - SMTH is wrong here. 
             for(size_t i = 0; i < n; i++) {
-                //double ydiff = result.horizontalAngularOffset * 
-                //    (1.0 - ((double)i) / ((double)n));
-                double ydiff = 0;
+                double ydiff = -result.angularOffset.x * 
+                    (1.0 - ((double)i) / ((double)n));
+                //double ydiff = 0;
                 Mat correction;
                 CreateRotationY(ydiff, correction);
                 firstRingImagePool[i]->adjustedExtrinsics = correction * 
                     firstRingImagePool[i]->adjustedExtrinsics;
 
-                //cout << "Applying correction of " << ydiff << " to image " << firstRingImagePool[i]->id << endl;
+                cout << "Applying correction of " << ydiff << " to image " << firstRingImagePool[i]->id << endl;
             }
 
-            //Debug 
-            //SimpleSphereStitchrer stitcher;
-            //auto scene = stitcher.Stitch(images);
-            //imwrite("dbg/extracted_ring.jpg", scene->image.data);
     
             //Re-select images.
            
@@ -431,6 +432,9 @@ namespace optonaut {
         }
 
         SelectionInfo SelectBetterMatchForPreSelection(const SelectionInfo &best, const SelectionInfo &in) {
+
+            SCounters::Increase("Better Match Pre Selection In");
+
             //Init case
             if(!best.isValid)
                 return in;
@@ -447,6 +451,7 @@ namespace optonaut {
             //Push images that get closer to the target towards the aligner.
             //But only if we're not in debug.
             if(debugPath == "") {
+                SCounters::Increase("Better Match Pre Selection Found");
                 ForwardToAligner(in.image);
             }
             if(best.closestPoint.globalId != in.closestPoint.globalId) {
@@ -461,21 +466,29 @@ namespace optonaut {
         }
         
         SelectionInfo SelectBetterMatchForMonoQueue(const SelectionInfo &best, const SelectionInfo &in) {
+                
+            SCounters::Increase("Better Match Mono Queue In");
             //Init case
-            if(!best.isValid)
+            if(!best.isValid) {
+                SCounters::Increase("Better Mono Queue Init");
                 return in;
+            }
 
             //Invalid case
-            if(!in.isValid)
+            if(!in.isValid) {
+                SCounters::Increase("Better Mono Queue Invalid");
                 return best;
+            }
             
             if(best.closestPoint.globalId != in.closestPoint.globalId) {
+                SCounters::Increase("Better Match Mono Queue Found");
                 //We will not get a better match. Can forward best.  
                 ForwardToStereoConversionQueue(best);
                 //ForwardToMonoQueue(in, true);
                 //We Finished a ring. Flush.
 
             } else {
+                SCounters::Increase("Better Match Mono Queue Rejected Because Same Id");
                 if(!isFinished) {
                     AssertM(best.dist >= in.dist, "Recorder controller only returns better or equal matches");
                 }

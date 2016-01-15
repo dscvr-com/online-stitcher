@@ -58,9 +58,10 @@ namespace optonaut {
         static const int ModeNoBot = 3;
         static const int ModeTinyDebug = 1337;
         
-        static const int DensityNormal = 1;
-        static const int DensityDouble = 2;
-        static const int DensityQadruple = 4;
+        static constexpr float DensityHalf = 0.5;
+        static constexpr float DensityNormal = 1;
+        static constexpr float DensityDouble = 2;
+        static constexpr float DensityQadruple = 4;
         
         const Mat intrinsics;
         const uint32_t ringCount;
@@ -166,8 +167,10 @@ namespace optonaut {
             Mat eInv = extrinscs.inv();
             
             for(auto &ring : targets) {
-                if(ring.size() == 0 || (ringId != -1 && ringId != (int)ring[0].ringId))
+                if(ring.size() == 0 || 
+                        (ringId != -1 && ringId != (int)ring[0].ringId)) {
                     continue;
+                }
                 
                 for(auto &target : ring) {
                     double dist = GetAngleOfRotation(eInv * target.extrinsics);

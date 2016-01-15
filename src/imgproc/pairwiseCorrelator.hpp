@@ -51,12 +51,15 @@ public:
     static const int RejectionUnknown = -1;
     static const int RejectionNone = 0;
     static const int RejectionNoOverlap = 1;
-    static const int RejectionInverseTest = 2;
+    static const int RejectionDeviationTest = 2;
     static const int RejectionOutOfWindow = 3;
    
     // Note: An outlier threshold of 2 is fine (1 pixel in each dimension), since
     // we don't do sub-pixel alignment.  
-    CorrelationDiff Match(const InputImageP a, const InputImageP b, int minWidth = 0, int minHeight = 0) {
+    CorrelationDiff Match(const InputImageP a, const InputImageP b, int minWidth = 0, int minHeight = 0, bool forceWholeImage = false) {
+
+        const bool enableDeviationTest = false;
+        const bool enableOutOfWindowTest = true;
 
         STimer cTimer;
         CorrelationDiff result;
@@ -64,7 +67,19 @@ public:
         Mat wa, wb;
 
         cv::Point appliedBorder;
-        cv::Rect overlappingRoi = GetOverlappingRegion(a, b, a->image, b->image, wa, wb, a->image.cols * 0.2, appliedBorder);
+        cv::Rect overlappingRoi;
+       
+        overlappingRoi = GetOverlappingRegion(a, b, a->image, b->image, wa, wb, a->image.cols * 0.2, appliedBorder);
+
+        // Forces to use the whole image instead of predicted overlays.
+        // Good for ring closure. We still have to guess the offset tough. 
+        if(forceWholeImage) {
+            overlappingRoi = cv::Rect(appliedBorder + overlappingRoi.tl(), 
+                    a->image.size());
+            appliedBorder = Point(0, 0);
+            wa = a->image.data;
+            wb = b->image.data;
+        }
 
         cTimer.Tick("Overlap found");
 
@@ -91,16 +106,19 @@ public:
         int maxX = max(wa.cols, wb.cols) * w;
         int maxY = max(wa.rows, wb.rows) * w;
 
-        if(res.offset.x < -maxX || res.offset.x > maxX 
-                || res.offset.y < -maxY || res.offset.y > maxY) {
+        if(enableOutOfWindowTest && (res.offset.x < -maxX || res.offset.x > maxX 
+                || res.offset.y < -maxY || res.offset.y > maxY)) {
             result.valid = false;
             result.rejectionReason = RejectionOutOfWindow;
             return result;
         }
 
-        if(res.topDeviation < 1.5) {
+        if(enableDeviationTest && (res.topDeviation < 1.5)) {
             result.valid = false;
-            result.rejectionReason = RejectionInverseTest;
+            result.rejectionReason = RejectionDeviationTest;
+            
+            cout << "Rejected because top deviation == " << res.topDeviation << " < 1.5." << endl;
+
             return result;
         }
 

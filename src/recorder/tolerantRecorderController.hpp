@@ -4,6 +4,7 @@
 #include <unordered_set>
 
 #include "../common/image.hpp"
+#include "../common/static_counter.hpp"
 #include "../math/support.hpp"
 #include "recorderGraph.hpp"
 
@@ -23,7 +24,7 @@ namespace optonaut {
         SelectionInfo best;
         RecorderGraph &graph;
     public:
-        const double tolerance = M_PI / 8; //High tolerance, since we have to catch up with alignment
+        const double tolerance = M_PI / 4; //High tolerance, since we have to catch up with alignment
 
         TolerantRecorderController(RecorderGraph &graph) : graph(graph) {
             best.isValid = false;
@@ -33,11 +34,15 @@ namespace optonaut {
         //(which we can if we do pre-selection). 
         SelectionInfo Push(const InputImageP image) {
             SelectionInfo current;
-            current.dist = graph.FindClosestPoint(image->adjustedExtrinsics, current.closestPoint);
+            current.dist = graph.FindClosestPoint(
+                    image->adjustedExtrinsics, 
+                    current.closestPoint);
+
             current.image = image;
             
             //Constraint at least a little. 
             if(current.dist > tolerance) {
+                cout << "Tolerant recorder rejected because of tolerance" << endl;
                 return best;    
             }
 
@@ -51,9 +56,11 @@ namespace optonaut {
             if(!best.isValid || 
                     current.closestPoint.globalId != best.closestPoint.globalId ||
                     current.dist < best.dist) {
-                //cout << "Tolerant recorder found a better match" << endl;
+                cout << "Tolerant recorder found a better match: " << current.closestPoint.globalId << endl;
                 //done.insert(best.closestPoint.globalId);
                 best = current;
+            } else {
+                cout << "Tolerant recorder rejected because match was not better" << endl;
             }
 
             return best;

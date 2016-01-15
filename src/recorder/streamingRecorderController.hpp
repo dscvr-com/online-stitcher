@@ -3,6 +3,7 @@
 #include <chrono>
 
 #include "../common/image.hpp"
+#include "../common/static_counter.hpp"
 #include "../math/support.hpp"
 #include "recorderGraph.hpp"
 
@@ -46,7 +47,7 @@ namespace optonaut {
         
         //Tolerance, measured on sphere, for hits.
         //We sould calc this from buffer, overlap, fov
-        const double tolerance = M_PI / 24; //Narrow tolerance.
+        const double tolerance = M_PI / 4; //Narrow tolerance.
         
         void MoveToNextRing(const Mat &cur) {
 

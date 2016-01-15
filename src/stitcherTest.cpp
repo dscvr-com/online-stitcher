@@ -88,6 +88,10 @@ int main(int argc, char** argv) {
     CheckpointStore leftStore("tmp/left/", "tmp/shared/");
     CheckpointStore rightStore("tmp/right/", "tmp/shared/");
     CheckpointStore commonStore("tmp/common/", "tmp/shared/");
+    
+    //DummyCheckpointStore leftStore;
+    //DummyCheckpointStore rightStore;
+    //DummyCheckpointStore commonStore;
 
     cout << "Starting." << endl;
 

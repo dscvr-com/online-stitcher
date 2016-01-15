@@ -42,7 +42,6 @@ namespace optonaut {
     }
 
     void UnLoadSRP(CheckpointStore &store, const StitchingResultP &a) {
-        assert(!store.SupportsPaging());
         if(store.SupportsPaging()) {
             a->image.Unload();
             a->mask.Unload();
@@ -99,7 +98,6 @@ namespace optonaut {
         store.LoadRingAdjustment(dyCache);
 
         if(dyCache.size() == 0) {
-            assert(!store.SupportsPaging());
             RingProcessor<StitchingResultP> queue(1, 0, 
                 std::bind(&LoadSRPGrayscaleDropMask, std::ref(store), std::placeholders::_1), 
                 correlate, 

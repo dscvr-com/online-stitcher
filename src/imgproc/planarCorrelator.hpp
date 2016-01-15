@@ -167,12 +167,7 @@ class PyramidPlanarAligner {
                     {res, Point(0, 0)});
 
             //DrawMatchingResults(hom, eye, a, b, target);
-            //std::string filename =  
-            //        "pcc_" + ToString(dbgctr) + 
-            //        "_x_" + ToString(res.x) + 
-            //        "_cc_" + ToString(sqrt(pool.Result()) / pool.Count()) + 
-            //        "_tc_" + ToString(pool.GetMeasurements().back().sum / 
-            //                pool.GetMeasurements().back().n);
+            
             std::string filename =  
                         ToString(sqrt(pool.GetMeasurements().back().s) / 
                             pool.GetMeasurements().back().n);
@@ -187,17 +182,17 @@ class PyramidPlanarAligner {
             imwrite("dbg/" + filename + ".jpg", target->image.data);
 
             
-            //float max = 255;
+            float max = 255;
 
-            //for(int i = 0; i < corr.cols; i++) {
-            //    for(int j = 0; j < corr.rows; j++) {
-            //        if(corr.at<float>(j, i) > max) {
-            //            max = corr.at<float>(j, i);
-            //        }
-            //    }
-            //}
-            //
-            //imwrite("dbg/" + filename + "_corr.jpg", corr / max * 255);
+            for(int i = 0; i < corr.cols; i++) {
+                for(int j = 0; j < corr.rows; j++) {
+                    if(corr.at<float>(j, i) > max) {
+                        max = corr.at<float>(j, i);
+                    }
+                }
+            }
+            
+            imwrite("dbg/" + filename + "_corr.jpg", corr / max * 255);
 
             dbgctr++;
         }

@@ -140,7 +140,7 @@ class IterativeBundleAligner {
                         } else if(corr.rejectionReason == 
                                 PairwiseCorrelator::RejectionOutOfWindow ||
                                 corr.rejectionReason == 
-                                PairwiseCorrelator::RejectionInverseTest) {
+                                PairwiseCorrelator::RejectionDeviationTest) {
                            outliers++; 
                         } else if(corr.rejectionReason == 
                                 PairwiseCorrelator::RejectionNoOverlap) {

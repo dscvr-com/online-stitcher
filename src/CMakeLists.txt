@@ -4,6 +4,7 @@ add_library(optonaut-lib
 common/image.cpp
 common/progressCallback.cpp
 common/static_timer.cpp
+common/static_counter.cpp
 io/checkpointStore.cpp
 io/inputImage.cpp
 io/io.cpp
