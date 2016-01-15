@@ -1,7 +1,7 @@
 #include <type_traits>
 
 #include <opencv2/features2d.hpp>
-#include <opencv2/xfeatures2d.hpp>
+//#include <opencv2/xfeatures2d.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/stitching/detail/matchers.hpp>
@@ -17,7 +17,7 @@
 using namespace cv;
 using namespace std;
 using namespace cv::detail;
-using namespace cv::xfeatures2d;
+//using namespace cv::xfeatures2d;
 
 #ifndef OPTONAUT_PAIRWISE_VISUAL_ALIGNMENT_HEADER
 #define OPTONAUT_PAIRWISE_VISUAL_ALIGNMENT_HEADER
@@ -113,7 +113,7 @@ private:
     void AllocateDebug(const InputImageP &a, const InputImageP &b) {
         if(!debug) return;
         AssertEQ(a->image.size(), b->image.size());
-        debugTarget = Mat::zeros(Size(a->image.cols * 3, a->image.rows), CV_8UC3); 
+        debugTarget = Mat::zeros(cv::Size(a->image.cols * 3, a->image.rows), CV_8UC3);
     }
 
     void DrawImageFeaturesDebug(const InputImageP &a, 
@@ -124,10 +124,10 @@ private:
             vector<DMatch> matches; 
         
             a->image.data.copyTo(
-                debugTarget(Rect(0, 0, a->image.cols, a->image.rows)));
+                debugTarget(cv::Rect(0, 0, a->image.cols, a->image.rows)));
 
             b->image.data.copyTo(
-                debugTarget(Rect(a->image.cols, 0, a->image.cols, a->image.rows)));
+                debugTarget(cv::Rect(a->image.cols, 0, a->image.cols, a->image.rows)));
 
             drawMatches(a->image.data, keypoints1, 
                     b->image.data, keypoints2, 
@@ -152,7 +152,7 @@ private:
         HomographyFromImages(a, b, estHom, estRot);
 
         a->image.data.copyTo(
-                debugTarget(Rect(o.x, 0, a->image.cols, a->image.rows)));
+                debugTarget(cv::Rect(o.x, 0, a->image.cols, a->image.rows)));
 
         // Green: Flow field from features
         // Blue: Flow field from homography
@@ -386,7 +386,7 @@ public:
             Mat ga, gb; 
             
             vector<Point2f> flowA(fun::map<KeyPoint, Point2f>(aFeatures.keypoints, 
-                        [](auto k) { return k.pt; }));
+                        [](KeyPoint k) { return k.pt; }));
             vector<Point2f> flowB(flowA.size());
 
             cvtColor(a->image.data, ga, CV_RGB2GRAY);

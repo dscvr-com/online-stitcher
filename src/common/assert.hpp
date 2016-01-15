@@ -134,7 +134,7 @@ namespace optonaut {
         #include "TargetConditionals.h"
         #if TARGET_OS_IPHONE
         inline void AssertFalseInProduction_(bool val, std::string var) {
-            Assert(!val, "", var, false);
+            Assert_(!val, "", var, false);
         }
         #else
             inline void AssertFalseInProduction_(bool, std::string) { }

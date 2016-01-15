@@ -106,7 +106,7 @@ class PyramidPlanarAligner {
 
                 if(debug) {
 
-                    Rect roi(guess.x * 2 - corrBf.cols / 2 + corr.cols / 2 + corrXOff,
+                    cv::Rect roi(guess.x * 2 - corrBf.cols / 2 + corr.cols / 2 + corrXOff,
                              guess.y * 2 - corrBf.rows / 2 + corr.rows / 2 + corrYOff,
                              corrBf.cols, corrBf.rows);
 
@@ -164,7 +164,7 @@ class PyramidPlanarAligner {
             auto target = stitcher.Stitch(
                     {std::make_shared<Image>(Image(a)), 
                     std::make_shared<Image>(Image(b))}, 
-                    {res, Point(0, 0)});
+                    {res, cv::Point(0, 0)});
 
             //DrawMatchingResults(hom, eye, a, b, target);
             

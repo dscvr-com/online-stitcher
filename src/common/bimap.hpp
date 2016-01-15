@@ -38,11 +38,11 @@ namespace optonaut {
             return false;
         }
 
-        auto begin() const {
+        typename std::map<V, T>::iterator begin() const {
             return forward.begin();
         }
 
-        auto end() const {
+        typename std::map<V, T>::iterator end() const {
             return forward.end();
         }
         

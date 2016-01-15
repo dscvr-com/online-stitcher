@@ -76,7 +76,7 @@ public:
         if(forceWholeImage) {
             overlappingRoi = cv::Rect(appliedBorder + overlappingRoi.tl(), 
                     a->image.size());
-            appliedBorder = Point(0, 0);
+            appliedBorder = cv::Point(0, 0);
             wa = a->image.data;
             wb = b->image.data;
         }
