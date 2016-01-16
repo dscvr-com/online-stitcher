@@ -1,7 +1,6 @@
 #include <type_traits>
 
 #include <opencv2/features2d.hpp>
-//#include <opencv2/xfeatures2d.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/stitching/detail/matchers.hpp>
@@ -17,7 +16,10 @@
 using namespace cv;
 using namespace std;
 using namespace cv::detail;
-//using namespace cv::xfeatures2d;
+
+//TODO - exclude from compile target IOS
+#include <opencv2/xfeatures2d.hpp>
+using namespace cv::xfeatures2d;
 
 #ifndef OPTONAUT_PAIRWISE_VISUAL_ALIGNMENT_HEADER
 #define OPTONAUT_PAIRWISE_VISUAL_ALIGNMENT_HEADER

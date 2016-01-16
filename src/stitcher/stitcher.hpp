@@ -27,7 +27,7 @@ namespace optonaut {
             store(store), core(width, height, store) {
         }
 
-        StitchingResultP Finish(ProgressCallback &progress, bool debug = false, string debugName = "") {
+        StitchingResultP Finish(ProgressCallback &progress, std::string debugName = "") {
             vector<vector<InputImageP>> rings;
             ExposureCompensator exposure;
             map<size_t, double> gains;
@@ -39,7 +39,7 @@ namespace optonaut {
             StitchingResultP res;
             
             core.InitializeForStitching(rings, exposure, 0.4);
-            res = core.Stitch(progress, debug, debugName);
+            res = core.Stitch(progress, debugName);
 
             return res;
         }

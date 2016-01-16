@@ -131,7 +131,7 @@ namespace optonaut {
         this->dyCache = vector<int>();
     }
     
-    StitchingResultP MultiRingStitcher::StitchRing(const vector<InputImageP> &ring, ProgressCallback &progress, int ringId, bool debug, const string &debugName) const {
+    StitchingResultP MultiRingStitcher::StitchRing(const vector<InputImageP> &ring, ProgressCallback &progress, int ringId) const {
         
         cout << "Attempting to stitch ring " << ringId << endl;
 
@@ -142,9 +142,9 @@ namespace optonaut {
             return res;
         }
         
-        RingStitcher stitcher(store);
+        RingStitcher stitcher;
         
-        res = stitcher.Stitch(ring, exposure, progress, ev, debug, debugName);
+        res = stitcher.Stitch(ring, exposure, progress, ev);
         res->id = ringId;
 
         if(store.SupportsPaging()) {
@@ -157,7 +157,7 @@ namespace optonaut {
         return res;
     }
 
-    StitchingResultP MultiRingStitcher::Stitch(ProgressCallback &progress, bool debug, const string &debugName) {
+    StitchingResultP MultiRingStitcher::Stitch(ProgressCallback &progress, const string &debugName) {
 
         stitcherTimer.Tick("StitchStart");
         
@@ -188,7 +188,7 @@ namespace optonaut {
                 continue;
             }
             
-            auto res = StitchRing(rings[i], progressCallbacks.At(i), (int)i, debug, debugName);
+            auto res = StitchRing(rings[i], progressCallbacks.At(i), (int)i);
             
             stitchedRings.push_back(res);
 
