@@ -8,13 +8,10 @@
 using namespace cv;
 using namespace std;
 
-#define _USE_MATH_DEFINES
-
 #ifndef OPTONAUT_IMAGE_SELECTOR_HEADER
 #define OPTONAUT_IMAGE_SELECTOR_HEADER
 
 namespace optonaut {
-
     class ImageSelector {
         private: 
             typedef std::function<void(SelectionInfo)> MatchCallback;
@@ -30,7 +27,7 @@ namespace optonaut {
 
             SelectionInfo current;
 
-            void MoveToNextRing(const Mat &cur) {
+            void MoveToNextRing() {
 
                 int ringCount = (int)graph.ringCount;
                 int newRing = GetNextRing(); 
@@ -84,7 +81,10 @@ namespace optonaut {
 
                 SelectionPoint next;
                 double dist = graph.FindClosestPoint(image->adjustedExtrinsics, 
-                        current, currentRing);
+                        next, currentRing);
+
+                if(dist > tolerance) 
+                    return;
 
                 if(!current.isValid) {
                     // Init case - remember this point. 
@@ -93,11 +93,13 @@ namespace optonaut {
                     current.dist = dist;
                     current.isValid = true;
                 } else {
-                    if(next.closestPoint.globalId == current.closestPoint.globalId) {
+                    if(next.globalId == current.closestPoint.globalId) {
                         if(dist < current.dist) {
                             // Better match.
                             current.dist = dist;
                             current.closestPoint = next;
+                            current.image = image;
+                            current.isValid = true;
                         }
                     } else {
                         // New Match
@@ -109,31 +111,37 @@ namespace optonaut {
                             if(realNext.globalId == next.globalId) {
                                 // Valid edge, notify and advance.
                                 // Else, ignore. 
-                                graph.MarkEdgeAsRecorded(current, next);
+                                graph.MarkEdgeAsRecorded(current.closestPoint, next);
 
                                 callback(current);
 
                                 if(graph.GetNextForRecording(next, realNext)) {
-                                    current = next;
+                                    current.closestPoint = next;
+                                    current.dist = dist;
+                                    current.image = image;
+                                    current.isValid = true;
                                 } else {
                                     int nextRing = GetNextRing();
                                     if(nextRing < 0 
                                             || nextRing >= (int)graph.ringCount) {
-                                        AssertW(!isFinished, "Already finished");
+                                        AssertWM(!isFinished, "Already finished");
                                         isFinished = true;
                                     } else {
-                                        MoveToNextRing(image->adjustedExtrinsics);
+                                        MoveToNextRing();
                                     }
                                 }
                             }
                         } else {
                             callback(current);
-                            current = next;
+                            current.closestPoint = next;
+                            current.dist = dist;
+                            current.image = image;
+                            current.isValid = true;
                         }
                     } 
                 }
             }
-    }
+    };
 }
 
 #endif

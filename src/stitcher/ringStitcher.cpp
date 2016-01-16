@@ -40,26 +40,26 @@ void RingStitcher::PrepareMatrices(const vector<InputImageP> &r) {
 void AsyncRingStitcher::Feed(const StitchingResultP &in) {
     STimer feedTimer;
 
-    exposure.Apply(in->image.data, in->id, ev);
-
     Rect imageRoi(in->corner, in->image.size());
     Rect overlap = imageRoi & resultRoi;
+    Mat warpedImageAsShort;
+    in->image.data.convertTo(warpedImageAsShort, CV_16S);
 
     Rect overlapI(0, 0, overlap.width, overlap.height);
 
     if(overlap.width == imageRoi.width) {
         //Image fits.
-        blender->feed(in->image.data(overlapI), in->mask.data(overlapI), in->corner);
+        blender->feed(warpedImageAsShort(overlapI), in->mask.data(overlapI), in->corner);
     } else {
         //Image overlaps on X-Axis and we have to blend two parts.
-        blender->feed(in->image.data(overlapI), 
+        blender->feed(warpedImageAsShort(overlapI), 
                 in->mask.data(overlapI), 
                 overlap.tl());
 
         Rect other(resultRoi.x, overlap.y, 
                 imageRoi.width - overlap.width, overlap.height);
         Rect otherI(overlap.width, 0, other.width, other.height);
-        blender->feed(in->image.data(otherI), 
+        blender->feed(warpedImageAsShort(otherI), 
                 in->mask.data(otherI), 
                 other.tl());
     }
@@ -93,9 +93,7 @@ void AsyncRingStitcher::FindSeams(const StitchingResultP &a,
 
 AsyncRingStitcher::AsyncRingStitcher(
         const InputImageP img, vector<Mat> rotations,
-        const ExposureCompensator &exposure, double ev) :
-            ev(ev), 
-            exposure(exposure), 
+        float warperScale, int roiBuffer) :
             queue(1, 
                 std::bind(&AsyncRingStitcher::FindSeams, this, 
                     std::placeholders::_1, std::placeholders::_2), 
@@ -111,9 +109,8 @@ AsyncRingStitcher::AsyncRingStitcher(
     corners.resize(n);
     warpedSizes.resize(n);
 
-    Ptr<WarperCreator> warperFactory = new cv::SphericalWarper();
+    warperFactory = new cv::SphericalWarper();
     warper = warperFactory->create(static_cast<float>(warperScale));
-    warperFactory.release();
 
     Mat scaledK;
     ScaleIntrinsicsToImage(img->intrinsics, img->image, scaledK);
@@ -135,10 +132,13 @@ AsyncRingStitcher::AsyncRingStitcher(
 
     //Blending
     MultiBandBlender* mb;
-	blender = Blender::createDefault(cv::detail::Blender::MULTI_BAND, false);
+	blender = Blender::createDefault(cv::detail::Blender::FEATHER, false);
     mb = dynamic_cast<MultiBandBlender*>(blender.get());
     mb->setNumBands(5);
     resultRoi = cv::detail::resultRoi(corners, warpedSizes);
+    resultRoi = Rect(resultRoi.x - roiBuffer, resultRoi.y - roiBuffer,
+                     resultRoi.width + roiBuffer * 2, 
+                     resultRoi.height + roiBuffer * 2);
     blender->prepare(resultRoi);
 
     //Prepare global masks and distortions. 
@@ -224,8 +224,6 @@ StitchingResultP AsyncRingStitcher::Finalize() {
     queue.Flush();
 
     STimer timer;
-    
-    warper.release();
 
 	StitchingResultP res(new StitchingResult());
     {
@@ -238,6 +236,8 @@ StitchingResultP AsyncRingStitcher::Finalize() {
         res->mask = Image(resMask);
     }
     blender.release();
+    warper.release();
+    warperFactory.release();
 
     res->corner.x = corners[0].x;
     res->corner.y = corners[0].y;

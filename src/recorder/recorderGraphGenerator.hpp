@@ -13,8 +13,8 @@ using namespace std;
 
 #define _USE_MATH_DEFINES
 
-#ifndef OPTONAUT_IMAGE_SELECTOR_HEADER
-#define OPTONAUT_IMAGE_SELECTOR_HEADER
+#ifndef OPTONAUT_RECORDER_GRAPH_GENERATOR_HEADER
+#define OPTONAUT_RECORDER_GRAPH_GENERATOR_HEADER
 
 namespace optonaut {
 
@@ -225,12 +225,18 @@ public:
 
         return *it;
     }
+    static RecorderGraph Sparse(const RecorderGraph &in, int skip) {
+        BiMap<size_t, uint32_t> x; 
+        BiMap<size_t, uint32_t> y;
+        BiMap<uint32_t, uint32_t> z;
 
-    static RecorderGraph Sparse(const RecorderGraph &in, 
+        return Sparse(in, skip, x, y, z); 
+    }
+
+    static RecorderGraph Sparse(const RecorderGraph &in, int skip,
             const BiMap<size_t, uint32_t> &denseImages, 
             BiMap<size_t, uint32_t> &sparseImagesToTargets,
-            BiMap<uint32_t, uint32_t> &denseToSparse, 
-            int skip) {
+            BiMap<uint32_t, uint32_t> &denseToSparse) {
 
         RecorderGraph sparse(in.ringCount, in.intrinsics);
 
@@ -257,15 +263,17 @@ public:
             for(size_t j = 0; j < rings[i].size(); j += skip) {
                 SelectionPoint copy = rings[i][j];
                 size_t imageId;
-                Assert(denseImages.GetKey(copy.globalId, imageId));
-                
-                denseToSparse.Insert(copy.globalId, globalId);
-                sparseImagesToTargets.Insert(imageId, globalId);
+
+                if(denseImages.Size() > 0) {
+                    Assert(denseImages.GetKey(copy.globalId, imageId));
+                    
+                    denseToSparse.Insert(copy.globalId, globalId);
+                    sparseImagesToTargets.Insert(imageId, globalId);
+                }
 
                 copy.localId = localId;
                 copy.globalId = globalId;
                 copy.ringSize = newRingSize;
-
                 hqueue.Push(copy);
 
                 localId++;

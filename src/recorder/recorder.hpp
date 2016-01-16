@@ -10,6 +10,7 @@
 #include "../common/progressCallback.hpp"
 #include "../common/reduceProcessor.hpp"
 #include "../stitcher/simpleSphereStitcher.hpp"
+#include "../stitcher/ringStitcher.hpp"
 #include "../debug/debugHook.hpp"
 
 #include "recorderGraph.hpp"
@@ -19,6 +20,7 @@
 #include "asyncAligner.hpp"
 #include "trivialAligner.hpp"
 #include "ringwiseStreamAligner.hpp"
+#include "asyncTolerantRingRecorder.hpp"
 
 #include <chrono>
 
@@ -78,6 +80,9 @@ namespace optonaut {
 
         vector<SelectionInfo> firstRing;
         vector<InputImageP> firstRingImagePool;
+
+        std::shared_ptr<AsyncTolerantRingRecorder> previewRecorder;
+        RecorderGraph previewGraph;
         
         STimer monoTimer;
         STimer pipeTimer;
@@ -118,7 +123,7 @@ namespace optonaut {
             generator(),
             recorderGraph(generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityNormal)),
             controller(recorderGraph),
-            preRecorderGraph(generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityDouble, 8)),
+            preRecorderGraph(generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityDouble, 0, 4)),
             preController(preRecorderGraph),
             imagesToRecord(preRecorderGraph.Size()),
             recordedImages(0),
@@ -147,6 +152,7 @@ namespace optonaut {
             saveQueue(
                     std::bind(&Recorder::SaveStereoResult,
                     this, placeholders::_1)),
+            previewGraph(RecorderGraphGenerator::Sparse(preRecorderGraph, 2)),
             debugPath(debugPath)
         {
             baseInv = base.inv();
@@ -316,6 +322,27 @@ namespace optonaut {
                 exposure.Register(a, b);
             }
         }
+
+        void PushToPreview(const InputImageP in) {
+            if(previewRecorder == nullptr) {
+                previewRecorder = 
+                    std::make_shared<AsyncTolerantRingRecorder>(in, previewGraph);
+            }
+
+            previewRecorder->Push(in);
+        }
+
+        bool PreviewAvailable() {
+            return previewRecorder != nullptr;
+        }
+
+        StitchingResultP FinishPreview() {
+            Assert(previewRecorder != nullptr);
+            StitchingResultP res = previewRecorder->Finalize();
+            previewRecorder = nullptr;
+
+            return res;
+        }
         
         void ForwardToMonoQueue(const SelectionInfo &in) {
             
@@ -406,6 +433,7 @@ namespace optonaut {
             }
 
             for(size_t i = 0; i < m; i++) {
+                PushToPreview(firstRing[i].image);
                 ForwardToMonoQueueEx(firstRing[i]);
                 firstRing[i].image = NULL; //Decrement our ref to the loaded instance
             }

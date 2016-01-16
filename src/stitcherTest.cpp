@@ -62,6 +62,12 @@ void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &
         }
 
         recorder->Push(image);
+
+        if(recorder->PreviewAvailable()) {
+            auto preview = recorder->FinishPreview();
+
+            imwrite("dbg/preview.jpg", preview->image.data);
+        }
         tmpMat.release();
 
         if(isAsync) {
@@ -125,7 +131,7 @@ int main(int argc, char** argv) {
 
     {
         cout << "Start left stitcher." << endl;
-        Stitcher leftStitcher(leftStore);
+        optonaut::Stitcher leftStitcher(leftStore);
         auto left = leftStitcher.Finish(callbacks.At(0), "dbg/left");
         imwrite("dbg/left.jpg", left->image.data);
         left->image.Unload();  
@@ -133,7 +139,7 @@ int main(int argc, char** argv) {
     }
     {
         cout << "Start right stitcher." << endl;
-        Stitcher rightStitcher(rightStore);
+        optonaut::Stitcher rightStitcher(rightStore);
         auto right = rightStitcher.Finish(callbacks.At(1), "dbg/right");
         imwrite("dbg/right.jpg", right->image.data);    
         right->image.Unload();  

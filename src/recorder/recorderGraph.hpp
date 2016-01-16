@@ -101,6 +101,10 @@ namespace optonaut {
             return targets;
         }
         
+        const vector<SelectionPoint*> &GetTargetsById() const {
+            return targetsById;
+        }
+        
         void RemoveEdge(const SelectionPoint& left, const SelectionPoint& right) {
             for(auto it = adj[left.globalId].begin(); it != adj[left.globalId].end(); it++) {
                 if(it->to == right.globalId) {

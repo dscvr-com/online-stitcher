@@ -144,7 +144,7 @@ namespace optonaut {
         
         RingStitcher stitcher;
         
-        res = stitcher.Stitch(ring, exposure, progress, ev);
+        res = stitcher.Stitch(ring, progress);
         res->id = ringId;
 
         if(store.SupportsPaging()) {

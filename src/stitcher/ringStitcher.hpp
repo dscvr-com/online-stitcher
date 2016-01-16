@@ -1,5 +1,7 @@
 #include <vector>
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/stitching/detail/blenders.hpp>
+#include <opencv2/stitching.hpp>
 #include <opencv2/opencv.hpp>
 #include <memory>
 
@@ -18,11 +20,10 @@ namespace optonaut {
 class AsyncRingStitcher {
     private:
         size_t n;
-        double ev;
-        const ExposureCompensator &exposure;
 
         cv::Ptr<cv::detail::Blender> blender;
         cv::Ptr<cv::detail::RotationWarper> warper;
+        cv::Ptr<cv::WarperCreator> warperFactory;
         std::vector<cv::Point> corners;
         std::vector<cv::Size> warpedSizes;
         cv::UMat uxmap, uymap;
@@ -35,14 +36,10 @@ class AsyncRingStitcher {
         void FindSeams(const StitchingResultP &a, const StitchingResultP &b);
         void Feed(const StitchingResultP &in);
     public:
-		bool compensate = false;
-		float workScale = 0.2f;
-		float warperScale = 1200;
 
         AsyncRingStitcher(const InputImageP firstImage, 
-                std::vector<cv::Mat> rotations, 
-                const ExposureCompensator &exposure, 
-                double ev = 0);
+                std::vector<cv::Mat> rotations, float warperScale = 400, 
+                int roiBuffer = 100);
 
         void Push(const InputImageP image);
 
@@ -52,12 +49,12 @@ class AsyncRingStitcher {
 //Fast pure R-Matrix based stitcher
 class RingStitcher {
 	public:
-    StitchingResultP Stitch(const std::vector<InputImageP> &images, const ExposureCompensator &exposure, ProgressCallback &progress, double ev = 0) {
+    StitchingResultP Stitch(const std::vector<InputImageP> &images, ProgressCallback &progress) {
 
         std::vector<Mat> rotations = fun::map<InputImageP, Mat>(images, 
                 [](const InputImageP &i) { return i->adjustedExtrinsics; }); 
 
-        AsyncRingStitcher core(images[0], rotations, exposure, ev);
+        AsyncRingStitcher core(images[0], rotations, 1200, 0);
 
         //TODO: Place all IO, exposure compensation and so on here. 
         

@@ -45,6 +45,10 @@ namespace optonaut {
         typename std::map<V, T>::iterator end() const {
             return forward.end();
         }
+
+        size_t Size() const {
+            return forward.size();
+        }
         
     };
 }
