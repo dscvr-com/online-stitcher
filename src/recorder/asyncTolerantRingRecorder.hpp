@@ -12,10 +12,10 @@ class AsyncTolerantRingRecorder {
         AsyncRingStitcher stitcher;
         ImageSelector selector;
     public:
-        AsyncTolerantRingRecorder(const InputImageP &firstImage, 
+        AsyncTolerantRingRecorder(const SelectionInfo &firstImage, 
                 RecorderGraph &graph, float warperScale = 400) :
             // For initialization, take extrinsics from grap
-            stitcher(firstImage,
+            stitcher(MonoStitcher::RectifySingle(firstImage),
                    fun::map<SelectionPoint*, Mat>(graph.GetTargetsById(), 
                        [](auto x) {
                             return x->extrinsics;
@@ -32,8 +32,10 @@ class AsyncTolerantRingRecorder {
 
         }
 
-        void PushToStitcher(const SelectionInfo info) {
-            stitcher.Push(info.image);
+        void PushToStitcher(SelectionInfo info) {
+            AutoLoad q(info.image);
+            stitcher.Push(MonoStitcher::RectifySingle(info));
+            //stitcher.Push(info.image);
         }
 
         void Push(const InputImageP img) {
@@ -41,6 +43,7 @@ class AsyncTolerantRingRecorder {
         }
 
         StitchingResultP Finalize() {
+            selector.Flush();
             return stitcher.Finalize();
         }
 };

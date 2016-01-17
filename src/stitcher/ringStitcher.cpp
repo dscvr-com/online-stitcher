@@ -40,10 +40,11 @@ void RingStitcher::PrepareMatrices(const vector<InputImageP> &r) {
 void AsyncRingStitcher::Feed(const StitchingResultP &in) {
     STimer feedTimer;
 
-    Rect imageRoi(in->corner, in->image.size());
-    Rect overlap = imageRoi & resultRoi;
     Mat warpedImageAsShort;
     in->image.data.convertTo(warpedImageAsShort, CV_16S);
+
+    Rect imageRoi(in->corner, in->image.size());
+    Rect overlap = imageRoi & resultRoi;
 
     Rect overlapI(0, 0, overlap.width, overlap.height);
 
@@ -64,12 +65,20 @@ void AsyncRingStitcher::Feed(const StitchingResultP &in) {
                 other.tl());
     }
 
+    warpedImageAsShort.release();
+
     feedTimer.Tick("Image Fed");
 };
 
 //Seam finder function. 
 void AsyncRingStitcher::FindSeams(const StitchingResultP &a, 
         const StitchingResultP &b) {
+
+    // Nope, no seams.
+    if(fast) {
+        return;
+    }
+
     Point aCorner = a->corner;
 
     if(aCorner.x > b->corner.x) {
@@ -93,12 +102,13 @@ void AsyncRingStitcher::FindSeams(const StitchingResultP &a,
 
 AsyncRingStitcher::AsyncRingStitcher(
         const InputImageP img, vector<Mat> rotations,
-        float warperScale, int roiBuffer) :
-            queue(1, 
-                std::bind(&AsyncRingStitcher::FindSeams, this, 
-                    std::placeholders::_1, std::placeholders::_2), 
-                std::bind(&AsyncRingStitcher::Feed, this, std::placeholders::_1)) {
-
+        float warperScale, bool fast, int roiBuffer) :
+    queue(1, 
+        std::bind(&AsyncRingStitcher::FindSeams, this, 
+            std::placeholders::_1, std::placeholders::_2), 
+        std::bind(&AsyncRingStitcher::Feed, this, std::placeholders::_1)),
+    fast(fast) {
+    
     STimer timer; 
     timer.Tick("Async Preperation");
 
@@ -131,10 +141,15 @@ AsyncRingStitcher::AsyncRingStitcher(
     }
 
     //Blending
-    MultiBandBlender* mb;
-	blender = Blender::createDefault(cv::detail::Blender::FEATHER, false);
-    mb = dynamic_cast<MultiBandBlender*>(blender.get());
-    mb->setNumBands(5);
+    if(fast) {
+        blender = Blender::createDefault(cv::detail::Blender::FEATHER, false);
+    } else {
+        MultiBandBlender* mb;
+        blender = Blender::createDefault(cv::detail::Blender::MULTI_BAND, false);
+        mb = dynamic_cast<MultiBandBlender*>(blender.get());
+        mb->setNumBands(5);
+    }
+
     resultRoi = cv::detail::resultRoi(corners, warpedSizes);
     resultRoi = Rect(resultRoi.x - roiBuffer, resultRoi.y - roiBuffer,
                      resultRoi.width + roiBuffer * 2, 
@@ -230,7 +245,9 @@ StitchingResultP AsyncRingStitcher::Finalize() {
         Mat resImage, resMask;
         blender->blend(resImage, resMask);
 
-        resImage.convertTo(resImage, CV_8U);
+        if(resImage.type() != CV_8UC3) {
+            resImage.convertTo(resImage, CV_8UC3);
+        }
 
         res->image = Image(resImage);
         res->mask = Image(resMask);

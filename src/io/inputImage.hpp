@@ -23,7 +23,8 @@ namespace optonaut {
         int height;
         int colorSpace;
 
-        InputImageRef() : data(NULL), width(0), height(0), colorSpace(colorspace::RGBA) { }
+        InputImageRef() : data(NULL), width(0), height(0), 
+        colorSpace(colorspace::RGBA) { }
 
         void Invalidate() {
             data = NULL;
@@ -70,6 +71,25 @@ namespace optonaut {
     typedef std::shared_ptr<InputImage> InputImageP;
     
     InputImageP CloneAndDownsample(InputImageP image);
+
+    class AutoLoad {
+        private:
+            InputImageP image;
+            bool didLoad;
+        public: 
+            AutoLoad(InputImageP &image) : image(image), didLoad(false) {
+                if(!image->image.IsLoaded()) {
+                    didLoad = true;
+                    image->image.Load();
+                }
+            }
+
+            ~AutoLoad() {
+                if(didLoad) {
+                    image->image.Unload();
+                }
+            }
+    };
 }
 
 

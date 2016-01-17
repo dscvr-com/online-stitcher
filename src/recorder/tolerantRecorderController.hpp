@@ -42,7 +42,7 @@ namespace optonaut {
             
             //Constraint at least a little. 
             if(current.dist > tolerance) {
-                cout << "Tolerant recorder rejected because of tolerance" << endl;
+                //cout << "Tolerant recorder rejected because of tolerance" << endl;
                 return best;    
             }
 
@@ -56,11 +56,11 @@ namespace optonaut {
             if(!best.isValid || 
                     current.closestPoint.globalId != best.closestPoint.globalId ||
                     current.dist < best.dist) {
-                cout << "Tolerant recorder found a better match: " << current.closestPoint.globalId << endl;
+                //cout << "Tolerant recorder found a better match: " << current.closestPoint.globalId << endl;
                 //done.insert(best.closestPoint.globalId);
                 best = current;
             } else {
-                cout << "Tolerant recorder rejected because match was not better" << endl;
+                //cout << "Tolerant recorder rejected because match was not better" << endl;
             }
 
             return best;

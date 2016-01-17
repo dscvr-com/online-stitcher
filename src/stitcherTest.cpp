@@ -67,6 +67,8 @@ void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &
             auto preview = recorder->FinishPreview();
 
             imwrite("dbg/preview.jpg", preview->image.data);
+
+            std::abort();
         }
         tmpMat.release();
 

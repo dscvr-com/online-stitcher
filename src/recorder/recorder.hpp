@@ -83,6 +83,7 @@ namespace optonaut {
 
         std::shared_ptr<AsyncTolerantRingRecorder> previewRecorder;
         RecorderGraph previewGraph;
+        bool previewImageFinished;
         
         STimer monoTimer;
         STimer pipeTimer;
@@ -152,7 +153,11 @@ namespace optonaut {
             saveQueue(
                     std::bind(&Recorder::SaveStereoResult,
                     this, placeholders::_1)),
-            previewGraph(RecorderGraphGenerator::Sparse(preRecorderGraph, 2)),
+            previewGraph(RecorderGraphGenerator::Sparse(
+                        preRecorderGraph, 
+                        2, 
+                        recorderGraph.ringCount / 2)),
+            previewImageFinished(false),
             debugPath(debugPath)
         {
             baseInv = base.inv();
@@ -323,23 +328,27 @@ namespace optonaut {
             }
         }
 
-        void PushToPreview(const InputImageP in) {
+        void PushToPreview(SelectionInfo in) {
             if(previewRecorder == nullptr) {
+                AutoLoad q(in.image);
                 previewRecorder = 
                     std::make_shared<AsyncTolerantRingRecorder>(in, previewGraph);
             }
 
-            previewRecorder->Push(in);
+            previewRecorder->Push(in.image);
         }
 
         bool PreviewAvailable() {
-            return previewRecorder != nullptr;
+            return previewImageFinished;
         }
 
         StitchingResultP FinishPreview() {
+            STimer finishPreview;
             Assert(previewRecorder != nullptr);
             StitchingResultP res = previewRecorder->Finalize();
             previewRecorder = nullptr;
+            previewImageFinished = false;
+            finishPreview.Tick("Finish Preview");
 
             return res;
         }
@@ -359,6 +368,9 @@ namespace optonaut {
             }
             
             if(!firstRingFinished) {
+                STimer syncPreviewPush;
+                PushToPreview(in);
+                syncPreviewPush.Tick("Synchronous Preview Push");
                 if(firstRing.size() == 0
                         || firstRing.back().closestPoint.globalId != 
                         in.closestPoint.globalId) {
@@ -375,6 +387,7 @@ namespace optonaut {
         void FinishFirstRing() {
             AssertM(!firstRingFinished, "First ring has not been closed");
             firstRingFinished = true;
+            previewImageFinished = true;
 
             PairwiseCorrelator corr;
             firstRingImagePool.back()->image.Load();
@@ -398,7 +411,7 @@ namespace optonaut {
                 firstRingImagePool[i]->adjustedExtrinsics = correction * 
                     firstRingImagePool[i]->adjustedExtrinsics;
 
-                cout << "Applying correction of " << ydiff << " to image " << firstRingImagePool[i]->id << endl;
+                //cout << "Applying correction of " << ydiff << " to image " << firstRingImagePool[i]->id << endl;
             }
 
     
@@ -433,10 +446,10 @@ namespace optonaut {
             }
 
             for(size_t i = 0; i < m; i++) {
-                PushToPreview(firstRing[i].image);
                 ForwardToMonoQueueEx(firstRing[i]);
                 firstRing[i].image = NULL; //Decrement our ref to the loaded instance
             }
+
            
             firstRingImagePool.clear();
             firstRing.clear();

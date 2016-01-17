@@ -33,13 +33,14 @@ class AsyncRingStitcher {
         RingProcessor<StitchingResultP> queue;
         cv::Mat warpedMask;
         cv::Mat K;
+        bool fast;
         void FindSeams(const StitchingResultP &a, const StitchingResultP &b);
         void Feed(const StitchingResultP &in);
     public:
 
         AsyncRingStitcher(const InputImageP firstImage, 
-                std::vector<cv::Mat> rotations, float warperScale = 400, 
-                int roiBuffer = 100);
+                std::vector<cv::Mat> rotations, float warperScale = 300, 
+                bool fast = true, int roiBuffer = 0);
 
         void Push(const InputImageP image);
 
@@ -54,7 +55,7 @@ class RingStitcher {
         std::vector<Mat> rotations = fun::map<InputImageP, Mat>(images, 
                 [](const InputImageP &i) { return i->adjustedExtrinsics; }); 
 
-        AsyncRingStitcher core(images[0], rotations, 1200, 0);
+        AsyncRingStitcher core(images[0], rotations, 1200, false, 0);
 
         //TODO: Place all IO, exposure compensation and so on here. 
         

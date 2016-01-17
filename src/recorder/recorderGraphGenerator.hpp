@@ -225,33 +225,38 @@ public:
 
         return *it;
     }
-    static RecorderGraph Sparse(const RecorderGraph &in, int skip) {
+    static RecorderGraph Sparse(const RecorderGraph &in, int skip, int ring = -1) {
         BiMap<size_t, uint32_t> x; 
         BiMap<size_t, uint32_t> y;
         BiMap<uint32_t, uint32_t> z;
 
-        return Sparse(in, skip, x, y, z); 
+        return Sparse(in, skip, x, y, z, ring); 
     }
 
     static RecorderGraph Sparse(const RecorderGraph &in, int skip,
             const BiMap<size_t, uint32_t> &denseImages, 
             BiMap<size_t, uint32_t> &sparseImagesToTargets,
-            BiMap<uint32_t, uint32_t> &denseToSparse) {
+            BiMap<uint32_t, uint32_t> &denseToSparse, 
+            int ring = -1) {
 
-        RecorderGraph sparse(in.ringCount, in.intrinsics);
+        int ringCount = ring < 0 ? in.ringCount : ring;
+        size_t startRing = ring < 0 ? 0 : ring;
+        size_t endRing = ring < 0 ? in.ringCount : ring + 1;
+
+        RecorderGraph sparse(ringCount, in.intrinsics);
 
         size_t globalId = 0;
         size_t localId = 0;
 
         const auto &rings = in.GetRings();
-        for(size_t i = 0; i < rings.size(); i++) {
+        for(size_t i = startRing; i < endRing; i++) {
 
-            int newRingSize = rings[i].size() / skip;
+            int newRingSize = (rings[i].size()) / skip;
 
             AssertEQM(newRingSize * skip, (int)rings[i].size(), 
                     "Ring size divisible by skip factor");
 
-            AssertEQ((uint32_t)i, sparse.AddNewRing(rings[i].size() / skip));
+            AssertEQ((uint32_t)(i - startRing), sparse.AddNewRing(newRingSize));
             
             RingProcessor<SelectionPoint> hqueue(1, 
                     bind(CreateEdge, std::ref(sparse), 
@@ -259,6 +264,7 @@ public:
                     bind(AddNode, std::ref(sparse), placeholders::_1));
 
             localId = 0;
+            int c = 0;
 
             for(size_t j = 0; j < rings[i].size(); j += skip) {
                 SelectionPoint copy = rings[i][j];
@@ -271,14 +277,19 @@ public:
                     sparseImagesToTargets.Insert(imageId, globalId);
                 }
 
+                copy.ringId = i - startRing;
                 copy.localId = localId;
                 copy.globalId = globalId;
                 copy.ringSize = newRingSize;
+                copy.hFov *= skip;
                 hqueue.Push(copy);
 
                 localId++;
                 globalId++;
+                c++;
             }
+
+            AssertEQM(c, newRingSize, "Size calculation was correct");
 
             hqueue.Flush();
         }
@@ -349,7 +360,7 @@ public:
 			uint32_t hCount = hCenterCount * cos(vCenter);
            
             if(hCount % divider != 0) { 
-                hCount += divider - (hCount % divider);
+                hCount += divider - ((hCount) % divider);
             }
 			hFov = M_PI * 2 / hCount;
 

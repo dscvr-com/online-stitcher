@@ -13,3 +13,6 @@ target_link_libraries(async-queue-test optonaut-lib)
 add_executable(slerp-test slerpTest.cpp)
 target_link_libraries(slerp-test optonaut-lib)
 
+add_executable(graph-test graphTest.cpp)
+target_link_libraries(graph-test optonaut-lib)
+

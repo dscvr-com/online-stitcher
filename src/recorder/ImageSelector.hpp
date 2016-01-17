@@ -76,6 +76,12 @@ namespace optonaut {
             SelectionInfo GetCurrent() {
                 return current;
             }
+
+            void Flush() {
+                if(current.isValid) {
+                    callback(current);
+                }
+            }
         
             void Push(const InputImageP image) {
 
@@ -114,6 +120,8 @@ namespace optonaut {
                                 graph.MarkEdgeAsRecorded(current.closestPoint, next);
 
                                 callback(current);
+
+                                current.isValid = false;
 
                                 if(graph.GetNextForRecording(next, realNext)) {
                                     current.closestPoint = next;

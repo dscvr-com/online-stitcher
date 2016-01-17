@@ -29,6 +29,7 @@ namespace optonaut {
         public:
             MonoStitcher() { }
             void CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo);
+            static InputImageP RectifySingle(const SelectionInfo &a);
     };
 }
 

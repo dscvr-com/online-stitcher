@@ -72,6 +72,12 @@ const double vBufferRatio = 0.05;
 void GetTargetArea(const SelectionPoint &a, const SelectionPoint &b, Mat &center, vector<Mat> &corners) {
     double hLeft = a.hPos;
     double hRight = b.hPos;
+
+    if(a.globalId == b.globalId) {
+        hLeft = a.hPos - a.hFov / 2;
+        hRight = a.hPos + a.hFov / 2;
+    }
+
     if(hLeft > hRight) {
         //Corner case - ring closing. 
         hRight += 2 * M_PI;
@@ -126,6 +132,33 @@ void MapToTarget(const InputImageP a, const StereoTarget &target, Mat &result, M
 
     warpPerspective(a->image.data, result, transformationF, target.size, 
             INTER_LINEAR, BORDER_CONSTANT, 0);
+}
+
+InputImageP MonoStitcher::RectifySingle(const SelectionInfo &a) {
+    StereoTarget target;
+    vector<Mat> targetArea;
+    vector<Point2f> corners;
+
+    target.R = a.closestPoint.extrinsics;
+
+    GetTargetArea(a.closestPoint, a.closestPoint, target.R, targetArea);
+    AreaToCorners(a.image->image.size(), target.R, targetArea, corners);
+    Rect roi = CornersToRoi(corners);
+    target.size = roi.size();
+
+    Mat resA, newKA;
+
+    MapToTarget(a.image, target, resA, newKA);
+
+    InputImageP res = std::make_shared<InputImage>(); 
+
+    res->image = Image(resA);
+    res->intrinsics = newKA;
+    res->originalExtrinsics = target.R.clone(); 
+    res->adjustedExtrinsics = target.R.clone(); 
+    res->id = a.image->id;
+
+    return res;
 }
 
 void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo) {
