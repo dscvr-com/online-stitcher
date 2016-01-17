@@ -1,13 +1,12 @@
 #include <vector>
 #include <opencv2/imgcodecs.hpp>
-#include <opencv2/stitching/detail/blenders.hpp>
-#include <opencv2/stitching.hpp>
 #include <opencv2/opencv.hpp>
 #include <memory>
 
 #include "../common/image.hpp"
 #include "../common/progressCallback.hpp"
 #include "../common/functional.hpp"
+#include "../common/ringProcessor.hpp"
 #include "../recorder/exposureCompensator.hpp"
 #include "../math/support.hpp"
 #include "../io/checkpointStore.hpp"
@@ -19,32 +18,19 @@ namespace optonaut {
 
 class AsyncRingStitcher {
     private:
-        size_t n;
-
-        cv::Ptr<cv::detail::Blender> blender;
-        cv::Ptr<cv::detail::RotationWarper> warper;
-        cv::Ptr<cv::WarperCreator> warperFactory;
-        std::vector<cv::Point> corners;
-        std::vector<cv::Size> warpedSizes;
-        cv::UMat uxmap, uymap;
-        cv::Rect resultRoi;
-        cv::Rect dstRoi;
-        cv::Rect dstCoreMaskRoi;
-        RingProcessor<StitchingResultP> queue;
-        cv::Mat warpedMask;
-        cv::Mat K;
-        bool fast;
-        void FindSeams(const StitchingResultP &a, const StitchingResultP &b);
-        void Feed(const StitchingResultP &in);
+    class Impl;
+    Impl* pimpl_;
     public:
 
-        AsyncRingStitcher(const InputImageP firstImage, 
+    AsyncRingStitcher(const InputImageP firstImage, 
                 std::vector<cv::Mat> rotations, float warperScale = 300, 
                 bool fast = true, int roiBuffer = 0);
 
-        void Push(const InputImageP image);
+    void Push(const InputImageP image);
 
-        StitchingResultP Finalize();
+    StitchingResultP Finalize();
+    
+    ~AsyncRingStitcher();
 };
 
 //Fast pure R-Matrix based stitcher

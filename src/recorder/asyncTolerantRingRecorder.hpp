@@ -17,7 +17,7 @@ class AsyncTolerantRingRecorder {
             // For initialization, take extrinsics from grap
             stitcher(MonoStitcher::RectifySingle(firstImage),
                    fun::map<SelectionPoint*, Mat>(graph.GetTargetsById(), 
-                       [](auto x) {
+                       [](const SelectionPoint* x) {
                             return x->extrinsics;
                        }), 
                    warperScale),
