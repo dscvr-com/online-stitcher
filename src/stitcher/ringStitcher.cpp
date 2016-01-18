@@ -17,6 +17,8 @@ using namespace std;
 using namespace cv;
 using namespace cv::detail;
 
+static const bool debug = true;
+
 namespace optonaut {
     
 void RingStitcher::PrepareMatrices(const vector<InputImageP> &r) {
@@ -57,6 +59,11 @@ private:
     //Stitcher feed function.
     void Feed(const StitchingResultP &in) {
         STimer feedTimer;
+
+        if(debug) {
+            imwrite("dbg/feed_" + ToString(in->id) + ".jpg", in->image.data);
+            imwrite("dbg/feed_mask_" + ToString(in->id) + ".jpg", in->mask.data);
+        }
 
         Mat warpedImageAsShort;
         in->image.data.convertTo(warpedImageAsShort, CV_16S);
@@ -188,7 +195,11 @@ private:
         {
             //Mask Warping - we force a tiny mask for each image.
             Mat mask = Mat::zeros(img->image.rows, img->image.cols, CV_8U);
-            mask(coreMaskRoi).setTo(Scalar::all(255));
+            if(fast) {
+                mask.setTo(Scalar::all(255));
+            } else {
+                mask(coreMaskRoi).setTo(Scalar::all(255));
+            }
             remap(mask, warpedMask, uxmap, uymap, INTER_NEAREST, BORDER_CONSTANT); 
             mask.release();
         }
