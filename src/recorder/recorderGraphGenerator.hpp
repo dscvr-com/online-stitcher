@@ -314,9 +314,9 @@ public:
 		double hFov = maxHFov * (1.0 - hOverlap);
 		double vFov = maxVFov * (1.0 - vOverlap);
 
-        cout << "H-FOV: " << (maxHFov * 180 / M_PI) << endl;
-        cout << "V-FOV: " << (maxVFov * 180 / M_PI) << endl;
-        cout << "Ratio: " << (sin(maxVFov) / sin(maxHFov)) << endl;
+        //cout << "H-FOV: " << (maxHFov * 180 / M_PI) << endl;
+        //cout << "V-FOV: " << (maxVFov * 180 / M_PI) << endl;
+        //cout << "Ratio: " << (sin(maxVFov) / sin(maxHFov)) << endl;
 
         uint32_t vCount = ceil(M_PI / vFov);
         double vStart = 0;

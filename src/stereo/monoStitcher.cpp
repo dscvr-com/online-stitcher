@@ -74,8 +74,8 @@ void GetTargetArea(const SelectionPoint &a, const SelectionPoint &b, Mat &center
     double hRight = b.hPos;
 
     if(a.globalId == b.globalId) {
-        hLeft = a.hPos - a.hFov / 2;
-        hRight = a.hPos + a.hFov / 2;
+        hLeft = a.hPos - a.hFov * 0.5;
+        hRight = a.hPos + a.hFov * 0.5;
     }
 
     if(hLeft > hRight) {

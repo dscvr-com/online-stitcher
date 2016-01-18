@@ -17,10 +17,6 @@ using namespace cv;
 using namespace std;
 using namespace cv::detail;
 
-//TODO - exclude from compile target IOS
-//#include <opencv2/xfeatures2d.hpp>
-//using namespace cv::xfeatures2d;
-
 #ifndef OPTONAUT_PAIRWISE_VISUAL_ALIGNMENT_HEADER
 #define OPTONAUT_PAIRWISE_VISUAL_ALIGNMENT_HEADER
 

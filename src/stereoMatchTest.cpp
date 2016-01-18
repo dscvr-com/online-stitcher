@@ -6,6 +6,10 @@
 #include <opencv2/stitching/detail/blenders.hpp>
 #include <opencv2/core/ocl.hpp>
 
+//TODO - exclude from compile target IOS
+#include <opencv2/xfeatures2d.hpp>
+using namespace cv::xfeatures2d;
+
 #include "common/assert.hpp"
 #include "common/intrinsics.hpp"
 #include "common/static_timer.hpp"

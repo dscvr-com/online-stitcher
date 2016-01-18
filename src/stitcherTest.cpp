@@ -58,17 +58,16 @@ void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &
         image->dataRef.colorSpace = colorspace::RGB;
 
         if(i == 0) {
-            recorder = shared_ptr<Recorder>(new Recorder(Recorder::iosBase, Recorder::iosZero, image->intrinsics, leftStore, rightStore, commonStore, "", RecorderGraph::ModeTruncated, isAsync));
+            recorder = shared_ptr<Recorder>(new Recorder(Recorder::iosBase, Recorder::iosZero, image->intrinsics, leftStore, rightStore, commonStore, "", RecorderGraph::ModeCenter, isAsync));
         }
 
         recorder->Push(image);
 
-        if(recorder->PreviewAvailable()) {
-            auto preview = recorder->FinishPreview();
-
-            imwrite("dbg/preview.jpg", preview->image.data);
-        }
         tmpMat.release();
+        
+        if(recorder->IsFinished()) {
+            break;
+        }
 
         if(isAsync) {
             auto now = system_clock::now(); 
@@ -77,6 +76,11 @@ void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &
             //cout << "Sleeping for " << duration_cast<microseconds>(sleep).count() << endl;
             this_thread::sleep_for(sleep);
         }
+    }
+
+    if(recorder->PreviewAvailable()) {
+        auto preview = recorder->FinishPreview();
+        imwrite("dbg/preview.jpg", preview->image.data);
     }
 
     recorder->Finish();
