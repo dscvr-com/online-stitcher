@@ -239,16 +239,21 @@ public:
             BiMap<uint32_t, uint32_t> &denseToSparse, 
             int ring = -1) {
 
-        int ringCount = ring < 0 ? in.ringCount : ring;
+        int ringCount = ring < 0 ? in.ringCount : 1;
         size_t startRing = ring < 0 ? 0 : ring;
         size_t endRing = ring < 0 ? in.ringCount : ring + 1;
-
+        
         RecorderGraph sparse(ringCount, in.intrinsics);
 
         size_t globalId = 0;
         size_t localId = 0;
 
         const auto &rings = in.GetRings();
+        
+        AssertGT(rings.size(), startRing);
+        AssertGE(startRing, (size_t)0);
+        AssertGE(rings.size(), endRing);
+
         for(size_t i = startRing; i < endRing; i++) {
 
             int newRingSize = (rings[i].size()) / skip;

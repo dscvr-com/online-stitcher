@@ -39,6 +39,7 @@ class AsyncTolerantRingRecorder {
         }
 
         void Push(const InputImageP img) {
+            Assert(img != nullptr);
             selector.Push(img);
         }
 

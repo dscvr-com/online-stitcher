@@ -195,6 +195,9 @@ private:
     }
 
     void Push(const InputImageP img) {
+        
+        Assert(img != nullptr);
+        
         STimer detailTimer;
 
         bool autoUnload = false;

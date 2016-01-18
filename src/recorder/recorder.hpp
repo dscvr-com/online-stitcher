@@ -83,7 +83,7 @@ namespace optonaut {
 
         std::shared_ptr<AsyncTolerantRingRecorder> previewRecorder;
         RecorderGraph previewGraph;
-        bool previewImageFinished;
+        bool previewImageAvailable;
         
         STimer monoTimer;
         STimer pipeTimer;
@@ -156,8 +156,8 @@ namespace optonaut {
             previewGraph(RecorderGraphGenerator::Sparse(
                         preRecorderGraph, 
                         2, 
-                        recorderGraph.ringCount / 2)),
-            previewImageFinished(false),
+                        recorderGraph.ringCount / 2)), //Don't remove single rings.
+            previewImageAvailable(false),
             debugPath(debugPath)
         {
             baseInv = base.inv();
@@ -333,27 +333,38 @@ namespace optonaut {
                 AutoLoad q(in.image);
                 previewRecorder = 
                     std::make_shared<AsyncTolerantRingRecorder>(in, previewGraph);
+                
+                previewImageAvailable = true;
             }
 
             previewRecorder->Push(in.image);
         }
 
         bool PreviewAvailable() {
-            return previewImageFinished;
+            return previewImageAvailable;
         }
 
         StitchingResultP FinishPreview() {
             STimer finishPreview;
             Assert(previewRecorder != nullptr);
+            
+            if(recorderGraph.ringCount == 1) {
+                // If we only have a single ring, we have to empty this queue
+                // before blending the preview to avoid racing conditions. 
+                aligner->Finish();
+                alignerDelayQueue.Flush();
+                stereoConversionQueue.Finish();
+            }
+            
             StitchingResultP res = previewRecorder->Finalize();
             previewRecorder = nullptr;
-            previewImageFinished = false;
+            previewImageAvailable = false;
             finishPreview.Tick("Finish Preview");
 
             return res;
         }
         
-        void ForwardToMonoQueue(const SelectionInfo &in) {
+        void ForwardToMonoQueue(const SelectionInfo in) {
             
             if(lastRingId == -1) {
                 lastRingId = in.closestPoint.ringId;
@@ -387,7 +398,7 @@ namespace optonaut {
         void FinishFirstRing() {
             AssertM(!firstRingFinished, "First ring has not been closed");
             firstRingFinished = true;
-            previewImageFinished = true;
+            previewImageAvailable = true;
 
             PairwiseCorrelator corr;
             firstRingImagePool.back()->image.Load();
@@ -599,10 +610,14 @@ namespace optonaut {
             //cout << "Pipeline Finish called by " << std::this_thread::get_id() << endl;
             isFinished = true;
             
-            aligner->Finish();
-            alignerDelayQueue.Flush();
+            if(stereoConversionQueue.IsRunning()) {
+                // If the stereo conversion queue is still running,
+                // end it. Otherwise, the preview generation already stopped this.
+                aligner->Finish();
+                alignerDelayQueue.Flush();
+                stereoConversionQueue.Finish();
+            }
             SelectionInfo last = selectorQueue.GetState();
-            stereoConversionQueue.Finish();
             stereoRingBuffer.Push(last);
             stereoRingBuffer.Flush();
             saveQueue.Finish();
