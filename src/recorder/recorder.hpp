@@ -348,9 +348,6 @@ namespace optonaut {
                 aligner->Finish();
                 alignerDelayQueue.Flush();
                 stereoConversionQueue.Finish();
-                if(!firstRingFinished) {
-                    FinishFirstRing();
-                }
             }
             
             StitchingResultP res = previewRecorder->Finalize();
@@ -618,9 +615,9 @@ namespace optonaut {
                 aligner->Finish();
                 alignerDelayQueue.Flush();
                 stereoConversionQueue.Finish();
-                if(!firstRingFinished) {
-                    FinishFirstRing();
-                }
+            }
+            if(!firstRingFinished) {
+                FinishFirstRing();
             }
             SelectionInfo last = selectorQueue.GetState();
             stereoRingBuffer.Push(last);
