@@ -7,6 +7,8 @@
 #include <opencv2/core/ocl.hpp>
 
 #include "recorder/recorder.hpp"
+#include "recorder/storageSink.hpp"
+#include "stitcher/stitcherSink.hpp"
 #include "common/intrinsics.hpp"
 #include "common/backtrace.hpp"
 #include "stitcher/stitcher.hpp"
@@ -24,7 +26,7 @@ bool CompareByFilename (const string &a, const string &b) {
 }
 
 
-void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &rightStore, CheckpointStore &commonStore) {
+void Record(vector<string> &files, StereoSink &sink) {
 
     if(files.size() == 0) {
         cout << "No Input." << endl;
@@ -58,7 +60,10 @@ void Record(vector<string> &files, CheckpointStore &leftStore, CheckpointStore &
         image->dataRef.colorSpace = colorspace::RGB;
 
         if(i == 0) {
-            recorder = shared_ptr<Recorder>(new Recorder(Recorder::iosBase, Recorder::iosZero, image->intrinsics, leftStore, rightStore, commonStore, "", RecorderGraph::ModeCenter, isAsync));
+            recorder = shared_ptr<Recorder>(
+                    new Recorder(Recorder::iosBase, Recorder::iosZero, 
+                        image->intrinsics, sink, "", RecorderGraph::ModeCenter, 
+                        isAsync));
         }
 
         recorder->Push(image);
@@ -95,6 +100,8 @@ int main(int argc, char** argv) {
     cv::ocl::setUseOpenCL(false);
     RegisterCrashHandler();
 
+    static const bool useStitcherSink = true;
+
     CheckpointStore leftStore("tmp/left/", "tmp/shared/");
     CheckpointStore rightStore("tmp/right/", "tmp/shared/");
     CheckpointStore commonStore("tmp/common/", "tmp/shared/");
@@ -102,6 +109,14 @@ int main(int argc, char** argv) {
     //DummyCheckpointStore leftStore;
     //DummyCheckpointStore rightStore;
     //DummyCheckpointStore commonStore;
+    
+    StorageSink storeSink(leftStore, rightStore);
+    StitcherSink stitcherSink;
+
+    StereoSink& sink = stitcherSink;
+
+    if(!useStitcherSink)
+        sink = storeSink;
 
     cout << "Starting." << endl;
 
@@ -117,37 +132,42 @@ int main(int argc, char** argv) {
 
     if(!leftStore.HasUnstitchedRecording()) {
         cout << "Recording." << endl;
-        Record(files, leftStore, rightStore, commonStore);
-    }
-
-    if(!leftStore.HasUnstitchedRecording()) {
-        cout << "No results." << endl;
-        return 0;
+        Record(files, sink);
     }
     
-    cout << "Create callbacks." << endl;
+    if(!useStitcherSink) {
 
-    ProgressCallback progress([](float) -> bool {
-                //cout << (int)(progress * 100) << "% ";
-                return true;
-            });
-    ProgressCallbackAccumulator callbacks(progress, {0.5, 0.5});
+        if(!leftStore.HasUnstitchedRecording()) {
+            cout << "No results." << endl;
+            return 0;
+        }
+        ProgressCallback progress([](float) -> bool {
+                    //cout << (int)(progress * 100) << "% ";
+                    return true;
+                });
+        ProgressCallbackAccumulator callbacks(progress, {0.5, 0.5});
 
-    {
-        cout << "Start left stitcher." << endl;
-        optonaut::Stitcher leftStitcher(leftStore);
-        auto left = leftStitcher.Finish(callbacks.At(0), "dbg/left");
+        {
+            cout << "Start left stitcher." << endl;
+            optonaut::Stitcher leftStitcher(leftStore);
+            auto left = leftStitcher.Finish(callbacks.At(0), "dbg/left");
+            imwrite("dbg/left.jpg", left->image.data);
+            left->image.Unload();  
+            left->mask.Unload();  
+        }
+        {
+            cout << "Start right stitcher." << endl;
+            optonaut::Stitcher rightStitcher(rightStore);
+            auto right = rightStitcher.Finish(callbacks.At(1), "dbg/right");
+            imwrite("dbg/right.jpg", right->image.data);    
+            right->image.Unload();  
+            right->mask.Unload();  
+        } 
+    } else {
+        auto left = stitcherSink.GetLeftResult(); 
         imwrite("dbg/left.jpg", left->image.data);
-        left->image.Unload();  
-        left->mask.Unload();  
-    }
-    {
-        cout << "Start right stitcher." << endl;
-        optonaut::Stitcher rightStitcher(rightStore);
-        auto right = rightStitcher.Finish(callbacks.At(1), "dbg/right");
+        auto right = stitcherSink.GetRightResult(); 
         imwrite("dbg/right.jpg", right->image.data);    
-        right->image.Unload();  
-        right->mask.Unload();  
     }
 
     //leftStore.Clear();

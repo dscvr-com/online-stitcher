@@ -17,7 +17,7 @@ using namespace std;
 using namespace cv;
 using namespace cv::detail;
 
-static const bool debug = true;
+static const bool debug = false;
 
 namespace optonaut {
     

@@ -12,6 +12,7 @@
 #include "../stitcher/simpleSphereStitcher.hpp"
 #include "../stitcher/ringStitcher.hpp"
 #include "../debug/debugHook.hpp"
+#include "../recorder/stereoSink.hpp"
 
 #include "recorderGraph.hpp"
 #include "recorderGraphGenerator.hpp"
@@ -43,16 +44,14 @@ namespace optonaut {
         Mat zero;
 
         shared_ptr<Aligner> aligner;
-        
-        CheckpointStore leftStore;
-        CheckpointStore rightStore;
-        CheckpointStore commonStore;
+
+        StereoSink &sink;
         
         vector<InputImageP> leftImages;
         vector<InputImageP> rightImages;
 
         ExposureCompensator exposure;
-        
+
         MonoStitcher stereoConverter;
 
         bool isIdle;
@@ -109,13 +108,11 @@ namespace optonaut {
         static bool alignmentEnabled;
         
         Recorder(Mat base, Mat zeroWithoutBase, Mat intrinsics, 
-                CheckpointStore &leftStore, CheckpointStore &rightStore, CheckpointStore &commonStore, string debugPath = "",
+                StereoSink &sink, string debugPath = "",
                 int graphConfiguration = RecorderGraph::ModeAll, 
                 bool isAsync = true) :
             base(base),
-            leftStore(leftStore),
-            rightStore(rightStore),
-            commonStore(commonStore),
+            sink(sink),
             stereoConverter(),
             isIdle(false),
             isFinished(false),
@@ -305,16 +302,12 @@ namespace optonaut {
         }
         
         void SaveStereoResult(StereoImage stereo) {
-            STimer saveTimer;
-            leftStore.SaveRectifiedImage(stereo.A);
-            rightStore.SaveRectifiedImage(stereo.B);
-            
-            stereo.A->image.Unload();
-            stereo.B->image.Unload();
+            sink.Push(stereo);
+
+            cout << "Stereo Push" << endl;
             
             leftImages.push_back(stereo.A);
             rightImages.push_back(stereo.B);
-            monoTimer.Tick("Saved");
         }
         
         void ExposureFeed(InputImageP a) {
@@ -345,6 +338,7 @@ namespace optonaut {
         }
 
         StitchingResultP FinishPreview() {
+
             STimer finishPreview;
             Assert(previewRecorder != nullptr);
             
@@ -354,6 +348,9 @@ namespace optonaut {
                 aligner->Finish();
                 alignerDelayQueue.Flush();
                 stereoConversionQueue.Finish();
+                if(!firstRingFinished) {
+                    FinishFirstRing();
+                }
             }
             
             StitchingResultP res = previewRecorder->Finalize();
@@ -388,8 +385,8 @@ namespace optonaut {
                     firstRing.push_back(in);    
                 }
                 firstRingImagePool.push_back(in.image);
-                commonStore.SaveStitcherTemporaryImage(in.image->image);
-                in.image->image.Unload();
+                //commonStore.SaveStitcherTemporaryImage(in.image->image);
+                //in.image->image.Unload();
             } else {
                 ForwardToMonoQueueEx(in);
             }
@@ -400,14 +397,20 @@ namespace optonaut {
             firstRingFinished = true;
             previewImageAvailable = true;
 
+            CorrelationDiff result;
+
             PairwiseCorrelator corr;
-            firstRingImagePool.back()->image.Load();
-            firstRingImagePool.front()->image.Load();
-            auto result = corr.Match(firstRingImagePool.back(), firstRingImagePool.front(), 0, 0, true); 
+            {
+                AutoLoad qb(firstRingImagePool.back());
+                AutoLoad qf(firstRingImagePool.back());
+
+                result = corr.Match(firstRingImagePool.back(), firstRingImagePool.front(), 0, 0, true); 
+            }
             size_t n = firstRingImagePool.size();
 
             if(!result.valid) {
-                cout << "Ring closure rejection because: " << result.rejectionReason << endl;
+                cout << "Ring closure rejection because: " << 
+                    result.rejectionReason << endl;
             }
 
             cout << "Y horizontal angular offset: " << result.angularOffset.x << endl;
@@ -460,7 +463,6 @@ namespace optonaut {
                 ForwardToMonoQueueEx(firstRing[i]);
                 firstRing[i].image = NULL; //Decrement our ref to the loaded instance
             }
-
            
             firstRingImagePool.clear();
             firstRing.clear();
@@ -609,13 +611,16 @@ namespace optonaut {
         void Finish() {
             //cout << "Pipeline Finish called by " << std::this_thread::get_id() << endl;
             isFinished = true;
-            
+
             if(stereoConversionQueue.IsRunning()) {
                 // If the stereo conversion queue is still running,
                 // end it. Otherwise, the preview generation already stopped this.
                 aligner->Finish();
                 alignerDelayQueue.Flush();
                 stereoConversionQueue.Finish();
+                if(!firstRingFinished) {
+                    FinishFirstRing();
+                }
             }
             SelectionInfo last = selectorQueue.GetState();
             stereoRingBuffer.Push(last);
@@ -634,10 +639,14 @@ namespace optonaut {
                 aligner->Postprocess(leftImages);
                 aligner->Postprocess(rightImages);
 
-                vector<vector<InputImageP>> rightRings = recorderGraph.SplitIntoRings(rightImages);
-                vector<vector<InputImageP>> leftRings = recorderGraph.SplitIntoRings(leftImages);
-                leftStore.SaveStitcherInput(leftRings, exposure.GetGains());
-                rightStore.SaveStitcherInput(rightRings, exposure.GetGains()); 
+                vector<vector<InputImageP>> rightRings = 
+                    recorderGraph.SplitIntoRings(rightImages);
+                vector<vector<InputImageP>> leftRings = 
+                    recorderGraph.SplitIntoRings(leftImages);
+
+                sink.Finish(leftRings, rightRings, exposure.GetGains());
+            } else {
+                AssertWM(false, "No results in recorder.");
             }
         }
 
