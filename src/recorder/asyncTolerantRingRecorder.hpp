@@ -20,7 +20,7 @@ class AsyncTolerantRingRecorder {
                        [](const SelectionPoint* x) {
                             return x->extrinsics;
                        }), 
-                   warperScale),
+                   warperScale, true),
             // Bind selector directly to stitcher 
             selector(graph, 
                     std::bind(&AsyncTolerantRingRecorder::PushToStitcher, 

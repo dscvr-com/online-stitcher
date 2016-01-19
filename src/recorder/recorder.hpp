@@ -155,8 +155,8 @@ namespace optonaut {
                     this, placeholders::_1)),
             previewGraph(RecorderGraphGenerator::Sparse(
                         preRecorderGraph, 
-                        2, 
-                        recorderGraph.ringCount / 2)), //Don't remove single rings.
+                        4,
+                        recorderGraph.ringCount / 2)),
             previewImageAvailable(false),
             debugPath(debugPath)
         {

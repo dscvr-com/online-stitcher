@@ -74,8 +74,8 @@ void GetTargetArea(const SelectionPoint &a, const SelectionPoint &b, Mat &center
     double hRight = b.hPos;
 
     if(a.globalId == b.globalId) {
-        hLeft = a.hPos - a.hFov * 0.5;
-        hRight = a.hPos + a.hFov * 0.5;
+        hLeft = a.hPos - a.hFov;
+        hRight = a.hPos + a.hFov;
     }
 
     if(hLeft > hRight) {
@@ -88,6 +88,12 @@ void GetTargetArea(const SelectionPoint &a, const SelectionPoint &b, Mat &center
     double vBot = vCenter + a.vFov / 2.0;
     double hBuffer = a.hFov * hBufferRatio;
     double vBuffer = a.vFov * vBufferRatio;
+    
+    // TODO - this is a hard coded corner case for mono-rectify
+    // which is only used for preview images. Still it is very ugly. Remove it.
+    if(a.globalId == b.globalId) {
+        hBuffer = a.hFov;
+    }
 
     corners.resize(4);
 
