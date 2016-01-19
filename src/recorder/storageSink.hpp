@@ -1,4 +1,6 @@
 #include "../stereo/monoStitcher.hpp"
+#include "stereoSink.hpp"
+#include "../io/checkpointStore.hpp"
 
 #ifndef OPTONAUT_STORAGE_SINK_HEADER
 #define OPTONAUT_STORAGE_SINK_HEADER
