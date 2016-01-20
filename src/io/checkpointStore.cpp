@@ -10,14 +10,14 @@ using namespace cv;
 namespace optonaut {
     
     void CheckpointStore::SaveRectifiedImage(InputImageP image) {
-        string path = rawImagesPath + ToString(image->id) + ".bmp";
+        string path = rawImagesPath + ToString(image->id) + defaultExtension;
         
         InputImageToFile(image, path);
         image->image.source = path;
     }
     
     void CheckpointStore::SaveStitcherTemporaryImage(Image &image) {
-        string path = stitcherDumpPath + ToString(c) + ".bmp";
+        string path = stitcherDumpPath + ToString(c) + defaultExtension;
         
         SaveImage(image, path);
         
@@ -60,23 +60,23 @@ namespace optonaut {
     }
 
     void CheckpointStore::SaveRing(int ringId, StitchingResultP image) {
-        StitchingResultToFile(image, ringPath + "ring_" + ToString(ringId), ".bmp");
+        StitchingResultToFile(image, ringPath + "ring_" + ToString(ringId), defaultExtension);
     }
     
     void CheckpointStore::SaveRingMask(int ringId, StitchingResultP image) {
-        StitchingResultToFile(image, ringPath + "ring_" + ToString(ringId), ".bmp", true);
+        StitchingResultToFile(image, ringPath + "ring_" + ToString(ringId), defaultExtension, true);
     }
     
     StitchingResultP CheckpointStore::LoadRing(int ringId) {
-        return StitchingResultFromFile(ringPath + "ring_" + ToString(ringId), ".bmp");
+        return StitchingResultFromFile(ringPath + "ring_" + ToString(ringId), defaultExtension);
     }
     
     void CheckpointStore::SaveOptograph(StitchingResultP image) {
-        StitchingResultToFile(image, optographPath + "result", ".bmp");
+        StitchingResultToFile(image, optographPath + "result", defaultExtension);
     }
     
     StitchingResultP CheckpointStore::LoadOptograph() {
-        return StitchingResultFromFile(optographPath + "result", ".bmp");
+        return StitchingResultFromFile(optographPath + "result", defaultExtension);
     }
     
     void CheckpointStore::Clear() {

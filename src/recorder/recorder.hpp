@@ -303,8 +303,6 @@ namespace optonaut {
         
         void SaveStereoResult(StereoImage stereo) {
             sink.Push(stereo);
-
-            cout << "Stereo Push" << endl;
             
             leftImages.push_back(stereo.A);
             rightImages.push_back(stereo.B);

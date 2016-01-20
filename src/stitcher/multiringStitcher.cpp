@@ -210,98 +210,105 @@ namespace optonaut {
             stitcherTimer.Tick("Ring Finished");
         }
 
-        assert(margin != -1);
+        if(stitchedRings.size() > 1) {
+            assert(margin != -1);
+               
+            cout << "Attempting ring adjustment." << endl;
+            ringAdjustmentProgress(1);
+            
+            AdjustCorners(stitchedRings, ringAdjustmentProgress);
+            FindSeams(stitchedRings, store);
+            
+            stitcherTimer.Tick("Corner Adjusting Finished");
+            
+            Ptr<Blender> blender;
+            blender = Blender::createDefault(cv::detail::Blender::FEATHER, false);
+            //MultiBandBlender* mb;
+            //mb = dynamic_cast<MultiBandBlender*>(blender.get());
+            //mb->setNumBands(5);
+            
+
+            Rect inRoi = detail::resultRoi(fun::map<StitchingResultP, Point>
+                    (stitchedRings, [](const StitchingResultP &x) { return x->corner; }),
+                    fun::map<StitchingResultP, Size>
+                    (stitchedRings, [](const StitchingResultP &x) { return x->image.size(); }));
+            if(w == 0 && h == 0) {
+                w = inRoi.width;
+                h = inRoi.height;
+                margin = 0;
+            }
+            Rect outRoi(0, 0, w, h);
+
+            int sx = inRoi.x;
+            int sy = inRoi.y - margin;
+            float dx = (float)outRoi.width / (float)inRoi.width;
+            float dy = (float)outRoi.height / (float)(inRoi.height + 2 * margin);
+
+            cout << "InRoi: " << inRoi << " OutRoi: " << outRoi << endl;
+            blender->prepare(outRoi);
            
-        cout << "Attempting ring adjustment." << endl;
-        ringAdjustmentProgress(1);
-        
-        AdjustCorners(stitchedRings, ringAdjustmentProgress);
-        FindSeams(stitchedRings, store);
-        
-        stitcherTimer.Tick("Corner Adjusting Finished");
-        
-	    Ptr<Blender> blender;
-	    blender = Blender::createDefault(cv::detail::Blender::FEATHER, false);
-        //MultiBandBlender* mb;
-        //mb = dynamic_cast<MultiBandBlender*>(blender.get());
-        //mb->setNumBands(5);
-        
+            cout << "Attempting ring blending." << endl;
+            for(size_t i = 0; i < stitchedRings.size(); i++) {
+                finalBlendingProgress((float)i / (float)stitchedRings.size());
+                auto res = stitchedRings[i];
 
-        Rect inRoi = detail::resultRoi(fun::map<StitchingResultP, Point>
-                (stitchedRings, [](const StitchingResultP &x) { return x->corner; }),
-                fun::map<StitchingResultP, Size>
-                (stitchedRings, [](const StitchingResultP &x) { return x->image.size(); }));
-        if(w == 0 && h == 0) {
-            w = inRoi.width;
-            h = inRoi.height;
-            margin = 0;
-        }
-        Rect outRoi(0, 0, w, h);
+                Mat resizedImage;
+                Mat resizedMask;
 
-        int sx = inRoi.x;
-        int sy = inRoi.y - margin;
-        float dx = (float)outRoi.width / (float)inRoi.width;
-        float dy = (float)outRoi.height / (float)(inRoi.height + 2 * margin);
+                if(!res->image.IsLoaded()) {
+                    res->image.Load();
+                }
+                assert(res->image.type() == CV_8UC3);
+                resize(res->image.data, resizedImage, cv::Size(0, 0), dx, dy);
+                if(store.SupportsPaging()) {
+                    res->image.Unload();
+                }
 
-        cout << "InRoi: " << inRoi << " OutRoi: " << outRoi << endl;
-        blender->prepare(outRoi);
-       
-        cout << "Attempting ring blending." << endl;
-        for(size_t i = 0; i < stitchedRings.size(); i++) {
-            finalBlendingProgress((float)i / (float)stitchedRings.size());
-            auto res = stitchedRings[i];
+                if(!res->image.IsLoaded()) {
+                    res->mask.Load(IMREAD_GRAYSCALE);
+                }
+                assert(res->mask.type() == CV_8U);
+                resize(res->mask.data, resizedMask, cv::Size(0, 0), dx, dy);
+                if(store.SupportsPaging()) {
+                    res->mask.Unload();
+                }
 
-            Mat resizedImage;
-            Mat resizedMask;
+                Mat warpedImageAsShort;
+                resizedImage.convertTo(warpedImageAsShort, CV_16S);
 
+                //Set one pixel of the mask to black on the edges to enable blending. 
+                resizedMask(Rect(0, 0, resizedMask.cols, 1)).setTo(Scalar::all(0));
+                resizedMask(Rect(0, resizedMask.rows - 1, resizedMask.cols, 1)).setTo(Scalar::all(0));
+
+                Point newCorner((res->corner.x - sx) * dx, (res->corner.y - sy) * dy); 
+
+                blender->feed(warpedImageAsShort, resizedMask, newCorner);
+            }
+
+            //for(int i = 0; i < mb->num_bands_; i++) {
+            //    Mat tmp;
+            //    mb->dst_pyr_laplace_[i].convertTo(tmp, CV_8UC3, 12, 0);
+            //    imwrite("dbg/dst_pyr_laplace_" + ToString(i) + ".jpg", tmp);
+            //    mb->dst_band_weights_[i].convertTo(tmp, CV_8UC3, 255.0, 0);
+            //    imwrite("dbg/dst_pyr_weights_" + ToString(i) + ".jpg", mb->dst_band_weights_[i]);
+            //}
+
+            stitchedRings.clear();
+            {
+                Mat imageRes, maskRes;
+                blender->blend(imageRes, maskRes);
+                imageRes.convertTo(imageRes, CV_8U);
+                res->image = Image(imageRes);
+                res->mask = Image(maskRes);
+            }
+            stitcherTimer.Tick("FinalStitching Finished");
+            blender.release();
+        } else {
+            res = stitchedRings.front();
             if(!res->image.IsLoaded()) {
                 res->image.Load();
             }
-            assert(res->image.type() == CV_8UC3);
-            resize(res->image.data, resizedImage, cv::Size(0, 0), dx, dy);
-            if(store.SupportsPaging()) {
-                res->image.Unload();
-            }
-
-            if(!res->image.IsLoaded()) {
-                res->mask.Load(IMREAD_GRAYSCALE);
-            }
-            assert(res->mask.type() == CV_8U);
-            resize(res->mask.data, resizedMask, cv::Size(0, 0), dx, dy);
-            if(store.SupportsPaging()) {
-                res->mask.Unload();
-            }
-
-            Mat warpedImageAsShort;
-            resizedImage.convertTo(warpedImageAsShort, CV_16S);
-
-            //Set one pixel of the mask to black on the edges to enable blending. 
-            resizedMask(Rect(0, 0, resizedMask.cols, 1)).setTo(Scalar::all(0));
-            resizedMask(Rect(0, resizedMask.rows - 1, resizedMask.cols, 1)).setTo(Scalar::all(0));
-
-            Point newCorner((res->corner.x - sx) * dx, (res->corner.y - sy) * dy); 
-
-            blender->feed(warpedImageAsShort, resizedMask, newCorner);
         }
-
-        //for(int i = 0; i < mb->num_bands_; i++) {
-        //    Mat tmp;
-        //    mb->dst_pyr_laplace_[i].convertTo(tmp, CV_8UC3, 12, 0);
-        //    imwrite("dbg/dst_pyr_laplace_" + ToString(i) + ".jpg", tmp);
-        //    mb->dst_band_weights_[i].convertTo(tmp, CV_8UC3, 255.0, 0);
-        //    imwrite("dbg/dst_pyr_weights_" + ToString(i) + ".jpg", mb->dst_band_weights_[i]);
-        //}
-
-        stitchedRings.clear();
-        {
-            Mat imageRes, maskRes;
-            blender->blend(imageRes, maskRes);
-            imageRes.convertTo(imageRes, CV_8U);
-            res->image = Image(imageRes);
-            res->mask = Image(maskRes);
-        }
-        stitcherTimer.Tick("FinalStitching Finished");
-        blender.release();
         
         store.SaveOptograph(res);
         
