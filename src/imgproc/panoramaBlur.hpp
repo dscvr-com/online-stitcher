@@ -13,11 +13,11 @@ namespace optonaut {
         private: 
             Mat mirrorTransform;
 
-            const Size is; //Input Size
-            const Size ds; //Destination Size
-            Size ss; //Strip size;
+            const cv::Size is; //Input Size
+            const cv::Size ds; //Destination Size
+            cv::Size ss; //Strip size;
 
-            void VerticalBlend(Mat &target, Mat &source, int startRow, int endRow) {
+            void VerticalBlend(cv::Mat &target, cv::Mat &source, int startRow, int endRow) {
                 
                 bool inverse = false;
                 
@@ -49,13 +49,13 @@ namespace optonaut {
                 if(depth == 0)
                     return;
 
-                Size inSize = in.size();
+                cv::Size inSize = in.size();
 
                 pyrDown(in, out);
                 FastBlur(out, out, depth - 1);
                 pyrUp(out, out);
 
-                out = out(Rect(Point(0, 0), inSize));
+                out = out(cv::Rect(cv::Point(0, 0), inSize));
             }
 
             void PyrDownRecu(const Mat &in, Mat &out, int depth) {
@@ -66,11 +66,11 @@ namespace optonaut {
                 PyrDownRecu(out, out, depth - 1);
             }
             
-            void PyrUpUntil(const Mat &in, Mat &out, Size target) {
+            void PyrUpUntil(const Mat &in, Mat &out, cv::Size target) {
                 pyrUp(in, out);
                 
                 if(out.rows >= target.height && out.cols >= target.width) { 
-                    out = out(Rect(Point(0, 0), target));
+                    out = out(cv::Rect(cv::Point(0, 0), target));
                     return;
                 }
 
@@ -79,25 +79,25 @@ namespace optonaut {
             }
         public:
 
-            PanoramaBlur(const Size inputSize, const Size outputSize) :
+            PanoramaBlur(const cv::Size inputSize, const cv::Size outputSize) :
                 is(inputSize), ds(outputSize) { 
 
                 AssertEQ(is.width, ds.width);
             
-                vector<Point2f> src = {
-                    Point(0, 0),
-                    Point(0, is.height),
-                    Point(is.width, is.height),
-                    Point(is.width, 0)
+                vector<cv::Point2f> src = {
+                    cv::Point2f(0, 0),
+                    cv::Point2f(0, is.height),
+                    cv::Point2f(is.width, is.height),
+                    cv::Point2f(is.width, 0)
                 };
 
-                ss = Size(ds.width, ds.height / 2 - is.height / 2);
+                ss = cv::Size(ds.width, ds.height / 2 - is.height / 2);
                 
-                vector<Point2f> dest = {
-                    Point(0, ss.height),
-                    Point(0, 0),
-                    Point(ss.width, 0),
-                    Point(ss.width, ss.height)
+                vector<cv::Point2f> dest = {
+                    cv::Point2f(0, ss.height),
+                    cv::Point2f(0, 0),
+                    cv::Point2f(ss.width, 0),
+                    cv::Point2f(ss.width, ss.height)
                 };
 
                 mirrorTransform = getPerspectiveTransform(src, dest);
@@ -108,16 +108,16 @@ namespace optonaut {
                 AssertEQ(input.size(), is);
                 output = Mat(ds, input.type());
 
-                const Rect top(0, 0, ss.width, ss.height);
-                const Rect center(0, ss.height, is.width, is.height);
-                const Rect bottom(0, ss.height + is.height, ss.width, ss.height);
+                const cv::Rect top(0, 0, ss.width, ss.height);
+                const cv::Rect center(0, ss.height, is.width, is.height);
+                const cv::Rect bottom(0, ss.height + is.height, ss.width, ss.height);
                 
-                const Rect halfTop(0, 0, ss.width, ss.height / 3 * 2);                
-                const Rect halfBottom(0, ss.height + is.height + ss.height / 3, 
+                const cv::Rect halfTop(0, 0, ss.width, ss.height / 3 * 2);
+                const cv::Rect halfBottom(0, ss.height + is.height + ss.height / 3,
                         ss.width, ss.height / 3 * 2);
 
-                const Rect blackTop(0, 0, ss.width, halfTop.height / 2); 
-                const Rect blackBottom(0, halfBottom.y + halfBottom.height / 2, 
+                const cv::Rect blackTop(0, 0, ss.width, halfTop.height / 2);
+                const cv::Rect blackBottom(0, halfBottom.y + halfBottom.height / 2, 
                         ss.width, halfBottom.height / 2); 
                 
                 const int weakGradient = ds.height / 128;
