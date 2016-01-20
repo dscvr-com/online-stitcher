@@ -142,8 +142,8 @@ namespace optonaut {
                    output(bottom), 
                    mirrorTransform, ss);
 
-                top = Rect(top.x, top.y, top.width, top.height - weakGradientOffset);
-                bottom = Rect(bottom.x, bottom.y + weakGradientOffset, 
+                top = cv::Rect(top.x, top.y, top.width, top.height - weakGradientOffset);
+                bottom = cv::Rect(bottom.x, bottom.y + weakGradientOffset,
                         bottom.width, top.height);
 
                 Mat blur6, blur8, blur;
