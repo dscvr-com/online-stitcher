@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
     cv::ocl::setUseOpenCL(false);
     RegisterCrashHandler();
 
-    static const bool useStitcherSink = true;
+    static const bool useStitcherSink = false;
 
     CheckpointStore leftStore("tmp/left/", "tmp/shared/");
     CheckpointStore rightStore("tmp/right/", "tmp/shared/");
@@ -112,11 +112,6 @@ int main(int argc, char** argv) {
     
     StorageSink storeSink(leftStore, rightStore);
     StitcherSink stitcherSink;
-
-    StereoSink& sink = stitcherSink;
-
-    if(!useStitcherSink)
-        sink = storeSink;
 
     cout << "Starting." << endl;
 
@@ -132,7 +127,11 @@ int main(int argc, char** argv) {
 
     if(!leftStore.HasUnstitchedRecording()) {
         cout << "Recording." << endl;
-        Record(files, sink);
+        if(useStitcherSink) {
+            Record(files, stitcherSink);
+        } else {
+            Record(files, storeSink);
+        }
     }
     
     if(!useStitcherSink) {

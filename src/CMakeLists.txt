@@ -37,6 +37,9 @@ target_link_libraries(to-polar optonaut-lib)
 add_executable(to-cube-map toCubeMap.cpp)
 target_link_libraries(to-cube-map optonaut-lib)
 
+add_executable(pano-blur panoBlur.cpp)
+target_link_libraries(pano-blur optonaut-lib)
+
 add_executable(optonaut-test stitcherTest.cpp)
 target_link_libraries(optonaut-test optonaut-lib)
 target_link_libraries(optonaut-test visual-debug-hook)
