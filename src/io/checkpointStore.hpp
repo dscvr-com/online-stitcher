@@ -20,7 +20,7 @@ namespace optonaut {
         const std::string ringPath;
         const std::string optographPath;
         const std::string exposureMapPath;
-        const std::string defaultExtension = ".jpg";
+        const std::string defaultExtension = ".bmp";
         const std::string ringAdjustmentPath;
         int c;
     public:
