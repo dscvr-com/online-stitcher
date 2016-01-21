@@ -142,8 +142,6 @@ namespace optonaut {
                    output(bottom), 
                    mirrorTransform, ss);
 
-                return;
-
                 top = cv::Rect(top.x, top.y, top.width, top.height - weakGradientOffset);
                 bottom = cv::Rect(bottom.x, bottom.y + weakGradientOffset,
                         bottom.width, top.height);
