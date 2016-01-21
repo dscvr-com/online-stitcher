@@ -27,8 +27,11 @@ bool CompareByFilename (const string &a, const string &b) {
 }
 
 shared_ptr<RecorderGraph> graph;
+shared_ptr<RecorderGraph> preGraph;
 Mat intrinsics;
 Size imageSize;
+vector<InputImageP> allImages;
+vector<Mat> originalExtrinsics;
 
 void Record(vector<string> &files, StereoSink &sink) {
 
@@ -63,6 +66,8 @@ void Record(vector<string> &files, StereoSink &sink) {
         image->dataRef.height = tmpMat.rows;
         image->dataRef.colorSpace = colorspace::RGB;
 
+        allImages.push_back(image);
+
         if(i == 0) {
             recorder = shared_ptr<Recorder>(
                     new Recorder(Recorder::iosBase, Recorder::iosZero, 
@@ -76,7 +81,14 @@ void Record(vector<string> &files, StereoSink &sink) {
             graph = shared_ptr<RecorderGraph>(new RecorderGraph(
                         recorder->GetRecorderGraph()
                         ));
+            preGraph = shared_ptr<RecorderGraph>(new RecorderGraph(
+                        recorder->GetPreRecorderGraph()
+                        ));
         }
+
+        Mat q;
+        recorder->ConvertToStitcher(image->originalExtrinsics, q);
+        originalExtrinsics.push_back(q.clone());
 
         recorder->Push(image);
 
@@ -166,6 +178,19 @@ int main(int argc, char** argv) {
             DrawPointsOnPanorama(left->image.data, 
                     ExtractExtrinsics(fun::flat(graph->GetRings())), 
                     intrinsics, imageSize, 1200, left->corner);
+            
+            DrawPointsOnPanorama(left->image.data, 
+                    ExtractExtrinsics(fun::flat(preGraph->GetRings())), 
+                    intrinsics, imageSize, 1200, left->corner + Point(0, 25));
+            
+            DrawPointsOnPanorama(left->image.data, 
+                    ExtractExtrinsics(allImages),
+                    intrinsics, imageSize, 1200, left->corner + Point(0, -25),
+                    Scalar(0xFF, 0x00, 0x00));
+            
+            DrawPointsOnPanorama(left->image.data, originalExtrinsics,
+                    intrinsics, imageSize, 1200, left->corner + Point(0, -100),
+                    Scalar(0xFF, 0x00, 0xFF));
             
             imwrite("dbg/left.jpg", left->image.data);
             left->image.Unload();  

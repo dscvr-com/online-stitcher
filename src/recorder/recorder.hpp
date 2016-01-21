@@ -60,9 +60,9 @@ namespace optonaut {
         bool hasStarted;
         
         RecorderGraphGenerator generator;
-        RecorderGraph recorderGraph;
-        TolerantRecorderController controller;
         RecorderGraph preRecorderGraph;
+        RecorderGraph recorderGraph;
+        ImageSelector recorderController;
         StreamingRecorderController preController;
         
         uint32_t imagesToRecord;
@@ -72,7 +72,6 @@ namespace optonaut {
         
         ReduceProcessor<SelectionInfo, SelectionInfo> preSelectorQueue;
         QueueProcessor<InputImageP> alignerDelayQueue;
-        ReduceProcessor<SelectionInfo, SelectionInfo> selectorQueue;
         AsyncQueue<SelectionInfo> stereoConversionQueue;
         RingProcessor<SelectionInfo> stereoRingBuffer;
         AsyncQueue<StereoImage> saveQueue;
@@ -119,9 +118,11 @@ namespace optonaut {
             firstRingFinished(false),
             hasStarted(false),
             generator(),
-            recorderGraph(generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityNormal)),
-            controller(recorderGraph),
             preRecorderGraph(generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityDouble, 0, 4)),
+            recorderGraph(RecorderGraphGenerator::Sparse(preRecorderGraph, 2)),
+            recorderController(recorderGraph, [this] (const SelectionInfo &x) {
+                ForwardToStereoConversionQueue(x);
+            }, M_PI / 16, false),
             preController(preRecorderGraph),
             imagesToRecord(preRecorderGraph.Size()),
             recordedImages(0),
@@ -134,10 +135,6 @@ namespace optonaut {
             alignerDelayQueue(15,
                 std::bind(&Recorder::ApplyAlignment,
                           this, placeholders::_1)),
-            selectorQueue(
-                std::bind(&Recorder::SelectBetterMatchForMonoQueue,
-                    this, placeholders::_1,
-                          placeholders::_2), SelectionInfo()),
             stereoConversionQueue(
                 std::bind(&Recorder::ForwardToMonoQueue,
                     this, placeholders::_1)),
@@ -151,8 +148,8 @@ namespace optonaut {
                     std::bind(&Recorder::SaveStereoResult,
                     this, placeholders::_1)),
             previewGraph(RecorderGraphGenerator::Sparse(
-                        preRecorderGraph, 
-                        4,
+                        recorderGraph, 
+                        2,
                         recorderGraph.ringCount / 2)),
             previewImageAvailable(false),
             debugPath(debugPath)
@@ -188,6 +185,10 @@ namespace optonaut {
 
         RecorderGraph& GetRecorderGraph() {
             return recorderGraph;
+        }
+        
+        RecorderGraph& GetPreRecorderGraph() {
+            return preRecorderGraph;
         }
 
         void ForwardToStereoProcess(const SelectionInfo &a, const SelectionInfo &b) {
@@ -518,50 +519,16 @@ namespace optonaut {
             return in;
         }
         
-        SelectionInfo SelectBetterMatchForMonoQueue(const SelectionInfo &best, const SelectionInfo &in) {
-                
-            SCounters::Increase("Better Match Mono Queue In");
-            //Init case
-            if(!best.isValid) {
-                SCounters::Increase("Better Mono Queue Init");
-                return in;
-            }
-
-            //Invalid case
-            if(!in.isValid) {
-                SCounters::Increase("Better Mono Queue Invalid");
-                return best;
-            }
-            
-            if(best.closestPoint.globalId != in.closestPoint.globalId) {
-                SCounters::Increase("Better Match Mono Queue Found");
-                //We will not get a better match. Can forward best.  
-                ForwardToStereoConversionQueue(best);
-                //ForwardToMonoQueue(in, true);
-                //We Finished a ring. Flush.
-
-            } else {
-                SCounters::Increase("Better Match Mono Queue Rejected Because Same Id");
-                if(!isFinished) {
-                    AssertM(best.dist >= in.dist, "Recorder controller only returns better or equal matches");
-                }
-            }
-            //Forward all for testing.  
-            //if(!firstRingFinished) {
-            //    ForwardToMonoQueue(in);
-            //}
-
-            return in; 
-        }
-
         void ApplyAlignment(InputImageP image) {
 
-            image->adjustedExtrinsics = aligner->GetCurrentBias() * image->originalExtrinsics;
+            image->adjustedExtrinsics = 
+                aligner->GetCurrentBias() * image->originalExtrinsics;
 
-            SelectionInfo current = controller.Push(image);
+            recorderController.Push(image);
 
-            if(isIdle)
-                return;
+            // TODO - Necassary?
+            // if(isIdle)
+            //    return;
 
             if(DebugHook::Instance != NULL) {
                 DebugHook::Instance->RegisterImageRotationModel(
@@ -569,8 +536,6 @@ namespace optonaut {
                         ConvertFromStitcher(image->adjustedExtrinsics), 
                         image->intrinsics);
             }
-           
-            selectorQueue.Push(current); 
         }
     
         void Push(InputImageP image) {
@@ -621,8 +586,8 @@ namespace optonaut {
             if(!firstRingFinished) {
                 FinishFirstRing();
             }
-            SelectionInfo last = selectorQueue.GetState();
-            stereoRingBuffer.Push(last);
+            
+            recorderController.Flush();
             stereoRingBuffer.Flush();
             saveQueue.Finish();
             

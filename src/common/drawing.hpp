@@ -82,8 +82,6 @@ namespace optonaut {
                        imageSize, Point(0, 0)) - 
                 Point(imageSize.width / 2, imageSize.height / 2);
 
-            cout << "Drawing point to: " << center << endl;
-
             cv::circle(target, center - offset, size, color, -1);
 
             //if(text != "") {
