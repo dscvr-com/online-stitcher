@@ -17,7 +17,6 @@
 #include "recorderGraph.hpp"
 #include "recorderGraphGenerator.hpp"
 #include "streamingRecorderController.hpp"
-#include "tolerantRecorderController.hpp"
 #include "asyncAligner.hpp"
 #include "trivialAligner.hpp"
 #include "ringwiseStreamAligner.hpp"
