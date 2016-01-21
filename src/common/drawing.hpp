@@ -5,6 +5,7 @@
 #include <opencv2/stitching/detail/matchers.hpp>
 
 #include "../math/projection.hpp"
+#include "../stitcher/simpleSphereStitcher.hpp"
 
 #ifndef OPTONAUT_DRAWING_DEBUG_HEADER
 #define OPTONAUT_DRAWING_DEBUG_HEADER
@@ -65,6 +66,34 @@ namespace optonaut {
 
         DrawMatchingHomographyBorder(homography, a, Scalar(0, 255, 0), target);
         DrawMatchingHomographyBorder(homographyFromRot, a, Scalar(255, 0, 0), target);
+    }
+
+    static inline void DrawPointsOnPanorama(Mat &target, const vector<Mat> &positions,
+            const Mat &intrinsics, const Size &imageSize, const float warperScale,
+            const Point &offset,
+            const Scalar color = Scalar(0x00, 0xFF, 0x00), const int size = 8) {
+
+        SimpleSphereStitcher debugger(warperScale);
+
+        for(auto ext : positions) {
+
+            Point center = debugger.WarpPoint(intrinsics, 
+                       ext, 
+                       imageSize, Point(0, 0)) - 
+                Point(imageSize.width / 2, imageSize.height / 2);
+
+            cout << "Drawing point to: " << center << endl;
+
+            cv::circle(target, center - offset, size, color, -1);
+
+            //if(text != "") {
+            //    Point offset(-20, -20);
+            //    
+            //    cv::putText(target, text, 
+            //            center + offset, FONT_HERSHEY_PLAIN, 3, 
+            //            color, 3);
+            //}
+        }
     }
 }
 

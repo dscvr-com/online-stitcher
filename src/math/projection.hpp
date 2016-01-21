@@ -6,6 +6,8 @@
 #include "../common/image.hpp"
 #include "../common/assert.hpp"
 #include "../common/support.hpp"
+#include "../common/functional.hpp"
+#include "../recorder/recorderGraph.hpp"
 #include "support.hpp"
 
 #ifndef OPTONAUT_PROJECTION_HEADER
@@ -362,7 +364,22 @@ namespace optonaut {
         if(face.cols != width || face.rows != height || face.type() != in.type()) {
             face = Mat(width, height, in.type());
         }
-        remap(in, face, mapx, mapy, CV_INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 0));
+        remap(in, face, mapx, mapy, CV_INTER_LINEAR, 
+                BORDER_CONSTANT, Scalar(0, 0, 0));
+    }
+
+    static inline std::vector<cv::Mat> ExtractExtrinsics(
+            const std::vector<InputImageP> &in) {
+        return fun::map<InputImageP, cv::Mat>(in, [](const InputImageP &q) { 
+                    return q->adjustedExtrinsics; 
+                });
+    }
+    
+    static inline std::vector<cv::Mat> ExtractExtrinsics(
+            const std::vector<SelectionPoint> &in) {
+        return fun::map<SelectionPoint, cv::Mat>(in, [](const SelectionPoint &q) { 
+                    return q.extrinsics; 
+                });
     }
 }
 #endif

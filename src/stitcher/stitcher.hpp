@@ -41,6 +41,16 @@ namespace optonaut {
             core.InitializeForStitching(rings, exposure, 0.4);
             res = core.Stitch(progress, debugName);
 
+            Mat intrinsics = rings[0][0]->intrinsics;
+            Size size = Size(intrinsics.at<double>(0, 2), 
+                    intrinsics.at<double>(1, 2));
+            
+            DrawPointsOnPanorama(res->image.data, 
+                    ExtractExtrinsics(fun::flat(rings)), 
+                    intrinsics, size, 1200, 
+                    res->corner + Point(0, 10), Scalar(0xFF, 0x00, 0x00));
+
+
             return res;
         }
     };    

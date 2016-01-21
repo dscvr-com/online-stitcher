@@ -11,6 +11,7 @@
 #include "stitcher/stitcherSink.hpp"
 #include "common/intrinsics.hpp"
 #include "common/backtrace.hpp"
+#include "common/drawing.hpp"
 #include "stitcher/stitcher.hpp"
 #include "debug/visualDebugHook.hpp"
 #include "io/io.hpp"
@@ -25,6 +26,9 @@ bool CompareByFilename (const string &a, const string &b) {
     return IdFromFileName(a) < IdFromFileName(b);
 }
 
+shared_ptr<RecorderGraph> graph;
+Mat intrinsics;
+Size imageSize;
 
 void Record(vector<string> &files, StereoSink &sink) {
 
@@ -64,6 +68,14 @@ void Record(vector<string> &files, StereoSink &sink) {
                     new Recorder(Recorder::iosBase, Recorder::iosZero, 
                         image->intrinsics, sink, "", RecorderGraph::ModeCenter, 
                         isAsync));
+
+            // Needed for debug. 
+            intrinsics = image->intrinsics;
+            imageSize = Size(intrinsics.at<double>(0, 2), 
+                    intrinsics.at<double>(1, 2));
+            graph = shared_ptr<RecorderGraph>(new RecorderGraph(
+                        recorder->GetRecorderGraph()
+                        ));
         }
 
         recorder->Push(image);
@@ -150,6 +162,11 @@ int main(int argc, char** argv) {
             cout << "Start left stitcher." << endl;
             optonaut::Stitcher leftStitcher(leftStore);
             auto left = leftStitcher.Finish(callbacks.At(0), "dbg/left");
+
+            DrawPointsOnPanorama(left->image.data, 
+                    ExtractExtrinsics(fun::flat(graph->GetRings())), 
+                    intrinsics, imageSize, 1200, left->corner);
+            
             imwrite("dbg/left.jpg", left->image.data);
             left->image.Unload();  
             left->mask.Unload();  

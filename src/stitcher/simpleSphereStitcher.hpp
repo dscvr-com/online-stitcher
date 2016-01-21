@@ -21,7 +21,7 @@ class SimpleSphereStitcher {
         std::map<size_t, cv::Point> cornerCache;
 	public:
 
-        SimpleSphereStitcher() : warper(800) {
+        SimpleSphereStitcher(float warperScale = 800) : warper(warperScale) {
             
         }
 

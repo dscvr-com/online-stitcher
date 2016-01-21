@@ -70,6 +70,18 @@ namespace optonaut {
             : intrinsics(intrinsics), ringCount(ringCount) {
             targets.reserve(ringCount); 
         }
+        
+        RecorderGraph(const RecorderGraph &c)
+            : adj(c.adj), targets(c.targets), 
+            intrinsics(c.intrinsics), ringCount(c.ringCount)
+        {
+            for(auto ring : targets) {
+                for(auto target : ring) {
+                    AssertEQ(target.globalId, (uint32_t)targetsById.size());
+                    targetsById.push_back(&target);
+                }
+            }
+        }
 
         uint32_t AddNewRing(uint32_t ringSize) {
             AssertGT((size_t)ringCount, targets.size()); 

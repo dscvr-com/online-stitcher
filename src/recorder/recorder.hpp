@@ -186,6 +186,10 @@ namespace optonaut {
             alignerDelayQueue.Push(in);
         }
 
+        RecorderGraph& GetRecorderGraph() {
+            return recorderGraph;
+        }
+
         void ForwardToStereoProcess(const SelectionInfo &a, const SelectionInfo &b) {
 
             SelectionEdge dummy;

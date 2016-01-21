@@ -85,28 +85,10 @@ class IterativeBundleAligner {
                     }
                 }
 
-                for(auto img : images) {
-
-                    uint32_t targetId;
-
-                    Assert(imagesToTargets.GetValue(img->id, targetId));
-
-                    Point center = debugger.WarpPoint(img->intrinsics, 
-                               img->adjustedExtrinsics, 
-                               img->image.size(), Point(0, 0)) - imgCenter;
-
-                    cv::circle(res->image.data, center, 8, 
-                        Scalar(0xc0, 0xc0, 0x00), -1);
-
-                    Point offset(-20, -20);
-
-                    if(targetId % 2 == 0)
-                        offset.y -= 50;
-                    
-                    cv::putText(res->image.data, ToString(targetId), 
-                            center + offset, FONT_HERSHEY_PLAIN, 3, 
-                            Scalar(0x00, 0xFF, 0x00), 3);
-                }
+                // TODO: add target ID again. 
+                DrawPointsOnPanorama(res->image.data, 
+                        ExtractExtrinsics(images), images[0]->intrinsics, 
+                        images[0]->image.size(), 800, res->corner);
             }
             imwrite("dbg/aligned_" + ToString(k) + ".jpg", res->image.data);
         }

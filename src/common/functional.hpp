@@ -19,6 +19,19 @@ namespace fun {
         return out;
     }
 
+    template <typename In>
+    std::vector<In> flat(const std::vector<std::vector<In>> &input) {
+        std::vector<In> output;
+
+        for(size_t i = 0; i < input.size(); i++) {
+            for(size_t j = 0; j < input[i].size(); j++) {
+                output.push_back(input[i][j]);
+            }
+        }
+
+        return output;
+    }
+
     template <typename In> 
     std::vector<In> filter(const std::vector<In> &input, std::function<bool(const In&)> a) {
         std::vector<In> out;
