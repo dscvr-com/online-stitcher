@@ -124,7 +124,7 @@ namespace optonaut {
                         halfBottom.y + halfBottom.height / 8.0 * 7.0, 
                         ss.width, halfBottom.height / 8); 
                 
-                const int weakGradient = ds.height / 24;
+                const int weakGradient = ds.height / 64;
                 const int strongGradient = (top.height - halfTop.height) / 2;
 
                 const int weakGradientOffset = weakGradient * 2.0 / 3.0;

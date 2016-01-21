@@ -299,7 +299,6 @@ namespace optonaut {
                 blender->blend(imageRes, maskRes);
                 imageRes.convertTo(imageRes, CV_8U);
                 res->image = Image(imageRes);
-                res->mask = Image(maskRes);
             }
             stitcherTimer.Tick("FinalStitching Finished");
             blender.release();
@@ -309,6 +308,13 @@ namespace optonaut {
                 res->image.Load();
             }
         }
+        
+        
+        // Final Step, trim away a few pixels to avoid masking issues.
+        
+        static const int trim = 3;
+        
+        res->image = Image(res->image.data(cv::Rect(0, trim, res->image.cols, res->image.rows - trim * 2)));
         
         store.SaveOptograph(res);
         

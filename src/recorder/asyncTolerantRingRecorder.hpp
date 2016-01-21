@@ -26,8 +26,8 @@ class AsyncTolerantRingRecorder {
                     std::bind(&AsyncTolerantRingRecorder::PushToStitcher, 
                         this, 
                         std::placeholders::_1),
-                    M_PI / 16,
-                    true)
+                    M_PI / 8,
+                    false)
         {
 
         }
