@@ -89,18 +89,18 @@ namespace optonaut {
             
                 vector<cv::Point2f> src = {
                     cv::Point2f(0, 0),
-                    cv::Point2f(0, is.height),
-                    cv::Point2f(is.width, is.height),
+                    cv::Point2f(0, is.height - 1),
+                    cv::Point2f(is.width, is.height - 1),
                     cv::Point2f(is.width, 0)
                 };
 
                 ss = cv::Size(ds.width, ds.height / 2 - is.height / 2);
                 
                 vector<cv::Point2f> dest = {
-                    cv::Point2f(0, ss.height),
+                    cv::Point2f(0, ss.height - 1),
                     cv::Point2f(0, 0),
                     cv::Point2f(ss.width, 0),
-                    cv::Point2f(ss.width, ss.height)
+                    cv::Point2f(ss.width, ss.height - 1)
                 };
 
                 mirrorTransform = getPerspectiveTransform(src, dest);
@@ -141,6 +141,8 @@ namespace optonaut {
                 warpPerspective(input, 
                    output(bottom), 
                    mirrorTransform, ss);
+
+                return;
 
                 top = cv::Rect(top.x, top.y, top.width, top.height - weakGradientOffset);
                 bottom = cv::Rect(bottom.x, bottom.y + weakGradientOffset,
