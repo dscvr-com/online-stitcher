@@ -16,7 +16,7 @@
 
 #include "recorderGraph.hpp"
 #include "recorderGraphGenerator.hpp"
-#include "tolerantRecorderController.hpp"
+#include "streamingRecorderController.hpp"
 #include "asyncAligner.hpp"
 #include "trivialAligner.hpp"
 #include "ringwiseStreamAligner.hpp"
@@ -388,7 +388,12 @@ namespace optonaut {
 
         void FinishFirstRing() {
             AssertM(!firstRingFinished, "First ring has not been closed");
+            
+            AssertGT((int)firstRingImagePool.size(), 0);
+            
             firstRingFinished = true;
+            
+            
             previewImageAvailable = true;
 
             CorrelationDiff result;

@@ -326,11 +326,11 @@ public:
         //TODO: Wrong assumptions.
         //This actually builds the recorder graph from the bottom. 
 
-        if(mode == RecorderGraph::ModeTruncated || mode == RecorderGraph::ModeTinyDebug) {
+        if(mode == RecorderGraph::ModeTruncated) {
            //Configuration for ModeTruncated
            //Optimize for 3 rings.
            
-           vCount = 3; 
+           vCount = 3;
            //vFov stays the same.
            vStart = (M_PI - (vFov * 3)) / 2;
             
@@ -341,7 +341,7 @@ public:
             vCount = vCount - 1;
             vStart = M_PI - (vFov * vCount);
             
-        } else if(mode == RecorderGraph::ModeCenter) {
+        } else if(mode == RecorderGraph::ModeCenter || mode == RecorderGraph::ModeTinyDebug) {
             vCount = 1;
             vStart = M_PI / 2 - (vFov / 2);
         } else {
@@ -368,13 +368,14 @@ public:
                 hCount += divider - ((hCount) % divider);
             }
 			hFov = M_PI * 2 / hCount;
+            
+            if(mode ==  RecorderGraph::ModeTinyDebug) {
+                hCount = 4 * divider;
+            }
 
             double hLeft = 0;
             SelectionEdge edge;
-            
-            if(mode ==  RecorderGraph::ModeTinyDebug) {
-                hCount = 6;
-            }
+
             int ringOverdrive = 0;
             
             if(i == vCount -1) {
@@ -387,7 +388,7 @@ public:
             RingProcessor<SelectionPoint> hqueue(1, 
                     bind(CreateEdge, std::ref(res), placeholders::_1, placeholders::_2),
                     bind(AddNode, std::ref(res), placeholders::_1));
- 
+            
             for(uint32_t j = 0; j < hCount; j++) {
                 if(debug) {
                     cout << "Recorder Graph Pushing " << hLeft << ", " << vCenter << endl;

@@ -107,6 +107,11 @@ namespace optonaut {
             }
 
             void Blur(const Mat &input, Mat &output) {
+                
+                if(ss.height <= 0) {
+                    output = input;
+                    return;
+                }
 
                 AssertEQ(input.size(), is);
                 output = Mat(ds, input.type());
@@ -141,8 +146,6 @@ namespace optonaut {
                 warpPerspective(input, 
                    output(bottom), 
                    mirrorTransform, ss);
-
-                return;
 
                 top = cv::Rect(top.x, top.y, top.width, top.height - weakGradientOffset);
                 bottom = cv::Rect(bottom.x, bottom.y + weakGradientOffset,
