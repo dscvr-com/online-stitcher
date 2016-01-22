@@ -330,7 +330,7 @@ public:
            //Configuration for ModeTruncated
            //Optimize for 3 rings.
            
-           vCount = 3; 
+           vCount = 3;
            //vFov stays the same.
            vStart = (M_PI - (vFov * 3)) / 2;
             
@@ -363,6 +363,10 @@ public:
 			double vCenter = i * vFov + vFov / 2.0 - M_PI / 2.0 + vStart;
 
 			uint32_t hCount = hCenterCount * cos(vCenter);
+            
+            if(mode ==  RecorderGraph::ModeTinyDebug) {
+                hCount = 6 * divider;
+            }
            
             if(hCount % divider != 0) { 
                 hCount += divider - ((hCount) % divider);
@@ -371,10 +375,7 @@ public:
 
             double hLeft = 0;
             SelectionEdge edge;
-            
-            if(mode ==  RecorderGraph::ModeTinyDebug) {
-                hCount = 6;
-            }
+
             int ringOverdrive = 0;
             
             if(i == vCount -1) {
