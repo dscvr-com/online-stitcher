@@ -16,7 +16,6 @@
 
 #include "recorderGraph.hpp"
 #include "recorderGraphGenerator.hpp"
-#include "streamingRecorderController.hpp"
 #include "tolerantRecorderController.hpp"
 #include "asyncAligner.hpp"
 #include "trivialAligner.hpp"
@@ -62,15 +61,14 @@ namespace optonaut {
         RecorderGraphGenerator generator;
         RecorderGraph preRecorderGraph;
         RecorderGraph recorderGraph;
+        FeedbackImageSelector preController;
         ImageSelector recorderController;
-        StreamingRecorderController preController;
         
         uint32_t imagesToRecord;
         uint32_t recordedImages;
         uint32_t keyframeCount;
         int lastRingId;
         
-        ReduceProcessor<SelectionInfo, SelectionInfo> preSelectorQueue;
         QueueProcessor<InputImageP> alignerDelayQueue;
         AsyncQueue<SelectionInfo> stereoConversionQueue;
         RingProcessor<SelectionInfo> stereoRingBuffer;
@@ -120,18 +118,16 @@ namespace optonaut {
             generator(),
             preRecorderGraph(generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityDouble, 0, 4)),
             recorderGraph(RecorderGraphGenerator::Sparse(preRecorderGraph, 2)),
+            preController(preRecorderGraph, [this] (const SelectionInfo &x) {
+                ForwardToAligner(x.image);
+            }, M_PI / 16, true),
             recorderController(recorderGraph, [this] (const SelectionInfo &x) {
                 ForwardToStereoConversionQueue(x);
             }, M_PI / 16, false),
-            preController(preRecorderGraph),
             imagesToRecord(preRecorderGraph.Size()),
             recordedImages(0),
             keyframeCount(0),
             lastRingId(-1),
-            preSelectorQueue(
-                std::bind(&Recorder::SelectBetterMatchForPreSelection,
-                    this, placeholders::_1,
-                    placeholders::_2), SelectionInfo()),
             alignerDelayQueue(15,
                 std::bind(&Recorder::ApplyAlignment,
                           this, placeholders::_1)),
@@ -217,17 +213,16 @@ namespace optonaut {
         void ConvertToStitcher(const Mat &in, Mat &out) const {
             out = (base * zero * in.inv() * baseInv);
         }
-       
-        //TODO: Rename/Remove all ball methods.  
-        Mat GetNextKeyframe() const {
-            return ConvertFromStitcher(preController.GetNextKeyframe());
+      
+        Mat GetBallPosition() const {
+            return ConvertFromStitcher(preController.GetBallPosition());
         }
         
-        double GetDistanceToNextKeyframe() const {
+        double GetDistanceToBall() const {
             return preController.GetError();
         }
         
-        const Mat &GetAngularDistanceToNextKeyframe() const {
+        const Mat &GetAngularDistanceToBall() const {
             return preController.GetErrorVector();
         }
 
@@ -237,7 +232,6 @@ namespace optonaut {
         }
 
         Mat GetCurrentRotation() const {
-            
             return ConvertFromStitcher(last->adjustedExtrinsics);
         }
 
@@ -485,40 +479,6 @@ namespace optonaut {
             stereoRingBuffer.Push(in);
         }
 
-        SelectionInfo SelectBetterMatchForPreSelection(const SelectionInfo &best, const SelectionInfo &in) {
-
-            SCounters::Increase("Better Match Pre Selection In");
-
-            //Init case
-            if(!best.isValid)
-                return in;
-            
-            //Invalid case
-            if(!in.isValid)
-                return best;
-
-            //Can do deffered loading here - we're still on main thread.  
-            if(!in.image->IsLoaded()) {
-                in.image->LoadFromDataRef();
-            }
-           
-            //Push images that get closer to the target towards the aligner.
-            //But only if we're not in debug.
-            if(debugPath == "") {
-                SCounters::Increase("Better Match Pre Selection Found");
-                ForwardToAligner(in.image);
-            }
-            if(best.closestPoint.globalId != in.closestPoint.globalId) {
-                //This delays.
-                recordedImages++;
-                if(preController.IsFinished()) {
-                    isFinished = true;
-                }
-            }
-            
-            return in;
-        }
-        
         void ApplyAlignment(InputImageP image) {
 
             image->adjustedExtrinsics = 
@@ -546,7 +506,8 @@ namespace optonaut {
             if(debugPath != "" && !isIdle) {
                 static int debugCounter = 0;
                 image->LoadFromDataRef();
-                InputImageToFile(image, debugPath + "/" + ToString(debugCounter++) + ".jpg");
+                InputImageToFile(image, 
+                        debugPath + "/" + ToString(debugCounter++) + ".jpg");
             }
             
             AssertM(!isFinished, "Warning: Push after finish - this is probably a racing condition");
@@ -555,21 +516,17 @@ namespace optonaut {
             
             ConvertToStitcher(image->originalExtrinsics, image->originalExtrinsics);
             image->adjustedExtrinsics = image->originalExtrinsics;
-           
-            //This preselects.
-            if(!preController.IsInitialized() || !hasStarted)
-                preController.Initialize(image->adjustedExtrinsics);
-            
-            //Pass idle info, so we can get UI feedback without modifying state
-            SelectionInfo current = preController.Push(image, isIdle);
-            
-            if(isIdle)
-                return;
-            
-            hasStarted = true;
-            
-            preSelectorQueue.Push(current);
 
+
+            // TODO: Pass idle info, so we can get UI feedback without modifying state
+            // TODO: Use FeedbackImageSelector
+            if(preController.Push(image, isIdle)) {
+                image->LoadFromDataRef();
+            }
+           
+            if(!isIdle) { 
+                hasStarted = true;
+            }
         }
 
         void Finish() {
@@ -621,10 +578,6 @@ namespace optonaut {
         bool AreAdjacent(SelectionPoint a, SelectionPoint b) {
             SelectionEdge dummy; 
             return preRecorderGraph.GetEdge(a, b, dummy);
-        }
-        
-        SelectionInfo LastKeyframe() {
-            return preSelectorQueue.GetState();
         }
         
         bool IsIdle() {

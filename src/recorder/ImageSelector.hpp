@@ -12,11 +12,22 @@ using namespace std;
 #define OPTONAUT_IMAGE_SELECTOR_HEADER
 
 namespace optonaut {
-    class ImageSelector {
-        private: 
-            typedef std::function<void(SelectionInfo)> MatchCallback;
+    
+    struct SelectionInfo {
+        SelectionPoint closestPoint;
+        InputImageP image;
+        double dist;
+        bool isValid;
+        
+        SelectionInfo() : dist(0), isValid(false) {
+            
+        }
+    };
 
-            RecorderGraph &graph;
+    class ImageSelector {
+        public: 
+            typedef std::function<void(SelectionInfo)> MatchCallback;
+        private: 
             MatchCallback callback;
 
             int currentRing;
@@ -24,8 +35,6 @@ namespace optonaut {
             
             double tolerance; 
             bool strictOrder;
-
-            SelectionInfo current;
 
             void MoveToNextRing() {
 
@@ -57,14 +66,32 @@ namespace optonaut {
                 return newRing;
             }
 
+        protected: 
+            RecorderGraph &graph;
+            SelectionInfo current;
+
+            virtual void SetCurrent(const SelectionPoint &closestPoint,
+                                    const InputImageP image, 
+                                    const double dist) {
+                    current.closestPoint = closestPoint;
+                    current.image = image;
+                    current.dist = dist;
+                    current.isValid = true;
+            }
+
+            virtual void Invalidate() {
+                current.isValid = false;
+            }
+
         public:
+
             ImageSelector(RecorderGraph &graph, 
                     MatchCallback onNewMatch,
                     double tolerance = M_PI / 16,
                     bool strictOrder = true) :
-                graph(graph), callback(onNewMatch), 
+                callback(onNewMatch), 
                 isFinished(false), tolerance(tolerance),
-                strictOrder(false) { 
+                strictOrder(strictOrder), graph(graph) { 
                     
                 if(strictOrder) {
                     currentRing = (int)(graph.ringCount - 1) / 2;
@@ -77,35 +104,31 @@ namespace optonaut {
                 return current;
             }
 
-            void Flush() {
+            virtual void Flush() {
                 if(current.isValid) {
                     callback(current);
                 }
             }
         
-            void Push(const InputImageP image) {
+            virtual bool Push(const InputImageP image) {
 
                 SelectionPoint next;
                 double dist = graph.FindClosestPoint(image->adjustedExtrinsics, 
                         next, currentRing);
 
                 if(dist > tolerance) 
-                    return;
+                    return false;
 
                 if(!current.isValid) {
                     // Init case - remember this point. 
-                    current.closestPoint = next;
-                    current.image = image;
-                    current.dist = dist;
-                    current.isValid = true;
+                    SetCurrent(next, image, dist);
+                    return true;
                 } else {
                     if(next.globalId == current.closestPoint.globalId) {
                         if(dist < current.dist) {
                             // Better match.
-                            current.dist = dist;
-                            current.closestPoint = next;
-                            current.image = image;
-                            current.isValid = true;
+                            SetCurrent(next, image, dist);
+                            return true;
                         }
                     } else {
                         // New Match
@@ -121,13 +144,11 @@ namespace optonaut {
 
                                 callback(current);
 
-                                current.isValid = false;
+                                Invalidate();
 
                                 if(graph.GetNextForRecording(next, realNext)) {
-                                    current.closestPoint = next;
-                                    current.dist = dist;
-                                    current.image = image;
-                                    current.isValid = true;
+                                    SetCurrent(next, image, dist);
+                                    return true;
                                 } else {
                                     int nextRing = GetNextRing();
                                     if(nextRing < 0 
@@ -138,16 +159,115 @@ namespace optonaut {
                                         MoveToNextRing();
                                     }
                                 }
+
                             }
                         } else {
                             callback(current);
-                            current.closestPoint = next;
-                            current.dist = dist;
-                            current.image = image;
-                            current.isValid = true;
+                            SetCurrent(next, image, dist);
+                            return true;
                         }
                     } 
                 }
+                return false;
+            }
+    };
+
+    // An image selector that's got balls.
+    class FeedbackImageSelector : public ImageSelector {
+        private:
+            SelectionPoint ballTarget;
+            Mat ballPosition;
+            bool hasStarted;
+            const int ballLead = 4;
+            //const double ballSpeed = M_PI / 128;
+
+            Mat errorVec;
+            double error;
+
+            SelectionPoint GetNext(const SelectionPoint &current, 
+                                   const bool allowRingSwitch,
+                                   const int depth) {
+                if(depth == 0)
+                    return current;
+
+                SelectionPoint next;
+
+                if(graph.GetNextForRecording(current, next)) {
+                    if(current.ringId != next.ringId) {
+                        if(allowRingSwitch) {
+                            return next;
+                        } else {
+                            return current;
+                        }
+                    }
+
+                    return GetNext(next, false, depth - 1); 
+                } else {
+                    return current;
+                }
+                
+            }
+
+        protected:
+            virtual void SetCurrent(const SelectionPoint &closestPoint,
+                                    const InputImageP image, 
+                                    const double dist) {
+                ImageSelector::SetCurrent(closestPoint, image, dist);
+
+                ballTarget = GetNext(closestPoint, true, ballLead);
+
+            }
+
+            virtual void Invalidate() {
+                ImageSelector::Invalidate();
+            }
+
+        public: 
+            FeedbackImageSelector(RecorderGraph &graph, 
+                    MatchCallback onNewMatch,
+                    double tolerance = M_PI / 16,
+                    bool strictOrder = true) : 
+                ImageSelector(graph, onNewMatch, tolerance, strictOrder), 
+                hasStarted(false) {
+                
+            }
+
+            using ImageSelector::Push;
+
+            bool Push(InputImageP image, bool isIdle) {
+
+                if(!hasStarted) {
+                    ballPosition = image->originalExtrinsics;
+                } else {
+                    // TODO: LERP!
+                }
+                
+                if(isIdle) {
+                    return false;
+                }
+
+                hasStarted = true;
+                
+                bool result = ImageSelector::Push(image);
+                
+                ExtractRotationVector(
+                        image->adjustedExtrinsics.inv() * ballPosition, errorVec);
+
+                error = GetAngleOfRotation(image->adjustedExtrinsics, ballPosition);
+
+                return result;
+            }
+
+            const Mat &GetBallPosition() const {
+                return ballPosition;
+            }
+            
+            double GetError() const {
+                return error;
+            }
+            
+            const Mat &GetErrorVector() const {
+                return errorVec;
             }
     };
 }

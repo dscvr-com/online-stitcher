@@ -12,6 +12,7 @@
 #include "io/io.hpp"
 #include "math/projection.hpp"
 #include "recorder/recorder.hpp"
+#include "recorder/streamingRecorderController.hpp"
 #include "stitcher/simpleSphereStitcher.hpp"
 #include "stitcher/simplePlaneStitcher.hpp"
 
@@ -51,6 +52,7 @@ int main(int argc, char** argv) {
     RecorderGraph graph = generator.Generate(image0->intrinsics, 
                         RecorderGraph::ModeCenter);
     cout << "Graph generated" << endl;
+    // TODO - remove apparently. 
     StreamingRecorderController controller(graph);
 
     SelectionInfo currentBest;

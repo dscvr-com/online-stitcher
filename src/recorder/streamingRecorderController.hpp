@@ -17,17 +17,6 @@ using namespace std;
 
 namespace optonaut {
 
-    struct SelectionInfo {
-        SelectionPoint closestPoint;
-        InputImageP image;
-        double dist;
-        bool isValid;
-        
-        SelectionInfo() : dist(0), isValid(false) {
-            
-        }
-    };
-
     class StreamingRecorderController {
     private:
         RecorderGraph &graph;

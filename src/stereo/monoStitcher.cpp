@@ -16,7 +16,7 @@
 #include "../common/assert.hpp"
 #include "../math/quat.hpp"
 #include "../math/support.hpp"
-#include "../recorder/streamingRecorderController.hpp"
+#include "../recorder/imageSelector.hpp"
 #include "../stereo/monoStitcher.hpp"
 
 using namespace std;
