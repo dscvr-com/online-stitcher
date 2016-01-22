@@ -64,7 +64,7 @@ namespace optonaut {
                     bool strictOrder = true) :
                 graph(graph), callback(onNewMatch), 
                 isFinished(false), tolerance(tolerance),
-                strictOrder(false) { 
+                strictOrder(false) {
                     
                 if(strictOrder) {
                     currentRing = (int)(graph.ringCount - 1) / 2;

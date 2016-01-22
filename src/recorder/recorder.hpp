@@ -393,7 +393,12 @@ namespace optonaut {
 
         void FinishFirstRing() {
             AssertM(!firstRingFinished, "First ring has not been closed");
+            
+            AssertGT((int)firstRingImagePool.size(), 0);
+            
             firstRingFinished = true;
+            
+            
             previewImageAvailable = true;
 
             CorrelationDiff result;

@@ -107,6 +107,11 @@ namespace optonaut {
             }
 
             void Blur(const Mat &input, Mat &output) {
+                
+                if(ss.height <= 0) {
+                    output = input;
+                    return;
+                }
 
                 AssertEQ(input.size(), is);
                 output = Mat(ds, input.type());
