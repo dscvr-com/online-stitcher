@@ -7,9 +7,12 @@
 namespace optonaut {
     class STimer {
         private:
+        static const bool g_enabled = false;
+
         std::chrono::high_resolution_clock::time_point last;
+        bool enabled;
         public:
-        STimer() : last(std::chrono::high_resolution_clock::now()) { }
+        STimer(bool enabled = g_enabled) : enabled(enabled), last(std::chrono::high_resolution_clock::now()) { }
         void Tick(std::string label = "");
         void Reset();
     };

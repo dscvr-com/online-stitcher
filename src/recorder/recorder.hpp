@@ -21,6 +21,7 @@
 #include "trivialAligner.hpp"
 #include "ringwiseStreamAligner.hpp"
 #include "asyncTolerantRingRecorder.hpp"
+#include "iterativeBundleAligner.hpp"
 
 #include <chrono>
 
@@ -69,7 +70,8 @@ namespace optonaut {
         uint32_t keyframeCount;
         int lastRingId;
         
-        QueueProcessor<InputImageP> alignerDelayQueue;
+        AsyncQueue<SelectionInfo> inputBufferQueue;
+        QueueProcessor<SelectionInfo> alignerDelayQueue;
         AsyncQueue<SelectionInfo> stereoConversionQueue;
         RingProcessor<SelectionInfo> stereoRingBuffer;
         AsyncQueue<StereoImage> saveQueue;
@@ -91,7 +93,7 @@ namespace optonaut {
         InputImageP GetParentKeyframe(const Mat &extrinsics) {
             return aligner->GetClosestKeyframe(extrinsics);
         }
-
+        
     public:
 
         static Mat androidBase;
@@ -116,18 +118,21 @@ namespace optonaut {
             firstRingFinished(false),
             hasStarted(false),
             generator(),
-            preRecorderGraph(generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityDouble, 0, 4)),
-            recorderGraph(RecorderGraphGenerator::Sparse(preRecorderGraph, 2)),
+            preRecorderGraph(generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityNormal, 0, 6)),
+            recorderGraph(RecorderGraphGenerator::Sparse(preRecorderGraph, 3)),
             preController(preRecorderGraph, [this] (const SelectionInfo &x) {
-                ForwardToAligner(x.image);
-            }, M_PI / 16, true),
+                inputBufferQueue.Push(x);
+            }, Vec3d(M_PI / 64, M_PI / 128, M_PI / 16)),
             recorderController(recorderGraph, [this] (const SelectionInfo &x) {
                 ForwardToStereoConversionQueue(x);
-            }, M_PI / 16, false),
+            }, Vec3d(M_PI / 16, M_PI / 16, M_PI / 8), false),
             imagesToRecord(preRecorderGraph.Size()),
             recordedImages(0),
             keyframeCount(0),
             lastRingId(-1),
+            inputBufferQueue([this] (const SelectionInfo &x) {
+                ForwardToAligner(x);
+            }),
             alignerDelayQueue(15,
                 std::bind(&Recorder::ApplyAlignment,
                           this, placeholders::_1)),
@@ -145,7 +150,7 @@ namespace optonaut {
                     this, placeholders::_1)),
             previewGraph(RecorderGraphGenerator::Sparse(
                         recorderGraph, 
-                        2,
+                        1,
                         recorderGraph.ringCount / 2)),
             previewImageAvailable(false),
             debugPath(debugPath)
@@ -174,8 +179,10 @@ namespace optonaut {
             }
         }
 
-        void ForwardToAligner(InputImageP in) {
-            aligner->Push(in);
+        void ForwardToAligner(SelectionInfo in) {
+            recordedImages++;
+            SCounters::Increase("Used Images");
+            aligner->Push(in.image);
             alignerDelayQueue.Push(in);
         }
 
@@ -218,6 +225,10 @@ namespace optonaut {
             return ConvertFromStitcher(preController.GetBallPosition());
         }
         
+        SelectionInfo GetCurrentKeyframe() const {
+            return preController.GetCurrent();
+        }
+        
         double GetDistanceToBall() const {
             return preController.GetError();
         }
@@ -256,6 +267,7 @@ namespace optonaut {
 
         void Dispose() {
             //cout << "Pipeline Dispose called by " << std::this_thread::get_id() << endl;
+            inputBufferQueue.Dispose();
             aligner->Dispose();
             stereoConversionQueue.Dispose();
             saveQueue.Dispose();
@@ -341,7 +353,8 @@ namespace optonaut {
             
             if(recorderGraph.ringCount == 1) {
                 // If we only have a single ring, we have to empty this queue
-                // before blending the preview to avoid racing conditions. 
+                // before blending the preview to avoid racing conditions.
+                inputBufferQueue.Finish();
                 aligner->Finish();
                 alignerDelayQueue.Flush();
                 stereoConversionQueue.Finish();
@@ -386,16 +399,33 @@ namespace optonaut {
             }
         }
 
+        // TODO - order of operations in this class is possibly broken!
         void FinishFirstRing() {
             AssertM(!firstRingFinished, "First ring has not been closed");
             
             AssertGT((int)firstRingImagePool.size(), 0);
             
             firstRingFinished = true;
-            
-            
             previewImageAvailable = true;
+            
+            /*
+            BiMap<size_t, uint32_t> imagesToTargets;
+            
+            vector<InputImageP> matches = recorderGraph.SelectBestMatches(firstRingImagePool, imagesToTargets);
+            
+            IterativeBundleAligner::Align(matches, recorderGraph, imagesToTargets, 15, 1.0);
+            
+            for(auto img : matches) {
+                SelectionInfo info;
+                uint32_t pointId;
+                Assert(imagesToTargets.GetValue(img->id, pointId));
+                Assert(recorderGraph.GetPointById(pointId, info.closestPoint));
+                info.image = img;
+                ForwardToMonoQueueEx(info);
+            }
+             */
 
+            
             CorrelationDiff result;
 
             PairwiseCorrelator corr;
@@ -416,7 +446,7 @@ namespace optonaut {
 
             // TODO - SMTH is wrong here. 
             for(size_t i = 0; i < n; i++) {
-                double ydiff = -result.angularOffset.x * 
+                double ydiff = result.angularOffset.x *
                     (1.0 - ((double)i) / ((double)n));
                 //double ydiff = 0;
                 Mat correction;
@@ -426,8 +456,6 @@ namespace optonaut {
 
                 //cout << "Applying correction of " << ydiff << " to image " << firstRingImagePool[i]->id << endl;
             }
-
-    
             //Re-select images.
            
             size_t m = firstRing.size();
@@ -456,7 +484,8 @@ namespace optonaut {
                 firstRing[i].image = firstRingImagePool[picked];
                 firstRing[i].dist = distCur;
                 firstRingImagePool[picked] = NULL;
-            }
+             }
+            
 
             for(size_t i = 0; i < m; i++) {
                 ForwardToMonoQueueEx(firstRing[i]);
@@ -484,7 +513,9 @@ namespace optonaut {
             stereoRingBuffer.Push(in);
         }
 
-        void ApplyAlignment(InputImageP image) {
+        void ApplyAlignment(SelectionInfo info) {
+            
+            auto image = info.image;
 
             image->adjustedExtrinsics = 
                 aligner->GetCurrentBias() * image->originalExtrinsics;
@@ -504,11 +535,14 @@ namespace optonaut {
         }
     
         void Push(InputImageP image) {
+            //STimer processingTime(true);
+
             //cout << "Pipeline Push called by " << std::this_thread::get_id() << endl;
             
             last = image;
             
             if(debugPath != "" && !isIdle) {
+                AssertFalseInProduction(false);
                 static int debugCounter = 0;
                 image->LoadFromDataRef();
                 InputImageToFile(image, 
@@ -521,17 +555,34 @@ namespace optonaut {
             
             ConvertToStitcher(image->originalExtrinsics, image->originalExtrinsics);
             image->adjustedExtrinsics = image->originalExtrinsics;
-
-
-            // TODO: Pass idle info, so we can get UI feedback without modifying state
-            // TODO: Use FeedbackImageSelector
-            if(preController.Push(image, isIdle)) {
+            
+            
+            Mat rvec;
+            ExtractRotationVector(image->originalExtrinsics, rvec);
+            
+            static STimer frame(true);
+            
+            //frame.Tick("## Frame Received");
+            //cout << "## Rotation X: " << rvec.at<double>(0) << endl;
+            //cout << "## Rotation Y: " << rvec.at<double>(1) << endl;
+            //cout << "## Rotation Z: " << rvec.at<double>(2) << endl;
+            //cout << "## Idle: " << (isIdle ? 1 : 0) << endl;
+            
+            bool shouldLoad = preController.Push(image, isIdle);
+            
+            if(shouldLoad) {
+                //static STimer loadingTime(true);
                 image->LoadFromDataRef();
-            }
-           
-            if(!isIdle) { 
+                //SCounters::Increase("Loaded Images");
                 hasStarted = true;
+                //loadingTime.Tick("## Loading Time");
             }
+            
+            if(preController.IsFinished()) {
+                isFinished = true;
+            }
+            
+            //processingTime.Tick("## Processing Time");
         }
 
         void Finish() {
@@ -541,6 +592,7 @@ namespace optonaut {
             if(stereoConversionQueue.IsRunning()) {
                 // If the stereo conversion queue is still running,
                 // end it. Otherwise, the preview generation already stopped this.
+                inputBufferQueue.Finish();
                 aligner->Finish();
                 alignerDelayQueue.Flush();
                 stereoConversionQueue.Finish();

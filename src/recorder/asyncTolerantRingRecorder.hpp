@@ -26,7 +26,7 @@ class AsyncTolerantRingRecorder {
                     std::bind(&AsyncTolerantRingRecorder::PushToStitcher, 
                         this, 
                         std::placeholders::_1),
-                    M_PI / 8,
+                    Vec3d(M_PI / 8, M_PI / 8, M_PI / 8),
                     false)
         {
 

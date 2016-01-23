@@ -188,20 +188,20 @@ namespace optonaut {
                     for(auto &adj : relations.GetEdges()) {
 
                         Edges correlatorEdges = fun::filter<Edge>(adj.second, 
-                            [] (auto a) {
+                            [] (const Edge &a) {
                                 return !a.value.forced && a.value.overlap > 0
                                 && a.value.valid; 
                             }); 
 
                         Edges forcedEdges = fun::filter<Edge>(adj.second, 
-                            [] (auto a) {
+                            [] (const Edge & a) {
                                 return a.value.forced && a.value.overlap > 0 
                                 && a.value.valid; 
                             }); 
 
                         //Reject upper quartil only and sort by absolute delta. 
                         std::sort(correlatorEdges.begin(), correlatorEdges.end(), 
-                            [] (const auto &a, const auto &b) {
+                            [] (const Edge &a, const Edge &b) {
                                 return abs(a.value.dphi) < abs(b.value.dphi);
                             });
 

@@ -9,6 +9,7 @@
 #include "inputImage.hpp"
 #include "../math/support.hpp"
 #include "../common/assert.hpp"
+#include "../common/static_timer.hpp"
 
 
 using namespace std;
@@ -17,22 +18,28 @@ using namespace cv;
 namespace optonaut {
 
     void InputImage::LoadFromDataRef(bool copy) {
-        assert(!IsLoaded());
-        assert(dataRef.data != NULL);
+        //STimer loadTimer(true);
+        
+        Assert(!IsLoaded());
+        Assert(dataRef.data != NULL);
         
         bool expectingPortrait = IsPortrait(intrinsics);
+        //loadTimer.Tick("## IsPortrait");
         
         if(dataRef.colorSpace == colorspace::RGBA) {
+            STimer loadTimer(true);
             Mat result(dataRef.height, dataRef.width, CV_8UC3);
-            
+            //loadTimer.Tick("## Allocate Mat");
             cv::cvtColor(
                     cv::Mat(dataRef.height, dataRef.width, CV_8UC4, dataRef.data), 
                     result,
-                    cv::COLOR_RGBA2RGB);
+                         cv::COLOR_RGBA2RGB);
+            //loadTimer.Tick("## cvtColor");
             
             image = Image(result);
             
             copy = false;
+            //loadTimer.Tick("## mkImage");
 
         } else if (dataRef.colorSpace == colorspace::RGB) {
             
@@ -41,12 +48,12 @@ namespace optonaut {
             
 
         } else {
-            assert(false); //Unsupported input color space.
+            Assert(false); //Unsupported input color space.
         }
         
         //We were expeciting portrait but got landscape
         if(expectingPortrait && image.rows < image.cols) {
-            assert(false); //Don't use portrait mode
+            AssertFalseInProduction(false); //Don't use portrait mode
             Mat res;
             cv::flip(image.data, res, 0);
             image = Image(res.t());
@@ -55,6 +62,7 @@ namespace optonaut {
         }
         
         if(image.data.cols != WorkingWidth && image.data.rows != WorkingHeight) {
+            AssertFalseInProduction(false); //Resize should be unnecassary
             Mat res;
             cv::resize(image.data, res, cv::Size(WorkingWidth, WorkingHeight));
             image = Image(res);
@@ -63,12 +71,12 @@ namespace optonaut {
         }
         
         if(copy) {
+            AssertFalseInProduction(false);
             image = Image(image.data.clone());
         }
 
         //InvalidateDataRef afterwards.
         dataRef.data = NULL;
-        
     }
     
     

@@ -24,7 +24,7 @@ class IterativeBundleAligner {
 
             SimpleSphereStitcher debugger;
             auto res = debugger.Stitch(images);
-            Point imgCenter = res->corner;
+            cv::Point imgCenter = res->corner;
             std::map<size_t, InputImageP> imageById;
 
             for(auto img : images) {
@@ -47,12 +47,12 @@ class IterativeBundleAligner {
                        if(tA.ringId != 1 && tA.ringId != tB.ringId)
                            continue; //Only draw cross-lines if origin at ring 0
 
-                       Point aCenter = debugger.WarpPoint(a->intrinsics, 
+                       cv::Point aCenter = debugger.WarpPoint(a->intrinsics,
                                a->adjustedExtrinsics, 
-                               a->image.size(), Point(0, 0)) - imgCenter;
-                       Point bCenter = debugger.WarpPoint(b->intrinsics, 
+                               a->image.size(), cv::Point(0, 0)) - imgCenter;
+                       cv::Point bCenter = debugger.WarpPoint(b->intrinsics,
                                b->adjustedExtrinsics, 
-                               b->image.size(), Point(0, 0)) - imgCenter;
+                               b->image.size(), cv::Point(0, 0)) - imgCenter;
 
                        //Make sure a is always left. 
                        if(aCenter.x > bCenter.x) {
@@ -73,10 +73,10 @@ class IterativeBundleAligner {
 
                        if(bCenter.x - aCenter.x > res->image.cols / 2) {
                             cv::line(res->image.data, 
-                               aCenter, bCenter - Point(res->image.cols, 0), 
+                               aCenter, bCenter - cv::Point(res->image.cols, 0),
                                color, thickness);
                             cv::line(res->image.data, 
-                               aCenter + Point(res->image.cols, 0), bCenter,
+                               aCenter + cv::Point(res->image.cols, 0), bCenter,
                                color, thickness);
                        } else {
                             cv::line(res->image.data, 

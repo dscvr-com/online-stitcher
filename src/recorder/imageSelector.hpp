@@ -30,10 +30,9 @@ namespace optonaut {
         private: 
             MatchCallback callback;
 
-            int currentRing;
             bool isFinished;
             
-            double tolerance; 
+            Vec3d tolerance;
             bool strictOrder;
 
             void MoveToNextRing() {
@@ -65,10 +64,26 @@ namespace optonaut {
 
                 return newRing;
             }
+        
+            bool CheckIfWithinTolerance(const Mat &a, const Mat &b) {
+                Mat rvec;
+                ExtractRotationVector(a.inv() *  b, rvec);
+                
+                for(int i = 0; i < 3; i++) {
+                    if(abs(rvec.at<double>(i)) > tolerance(i)) {
+                        cout << rvec.t() << endl;
+                        cout << "Reject " << i << endl;
+                        return false;
+                    }
+                }
+                
+                return true;
+            }
 
-        protected: 
+        protected:
             RecorderGraph &graph;
             SelectionInfo current;
+            int currentRing;
 
             virtual void SetCurrent(const SelectionPoint &closestPoint,
                                     const InputImageP image, 
@@ -87,7 +102,7 @@ namespace optonaut {
 
             ImageSelector(RecorderGraph &graph, 
                     MatchCallback onNewMatch,
-                    double tolerance = M_PI / 16,
+                    Vec3d tolerance,
                     bool strictOrder = true) :
                 callback(onNewMatch), 
                 isFinished(false), tolerance(tolerance),
@@ -100,7 +115,7 @@ namespace optonaut {
                 }
             }
 
-            SelectionInfo GetCurrent() {
+            SelectionInfo GetCurrent() const {
                 return current;
             }
 
@@ -109,15 +124,20 @@ namespace optonaut {
                     callback(current);
                 }
             }
+            
+            bool IsFinished() {
+                return isFinished;
+            }
         
             virtual bool Push(const InputImageP image) {
 
                 SelectionPoint next;
                 double dist = graph.FindClosestPoint(image->adjustedExtrinsics, 
                         next, currentRing);
-
-                if(dist > tolerance) 
+                
+                if(!CheckIfWithinTolerance(image->adjustedExtrinsics, next.extrinsics)) {
                     return false;
+                }
 
                 if(!current.isValid) {
                     // Init case - remember this point. 
@@ -137,6 +157,11 @@ namespace optonaut {
 
                         if(strictOrder) {
                             // Strict order - refuse to take anything out of order.
+                            if(realNext.globalId != next.globalId) {
+                                if(CheckIfWithinTolerance(image->adjustedExtrinsics, realNext.extrinsics)) {
+                                    next = realNext;
+                                }
+                            }
                             if(realNext.globalId == next.globalId) {
                                 // Valid edge, notify and advance.
                                 // Else, ignore. 
@@ -159,7 +184,8 @@ namespace optonaut {
                                         MoveToNextRing();
                                     }
                                 }
-
+                            } else {
+                                cout << "Reject Unordered" << endl;
                             }
                         } else {
                             callback(current);
@@ -179,7 +205,6 @@ namespace optonaut {
             Mat ballPosition;
             bool hasStarted;
             const int ballLead = 4;
-            //const double ballSpeed = M_PI / 128;
 
             Mat errorVec;
             double error;
@@ -207,15 +232,19 @@ namespace optonaut {
                 }
                 
             }
+        
+            void UpdateBallPosition(const Mat &newPosition) {
+                ballPosition = newPosition;
+                
+                Slerp(ballPosition, newPosition, 0.5, ballPosition);
+            }
 
         protected:
             virtual void SetCurrent(const SelectionPoint &closestPoint,
                                     const InputImageP image, 
                                     const double dist) {
                 ImageSelector::SetCurrent(closestPoint, image, dist);
-
-                ballTarget = GetNext(closestPoint, true, ballLead);
-
+                ballTarget = GetNext(current.closestPoint, true, ballLead);
             }
 
             virtual void Invalidate() {
@@ -225,11 +254,10 @@ namespace optonaut {
         public: 
             FeedbackImageSelector(RecorderGraph &graph, 
                     MatchCallback onNewMatch,
-                    double tolerance = M_PI / 16,
-                    bool strictOrder = true) : 
-                ImageSelector(graph, onNewMatch, tolerance, strictOrder), 
-                hasStarted(false) {
-                
+                    Vec3d tolerance) :
+                ImageSelector(graph, onNewMatch, tolerance, true),
+                hasStarted(false), errorVec(Mat::zeros(3, 1, CV_64F)), error(0) {
+            
             }
 
             using ImageSelector::Push;
@@ -237,25 +265,33 @@ namespace optonaut {
             bool Push(InputImageP image, bool isIdle) {
 
                 if(!hasStarted) {
-                    ballPosition = image->originalExtrinsics;
+                    
+                    graph.FindClosestPoint(image->adjustedExtrinsics,
+                                                         ballTarget, currentRing);
+                    
+                    UpdateBallPosition(ballTarget.extrinsics);
+                    
                 } else {
-                    // TODO: LERP!
+                    if(isIdle) {
+                        ballTarget = GetNext(current.closestPoint, true, 1);
+                        UpdateBallPosition(ballTarget.extrinsics);
+                    } else {
+                        UpdateBallPosition(ballTarget.extrinsics);
+                    }
                 }
                 
+                ExtractRotationVector(
+                                      image->adjustedExtrinsics.inv() * ballPosition, errorVec);
+                
+                error = GetAngleOfRotation(image->adjustedExtrinsics, ballPosition);
+
                 if(isIdle) {
                     return false;
                 }
 
                 hasStarted = true;
                 
-                bool result = ImageSelector::Push(image);
-                
-                ExtractRotationVector(
-                        image->adjustedExtrinsics.inv() * ballPosition, errorVec);
-
-                error = GetAngleOfRotation(image->adjustedExtrinsics, ballPosition);
-
-                return result;
+                return ImageSelector::Push(image);
             }
 
             const Mat &GetBallPosition() const {
