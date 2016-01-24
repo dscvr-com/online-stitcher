@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
         Mat wa, wb;
 
         Point appliedBorder;
-        Rect overlappingRoi = GetOverlappingRegion(imgA, imgB, imgA->image, imgB->image, wa, wb, imgA->image.cols * 0.2, appliedBorder);
+        auto overlappingRoi = GetOverlappingRegion(imgA, imgB, imgA->image, imgB->image, wa, wb, imgA->image.cols * 0.2, appliedBorder);
 
         timer.Tick("Overlap");
 

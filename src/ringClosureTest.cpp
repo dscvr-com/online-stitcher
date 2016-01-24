@@ -15,6 +15,7 @@
 #include "recorder/streamingRecorderController.hpp"
 #include "stitcher/simpleSphereStitcher.hpp"
 #include "stitcher/simplePlaneStitcher.hpp"
+#include "minimal/imagePreperation.hpp"
 
 using namespace std;
 using namespace cv;
@@ -34,63 +35,24 @@ int main(int argc, char** argv) {
 
     cv::ocl::setUseOpenCL(false);
 
-    int n = argc - 1;
-    vector<string> files;
-
-    for(int i = 0; i < n; i++) {
-        string imageName(argv[i + 1]);
-        files.push_back(imageName);
-    }
-
-    std::sort(files.begin(), files.end(), CompareByFilename);
-
-    cout << "Generating graph." << endl;
-
-    auto image0 = InputImageFromFile(files[0], false);
+    auto allImages = minimal::ImagePreperation::LoadAndPrepareArgs(argc, argv);
 
     RecorderGraphGenerator generator;
-    RecorderGraph graph = generator.Generate(image0->intrinsics, 
+    RecorderGraph graph = generator.Generate(allImages[0]->intrinsics, 
                         RecorderGraph::ModeCenter);
-    cout << "Graph generated" << endl;
-    // TODO - remove apparently. 
-    StreamingRecorderController controller(graph);
 
-    SelectionInfo currentBest;
-        
-    auto base = Recorder::iosBase;
-    auto zero = Recorder::iosZero;
-    auto baseInv = base.t();
-
-    size_t imagesToRecord = graph.Size();
     vector<InputImageP> ring;
-    ring.reserve(imagesToRecord);
 
-    for(int i = 0; i < n; i++) {
-        auto image = InputImageFromFile(files[i], false);
-        image->originalExtrinsics = base * zero * image->originalExtrinsics.inv() * baseInv;
-        image->adjustedExtrinsics = image->originalExtrinsics;
+    ImageSelector selector(graph, [&ring] (const SelectionInfo &x) {
+        ring.push_back(x.image);
+    }, Vec3d(M_PI / 8, M_PI / 8, M_PI / 8));
 
-        if(!controller.IsInitialized())
-            controller.Initialize(image->adjustedExtrinsics);
-        
-        SelectionInfo current = controller.Push(image, false);
-
-        if(current.isValid) {
-            if(currentBest.isValid &&
-                    current.closestPoint.globalId != 
-                    currentBest.closestPoint.globalId) {
-                ring.push_back(currentBest.image);
-        
-                cout << "Found " << ring.size() << " images." << endl;
-            }
-            
-            currentBest = current;
-
-            if(ring.size() >= imagesToRecord) 
-                i = n;
-        }
+    for(auto img : allImages) {
+        selector.Push(img);
     }
-    
+
+    minimal::ImagePreperation::LoadAllImages(ring);
+
     SimpleSphereStitcher stitcher;
     auto scene = stitcher.Stitch(ring);
     imwrite("dbg/extracted_ring.jpg", scene->image.data);
@@ -100,11 +62,18 @@ int main(int argc, char** argv) {
    
     PairwiseCorrelator corr;
 
-    auto result = corr.Match(ring.front(), ring.back()); 
+    auto result = corr.Match(ring.front(), ring.back(), 4, 4, true); 
 
-    n = ring.size();
+    if(!result.valid) {
+        cout << "Rejected." << endl;
+        return 0;
+    }
 
-    for(int i = 0; i < n; i++) {
+    cout << "Adjusting by: " << result.angularOffset.x << endl;
+
+    size_t n = ring.size();
+
+    for(size_t i = 0; i < n; i++) {
         double ydiff = result.angularOffset.x * (1.0 - ((double)i) / ((double)n));
         Mat correction;
         CreateRotationY(ydiff, correction);

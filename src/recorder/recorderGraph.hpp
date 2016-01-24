@@ -253,6 +253,11 @@ namespace optonaut {
             return size;
         }
 
+        vector<InputImageP> SelectBestMatches(const vector<InputImageP> &imgs) {
+            BiMap<size_t, uint32_t> dummy;
+            return SelectBestMatches(imgs, dummy); 
+        }
+
         vector<InputImageP> SelectBestMatches(const vector<InputImageP> &_imgs, 
                 BiMap<size_t, uint32_t> &imagesToTargets) const {
 

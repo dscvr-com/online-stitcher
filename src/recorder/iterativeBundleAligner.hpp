@@ -16,8 +16,8 @@ using namespace cv;
 namespace optonaut {
 class IterativeBundleAligner {
     private:
-        static const bool drawDebug = false;
-        static const bool drawWeights = false;
+        static const bool drawDebug = true;
+        static const bool drawWeights = true;
 
         static void DrawDebugGraph(const vector<InputImageP> &images,
                 const RecorderGraph &graph, 

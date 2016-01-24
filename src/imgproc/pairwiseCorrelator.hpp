@@ -67,18 +67,17 @@ public:
         Mat wa, wb;
 
         cv::Point appliedBorder;
-        cv::Rect overlappingRoi;
        
-        overlappingRoi = GetOverlappingRegion(a, b, a->image, b->image, wa, wb, a->image.cols * 0.2, appliedBorder);
+        cv::Rect overlappingRoiB = GetOverlappingRegion(a, b, a->image, b->image, wa, wb, a->image.cols * 0.2, appliedBorder);
 
         // Forces to use the whole image instead of predicted overlays.
         // Good for ring closure. We still have to guess the offset tough. 
         if(forceWholeImage) {
-            overlappingRoi = cv::Rect(appliedBorder + overlappingRoi.tl(), 
-                    a->image.size());
             appliedBorder = cv::Point(0, 0);
-            wa = a->image.data;
-            wb = b->image.data;
+            overlappingRoiB = cv::Rect(overlappingRoiB.tl(), 
+                    a->image.size());
+            wb = a->image.data;
+            wa = b->image.data;
         }
 
         cTimer.Tick("Overlap found");
@@ -125,11 +124,11 @@ public:
         cv::Point correctedRes = res.offset + appliedBorder;
         
         double h = b->intrinsics.at<double>(0, 0) * (b->image.cols / (b->intrinsics.at<double>(0, 2) * 2));
-        double olXA = (overlappingRoi.x + correctedRes.x - b->image.cols / 2) / h;
-        double olXB = (overlappingRoi.x - b->image.cols / 2) / h;
+        double olXA = (overlappingRoiB.x + correctedRes.x - b->image.cols / 2) / h;
+        double olXB = (overlappingRoiB.x - b->image.cols / 2) / h;
         
-        double olYA = (overlappingRoi.y + correctedRes.y - b->image.rows / 2) / h;
-        double olYB = (overlappingRoi.y - b->image.rows / 2) / h;
+        double olYA = (overlappingRoiB.y + correctedRes.y - b->image.rows / 2) / h;
+        double olYB = (overlappingRoiB.y - b->image.rows / 2) / h;
        
         result.overlap = wa.cols * wa.rows; 
         result.angularOffset.x = atan(olXA) - atan(olXB);

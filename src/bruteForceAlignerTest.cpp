@@ -27,14 +27,14 @@ using namespace std::chrono;
 
 int main(int argc, char** argv) {
     cv::ocl::setUseOpenCL(false);
-    cout << cv::getBuildInformation() << endl;
+    //cout << cv::getBuildInformation() << endl;
     bool outputUnalignedStereo = false;
 
     auto allImages = minimal::ImagePreperation::LoadAndPrepareArgs(argc, argv);
 
     RecorderGraph fullGraph = RecorderGraphGenerator::Generate(
             allImages[0]->intrinsics, 
-            RecorderGraph::ModeTruncated, 
+            RecorderGraph::ModeCenter, 
             1, 0, 4);
 
     BiMap<size_t, uint32_t> imagesToTargets;
@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
                 fullImages, fullGraph, "unaligned");
     }
 
-    IterativeBundleAligner::Align(miniImages, fullGraph, imagesToTargets);
+    IterativeBundleAligner::Align(miniImages, fullGraph, imagesToTargets, 10, 0.5);
 
     minimal::ImagePreperation::CopyExtrinsics(miniImages, fullImages);
 

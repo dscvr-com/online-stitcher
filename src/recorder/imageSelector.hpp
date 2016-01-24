@@ -71,8 +71,8 @@ namespace optonaut {
                 
                 for(int i = 0; i < 3; i++) {
                     if(abs(rvec.at<double>(i)) > tolerance(i)) {
-                        cout << rvec.t() << endl;
-                        cout << "Reject " << i << endl;
+                        //cout << rvec.t() << endl;
+                        //cout << "Reject " << i << endl;
                         return false;
                     }
                 }
@@ -153,12 +153,18 @@ namespace optonaut {
                     } else {
                         // New Match
                         SelectionPoint realNext;
-                        graph.GetNextForRecording(current.closestPoint, realNext);
+                        if(!graph.GetNextForRecording(
+                                    current.closestPoint, 
+                                    realNext)) {
+                            // We're already finished. There is no next. 
+                            return false;
+                        }
 
                         if(strictOrder) {
                             // Strict order - refuse to take anything out of order.
                             if(realNext.globalId != next.globalId) {
-                                if(CheckIfWithinTolerance(image->adjustedExtrinsics, realNext.extrinsics)) {
+                                if(CheckIfWithinTolerance(image->adjustedExtrinsics, 
+                                            realNext.extrinsics)) {
                                     next = realNext;
                                 }
                             }
@@ -185,7 +191,7 @@ namespace optonaut {
                                     }
                                 }
                             } else {
-                                cout << "Reject Unordered" << endl;
+                                //cout << "Reject Unordered" << endl;
                             }
                         } else {
                             callback(current);

@@ -163,7 +163,7 @@ namespace optonaut {
      * @param overlapB On completion, is set to the overlapping, undistorted part of b
      * @param buffer Additional image border to be included in the overlap, wherever possible, relative to the position of a.
      *
-     * @returns The roi of the overlapping image area of b. 
+     * @returns The roi of the overlapping image area of a on b. 
      */
     static inline cv::Rect GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, const Image &bi, Mat &overlapA, Mat &overlapB, int buffer, cv::Point &appliedBorder) {
         Mat hom(3, 3, CV_64F);
@@ -211,14 +211,14 @@ namespace optonaut {
         
         hom = offset * hom;
         if(roia.width == 0 || roia.height == 0) {
-            return roia;
+            return roi;
         }
         
         warpPerspective(ai.data, overlapA, hom, roia.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
 
         overlapB = bi.data(roib);
 
-        return roib;
+        return roi;
     }
  
     static inline void GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, const Image &bi, Mat &overlapA, Mat &overlapB) {
