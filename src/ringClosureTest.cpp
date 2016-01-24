@@ -16,6 +16,7 @@
 #include "stitcher/simpleSphereStitcher.hpp"
 #include "stitcher/simplePlaneStitcher.hpp"
 #include "minimal/imagePreperation.hpp"
+#include "recorder/ringCloser.hpp"
 
 using namespace std;
 using namespace cv;
@@ -59,26 +60,8 @@ int main(int argc, char** argv) {
 
     //Wooop woop ring closure
     //#######################
-   
-    PairwiseCorrelator corr;
-
-    auto result = corr.Match(ring.front(), ring.back(), 4, 4, true); 
-
-    if(!result.valid) {
-        cout << "Rejected." << endl;
-        return 0;
-    }
-
-    cout << "Adjusting by: " << result.angularOffset.x << endl;
-
-    size_t n = ring.size();
-
-    for(size_t i = 0; i < n; i++) {
-        double ydiff = result.angularOffset.x * (1.0 - ((double)i) / ((double)n));
-        Mat correction;
-        CreateRotationY(ydiff, correction);
-        ring[i]->adjustedExtrinsics = correction * ring[i]->adjustedExtrinsics;
-    }
+  
+    RingCloser::CloseRing(ring); 
 
     //#######################
 

@@ -14,7 +14,7 @@ using namespace std;
 
 namespace optonaut {
 
-static const bool debug = true;
+static const bool debug = false;
 
 struct PlanarCorrelationResult {
     cv::Point offset;

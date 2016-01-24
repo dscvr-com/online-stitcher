@@ -62,7 +62,7 @@ private:
 	Ptr<DescriptorExtractor> extractor;
     Ptr<DescriptorMatcher> matcher;
 
-    static const bool debug = true;
+    static const bool debug = false;
     const size_t NO_CHAIN = (size_t)-1; 
 
     //Needed for bundle adj.
