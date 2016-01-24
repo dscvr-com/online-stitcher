@@ -27,7 +27,7 @@ int main(int, char**) {
 
     // For equality testing, only 1d lerp supported. 
     // Veryfiy others by drawDebug = true. 
-    double phiStart = 0, phiEnd = M_PI / 2;
+    double phiStart = M_PI, phiEnd = -M_PI;
     double thetaStart = 0, thetaEnd = 0;
 
     CreateRotationPhiTheta(phiStart, thetaStart, start);
@@ -39,7 +39,7 @@ int main(int, char**) {
 
     Mat canvas = Mat::zeros(2000, 2000, CV_8UC3);
 
-    for(double i = 0; i <= 1; i += 0.1) {
+    for(double i = 0; i <= 1; i += 0.01) {
        Mat slerp = Mat::eye(4, 4, CV_64F);
        Mat lerp;
 
