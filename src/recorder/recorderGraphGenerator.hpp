@@ -5,7 +5,7 @@
 #include "../math/support.hpp"
 #include "../math/projection.hpp"
 #include "../common/ringProcessor.hpp"
-#include "../common/biMap.hpp"
+#include "../common/bimap.hpp"
 #include "recorderGraph.hpp"
 
 using namespace cv;

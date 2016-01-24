@@ -5,7 +5,7 @@
 
 #include "../io/inputImage.hpp"
 #include "../common/image.hpp"
-#include "../common/biMap.hpp"
+#include "../common/bimap.hpp"
 #include "../math/support.hpp"
 
 using namespace cv;

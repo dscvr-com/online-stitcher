@@ -85,6 +85,7 @@ namespace optonaut {
         STimer pipeTimer;
         
         InputImageP last;
+        int lastRingId;
         
         string debugPath;
         
@@ -149,6 +150,7 @@ namespace optonaut {
                         1,
                         recorderGraph.ringCount / 2)),
             previewImageAvailable(false),
+            lastRingId(-1),
             debugPath(debugPath)
         {
             baseInv = base.inv();
@@ -350,9 +352,11 @@ namespace optonaut {
             if(recorderGraph.ringCount == 1) {
                 // If we only have a single ring, we have to empty this queue
                 // before blending the preview to avoid racing conditions.
+                preController.Flush();
                 inputBufferQueue.Finish();
                 aligner->Finish();
                 alignerDelayQueue.Flush();
+                recorderController.Flush();
                 stereoConversionQueue.Finish();
             }
             
@@ -365,6 +369,10 @@ namespace optonaut {
         }
         
         void ForwardToMonoQueue(const SelectionInfo in) {
+            if(lastRingId != (int)in.closestPoint.ringId) {
+                stereoRingBuffer.Flush();
+                lastRingId = in.closestPoint.ringId;
+            }
             if(recorderGraph.HasChildRing(in.closestPoint.ringId)) {
                 if(keyframeCount % 2 == 0) {
                     //Save some memory by sparse keyframing.
@@ -459,16 +467,17 @@ namespace optonaut {
             if(stereoConversionQueue.IsRunning()) {
                 // If the stereo conversion queue is still running,
                 // end it. Otherwise, the preview generation already stopped this.
+                preController.Flush();
                 inputBufferQueue.Finish();
                 aligner->Finish();
                 alignerDelayQueue.Flush();
+                recorderController.Flush();
                 stereoConversionQueue.Finish();
             }
             //if(!firstRingFinished) {
             //    FinishFirstRing();
             //}
             
-            recorderController.Flush();
             stereoRingBuffer.Flush();
             saveQueue.Finish();
             

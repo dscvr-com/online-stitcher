@@ -13,7 +13,6 @@
 #include "common/backtrace.hpp"
 #include "common/drawing.hpp"
 #include "stitcher/stitcher.hpp"
-#include "debug/visualDebugHook.hpp"
 #include "io/io.hpp"
 
 using namespace std;
@@ -43,7 +42,6 @@ void Record(vector<string> &files, StereoSink &sink) {
     static const bool isAsync = true;
     shared_ptr<Recorder> recorder(NULL);
 
-    VisualDebugHook hook;
     //DebugHook::Instance = &hook;
 
     for(size_t i = 0; i < files.size(); i++) {

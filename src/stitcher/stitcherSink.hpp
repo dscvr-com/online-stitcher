@@ -1,5 +1,5 @@
 #include "../stereo/monoStitcher.hpp"
-#include "../stitcher/multiRingStitcher.hpp"
+#include "../stitcher/multiringStitcher.hpp"
 
 #ifndef OPTONAUT_STITCHER_SINK_HEADER
 #define OPTONAUT_STITCHER_SINK_HEADER

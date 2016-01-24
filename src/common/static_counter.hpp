@@ -1,4 +1,5 @@
 #include <string>
+#include <memory>
 #include <map>
 
 #ifndef OPTONAUT_STATIC_COUNTER_HEADER
