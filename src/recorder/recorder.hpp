@@ -56,7 +56,6 @@ namespace optonaut {
 
         bool isIdle;
         bool isFinished;
-        bool firstRingFinished;
         bool hasStarted;
         
         RecorderGraphGenerator generator;
@@ -68,7 +67,6 @@ namespace optonaut {
         uint32_t imagesToRecord;
         uint32_t recordedImages;
         uint32_t keyframeCount;
-        int lastRingId;
         
         AsyncQueue<SelectionInfo> inputBufferQueue;
         QueueProcessor<SelectionInfo> alignerDelayQueue;
@@ -115,10 +113,9 @@ namespace optonaut {
             stereoConverter(),
             isIdle(false),
             isFinished(false),
-            firstRingFinished(false),
             hasStarted(false),
             generator(),
-            preRecorderGraph(generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityNormal, 0, 6)),
+            preRecorderGraph(generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityDouble, 0, 6)),
             recorderGraph(RecorderGraphGenerator::Sparse(preRecorderGraph, 3)),
             preController(preRecorderGraph, [this] (const SelectionInfo &x) {
                 inputBufferQueue.Push(x);
@@ -129,7 +126,6 @@ namespace optonaut {
             imagesToRecord(preRecorderGraph.Size()),
             recordedImages(0),
             keyframeCount(0),
-            lastRingId(-1),
             inputBufferQueue([this] (const SelectionInfo &x) {
                 ForwardToAligner(x);
             }),
@@ -369,135 +365,6 @@ namespace optonaut {
         }
         
         void ForwardToMonoQueue(const SelectionInfo in) {
-            
-            if(lastRingId == -1) {
-                lastRingId = in.closestPoint.ringId;
-            }
-            
-            if(lastRingId != (int)in.closestPoint.ringId) {
-                if(!firstRingFinished) {
-                    FinishFirstRing();
-                }
-                stereoRingBuffer.Flush();
-                lastRingId = in.closestPoint.ringId;
-            }
-            
-            if(!firstRingFinished) {
-                STimer syncPreviewPush;
-                PushToPreview(in);
-                syncPreviewPush.Tick("Synchronous Preview Push");
-                if(firstRing.size() == 0
-                        || firstRing.back().closestPoint.globalId != 
-                        in.closestPoint.globalId) {
-                    firstRing.push_back(in);    
-                }
-                firstRingImagePool.push_back(in.image);
-                //commonStore.SaveStitcherTemporaryImage(in.image->image);
-                //in.image->image.Unload();
-            } else {
-                ForwardToMonoQueueEx(in);
-            }
-        }
-
-        // TODO - order of operations in this class is possibly broken!
-        void FinishFirstRing() {
-            AssertM(!firstRingFinished, "First ring has not been closed");
-            
-            AssertGT((int)firstRingImagePool.size(), 0);
-            
-            firstRingFinished = true;
-            previewImageAvailable = true;
-            
-            /*
-            BiMap<size_t, uint32_t> imagesToTargets;
-            
-            vector<InputImageP> matches = recorderGraph.SelectBestMatches(firstRingImagePool, imagesToTargets);
-            
-            IterativeBundleAligner::Align(matches, recorderGraph, imagesToTargets, 15, 1.0);
-            
-            for(auto img : matches) {
-                SelectionInfo info;
-                uint32_t pointId;
-                Assert(imagesToTargets.GetValue(img->id, pointId));
-                Assert(recorderGraph.GetPointById(pointId, info.closestPoint));
-                info.image = img;
-                ForwardToMonoQueueEx(info);
-            }
-             */
-
-            
-            CorrelationDiff result;
-
-            PairwiseCorrelator corr;
-            {
-                AutoLoad qb(firstRingImagePool.back());
-                AutoLoad qf(firstRingImagePool.back());
-
-                result = corr.Match(firstRingImagePool.back(), firstRingImagePool.front(), 0, 0, true); 
-            }
-            size_t n = firstRingImagePool.size();
-
-            if(!result.valid) {
-                cout << "Ring closure rejection because: " << 
-                    result.rejectionReason << endl;
-            }
-
-            cout << "Y horizontal angular offset: " << result.angularOffset.x << endl;
-
-            // TODO - SMTH is wrong here. 
-            for(size_t i = 0; i < n; i++) {
-                double ydiff = result.angularOffset.x *
-                    (1.0 - ((double)i) / ((double)n));
-                //double ydiff = 0;
-                Mat correction;
-                CreateRotationY(ydiff, correction);
-                firstRingImagePool[i]->adjustedExtrinsics = correction * 
-                    firstRingImagePool[i]->adjustedExtrinsics;
-
-                //cout << "Applying correction of " << ydiff << " to image " << firstRingImagePool[i]->id << endl;
-            }
-            //Re-select images.
-           
-            size_t m = firstRing.size();
-            for(size_t i = 0; i < m; i++) {
-                int picked = -1;
-                double distCur = 100;
-                for(size_t j = 0; j < n; j++) {
-
-                    if(firstRingImagePool[j] == NULL)
-                        continue;
-
-                    double distCand = abs(GetAngleOfRotation(
-                            firstRingImagePool[j]->adjustedExtrinsics, 
-                            firstRing[i].closestPoint.extrinsics));
-
-                    if(distCur > distCand || picked == -1) {
-                        distCur = distCand;
-                        picked = (int)j;
-                    }
-                }
-                //cout << "Selection Point " << firstRing[i].closestPoint.globalId
-                //    << " reassigned image " << firstRing[i].image->id << " to "
-                //    << firstRingImagePool[picked]->id << " with dist: "
-                //    << distCur << endl;
-                AssertGTM(picked, -1, "Must pick image"); 
-                firstRing[i].image = firstRingImagePool[picked];
-                firstRing[i].dist = distCur;
-                firstRingImagePool[picked] = NULL;
-            }
-            
-
-            for(size_t i = 0; i < m; i++) {
-                ForwardToMonoQueueEx(firstRing[i]);
-                firstRing[i].image = NULL; //Decrement our ref to the loaded instance
-            }
-           
-            firstRingImagePool.clear();
-            firstRing.clear();
-        }
-
-        void ForwardToMonoQueueEx(const SelectionInfo &in) {
-           
             if(recorderGraph.HasChildRing(in.closestPoint.ringId)) {
                 if(keyframeCount % 2 == 0) {
                     //Save some memory by sparse keyframing.
@@ -597,9 +464,9 @@ namespace optonaut {
                 alignerDelayQueue.Flush();
                 stereoConversionQueue.Finish();
             }
-            if(!firstRingFinished) {
-                FinishFirstRing();
-            }
+            //if(!firstRingFinished) {
+            //    FinishFirstRing();
+            //}
             
             recorderController.Flush();
             stereoRingBuffer.Flush();

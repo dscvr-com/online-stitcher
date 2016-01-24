@@ -10,6 +10,9 @@
 using namespace std;
 using namespace cv;
 
+#ifndef OPTONAUT_ITERATIVE_BUNDLE_ALIGNER_HEADER
+#define OPTONAUT_ITERATIVE_BUNDLE_ALIGNER_HEADER
+
 namespace optonaut {
 class IterativeBundleAligner {
     private:
@@ -160,3 +163,5 @@ class IterativeBundleAligner {
         }
 };
 }
+
+#endif
