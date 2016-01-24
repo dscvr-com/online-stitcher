@@ -143,8 +143,10 @@ namespace optonaut {
             
             if(ring == -1)
                 return; //No ring x(
-           
+
             if(graph.HasChildRing(ring)) { 
+                AssertGE(ring, 0);
+                AssertGT((int)rings.size(), ring);
                 rings[ring].push_back(next);
             
                 //cout << "Adding keyframe " << next->id << " to ring: " << ring << " count: " << rings[ring].size() << endl;
@@ -208,7 +210,6 @@ namespace optonaut {
             if(async) {
                 worker->Dispose();
             }
-            rings.clear();
         }
 
         void Postprocess(vector<InputImageP>) const {
