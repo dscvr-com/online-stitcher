@@ -484,7 +484,7 @@ namespace optonaut {
                 firstRing[i].image = firstRingImagePool[picked];
                 firstRing[i].dist = distCur;
                 firstRingImagePool[picked] = NULL;
-             }
+            }
             
 
             for(size_t i = 0; i < m; i++) {
