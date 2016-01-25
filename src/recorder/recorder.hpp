@@ -81,7 +81,6 @@ namespace optonaut {
 
         std::shared_ptr<AsyncTolerantRingRecorder> previewRecorder;
         RecorderGraph previewGraph;
-        bool previewImageAvailable;
         
         STimer monoTimer;
         STimer pipeTimer;
@@ -152,9 +151,8 @@ namespace optonaut {
             firstRingFinished(false),
             previewGraph(RecorderGraphGenerator::Sparse(
                         recorderGraph, 
-                        2,
+                        1,
                         recorderGraph.ringCount / 2)),
-            previewImageAvailable(false),
             lastRingId(-1),
             debugPath(debugPath)
         {
@@ -371,20 +369,18 @@ namespace optonaut {
                 AutoLoad q(in.image);
                 previewRecorder = 
                     std::make_shared<AsyncTolerantRingRecorder>(in, previewGraph);
-                previewImageAvailable = true;
             }
 
             previewRecorder->Push(in.image);
         }
 
         bool PreviewAvailable() {
-            return previewImageAvailable;
+            return true;
         }
 
         StitchingResultP FinishPreview() {
 
             STimer finishPreview;
-            Assert(previewRecorder != nullptr);
             
             if(recorderGraph.ringCount == 1) {
                 // If the input buffer queue is still running,
@@ -400,9 +396,10 @@ namespace optonaut {
             recorderController.Flush();
             stereoConversionQueue.Finish();
             
+            Assert(previewRecorder != nullptr);
+            
             StitchingResultP res = previewRecorder->Finalize();
             previewRecorder = nullptr;
-            previewImageAvailable = false;
             finishPreview.Tick("Finish Preview");
 
             return res;
@@ -444,9 +441,9 @@ namespace optonaut {
                 return x.image;
             }));
 
-            for(auto x : firstRing) {
-                PushToPreview(x);
-                recorderController.Push(x.image);
+            for(auto i = 0; i < firstRing.size(); i++) {
+                PushToPreview(firstRing[i]);
+                recorderController.Push(firstRing[i].image);
             }
             
             firstRing.clear();
