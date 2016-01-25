@@ -326,7 +326,7 @@ public:
         //TODO: Wrong assumptions.
         //This actually builds the recorder graph from the bottom. 
 
-        if(mode == RecorderGraph::ModeTruncated) {
+        if(mode == RecorderGraph::ModeTruncated || mode == RecorderGraph::ModeTinyDebug) {
            //Configuration for ModeTruncated
            //Optimize for 3 rings.
            
@@ -341,7 +341,7 @@ public:
             vCount = vCount - 1;
             vStart = M_PI - (vFov * vCount);
             
-        } else if(mode == RecorderGraph::ModeCenter || mode == RecorderGraph::ModeTinyDebug) {
+        } else if(mode == RecorderGraph::ModeCenter) {
             vCount = 1;
             vStart = M_PI / 2 - (vFov / 2);
         } else {

@@ -164,7 +164,9 @@ namespace optonaut {
             {
                 vector<void*> uselessMem;
                 
-                for(size_t i = 0; i < preRecorderGraph.GetTargetsById().size() + 5; i++) {
+                auto &rings = preRecorderGraph.GetRings();
+                
+                for(size_t i = 0; i < rings[rings.size() / 2].size() + 5; i++) {
                     size_t size = 4 * 1280 * 720;
                     void *memory = malloc(size);
                     Assert(memory != NULL);
