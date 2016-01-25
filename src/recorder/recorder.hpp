@@ -100,6 +100,8 @@ namespace optonaut {
         static Mat androidBase;
         static Mat iosBase;
         static Mat iosZero;
+        
+        int uselessVariable = 0;
 
         static string tempDirectory;
         static string version;
@@ -118,7 +120,7 @@ namespace optonaut {
             isFinished(false),
             hasStarted(false),
             generator(),
-            preRecorderGraph(generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityDouble, 0, 8)),
+            preRecorderGraph(generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityNormal, 0, 8)),
             recorderGraph(RecorderGraphGenerator::Sparse(preRecorderGraph, 2)),
             preController(preRecorderGraph, [this] (const SelectionInfo &x) {
                 inputBufferQueue.Push(x);
@@ -158,6 +160,26 @@ namespace optonaut {
         {
             baseInv = base.inv();
             zero = zeroWithoutBase;
+            
+            // Allocate some useless memory.
+            // We do so to "reserve" pages, so we don't have lag when allocating during the first ring.
+            {
+                vector<void*> uselessMem;
+                
+                for(int i = 0; i < preRecorderGraph.GetTargetsById().size() + 5; i++) {
+                    size_t size = 4 * 1280 * 720;
+                    void *memory = malloc(size);
+                    Assert(memory != NULL);
+                    memset(memory, 'o', size);
+                    uselessVariable += ((int*)memory)[2];
+                    uselessMem.push_back(memory);
+                }
+                
+                for(int i = 0; i < uselessMem.size(); i++) {
+                    free(uselessMem[i]);
+                }
+            }
+            
 
             //cout << "Initializing Optonaut Pipe." << endl;
             
@@ -257,7 +279,7 @@ namespace optonaut {
         }
 
         Mat GetCurrentRotation() const {
-            return ConvertFromStitcher(jumpFilter.GetState());
+            return ConvertFromStitcher(last->originalExtrinsics);
         }
 
         vector<SelectionPoint> GetSelectionPoints() const {
@@ -349,7 +371,6 @@ namespace optonaut {
                 AutoLoad q(in.image);
                 previewRecorder = 
                     std::make_shared<AsyncTolerantRingRecorder>(in, previewGraph);
-                
                 previewImageAvailable = true;
             }
 
@@ -424,16 +445,17 @@ namespace optonaut {
             }));
 
             for(auto x : firstRing) {
+                PushToPreview(x);
                 recorderController.Push(x.image);
             }
+            
+            firstRing.clear();
         }
     
         void Push(InputImageP image) {
             //STimer processingTime(true);
 
             //cout << "Pipeline Push called by " << std::this_thread::get_id() << endl;
-            
-            last = image;
             
             if(debugPath != "" && !isIdle) {
                 AssertFalseInProduction(false);
@@ -449,8 +471,9 @@ namespace optonaut {
             
             ConvertToStitcher(image->originalExtrinsics, image->originalExtrinsics);
             jumpFilter.Push(image->originalExtrinsics);
-
-            image->adjustedExtrinsics = image->originalExtrinsics;
+            image->originalExtrinsics.copyTo(image->adjustedExtrinsics);
+            
+            last = image;
             
             Mat rvec;
             ExtractRotationVector(image->originalExtrinsics, rvec);
