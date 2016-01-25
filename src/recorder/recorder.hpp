@@ -164,7 +164,7 @@ namespace optonaut {
             {
                 vector<void*> uselessMem;
                 
-                for(int i = 0; i < preRecorderGraph.GetTargetsById().size() + 5; i++) {
+                for(size_t i = 0; i < preRecorderGraph.GetTargetsById().size() + 5; i++) {
                     size_t size = 4 * 1280 * 720;
                     void *memory = malloc(size);
                     Assert(memory != NULL);
@@ -173,7 +173,7 @@ namespace optonaut {
                     uselessMem.push_back(memory);
                 }
                 
-                for(int i = 0; i < uselessMem.size(); i++) {
+                for(size_t i = 0; i < uselessMem.size(); i++) {
                     free(uselessMem[i]);
                 }
             }
@@ -441,7 +441,7 @@ namespace optonaut {
                 return x.image;
             }));
 
-            for(auto i = 0; i < firstRing.size(); i++) {
+            for(size_t i = 0; i < firstRing.size(); i++) {
                 PushToPreview(firstRing[i]);
                 recorderController.Push(firstRing[i].image);
             }
