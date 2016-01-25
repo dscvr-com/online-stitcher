@@ -16,11 +16,16 @@ namespace optonaut {
             auto result = corr.Match(ring.front(), ring.back(), 4, 4, true); 
 
             if(!result.valid) {
-                //cout << "Rejected." << endl;
+                cout << "Ring closure: Rejected." << endl;
                 return false;
             }
 
-            //cout << "Adjusting by: " << result.angularOffset.x << endl;
+            if(result.angularOffset.x < -0.2) {
+                cout << "Ring closure: Rejected because it would lead to black stripes"<< endl;
+                return false;
+            }
+
+            cout << "Ring closure: Adjusting by: " << result.angularOffset.x << endl;
 
             size_t n = ring.size();
 

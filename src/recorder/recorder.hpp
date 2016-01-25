@@ -107,7 +107,7 @@ namespace optonaut {
 
         static bool exposureEnabled;
         static bool alignmentEnabled;
-        
+
         Recorder(Mat base, Mat zeroWithoutBase, Mat intrinsics, 
                 StereoSink &sink, string debugPath = "",
                 int graphConfiguration = RecorderGraph::ModeAll, 
