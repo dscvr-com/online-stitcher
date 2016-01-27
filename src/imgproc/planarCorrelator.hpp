@@ -14,7 +14,7 @@ using namespace std;
 
 namespace optonaut {
 
-static const bool debug = false;
+static const bool debug = true;
 
 struct PlanarCorrelationResult {
     cv::Point offset;
@@ -32,6 +32,9 @@ class BruteForcePlanarAligner {
     }
     
     static inline PlanarCorrelationResult Align(const Mat &a, const Mat &b, Mat &corr, int wx, int wy, int ox, int oy) {
+
+        AssertFalseInProduction(debug);
+
         int mx = 0;
         int my = 0;
         float min = std::numeric_limits<float>::max();

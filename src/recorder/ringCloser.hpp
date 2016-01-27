@@ -20,17 +20,17 @@ namespace optonaut {
                 return false;
             }
 
-            if(result.angularOffset.x < -0.2) {
+            if(result.angularOffset.y > 0.2) {
                 cout << "Ring closure: Rejected because it would lead to black stripes"<< endl;
                 return false;
             }
 
-            cout << "Ring closure: Adjusting by: " << result.angularOffset.x << endl;
+            cout << "Ring closure: Adjusting by: " << result.angularOffset.y << endl;
 
             size_t n = ring.size();
 
             for(size_t i = 0; i < n; i++) {
-                double ydiff = result.angularOffset.x * 
+                double ydiff = result.angularOffset.y * 
                     (1.0 - ((double)i) / ((double)n));
                 Mat correction;
                 CreateRotationY(ydiff, correction);

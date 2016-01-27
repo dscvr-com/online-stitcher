@@ -43,7 +43,7 @@ public:
 class PairwiseCorrelator {
 
 private:
-    static const bool debug = false;
+    static const bool debug = true;
     typedef PyramidPlanarAligner<NormedCorrelator<LeastSquares<Vec3b>>> Aligner;
 public:
     PairwiseCorrelator() { }
@@ -58,6 +58,8 @@ public:
     // we don't do sub-pixel alignment.  
     CorrelationDiff Match(const InputImageP a, const InputImageP b, int minWidth = 0, int minHeight = 0, bool forceWholeImage = false) {
 
+        AssertFalseInProduction(debug);
+
         const bool enableDeviationTest = false;
         const bool enableOutOfWindowTest = true;
 
@@ -68,16 +70,14 @@ public:
 
         cv::Point appliedBorder;
        
-        cv::Rect overlappingRoiB = GetOverlappingRegion(a, b, a->image, b->image, wa, wb, a->image.cols * 0.2, appliedBorder);
+        cv::Point2d locationDiff = GetOverlappingRegion(a, b, a->image, b->image, wa, wb, a->image.cols * 0.2, appliedBorder);
 
         // Forces to use the whole image instead of predicted overlays.
         // Good for ring closure. We still have to guess the offset tough. 
         if(forceWholeImage) {
-            appliedBorder = cv::Point(0, 0);
-            overlappingRoiB = cv::Rect(overlappingRoiB.tl(), 
-                    a->image.size());
-            wb = a->image.data;
-            wa = b->image.data;
+            appliedBorder = -locationDiff;
+            wb = b->image.data;
+            wa = a->image.data;
         }
 
         cTimer.Tick("Overlap found");
@@ -122,17 +122,27 @@ public:
         }
 
         cv::Point correctedRes = res.offset + appliedBorder;
+
+        // Get hFov and vFov in radians. 
+        // Calculate pixel per radian (linar vs. asin/atan)
+        // We're working on the projectional tangent plane of B.
         
-        double h = b->intrinsics.at<double>(0, 0) * (b->image.cols / (b->intrinsics.at<double>(0, 2) * 2));
-        double olXA = (overlappingRoiB.x + correctedRes.x - b->image.cols / 2) / h;
-        double olXB = (overlappingRoiB.x - b->image.cols / 2) / h;
+        double hFov = GetHorizontalFov(a->intrinsics);
+        double vFov = GetVerticalFov(a->intrinsics);
+
+        cout << "hfov: " << hFov << ", vfov: " << vFov << endl;
         
-        double olYA = (overlappingRoiB.y + correctedRes.y - b->image.rows / 2) / h;
-        double olYB = (overlappingRoiB.y - b->image.rows / 2) / h;
+        Point2d relativeOffset = 
+            Point2d((double)correctedRes.x / a->image.cols, 
+                    (double)correctedRes.y / a->image.rows); 
+
+        cout << "RelativeOffset: " << relativeOffset << endl;
        
         result.overlap = wa.cols * wa.rows; 
-        result.angularOffset.x = atan(olXA) - atan(olXB);
-        result.angularOffset.y = atan(olYA) - atan(olYB);
+
+        // Careful! Rotational axis are swapped (rotation is AROUND axis) 
+        result.angularOffset.y = asin(relativeOffset.x * sin(hFov));
+        result.angularOffset.x = asin(relativeOffset.y * sin(vFov));
         result.offset = correctedRes;
         result.valid = true;
         result.correlationCoefficient = sqrt(res.variance) / res.n;

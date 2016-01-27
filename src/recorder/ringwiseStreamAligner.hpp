@@ -117,7 +117,7 @@ namespace optonaut {
                 CorrelationDiff corr = visual.Match(CloneAndDownsample(next), closest);
                 //aTime.Tick("Aligned");
 
-                double angleY = corr.angularOffset.x;
+                double angleY = corr.angularOffset.y;
                 
                 while(angleY < -M_PI)
                     angleY = M_PI * 2 + angleY;

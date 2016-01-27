@@ -163,9 +163,9 @@ namespace optonaut {
      * @param overlapB On completion, is set to the overlapping, undistorted part of b
      * @param buffer Additional image border to be included in the overlap, wherever possible, relative to the position of a.
      *
-     * @returns The roi of the overlapping image area of a on b. 
+     * @returns The location difference of b a nd a measured on the image plane. 
      */
-    static inline cv::Rect GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, const Image &bi, Mat &overlapA, Mat &overlapB, int buffer, cv::Point &appliedBorder) {
+    static inline cv::Point GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, const Image &bi, Mat &overlapA, Mat &overlapB, int buffer, cv::Point &appliedBorder) {
         Mat hom(3, 3, CV_64F);
         Mat rot(4, 4, CV_64F);
         
@@ -175,6 +175,8 @@ namespace optonaut {
         HomographyFromImages(a, b, hom, rot, ai.size());
 
         Mat offset = Mat::eye(3, 3, CV_64F);
+
+        Point2d locationDiff(hom.at<double>(0, 2), hom.at<double>(1, 2));
 
         //Modify homography, so it includes buffer. 
         if(hom.at<double>(1, 2) < 0) {
@@ -211,14 +213,14 @@ namespace optonaut {
         
         hom = offset * hom;
         if(roia.width == 0 || roia.height == 0) {
-            return roi;
+            return locationDiff;
         }
         
         warpPerspective(ai.data, overlapA, hom, roia.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
 
         overlapB = bi.data(roib);
 
-        return roi;
+        return locationDiff;
     }
  
     static inline void GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, const Image &bi, Mat &overlapA, Mat &overlapB) {

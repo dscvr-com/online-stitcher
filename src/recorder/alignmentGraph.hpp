@@ -107,13 +107,13 @@ namespace optonaut {
 
                     if(!res.valid && areNeighbors && dampUncorrelatedNeighbors) {
                         res.valid = true;
-                        res.angularOffset.x = 0;
+                        res.angularOffset.y = 0;
                         res.overlap = imgA->image.cols * imgA->image.rows * 100 *
                             (1 + abs(angularDiff)) * (1 + abs(angularDiff));
                         aToB.forced = true;
                     }
 
-                    aToB.dphi = res.angularOffset.x;
+                    aToB.dphi = res.angularOffset.y;
                     aToB.overlap = res.correlationCoefficient;
                     aToB.valid = res.valid;
                     aToB.rejectionReason = res.rejectionReason;
