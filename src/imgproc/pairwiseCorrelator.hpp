@@ -43,7 +43,7 @@ public:
 class PairwiseCorrelator {
 
 private:
-    static const bool debug = true;
+    static const bool debug = false;
     typedef PyramidPlanarAligner<NormedCorrelator<LeastSquares<Vec3b>>> Aligner;
 public:
     PairwiseCorrelator() { }
