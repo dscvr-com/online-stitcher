@@ -9,6 +9,8 @@ using namespace cv;
 
 namespace optonaut {
     
+    CheckpointStore* CheckpointStore::DebugStore = nullptr;
+    
     void CheckpointStore::SaveRectifiedImage(InputImageP image) {
         string path = rawImagesPath + ToString(image->id) + defaultExtension;
         
