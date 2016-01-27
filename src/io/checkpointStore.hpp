@@ -24,6 +24,9 @@ namespace optonaut {
         const std::string ringAdjustmentPath;
         int c;
     public:
+        
+        static CheckpointStore* DebugStore;
+        
         CheckpointStore(std::string basePath, std::string sharedPath) :
             basePath(basePath),
             sharedPath(sharedPath),
