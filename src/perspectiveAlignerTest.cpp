@@ -47,8 +47,8 @@ int main(int argc, char** argv) {
         auto zero = Recorder::iosZero;
         auto baseInv = base.t();
 
-        imgA->originalExtrinsics = base * zero * imgA->originalExtrinsics.inv() * baseInv;
-        imgB->originalExtrinsics = base * zero * imgB->originalExtrinsics.inv() * baseInv;
+        //imgA->originalExtrinsics = base * zero * imgA->originalExtrinsics.inv() * baseInv;
+        //imgB->originalExtrinsics = base * zero * imgB->originalExtrinsics.inv() * baseInv;
         imgA->adjustedExtrinsics = imgA->originalExtrinsics;
         imgB->adjustedExtrinsics = imgB->originalExtrinsics;
         

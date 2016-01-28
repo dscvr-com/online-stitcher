@@ -27,7 +27,10 @@ namespace optonaut {
                 return false;
             }
 
-            if(result.angularOffset.y > 0.2) {
+            // Todo - this is a quick hack to reject too far away images
+            // that would lead to black stripes. A better solution would be to
+            // just record more ring. 
+            if(result.angularOffset.y > 0.12) {
                 cout << "Ring closure: Rejected because it would lead to black stripes"<< endl;
                 return false;
             }
