@@ -134,6 +134,8 @@ namespace optonaut {
 
                 const int weakGradientOffset = weakGradient * 2.0 / 3.0;
 
+                const int blurBorder = ss.width / 4;
+
                 // Top
                 warpPerspective(input, 
                    output(top), 
@@ -153,8 +155,30 @@ namespace optonaut {
 
                 Mat blur6, blur8, blur;
 
-                PyrDownRecu(output, blur6, 6);
-                PyrUpUntil(blur6, blur, output.size());
+                Mat blurCanvas = 
+                    Mat::zeros(output.rows, output.cols + blurBorder * 2, CV_8UC3);
+
+                cv::Rect blurCanvasCenter = 
+                    cv::Rect(blurBorder, 0, output.cols, output.rows);
+
+                // Full output
+                output.copyTo(blurCanvas(blurCanvasCenter));
+
+                // Right border
+                output(cv::Rect(0, 0, blurBorder, output.rows)).copyTo(
+                    blurCanvas(cv::Rect(blurBorder + output.cols, 0, 
+                            blurBorder, output.rows)));
+                
+                // Left border
+                output(cv::Rect(output.cols - blurBorder, 0, 
+                        blurBorder, output.rows)).copyTo(
+                    blurCanvas(cv::Rect(0, 0, 
+                            blurBorder, output.rows))); 
+
+                PyrDownRecu(blurCanvas, blur6, 6);
+                PyrUpUntil(blur6, blur, blurCanvas.size()); 
+
+                blur = blur(blurCanvasCenter);
 
                 blur(top).copyTo(output(top));
                 blur(bottom).copyTo(output(bottom));
@@ -163,7 +187,9 @@ namespace optonaut {
                 VerticalBlend(output, blur, bottom.y + 1, bottom.y - weakGradient);
                 
                 PyrDownRecu(blur6, blur8, 1);
-                PyrUpUntil(blur8, blur, output.size());
+                PyrUpUntil(blur8, blur, blurCanvas.size());
+                
+                blur = blur(blurCanvasCenter);
                 
                 blur(halfTop).copyTo(output(halfTop));
                 blur(halfBottom).copyTo(output(halfBottom));
