@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
         auto result = corr.Match(imgA, imgB, 4, 4, true); 
 
         if(!result.valid) {
-            cout << "Correlation: Rejected." << endl;
+            cout << "Correlation: Rejected " << result.rejectionReason << "." << endl;
         }
 
         cout << "BiasY: " << result.angularOffset.y << endl;

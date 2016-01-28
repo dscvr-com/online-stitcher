@@ -2,7 +2,7 @@
 #include "../imgproc/planarCorrelator.hpp"
 #include "../math/support.hpp"
 
-#include "checkpointStore.hpp"
+#include "../io/checkpointStore.hpp"
 
 #ifndef OPTONAUT_RING_CLOSER_HEADER
 #define OPTONAUT_RING_CLOSER_HEADER
