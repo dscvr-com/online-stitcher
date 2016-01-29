@@ -166,10 +166,13 @@ namespace optonaut {
                 
                 auto &rings = preRecorderGraph.GetRings();
                 
-                for(size_t i = 0; i < rings[rings.size() / 2].size() + 5; i++) {
+                // Allocate a little extra for working/preview
+                for(size_t i = 0; i < rings[rings.size() / 2].size() + 20; i++) {
                     size_t size = 4 * 1280 * 720;
                     void *memory = malloc(size);
-                    Assert(memory != NULL);
+                    if(memory == NULL) {
+                        AssertM(memory != NULL, "Failed to pre-allocate memory");
+                    }
                     memset(memory, 'o', size);
                     uselessVariable += ((int*)memory)[2];
                     uselessMem.push_back(memory);
@@ -469,7 +472,12 @@ namespace optonaut {
             //pipeTimer.Tick("Push");
             
             ConvertToStitcher(image->originalExtrinsics, image->originalExtrinsics);
-            jumpFilter.Push(image->originalExtrinsics);
+            
+            
+            if(hasStarted && !jumpFilter.Push(image->originalExtrinsics)) {
+                cout << "Jump Detected" << endl;  
+            }
+        
             image->originalExtrinsics.copyTo(image->adjustedExtrinsics);
             
             last = image;

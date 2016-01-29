@@ -14,10 +14,10 @@ namespace optonaut {
             Mat state;
             Mat lastDiff;
         
-        static const bool enabled = false;
+        static const bool enabled = true;
         public:
             // Jump thresh of 0.06 found via matlab. 
-            JumpFilter(double threshold = 0.02) : threshold(threshold) { }
+            JumpFilter(double threshold = 0.03) : threshold(threshold) { }
 
             const Mat &GetState() const {
                 return state;
@@ -42,7 +42,10 @@ namespace optonaut {
                     
                     Mat rvec;
                     Mat diff = state.inv() * offs.inv() * in;
-                    ExtractRotationVector(diff, rvec);
+                    
+                    
+                    // Actually take diff of diffs (e.g. second derivation) 
+                    ExtractRotationVector(diff * lastDiff.inv(), rvec);
                     
                     double hMovement = abs(rvec.at<double>(1));
 
@@ -51,7 +54,11 @@ namespace optonaut {
                         offs = offs * (lastDiff.inv() * diff);
                         state = state * lastDiff;
                         state.copyTo(in);
-                        cout << "Avoiding Jump" << endl;
+                        
+                        
+                        ExtractRotationVector(offs, rvec);
+                        
+                        cout << "Avoiding Jump, offset: " << rvec.t() << endl;
                         return false;
                     } else {
                         diff.copyTo(lastDiff);

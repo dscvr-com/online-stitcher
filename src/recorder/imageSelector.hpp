@@ -210,7 +210,7 @@ namespace optonaut {
             SelectionPoint ballTarget;
             Mat ballPosition;
             bool hasStarted;
-            const int ballLead = 4;
+            const int ballLead = 2;
 
             Mat errorVec;
             double error;
@@ -272,10 +272,16 @@ namespace optonaut {
 
                 if(!hasStarted) {
                     
+                    // Make suggested initial position dependet on vertical position only for smoothness. 
                     graph.FindClosestPoint(image->adjustedExtrinsics,
                                                          ballTarget, currentRing);
                     
-                    UpdateBallPosition(ballTarget.extrinsics);
+                    Mat rDiff;
+                    ExtractRotationVector(image->adjustedExtrinsics * ballTarget.extrinsics.inv(), rDiff);
+                    Mat mDiff;
+                    CreateRotationY(rDiff.at<double>(1), mDiff);
+                    
+                    UpdateBallPosition(mDiff * ballTarget.extrinsics);
                     
                 } else {
                     if(isIdle) {
