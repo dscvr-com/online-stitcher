@@ -27,7 +27,7 @@ namespace optonaut {
                 
                 if(!enabled) {
                     in.copyTo(state);
-                    return false;
+                    return true;
                 }
                 
                 if(state.cols == 0) {

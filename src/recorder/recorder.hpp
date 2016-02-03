@@ -473,7 +473,6 @@ namespace optonaut {
             
             ConvertToStitcher(image->originalExtrinsics, image->originalExtrinsics);
             
-            
             if(hasStarted && !jumpFilter.Push(image->originalExtrinsics)) {
                 cout << "Jump Detected" << endl;  
             }

@@ -270,7 +270,7 @@ namespace optonaut {
 
             bool Push(InputImageP image, bool isIdle) {
 
-                if(!hasStarted) {
+                if(!hasStarted || !current.isValid) {
                     
                     // Make suggested initial position dependet on vertical position only for smoothness. 
                     graph.FindClosestPoint(image->adjustedExtrinsics,
