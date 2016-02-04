@@ -14,6 +14,8 @@ namespace optonaut {
             Mat state;
             Mat lastDiff;
         
+            Mat last;
+        
         static const bool enabled = true;
         public:
             // Jump thresh of 0.06 found via matlab. 
@@ -30,19 +32,23 @@ namespace optonaut {
                     return true;
                 }
                 
+                
                 if(state.cols == 0) {
                     //Init case. 
                     state = in.clone();
                     offs = Mat::eye(4, 4, CV_64F);
                     lastDiff = Mat::eye(4, 4, CV_64F);
+                    last = in.clone();
                     return true;
                 } else {
+                    
+                    //cout << "State: " << state << endl;
                     
                     AssertEQ(determinant(state), 1.0);
                     
                     Mat rvec;
-                    Mat diff = state.inv() * offs.inv() * in;
-                    
+                    Mat diff = last.inv() * in;
+                    in.copyTo(last);
                     
                     // Actually take diff of diffs (e.g. second derivation) 
                     ExtractRotationVector(diff * lastDiff.inv(), rvec);
@@ -54,7 +60,6 @@ namespace optonaut {
                         offs = offs * (lastDiff.inv() * diff);
                         state = state * lastDiff;
                         state.copyTo(in);
-                        
                         
                         ExtractRotationVector(offs, rvec);
                         

@@ -1,4 +1,4 @@
-#include "../io/inputImage.hpp"
+    #include "../io/inputImage.hpp"
 #include "../io/io.hpp"
 #include "../io/checkpointStore.hpp"
 #include "../stereo/monoStitcher.hpp"
@@ -474,7 +474,7 @@ namespace optonaut {
             ConvertToStitcher(image->originalExtrinsics, image->originalExtrinsics);
             
             if(hasStarted && !jumpFilter.Push(image->originalExtrinsics)) {
-                cout << "Jump Detected" << endl;  
+                cout << "Jump Detected" << endl;
             }
         
             image->originalExtrinsics.copyTo(image->adjustedExtrinsics);
@@ -491,6 +491,8 @@ namespace optonaut {
             //cout << "## Rotation Y: " << rvec.at<double>(1) << endl;
             //cout << "## Rotation Z: " << rvec.at<double>(2) << endl;
             //cout << "## Idle: " << (isIdle ? 1 : 0) << endl;
+            
+            Assert(image != NULL);
             
             bool shouldLoad = preController.Push(image, isIdle);
             
