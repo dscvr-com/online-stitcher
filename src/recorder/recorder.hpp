@@ -133,7 +133,7 @@ namespace optonaut {
             inputBufferQueue([this] (const SelectionInfo &x) {
                 ForwardToAligner(x);
             }),
-            alignerDelayQueue(15,
+            alignerDelayQueue(1,
                 std::bind(&Recorder::ApplyAlignment,
                           this, placeholders::_1)),
             stereoConversionQueue(
