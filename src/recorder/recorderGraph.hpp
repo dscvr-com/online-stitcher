@@ -52,11 +52,11 @@ namespace optonaut {
         vector<SelectionPoint*> targetsById;
     public:
         
-        static const int ModeAll = 0;
-        static const int ModeCenter = 1;
-        static const int ModeTruncated = 2;
-        static const int ModeNoBot = 3;
-        static const int ModeTinyDebug = 1337;
+        static constexpr int ModeAll = 0;
+        static constexpr int ModeCenter = 1;
+        static constexpr int ModeTruncated = 2;
+        static constexpr int ModeNoBot = 3;
+        static constexpr int ModeTinyDebug = 1337;
         
         static constexpr float DensityHalf = 0.5;
         static constexpr float DensityNormal = 1;

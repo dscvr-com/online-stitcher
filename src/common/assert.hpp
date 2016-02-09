@@ -1,8 +1,11 @@
 #include <cassert>
 #include <string>
 #include <iostream>
+#include <sstream>
+#include <android/log.h>
 
-#include "backtrace.hpp"
+
+//#include "backtrace.hpp"
 #include "support.hpp"
 
 #ifndef OPTONAUT_ASSERT_HEADER
@@ -34,23 +37,26 @@
 namespace optonaut {
 
     inline void PrintAndTerminate(std::string message, std::string vars, std::string values = "", bool isWarning = false) {
-
+        std::stringstream s;
         if(isWarning) {
-            std::cerr << "Warning: "; 
+            s << "Warning: ";
         } else {
-            std::cerr << "Assertion Failed: ";
+            s << "Assertion Failed: ";
         }
         if(message != "")
-            std::cerr << message << " ";
+            s << message << " ";
         if(vars != "")
-            std::cerr << std::endl << "Expression: " << vars << " ";
+            s << std::endl << "Expression: " << vars << " ";
         if(values != "")
-            std::cerr << "(" << values << ")";
+            s << "(" << values << ")";
 
-        std::cerr << std::endl;
+        s << std::endl;
+
+        std::string ret = s.str();
+        __android_log_print(ANDROID_LOG_DEBUG, "TAG", "%s", ret.c_str());
 
         if(!isWarning) {
-            PrintBacktrace();
+            //PrintBacktrace();
             std::abort();
         }
     }

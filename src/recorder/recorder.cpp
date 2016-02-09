@@ -36,10 +36,11 @@ namespace optonaut {
         0, 0, 0, 1
     };
 
-
+    /*
     Mat Recorder::androidBase(4, 4, CV_64F, androidBaseData);
     Mat Recorder::iosBase(4, 4, CV_64F, iosBaseData);
     Mat Recorder::iosZero = Recorder::iosBase * Mat(4, 4, CV_64F, iosZeroData) * Recorder::iosBase.inv();
+    */
 
     string Recorder::tempDirectory = "tmp/";
     string Recorder::version = "0.7.0";
