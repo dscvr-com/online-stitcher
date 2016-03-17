@@ -16,7 +16,7 @@ namespace optonaut {
         
             Mat last;
         
-        static const bool enabled = true;
+        static const bool enabled = false;
         public:
             // Jump thresh of 0.06 found via matlab. 
             JumpFilter(double threshold = 0.015) : threshold(threshold) { }

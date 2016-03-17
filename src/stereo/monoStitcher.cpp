@@ -67,7 +67,7 @@ Rect CornersToRoi(const vector<Point2f> &corners) {
 //Extracts the target area, as points on a sphere surface, 
 //encoded as rotation matrices. 
 const double hBufferRatio = 3;
-const double vBufferRatio = 0.05;
+const double vBufferRatio = 0.00;
 
 void GetTargetArea(const SelectionPoint &a, const SelectionPoint &b, Mat &center, vector<Mat> &corners) {
     double hLeft = a.hPos;
