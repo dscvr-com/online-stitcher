@@ -9,7 +9,7 @@
 #include "../common/functional.hpp"
 #include "../recorder/recorderGraph.hpp"
 #include "../io/io.hpp"
-#include "../stitcher/multiRingStitcher.hpp"
+#include "../stitcher/multiringStitcher.hpp"
 #include "../stitcher/stitchingResult.hpp"
 
 using namespace std;

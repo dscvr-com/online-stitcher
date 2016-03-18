@@ -16,7 +16,7 @@
 #include "recorder/alignmentGraph.hpp"
 #include "stitcher/simpleSphereStitcher.hpp"
 #include "stitcher/simplePlaneStitcher.hpp"
-#include "stitcher/multiRingStitcher.hpp"
+#include "stitcher/multiringStitcher.hpp"
 #include "minimal/stereoConverter.hpp"
 #include "minimal/imagePreperation.hpp"
 
