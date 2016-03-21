@@ -17,7 +17,11 @@ using namespace std;
 #define OPTONAUT_RECORDER_GRAPH_HEADER
 
 namespace optonaut {
-    
+
+    /*
+     * Represents a node in the recorder graph. This is a point 
+     * where at least one image needs to be captured while recording. 
+     */     
     struct SelectionPoint {
         uint32_t globalId;
         uint32_t localId;
@@ -34,7 +38,11 @@ namespace optonaut {
             vFov(0), extrinsics(0, 0, CV_64F) {
         }
     };
-    
+   
+    /*
+     * Represents an edge in the recorder graph. 
+     * Usually, all edges in a ring need to be traversed during recording. 
+     */ 
     struct SelectionEdge {
         uint32_t from;
         uint32_t to;
@@ -44,20 +52,27 @@ namespace optonaut {
             
         }
     };
-    
+   
+    /*
+     * This class defines the graph that has to be traversed during recording. 
+     * It defines the position and order of all images that should 
+     * be taken while recording an optograph. 
+     */ 
     class RecorderGraph {
     private: 
         vector<vector<SelectionEdge>> adj;
         vector<vector<SelectionPoint>> targets;
         vector<SelectionPoint*> targetsById;
     public:
-        
-        static const int ModeAll = 0;
-        static const int ModeCenter = 1;
-        static const int ModeTruncated = 2;
-        static const int ModeNoBot = 3;
-        static const int ModeTinyDebug = 1337;
-        
+       
+        // Recorder graph modes, usually used while generating. 
+        static const int ModeAll = 0; // Full sphere
+        static const int ModeCenter = 1; // Only center ring
+        static const int ModeTruncated = 2; // Omit top and bottom ring (usually leads three rings)
+        static const int ModeNoBot = 3; // Omits bottom ring
+        static const int ModeTinyDebug = 1337; // Three ring slices. Good for debugging state transistions during recording.  
+       
+        // Some predefined densities.  
         static constexpr float DensityHalf = 0.5;
         static constexpr float DensityNormal = 1;
         static constexpr float DensityDouble = 2;
@@ -66,11 +81,17 @@ namespace optonaut {
         const Mat intrinsics;
         const uint32_t ringCount;
 
+        /*
+         * Creates a new, empty, recorder graph. 
+         */
         RecorderGraph(uint32_t ringCount, const Mat &intrinsics)
             : intrinsics(intrinsics), ringCount(ringCount) {
             targets.reserve(ringCount); 
         }
-        
+       
+        /*
+         * Copy constructor.  
+         */
         RecorderGraph(const RecorderGraph &c)
             : adj(c.adj), targets(c.targets), 
             intrinsics(c.intrinsics), ringCount(c.ringCount)
@@ -83,6 +104,9 @@ namespace optonaut {
             }
         }
 
+        /* 
+         * Adds a new ring to the recorder graph. 
+         */
         uint32_t AddNewRing(uint32_t ringSize) {
             AssertGT((size_t)ringCount, targets.size()); 
             targets.push_back(vector<SelectionPoint>(ringSize));
@@ -90,6 +114,9 @@ namespace optonaut {
             return (uint32_t)targets.size() - 1;
         }
 
+        /*
+         * Adds a new node to the recorder graph. 
+         */
         void AddNewNode(const SelectionPoint &point) {
             //Check for index consistency. 
             AssertGT(targets.size(), (size_t)point.ringId); 
@@ -102,21 +129,33 @@ namespace optonaut {
             targetsById[point.globalId] = &(targets[point.ringId][point.localId]);
         } 
 
+        /*
+         * Adds a new edge to the recorder graph. 
+         */
         void AddEdge(const SelectionEdge &edge) {
             while(adj.size() <= edge.from) {
                 adj.push_back(vector<SelectionEdge>());
             }
             adj[edge.from].push_back(edge);
         }
-       
+      
+        /* 
+         * Gets all rings from this recorder graph.  
+         */
         const vector<vector<SelectionPoint>> &GetRings() const {
             return targets;
         }
         
+        /*
+         * Gets a lookup table from selection point Ids to selection points. 
+         */
         const vector<SelectionPoint*> &GetTargetsById() const {
             return targetsById;
         }
-        
+       
+        /*
+         * Removes an edge from this recorder graph.  
+         */
         void RemoveEdge(const SelectionPoint& left, const SelectionPoint& right) {
             for(auto it = adj[left.globalId].begin(); it != adj[left.globalId].end(); it++) {
                 if(it->to == right.globalId) {
@@ -126,6 +165,9 @@ namespace optonaut {
             }
         }
         
+        /*
+         * Tries to get an edge between two given points. Returns true if the edge was found. 
+         */
         bool GetEdge(const SelectionPoint& left, const SelectionPoint& right, SelectionEdge &outEdge) const {
             for(auto it = adj[left.globalId].begin(); it != adj[left.globalId].end(); it++) {
                 if(it->to == right.globalId) {
@@ -135,7 +177,10 @@ namespace optonaut {
             }
             return false;
         }
-        
+       
+        /*
+         * Marks the given edge as recorded.
+         */ 
         void MarkEdgeAsRecorded(const SelectionPoint& left, const SelectionPoint& right) {
             for(auto it = adj[left.globalId].begin(); it != adj[left.globalId].end(); it++) {
                 if(it->to == right.globalId) {
@@ -144,6 +189,10 @@ namespace optonaut {
             }
         }
 
+        /*
+         * Gets the next selection point. That is the first point that is connected to 
+         * the given selection point. 
+         */
         bool GetNext(const SelectionPoint &current, SelectionPoint &next) const {
             auto it = adj[current.globalId].begin();
 
@@ -153,7 +202,11 @@ namespace optonaut {
                 return GetPointById(it->to, next);
             }
         }
-        
+       
+        /*
+         * Gets the next selection point that has not been recorded so far. That is 
+         * the selection point that is connected by an edge that was not traversed during recording.  
+         */ 
         bool GetNextForRecording(const SelectionPoint &current, SelectionPoint &next) const {
             auto it = adj[current.globalId].begin();
             
@@ -167,7 +220,10 @@ namespace optonaut {
             
             return false;
         }
-        
+       
+        /*
+         * Gets a selection point by its id. Returns true if the point was found. 
+         */ 
         bool GetPointById(uint32_t id, SelectionPoint &point) const {
             
             if(id < targetsById.size()) {
@@ -177,7 +233,12 @@ namespace optonaut {
             
             return false;
         }
-        
+       
+        /*
+         * Finds the point closest to the given position. Optionally restricts the search to a given ring. 
+         *
+         * Returns the distance to the found point. 
+         */ 
         double FindClosestPoint(const Mat &extrinscs, SelectionPoint &point, const int ringId = -1) const {
             double bestDist = -1;
             Mat eInv = extrinscs.inv();
@@ -200,6 +261,9 @@ namespace optonaut {
             return bestDist;
         }
 
+        /*
+         * Finds the ring closest to the given position. 
+         */
         int FindAssociatedRing(const Mat &extrinsics, const double tolerance = M_PI / 8) const {
             assert(targets.size() > 0);
 
@@ -211,6 +275,9 @@ namespace optonaut {
             return -1;
         }
 
+        /*
+         * Returns the index of the child ring for the given ring. 
+         */
         int GetChildRing(int ring) {
             int c = (int)(targets.size() - 1) / 2;
 
@@ -223,6 +290,9 @@ namespace optonaut {
             }
         }
 
+        /*
+         * Checks if the given ring has a child ring. 
+         */
         bool HasChildRing(int ring) {
             int c = GetChildRing(ring);
             if(c < 0 || c >= (int)targets.size()) {
@@ -232,6 +302,9 @@ namespace optonaut {
             }
         }
 
+        /*
+         * Returns the parent ring of the given ring. 
+         */
         int GetParentRing(int ring) {
             int c = (int)(targets.size() - 1) / 2;
 
@@ -243,7 +316,10 @@ namespace optonaut {
                 return ring + 1;
             }
         }
-        
+       
+        /*
+         * Returns the count of all selection points in this recorder graph. 
+         */ 
         uint32_t Size() {
             uint32_t size = 0;
             
@@ -253,11 +329,17 @@ namespace optonaut {
             return size;
         }
 
+        /*
+         * Greedely selects the best matches for the given images. 
+         */
         vector<InputImageP> SelectBestMatches(const vector<InputImageP> &imgs) {
             BiMap<size_t, uint32_t> dummy;
             return SelectBestMatches(imgs, dummy); 
         }
 
+        /*
+         * Greedely selects the best matches for the given images. 
+         */
         vector<InputImageP> SelectBestMatches(const vector<InputImageP> &_imgs, 
                 BiMap<size_t, uint32_t> &imagesToTargets) const {
 
@@ -303,7 +385,10 @@ namespace optonaut {
 
             return res;
         }
-        
+       
+        /*
+         * Splits all given images into rings, according to this graph. 
+         */ 
         vector<vector<InputImageP>> SplitIntoRings(const vector<InputImageP> &imgs) const {
             vector<vector<InputImageP>> rings(this->GetRings().size());
             

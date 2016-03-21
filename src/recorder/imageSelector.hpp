@@ -12,18 +12,30 @@ using namespace std;
 #define OPTONAUT_IMAGE_SELECTOR_HEADER
 
 namespace optonaut {
-    
+   
+    /*
+     * Represents a match of an image and a corresponding selection point. 
+     */
     struct SelectionInfo {
-        SelectionPoint closestPoint;
-        InputImageP image;
-        double dist;
-        bool isValid;
+        SelectionPoint closestPoint; // The associated point
+        InputImageP image; // The associated image
+        double dist; // The distance, in radians on a sphere
+        bool isValid; // Is the match valid? 
         
         SelectionInfo() : dist(0), isValid(false) {
             
         }
     };
 
+    /*
+     * Class responsible of matching series of images with selection
+     * points in a recorder graph in order. 
+     *
+     * This class basically works by holding a reference to the current selection
+     * point. For each input image, we move our current selection point. We assume a best match
+     * for a selection point if we get a new image that is not a better match than the previous one.  
+     * If this case happens, the callback is invoked. 
+     */
     class ImageSelector {
         public: 
             typedef std::function<void(SelectionInfo)> MatchCallback;
@@ -100,6 +112,16 @@ namespace optonaut {
 
         public:
 
+            /*
+             * Creates a new ImageSelector based on the given graph and the given callback.
+             *
+             * @param graph The recorder graph to use. 
+             * @param onNewMatch The callback onNewMatch is called whenever a new best match is found for
+             * a selection point. 
+             * @param tolerance The rotational tolerance, for each axis. 
+             * @param strictOrder If true, all selection points must be visited in order. 
+             *
+             */
             ImageSelector(RecorderGraph &graph, 
                     MatchCallback onNewMatch,
                     Vec3d tolerance,
@@ -115,20 +137,34 @@ namespace optonaut {
                 }
             }
 
+            /*
+             * Returns the current match. 
+             */
             SelectionInfo GetCurrent() const {
                 return current;
             }
 
+            /*
+             * Notifies the selector that processing is finished. 
+             */
             virtual void Flush() {
                 if(current.isValid) {
+                    // It is safe to assume that the last match, if it was valid
+                    // was also the best one. 
                     callback(current);
                 }
             }
-            
+           
+            /*
+             * Returns true if all selection points have been visited. 
+             */ 
             bool IsFinished() {
                 return isFinished;
             }
         
+            /*
+             * Pushes an image to this selector and advances the internal state. 
+             */
             virtual bool Push(const InputImageP image) {
 
                 SelectionPoint next;
@@ -204,7 +240,9 @@ namespace optonaut {
             }
     };
 
-    // An image selector that's got balls.
+    /*
+     * An extension of ImageSelector that calculates guidenceinformation to show in the UI. 
+     */
     class FeedbackImageSelector : public ImageSelector {
         private:
             SelectionPoint ballTarget;
@@ -268,10 +306,12 @@ namespace optonaut {
 
             using ImageSelector::Push;
 
+            /*
+             * Pushes an input image to this instance and advances the internal state. 
+             */
             bool Push(InputImageP image, bool isIdle) {
 
                 if(!hasStarted || !current.isValid) {
-                    
                     // Make suggested initial position dependet on vertical position only for smoothness. 
                     graph.FindClosestPoint(image->adjustedExtrinsics,
                                                          ballTarget, currentRing);
@@ -284,6 +324,7 @@ namespace optonaut {
                     UpdateBallPosition(mDiff * ballTarget.extrinsics);
                     
                 } else {
+                    // Do noremal movement, also update the ball position if applicable. 
                     if(isIdle) {
                         ballTarget = GetNext(current.closestPoint, true, 1);
                         UpdateBallPosition(ballTarget.extrinsics);
@@ -292,8 +333,9 @@ namespace optonaut {
                     }
                 }
                 
+                // Extract error/guidance information
                 ExtractRotationVector(
-                                      image->adjustedExtrinsics.inv() * ballPosition, errorVec);
+                    image->adjustedExtrinsics.inv() * ballPosition, errorVec);
                 
                 error = GetAngleOfRotation(image->adjustedExtrinsics, ballPosition);
 
@@ -306,14 +348,24 @@ namespace optonaut {
                 return ImageSelector::Push(image);
             }
 
+            /*
+             * Gets the guidance ball position (in other words, the position of the next keyframe)
+             * as rotation matrix. 
+             */
             const Mat &GetBallPosition() const {
                 return ballPosition;
             }
-            
+           
+            /*
+             * Gets the absolute guidance error in radians. 
+             */ 
             double GetError() const {
                 return error;
             }
-            
+
+            /*
+             * Gets the guidance error for all axis. 
+             */
             const Mat &GetErrorVector() const {
                 return errorVec;
             }

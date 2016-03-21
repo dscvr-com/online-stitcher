@@ -20,6 +20,11 @@ using namespace std;
 #define OPTONAUT_RINGWISE_STREAM_ALIGNMENT_HEADER
 
 namespace optonaut {
+    /*
+     * Class that alignes images based on images with a known position.
+     *
+     * Usually outer rings are compared towards a center baseline. 
+     */
 	class RingwiseStreamAligner : public Aligner {
 	private:
         typedef AsyncStream<InputImageP, int> Worker; 
@@ -39,22 +44,27 @@ namespace optonaut {
         const bool async;
         static const bool debug = false;
 	public:
-		RingwiseStreamAligner(RecorderGraph &graph, ExposureCompensator&, const bool async = true) :
+        /*
+         * Creates a new instance of this class, based on the given recorder graph. 
+         */
+		RingwiseStreamAligner(RecorderGraph &graph, const bool async = true) :
             graph(graph), 
-            //visual(exposure),
             rings(graph.GetRings().size()), 
             compassDrift(Mat::eye(4, 4, CV_64F)), 
             lasty(0),
             cury(0),
             async(async)
         { 
-            worker = shared_ptr<Worker>(new Worker(alignOp));
+            worker = shared_ptr<Worker>(new Worker(AlignOperation));
         }
 
         bool NeedsImageData() {
             return false; //Will always load ourselves. 
         }
 
+        /*
+         * Stops operation and clears all resources. 
+         */
         void Dispose() {
             if(async) {
                 if(worker->IsRunning()) {
@@ -65,11 +75,17 @@ namespace optonaut {
             
             rings.clear();
         }
-        
+       
+        /*
+         * Convenience method that splits a set of images into a set of rings. 
+         */ 
         vector<vector<InputImageP>> SplitIntoRings(vector<InputImageP> &imgs) const {
             return graph.SplitIntoRings(imgs);
         }
 
+        /*
+         * Finds the closest known keyframes for a given position. 
+         */
         vector<KeyframeInfo> GetClosestKeyframes(const Mat &search, size_t count) const {
 
             int ring = graph.FindAssociatedRing(search);
@@ -108,28 +124,33 @@ namespace optonaut {
             return keyframes;
         }
 
-        function<int(InputImageP)> alignOp = [&] (InputImageP next) -> int {
+        /*
+         * Correlation operation that is executed for each image. 
+         */
+        int AlignOperation(const InputImageP &next) {
             STimer aTime;
+            // Find the closest keyframe
             InputImageP closest = GetClosestKeyframe(next->adjustedExtrinsics);
-            //aTime.Tick("Keyframe found");
             if(closest != NULL) {
-                //Todo: Bias intensity is probably dependent on image size. 
+                
+                // Correlate the image and its closest keyrame.
                 CorrelationDiff corr = visual.Match(CloneAndDownsample(next), closest);
                 
                 //aTime.Tick("Aligned");
                 
                 double angleY = corr.angularOffset.y;
                 
-                //Check variance. Value of 10^6 guessed via chart observation. 
+                // Check variance. Value of 10^6 guessed via chart observation. 
                 if(corr.valid) {
-                    cout << "Correlating with angular offset " << angleY << ", variance " << corr.correlationCoefficient << endl;
+                    //cout << "Correlating with angular offset " << angleY << ", variance " << corr.correlationCoefficient << endl;
                     
                     while(angleY < -M_PI)
                         angleY = M_PI * 2 + angleY;
-                    
+                   
+                    // Remember image.
                     lasty = angleY;
                 } else {
-                    cout << "Rejecting Corrleation with angular offset " << angleY << ", variance " << corr.correlationCoefficient << endl;
+                    //cout << "Rejecting Corrleation with angular offset " << angleY << ", variance " << corr.correlationCoefficient << endl;
                     lasty = cury;
                 }
                 //cout << "AngularDiffBias: " << lasty << endl;
@@ -141,7 +162,10 @@ namespace optonaut {
 
             return lasty;
         };
-                
+               
+        /*
+         * Registers a new keyframe with this aligner. 
+         */ 
         void AddKeyframe(InputImageP next) {
             int ring = graph.FindAssociatedRing(next->originalExtrinsics);
             
@@ -157,6 +181,11 @@ namespace optonaut {
             }
         }
 
+        /*
+         * Pushes a new image to this aligner. 
+         * If the aligner is ready for new input, the image will be loaded, 
+         * if necassary, and used to esimate sensor bias. 
+         */
 		void Push(InputImageP next) {
             last = next;
             
@@ -183,6 +212,7 @@ namespace optonaut {
                 if(worker->Finished()) {
                     if(!next->IsLoaded()) {
                         //Pre-load the image. 
+                        AssertM(false, "Tried to load an image from its data ref where it is potentially unsafe. Make sure that code runs on the AVFoundation's thread");
                         next->LoadFromDataRef();
                     }
                     worker->Push(next);
@@ -190,11 +220,12 @@ namespace optonaut {
             } else {
                 if(!next->IsLoaded()) {
                     //Pre-load the image.
+                    AssertM(false, "Tried to load an image from its data ref where it is potentially unsafe. Make sure that code runs on the AVFoundation's thread");
                     next->LoadFromDataRef();
                 }
-                alignOp(next);
+                AlignOperation(next);
             }
-                
+               
             sangles.push_back(lasty);
  
             if(sangles.size() > order) {
@@ -202,20 +233,32 @@ namespace optonaut {
             }
         }
 
-		Mat GetCurrentBias() const {
+		/*
+         * Returns the current bias as 3x3 rotation matrix. 
+         */
+        Mat GetCurrentBias() const {
 			return compassDrift;
         }
-        
-        double GetCurrentVtag() const {
+       
+        /*
+         * Returns the current angular offset around the vertical axis. 
+         */ 
+        double GetCurrentAngularOffset() const {
             return cury;
         }
 
+        /*
+         * Stops the worker thread. 
+         */
         void Finish() {
             if(async) {
                 worker->Dispose();
             }
         }
 
+        /*
+         * If debug enabled, saves all keyframes.  
+         */
         void Postprocess(vector<InputImageP>) const {
             //for(auto img : imgs) {
             //    DrawBar(img->image.data, img->vtag);
