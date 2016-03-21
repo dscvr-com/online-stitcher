@@ -1,5 +1,5 @@
 # optonaut-online-stitcher
-Dev Crib for Optonaut Recording and Aligning on Phones
+Dev Environment for Optonaut Recording and on Phones
 
 ## Input Data Format
 
@@ -16,6 +16,22 @@ An input data package for the test applications consists of a number of data/ima
   ```
   
 * `NUMBER.jpg` is the image of the respective frame.
+
+## Project Structure
+
+Most code is placed in header files. This is due to compile-time optimization and ease-of-use. There are some exceptions with code that does not work with the iOS/Android build process. 
+There are some examples and tests in the root folder. Also, there are unit tests for some low level modules in the test folder. 
+
+The code consists roughly of the following modules: 
+* debug - Contains debug code that is not used on the phone. 
+* common - Contains several general classes and modules, mainly generic helpers for other modules. Example: Graph, Ring Buffers, Timers, other Collection Types. 
+* imgproc - Contains classes that work on image data directly. For example alignment.  
+* io - Contains classes for image IO, especially for storing contextual information during stitching. 
+* math - Contains mathematical functions. Especially related to projection, quaternions and statistics. 
+* recorder - Contains classes specific for recording. The main class here is Recorder. 
+* stereo - Contains the code responsible for stereo conversion. 
+* stitcher - Contains code responsible for stitching results together. The main class here is RingStitcher (and MultiRingStitcher). Also, classes for very simple debug stitching exist. 
+* minimal - Contains code to use parts of this project in a very simple and minimal way. Great for testing!
 
 ## Output Data Format
 
