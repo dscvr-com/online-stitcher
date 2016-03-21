@@ -61,9 +61,15 @@ The follwoing code files are experimental:
 * featureChainTest, minimalFeatureTest - testbeds for feature based alignments and structure from motion, e.g. creating 3D models from a series of images. 
 * stereoMatchTest - testbed for stereo matching, e.g. comparing two images to extract a depthmap. 
 
+## Mat conventions
+
+Unless otherwise noted, we use ```CV_64F``` (```double```) matrices for all matrices in mathematicel sense (also quaternions and vectors). We use ```CV_8UC3``` matrices for BGR images and ```CV_8UC1```matrices for grayscale images. 
+
+All intrinsic matrices are represented as 3x3 matrices, all extrinsic matrices are represented as 4x4, even if they only contain rotations. 
+
 ## Compiling 
 
-A c++13 compiler is required. For example ```clang 7.2.0``` or ```gcc 4.9```. 
+Cmake and a c++13 compiler are required. For example ```clang 7.2.0``` or ```gcc 4.9```. 
 
 OpenCV is the main dependency. Build Flags used for OpenCV:
 ```
