@@ -20,7 +20,7 @@ An input data package for the test applications consists of a number of data/ima
 ## Project Structure
 
 Most code is placed in header files. This is due to compile-time optimization and ease-of-use. There are some exceptions with code that does not work with the iOS/Android build process. 
-There are some examples and tests in the root folder. Also, there are unit tests for some low level modules in the test folder. 
+There are some examples and tests in the ```src``` folder. Also, there are unit tests for some low level modules in the ```src/test``` folder. 
 
 The code consists roughly of the following modules: 
 * debug - Contains debug code that is not used on the phone. 
@@ -61,15 +61,19 @@ The follwoing code files are experimental:
 * featureChainTest, minimalFeatureTest - testbeds for feature based alignments and structure from motion, e.g. creating 3D models from a series of images. 
 * stereoMatchTest - testbed for stereo matching, e.g. comparing two images to extract a depthmap. 
 
-## Notes on compiling on Mac
+## Compiling 
 
-Build Flags used for OpenCV
+A c++13 compiler is required. For example ```clang 7.2.0``` or ```gcc 4.9```. 
+
+OpenCV is the main dependency. Build Flags used for OpenCV:
 ```
 cmake -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules -DWITH_OPENGL=ON -DWITH_OPENEXR=OFF -DBUILD_TIFF=OFF -DWITH_CUDA=OFF -DWITH_NVCUVID=OFF -DBUILD_PNG=OFF ..
 ```
+The contrib modules are used for the experimental SFM support. 
 
 Please set the environment variable OpenCV_DIR to the path of opencv. 
 
-Please keep track of all the dependencies when compiling OpenCV. Ceres solver and Eigen are especially important for SFM. 
-
+Please keep track of all the dependencies when compiling OpenCV. Ceres solver and Eigen are only important for SFM. 
 The visual debug hook and the SFM preview depends on the 3D library irrlicht. 
+
+The code can be compiled by running ```./compile.sh``` in the root directory. 
