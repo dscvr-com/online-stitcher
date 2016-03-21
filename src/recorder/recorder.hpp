@@ -466,7 +466,7 @@ namespace optonaut {
                 InputImageToFile(image, 
                         debugPath + "/" + ToString(debugCounter++) + ".jpg");
             }
-            
+
             AssertM(!isFinished, "Warning: Push after finish - this is probably a racing condition");
             
             //pipeTimer.Tick("Push");
