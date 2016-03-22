@@ -11,7 +11,10 @@
 #define OPTONAUT_STITCHER_HEADER
 
 namespace optonaut {
-    
+   
+    /*
+     * Wrapper for the optonaut stitching part. 
+     */  
     class Stitcher {
 
     private:    

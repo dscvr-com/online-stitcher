@@ -5,6 +5,9 @@
 #define OPTONAUT_STITCHER_SINK_HEADER
 
 namespace optonaut {
+    /*
+     * Stereo sink that directly stitches results in memory, instead of writing them to disk. 
+     */
     class StitcherSink : public StereoSink {
 
     private:
