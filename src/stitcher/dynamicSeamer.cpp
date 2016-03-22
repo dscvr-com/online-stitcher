@@ -9,6 +9,7 @@
 #include "../common/static_timer.hpp"
 #include "dynamicSeamer.hpp"
 
+// Coordinate remap macros, so we can use the same code for vertical and horizontal seaming. 
 #define REMAPX(x,y)  (vertical ? x : y)
 #define REMAPY(x,y)  (vertical ? y : x)
 
@@ -30,6 +31,7 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
     Point tlB;
     int acols, bcols, arows, brows;
 
+    // Setup coordinates depending on vertical/horizontal. 
     if(vertical) {
         tlA = tlAIn;
         tlB = tlBIn;
@@ -49,7 +51,7 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
     Rect roi = Rect(tlA.x, tlA.y, acols, arows) & 
                Rect(tlB.x, tlB.y, bcols, brows);
 
-    //Well, we can't do anything about that. 
+    // Margin larger than overlapping image area. We can't handle that. 
     if(roi.width <= border * 2) 
         return;
 
@@ -58,17 +60,17 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
         cout << "TLA: " << tlA << " TLB: " << tlB << endl;
     }   
 
-    // Bunch of assertions. 
-    assert(maskA.type() == CV_8U);
-    assert(maskB.type() == CV_8U);
+    // Some assertions to be on the safe side.  
+    Assert(maskA.type() == CV_8U);
+    Assert(maskB.type() == CV_8U);
     
-    assert(imgA.type() == CV_8UC3);
-    assert(imgB.type() == CV_8UC3);
+    Assert(imgA.type() == CV_8UC3);
+    Assert(imgB.type() == CV_8UC3);
 
-    assert(imgA.cols == maskA.cols);
-    assert(imgB.cols == maskB.cols);
-    assert(imgA.rows == maskA.rows);
-    assert(imgB.rows == maskB.rows);
+    Assert(imgA.cols == maskA.cols);
+    Assert(imgB.cols == maskB.cols);
+    Assert(imgA.rows == maskA.rows);
+    Assert(imgB.rows == maskB.rows);
 
     //All coordinates in ROI top left
 
@@ -114,10 +116,10 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
     }
 
     if(debug) {
-        //imwrite("dbg/" + ToString(id) + "_cost_inv.jpg", invCost);
+       //imwrite("dbg/" + ToString(id) + "_cost_inv.jpg", invCost);
     }
     
-    //Calculate path. 
+    // Calculate all paths, from top to bottom.  
     for(int y = 1; y < roi.height; y++) {
         for(int x = border; x < roi.width - border; x++) {
             int min = 0; 
@@ -142,7 +144,8 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
     if(debug) { 
        // imwrite("dbg/" + ToString(id) + "_path.jpg", path * 100);
     }
-    //Find best path
+    
+    // Start at the bottom, find the best bath.  
     int start = 0;
 
     for(int x = 1 + border; x < roi.width - border; x++) {
@@ -152,7 +155,7 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
         }
     }
 
-    //Trace path and update masks
+    //Trace path from bottom to top and update masks
     Mat leftMask = maskA;
     Mat rightMask = maskB;
     auto leftToRoiX = aToRoiX;

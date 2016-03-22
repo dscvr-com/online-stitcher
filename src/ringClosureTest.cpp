@@ -12,7 +12,6 @@
 #include "io/io.hpp"
 #include "math/projection.hpp"
 #include "recorder/recorder.hpp"
-#include "recorder/streamingRecorderController.hpp"
 #include "stitcher/simpleSphereStitcher.hpp"
 #include "stitcher/simplePlaneStitcher.hpp"
 #include "minimal/imagePreperation.hpp"

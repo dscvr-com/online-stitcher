@@ -55,7 +55,7 @@ namespace optonaut {
             cury(0),
             async(async)
         { 
-            worker = shared_ptr<Worker>(new Worker(AlignOperation));
+            worker = shared_ptr<Worker>(new Worker([this] (const InputImageP &x) { return AlignOperation(x); }));
         }
 
         bool NeedsImageData() {

@@ -1,4 +1,4 @@
-    #include "../io/inputImage.hpp"
+#include "../io/inputImage.hpp"
 #include "../io/io.hpp"
 #include "../io/checkpointStore.hpp"
 #include "../stereo/monoStitcher.hpp"
@@ -16,8 +16,6 @@
 
 #include "recorderGraph.hpp"
 #include "recorderGraphGenerator.hpp"
-#include "streamingRecorderController.hpp"
-#include "asyncAligner.hpp"
 #include "trivialAligner.hpp"
 #include "ringwiseStreamAligner.hpp"
 #include "asyncTolerantRingRecorder.hpp"
@@ -191,7 +189,7 @@ namespace optonaut {
             //cout << "Zero: " << zero << endl;
         
             if(Recorder::alignmentEnabled) {
-                aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph, exposure, isAsync));
+                aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph, isAsync));
             } else {
                 aligner = shared_ptr<Aligner>(new TrivialAligner());
             }
