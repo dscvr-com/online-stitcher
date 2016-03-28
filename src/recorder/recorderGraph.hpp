@@ -64,7 +64,6 @@ namespace optonaut {
         vector<vector<SelectionPoint>> targets;
         vector<SelectionPoint*> targetsById;
     public:
-       
         // Recorder graph modes, usually used while generating. 
         static const int ModeAll = 0; // Full sphere
         static const int ModeCenter = 1; // Only center ring

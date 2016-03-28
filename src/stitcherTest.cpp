@@ -47,6 +47,7 @@ void Record(vector<string> &files, StereoSink &sink) {
     for(size_t i = 0; i < files.size(); i++) {
         auto lt = system_clock::now();
         auto image = InputImageFromFile(files[i], false);
+        cout << "[Record] InputImageFromFile :" << files[i] << endl;
             
         //image->intrinsics = iPhone6Intrinsics;
         
@@ -142,6 +143,7 @@ int main(int argc, char** argv) {
 
     for(int i = 0; i < n; i++) {
         string imageName(argv[i + 1]);
+        cout << "imageName :" << imageName << endl;
         files.push_back(imageName);
     }
 

@@ -73,6 +73,7 @@ namespace optonaut {
         AsyncQueue<SelectionInfo> stereoConversionQueue;
         RingProcessor<SelectionInfo> stereoRingBuffer;
         AsyncQueue<StereoImage> saveQueue;
+        AsyncQueue<InputImageP> debugQueue;
 
         vector<SelectionInfo> firstRing;
         bool firstRingFinished;
@@ -146,6 +147,12 @@ namespace optonaut {
             saveQueue(
                     std::bind(&Recorder::SaveStereoResult,
                     this, placeholders::_1)),
+
+            debugQueue([this] (const InputImageP &x) {
+                static int debugCounter = 0;
+                InputImageToFile(x, 
+                        this->debugPath + "/" + ToString(debugCounter++) + ".jpg");
+ 	    }),
             firstRingFinished(false),
             previewGraph(RecorderGraphGenerator::Sparse(
                         recorderGraph, 
@@ -162,6 +169,7 @@ namespace optonaut {
             {
                 vector<void*> uselessMem;
                 
+                // rings = vector<vector<SelectionPoint>> targets
                 auto &rings = preRecorderGraph.GetRings();
                 
                 // Allocate a little extra for working/preview
@@ -459,10 +467,8 @@ namespace optonaut {
             
             if(debugPath != "" && !isIdle) {
                 AssertFalseInProduction(false);
-                static int debugCounter = 0;
                 image->LoadFromDataRef();
-                InputImageToFile(image, 
-                        debugPath + "/" + ToString(debugCounter++) + ".jpg");
+                debugQueue.Push(image);
             }
 
             AssertM(!isFinished, "Warning: Push after finish - this is probably a racing condition");
@@ -496,7 +502,9 @@ namespace optonaut {
             
             if(shouldLoad) {
                 //static STimer loadingTime(true);
-                image->LoadFromDataRef();
+								if (!image->IsLoaded()) {
+                  image->LoadFromDataRef();
+								}
                 //SCounters::Increase("Loaded Images");
                 hasStarted = true;
                 //loadingTime.Tick("## Loading Time");
@@ -529,6 +537,7 @@ namespace optonaut {
             
             stereoRingBuffer.Flush();
             saveQueue.Finish();
+            debugQueue.Finish();
             
             if(debugPath != "") {
                 std::abort();

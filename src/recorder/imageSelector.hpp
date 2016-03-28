@@ -83,8 +83,8 @@ namespace optonaut {
                 
                 for(int i = 0; i < 3; i++) {
                     if(abs(rvec.at<double>(i)) > tolerance(i)) {
-                        //cout << rvec.t() << endl;
-                        //cout << "Reject " << i << endl;
+                        cout << "[CheckIfWithinTolerance] rvec.t()" << rvec.t() << endl;
+                        cout << "[CheckIfWithinTolerance] Reject i" << i << endl;
                         return false;
                     }
                 }
