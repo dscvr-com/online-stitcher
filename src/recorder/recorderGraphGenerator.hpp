@@ -85,6 +85,7 @@ public:
         }
 
         for(size_t sj = 0; sj < sparseImages.size() - 1; sj++) {
+            //note:mca neighboring image
             auto start = sparseImages[sj];    
             auto end = sparseImages[sj + 1];
 
@@ -93,6 +94,8 @@ public:
 
             if(tStart.ringId == tEnd.ringId) {
                 // Case 1: start/end are on the same ring. Just use slerp.
+                // spherical liner interpolation
+                // any point on the curve must be a linear combination of the ends
                 vector<InputImageP> denseChain;
 
                 while(dj < denseImages.size() && 
@@ -314,9 +317,9 @@ public:
 		double hFov = maxHFov * (1.0 - hOverlap);
 		double vFov = maxVFov * (1.0 - vOverlap);
 
-        //cout << "H-FOV: " << (maxHFov * 180 / M_PI) << endl;
-        //cout << "V-FOV: " << (maxVFov * 180 / M_PI) << endl;
-        //cout << "Ratio: " << (sin(maxVFov) / sin(maxHFov)) << endl;
+        cout << "[RecorderGraph Generate] H-FOV: " << (maxHFov * 180 / M_PI) << endl;
+        cout << "[RecorderGraph Generate] V-FOV: " << (maxVFov * 180 / M_PI) << endl;
+        cout << "[RecorderGraph Generate] Ratio: " << (sin(maxVFov) / sin(maxHFov)) << endl;
 
         uint32_t vCount = ceil(M_PI / vFov);
         double vStart = 0;

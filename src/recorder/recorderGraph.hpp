@@ -52,10 +52,10 @@ namespace optonaut {
         vector<SelectionPoint*> targetsById;
     public:
         
-        static const int ModeAll = 0;
-        static const int ModeCenter = 1;
-        static const int ModeTruncated = 2;
-        static const int ModeNoBot = 3;
+        static const int ModeAll = 0;   // 5 rings
+        static const int ModeCenter = 1;  // 1 ring
+        static const int ModeTruncated = 2; // 3 ring
+        static const int ModeNoBot = 3; // 3 ring only the top
         static const int ModeTinyDebug = 1337;
         
         static constexpr float DensityHalf = 0.5;
