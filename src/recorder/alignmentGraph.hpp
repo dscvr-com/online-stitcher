@@ -104,6 +104,7 @@ namespace optonaut {
 
                 const bool dampUncorrelatedNeighbors = true;
                 const bool dampAllNeighbors = false;
+                const bool dampSuccessors = true;
 
                 uint32_t pidA, pidB;
                 SelectionPoint tA, tB;
@@ -123,6 +124,9 @@ namespace optonaut {
                 bool areNeighbors = 
                     dist <= 1
                     && tA.ringId == tB.ringId;
+
+                bool areSuccessors = areNeighbors && 
+                    imgA->id < imgB->id;
                         
                 Mat rvec;
                 ExtractRotationVector(imgA->adjustedExtrinsics.inv() * 
@@ -182,6 +186,19 @@ namespace optonaut {
                     // Insert this extra correspondence.  
                     InsertCorrespondence(imgA->id, imgB->id, aToBDamp, bToADamp);
                 }
+
+                if(dampSuccessors && areSuccessors) {
+                    AlignmentDiff aToBDamp, bToADamp; 
+                    aToBDamp.dphi = 0; 
+                    aToBDamp.overlap = imgA->image.cols * imgA->image.rows * 0.5;
+                    aToBDamp.forced = true;
+                    aToBDamp.valid = true;
+                    bToADamp = aToBDamp;
+                    bToADamp.dphi *= -1;
+                       
+                    // Insert this extra correspondence.  
+                    InsertCorrespondence(imgA->id, imgB->id, aToBDamp, bToADamp);
+                } 
 
                 tFindCorrespondence.Tick("Find Correspondence");
                
