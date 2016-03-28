@@ -67,7 +67,7 @@ Rect CornersToRoi(const vector<Point2f> &corners) {
 //Extracts the target area, as points on a sphere surface, 
 //encoded as rotation matrices. 
 const double hBufferRatio = 3;
-const double vBufferRatio = 0.00;
+const double vBufferRatio = 0.05;
 
 void GetTargetArea(const SelectionPoint &a, const SelectionPoint &b, Mat &center, vector<Mat> &corners) {
     double hLeft = a.hPos;
@@ -169,7 +169,7 @@ InputImageP MonoStitcher::RectifySingle(const SelectionInfo &a) {
 
 void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo) {
 
-    const static bool debug = false;
+    const static bool debug = true;
 
     Mat k;
     stereo.valid = false;

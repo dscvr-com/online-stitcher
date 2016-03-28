@@ -97,6 +97,7 @@ namespace optonaut {
         static Mat androidBase;
         static Mat iosBase;
         static Mat iosZero;
+        static Mat androidZero;
         
         int uselessVariable = 0;
 
