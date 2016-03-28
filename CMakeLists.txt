@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 2.8)
 project(optonaut-stitcher)
 include(GNUInstallDirs)
 
-find_package(OpenGL REQUIRED)
-include_directories(${OPENGL_INCLUDE_DIR})
+#find_package(OpenGL REQUIRED)
+#include_directories(${OPENGL_INCLUDE_DIR})
 #include_directories(SYSTEM src/lib/irrlicht)
 #include_directories("/usr/local/include/Eigen3")
 

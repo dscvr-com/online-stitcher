@@ -16,8 +16,6 @@
 
 #include "recorderGraph.hpp"
 #include "recorderGraphGenerator.hpp"
-#include "streamingRecorderController.hpp"
-#include "asyncAligner.hpp"
 #include "trivialAligner.hpp"
 #include "ringwiseStreamAligner.hpp"
 #include "asyncTolerantRingRecorder.hpp"
@@ -199,7 +197,7 @@ namespace optonaut {
             //cout << "Zero: " << zero << endl;
         
             if(Recorder::alignmentEnabled) {
-                aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph, exposure, isAsync));
+                aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph, isAsync));
             } else {
                 aligner = shared_ptr<Aligner>(new TrivialAligner());
             }
@@ -472,7 +470,7 @@ namespace optonaut {
                 image->LoadFromDataRef();
                 debugQueue.Push(image);
             }
-            
+
             AssertM(!isFinished, "Warning: Push after finish - this is probably a racing condition");
             
             //pipeTimer.Tick("Push");

@@ -18,16 +18,22 @@ using namespace std;
 
 namespace optonaut {
 
+/*
+ * Class to generate and modify recorder graphs. 
+ */
 class RecorderGraphGenerator {
 
 private:
-	//adj[n] contains m if m is right of n
-	//Horizontal and Vertical overlap in percent. 
+	// adj[n] contains m if m is right of n
+	// Horizontal and Vertical overlap in percent. 
 	static constexpr double hOverlap_ = 0.9;
 	static constexpr double vOverlap_ = 0.25;
 
     static const bool debug = false;
-    
+   
+    /*
+     * Inserts a new edge into the given recorder graph. 
+     */ 
     static void CreateEdge(RecorderGraph &res, 
             const SelectionPoint &a, const SelectionPoint &b) {
         SelectionEdge edge;
@@ -38,10 +44,16 @@ private:
         res.AddEdge(edge);
     };
 
+    /*
+     * Adds a new node into the given recorder graph. 
+     */
     static void AddNode(RecorderGraph &res, const SelectionPoint &a) {
         res.AddNewNode(a); 
     };
 
+    /*
+     * Moves all images in the given chain according to the difference between the aligned and the unaligneg image. 
+     */
     static void PushBy(InputImageP aligned, InputImageP unaligned, const vector<InputImageP> &chain, vector<InputImageP> &res) {
         Mat diff = aligned->adjustedExtrinsics * 
             unaligned->originalExtrinsics.inv();
@@ -53,6 +65,9 @@ private:
     }
 public:
 
+    /*
+     * Adjusts a dense graph from the changes in a sparse graph. 
+     */
     static vector<InputImageP> AdjustFromSparse(
             vector<InputImageP> sparseImages, 
             const RecorderGraph &sparse, 
@@ -202,6 +217,9 @@ public:
         */
     }
 
+    /*
+     * Convenience. Gets the selection point associated with a given image id for the given recorder graph. 
+     */
     static SelectionPoint TargetFromImage(const RecorderGraph &in, 
             const BiMap<size_t, uint32_t> &imagesToTargets, 
             size_t imageId) {
@@ -214,6 +232,9 @@ public:
         return p;
     }
 
+    /*
+     * Convenience. Gets the image associated with a given selection point. 
+     */
     static InputImageP ImageFromTarget(const vector<InputImageP> &in, 
             const BiMap<size_t, uint32_t> &imagesToTargets, 
             uint32_t pid) {
@@ -228,6 +249,12 @@ public:
 
         return *it;
     }
+
+    /*
+     * Creates a sparse recorder graph from a dense recorder graph. 
+     *
+     * Skip gives the amount of selection points to skip from the dense graph. 
+     */
     static RecorderGraph Sparse(const RecorderGraph &in, int skip, int ring = -1) {
         BiMap<size_t, uint32_t> x; 
         BiMap<size_t, uint32_t> y;
@@ -236,6 +263,11 @@ public:
         return Sparse(in, skip, x, y, z, ring); 
     }
 
+    /*
+     * Creates a sparse recorder graph from a dense recorder graph. 
+     * 
+     * Skip gives the amount of selection points to skip from the dense graph. 
+     */
     static RecorderGraph Sparse(const RecorderGraph &in, int skip,
             const BiMap<size_t, uint32_t> &denseImages, 
             BiMap<size_t, uint32_t> &sparseImagesToTargets,
@@ -304,7 +336,16 @@ public:
 
         return sparse;
     }
-    
+   
+    /*
+     * Generates a new recorder graph, based on the given parameters. 
+     *
+     * @param intrinsics The intrinsics to base the recorder graph on. 
+     * @param mode The recorder graph generation mode. Please see the constants defined in RecorderGraph. 
+     * @param density The density of the recorder graph. 1 is normal. 2 leads to twice as many selection points. 
+     * @param lastRingOverdrive Additional edges to add to the last ring, so we record extra. 
+     * @param divider The ring size is guaranteed to be divisible by this divider. Useful if a sparse graph should be generated from this graph. 
+     */ 
     static RecorderGraph Generate(const Mat &intrinsics, const int mode = RecorderGraph::ModeAll, const float density = RecorderGraph::DensityNormal, const int lastRingOverdrive = 0, const int divider = 1) {
         AssertWGEM(density, 1.f, 
                 "Reducing recorder graph density below one is potentially unsafe.");

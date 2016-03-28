@@ -6,6 +6,11 @@
 #define OPTONAUT_STORAGE_SINK_HEADER
 
 namespace optonaut {
+
+    /*
+     * Implementation of StereoSink that saves recorder output to 
+     * a checkpoint store (and thus usually to disk). 
+     */
     class StorageSink : public StereoSink {
 
     private:

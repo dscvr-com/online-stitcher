@@ -12,6 +12,9 @@ using namespace std;
 #define OPTONAUT_EXPOSURE_COMPENSATOR_HEADER
 
 namespace optonaut {
+    /*
+     * Represnets a difference in exposure between two images. 
+     */
     struct ExposureDiff {
         size_t n; //Count of measured pixels
         double iFrom; //Overlapping area brightness mine. 
@@ -25,35 +28,62 @@ namespace optonaut {
     };
     
 
+    /*
+     * Holds a set of pairwise exposure differences for a pair of images. 
+     *
+     * This class is capable of finding optimal exposure gains for normalizing the
+     * exposure of the image set. 
+     */
     class ExposureCompensator : public ImageCorrespondenceGraph<ExposureDiff> {
         private: 
             static const bool debug = false;
             map<size_t, double> gains;
         public:
+            /*
+             * Creates a new instance of this class.
+             */
             ExposureCompensator() { }
+
+            /*
+             * Copy constructor. 
+             */ 
             ExposureCompensator(ExposureCompensator &ref) {
                 SetGains(ref.GetGains());
             }
-        
+       
+            /*
+             * Sets gains for this exposure compensator. 
+             */ 
             void SetGains(map<size_t, double> gains)
             {
                 this->gains = gains;
             }
 
+            /*
+             * Gets the gains of this exposure compensator. 
+             */
             const map<size_t, double>& GetGains() const {
                 return gains;
             }
-        
+       
+            /*
+             * Convenience overload. 
+             */
             ExposureDiff Register(InputImageP a, InputImageP b) {
                 return ImageCorrespondenceGraph<ExposureDiff>::Register(a, b);
             }
 
-            virtual ExposureDiff GetCorrespondence(InputImageP imgA, InputImageP imgB,  ExposureDiff &aToB, ExposureDiff &bToA) {
+            /*
+             * Calculates the exposure difference of the given image pair and adds it to the exposure graph. 
+             */
+            virtual ExposureDiff GetCorrespondence(InputImageP imgA, InputImageP imgB, ExposureDiff &aToB, ExposureDiff &bToA) {
 
+                // Extract the overlapping region of the image pair. 
                 Mat a, b;
                 GetOverlappingRegion(imgA, imgB, imgA->image, imgB->image, a, b);
                 
                 if(a.cols < 1 || a.rows < 1) {
+                    // No overlap - no correspondence. 
                     ExposureDiff zero;
                     aToB.n = 0;
                     bToA.n = 0;
@@ -63,6 +93,7 @@ namespace optonaut {
                 assert(a.cols == b.cols && a.rows == b.rows);
                 assert(a.type() == b.type());
 
+                // Now just sum up all pixels and then substract the results. 
                 double sumB = 0;
                 double sumA = 0;
                 unsigned char *aData = a.data;
@@ -74,11 +105,13 @@ namespace optonaut {
                 size_t size = width * height / skip;
 
                 if(a.type() == CV_8UC1) {
+                    // Grayscale images - faster!
                     for(size_t x = 0; x < width * height; x++) {
                         sumA += aData[x];
                         sumB += bData[x];
                     }
                 } else if(a.type() == CV_8UC3) {
+                    // BGR images. 
                     for(size_t x = 0; x < width * height; x += (3 * skip)) {
                         sumA += sqrt((int)aData[x] * (int)aData[x] + 
                                 (int)aData[x + 1] * (int)aData[x + 1] + 
@@ -93,6 +126,7 @@ namespace optonaut {
                     assert(false);
                 } 
                 
+                // Add the correspondence to the graph. 
                 bToA.n = aToB.n = size;
 
                 bToA.iFrom = aToB.iTo = sumB / size;
@@ -109,8 +143,12 @@ namespace optonaut {
                 return aToB;
             };
 
+            /*
+             * Finds optimal compensation gains for all exposure correspondences in this graph.
+             */
             void FindGains() {
 
+                // Find size of equation system
                 size_t maxId = 0;
 
                 for(auto &adj : relations.GetEdges()) {
@@ -120,17 +158,19 @@ namespace optonaut {
                 vector<int> remap(maxId);
                 vector<int> invmap;
                 
+                // Build lookup table
                 for(auto &adj : relations.GetEdges()) {
                     remap[adj.first] = (int)invmap.size();
                     invmap.push_back((int)adj.first);
                 }
 
                 int n = (int)invmap.size();
-                
+               
+                // Alpha damps the regression 
                 double alpha = 0.1;
-                double beta = 10;
+                double beta = 1 / alpha;
                 
-                //Build equation systen
+                // Build equation systen
                 Mat I = Mat::zeros(n, n, CV_64F);
                 Mat N = Mat::zeros(n, n, CV_64F);
 
@@ -155,6 +195,7 @@ namespace optonaut {
                     }
                 }
 
+                // Solve for optimum error. 
                 solve(A, b, gains);
                 
                 assert((int)invmap.size() == n);
@@ -166,6 +207,10 @@ namespace optonaut {
 
             }
 
+            /*
+             * Applies the calculated exposure gain to the given image. 
+             * The ev parameter allows for manual exposure adjustment. 
+             */
             void Apply(Mat &image, size_t id, double ev = 0) const {
                 if(gains.find(id) != gains.end()) {
                     multiply(image, gains.at(id) + ev, image);

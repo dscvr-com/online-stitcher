@@ -1,9 +1,9 @@
 # optonaut-online-stitcher
-Dev Crib for Optonaut Recording and Aligning on Phones
+Dev Environment for Optonaut Recording and on Phones
 
 ## Input Data Format
 
-An input data package consists of a number of data/image pairs (`NUMBER.json`/`NUMBER.jpg`).
+An input data package for the test applications consists of a number of data/image pairs (`NUMBER.json`/`NUMBER.jpg`).
 
 * `NUMBER.json` includes the `intrinsics` matrix (3x3) of the camera, the `extrinsics` matrix (4x4) of the respective frame in row format and an integer `id` which is the same as `NUMBER`.
 
@@ -17,40 +17,65 @@ An input data package consists of a number of data/image pairs (`NUMBER.json`/`N
   
 * `NUMBER.jpg` is the image of the respective frame.
 
+## Project Structure
+
+Most code is placed in header files. This is due to compile-time optimization and ease-of-use. There are some exceptions with code that does not work with the iOS/Android build process. 
+There are some examples and tests in the ```src``` folder. Also, there are unit tests for some low level modules in the ```src/test``` folder. 
+
+The code consists roughly of the following modules: 
+* debug - Contains debug code that is not used on the phone. 
+* common - Contains several general classes and modules, mainly generic helpers for other modules. Example: Graph, Ring Buffers, Timers, other Collection Types. 
+* imgproc - Contains classes that work on image data directly. For example alignment.  
+* io - Contains classes for image IO, especially for storing contextual information during stitching. 
+* math - Contains mathematical functions. Especially related to projection, quaternions and statistics. 
+* recorder - Contains classes specific for recording. The main class here is Recorder. 
+* stereo - Contains the code responsible for stereo conversion. 
+* stitcher - Contains code responsible for stitching results together. The main class here is RingStitcher (and MultiRingStitcher). Also, classes for very simple debug stitching exist. 
+* minimal - Contains code to use parts of this project in a very simple and minimal way. Great for testing!
+
 ## Output Data Format
 
-An output data package consists of a zipped file ("opto-file") that contains a pair of JPEG images (`left.jpg`, `right.jpg`) and a data file, `data.json`.
+The output data format depends on the tool used. For the main test application, it's usually a pair of panorama images, one for each eye. 
 
-The file `data.json` contains:
-* `id`, UUID of this Oprograph. 
-* `version`, the version of the stitcher that created the Optograph.
-* `orientation`, the orientation of the center of the Optograph, given as 3x3 rotation matrix, in iOS core motion reference frame. 
-* `alignment`, either `top`, `center` or `bottom`, specifying the texture alignment. 
-* `offset`, optional, a pair of sperical coordinates, specifying the offset of the texture on the sphere. 
-* `author`, optional, the name of the author. 
-* `description`, optional, a description.
-* `timestamp`, optional, the date of creation. 
-* `hastags`, optional, list of hashtags associated with this Optograph. 
+## Test Programs
 
-Example: 
+The test programs in the main directory have the following functions:
+* alignerTest - testbed for testing pixel-based alignment functions on two plain images. Usage: aligner-test image1 image2
+* bruteForceAlignerTest - testbed for testing iterative bundle adjustment on a collection of images + metadata. Usage: brute-force-aligner-test inputimages
+* perspectiveAlignerTest - testbed for testing pixel-baded alignment on two images + metadata. The images are transformed accordingly prior alignment. Usage: perspective-aligner-test image1 image2
+* ringClosureTest - testbed for testing closing of first ring. Usage: ring-closure-test inputImages
+* stereoConversionTest - testbed for testing stereo conversion with two images + metadata. Usage: stereo-conversion-test image1 image2
+* stitcherTest - testbed for whole recording/stitching pipeline on a collection of images + metadata. Usage: optonaut-test inputImages
 
-```json
-{
-    "id": "550e8400-e29b-11d4-a716-446655440000",
-    "version": "7.0.0",
-    "orientation": [0.274960309267044, 0.0712836310267448, 0.958809375762939, 0, -0.152490735054016, 0.98785811662674, -0.0297131240367889, 0, -0.949285745620728, -0.138039633631706, 0.282491862773895, 0], 
-    "alignment": "center", 
-    "author": "schickling",
-    "hashtags": ["test", "london"]
-}
+## Utility Programs
 
-```
+The utility programs in the main directory are small stand-alone tools that are used around the whole optonaut system. They have the following functions: 
+* panoBlur - extens a single-ring panorama by a blurrend and mirrored area, so it looks more pleasing in VR. Usage: pano-blur inputImage outputImage
+* toCubeMap - converts a equirectangular panorama to it's cube map representation. Usage: to-cube-map [INPUT-IMAGE] [OUTPUT-IMAGE] [WIDTH] [FACE-ID] [SUB X] [SUB Y] [SUB WIDTH] [SUB HEIGHT]
+* toPol - converts a equirectangular panorama to it's inverse polar projection (e.g. little world). Usage: to-polar inputImage outputImage
 
-## Notes on compiling on Mac
-Build Flags used for OpenCV
+## Experimental Code
+
+The follwoing code files are experimental: 
+* debugHookTest - test of 3D-based debugging tool, that shows images/features in a 3D space. 
+* featureChainTest, minimalFeatureTest - testbeds for feature based alignments and structure from motion, e.g. creating 3D models from a series of images. 
+* stereoMatchTest - testbed for stereo matching, e.g. comparing two images to extract a depthmap. 
+
+## Mat conventions
+
+Unless otherwise noted, we use ```CV_64F``` (```double```) matrices for all matrices in mathematicel sense (also quaternions and vectors). We use ```CV_8UC3``` matrices for BGR images and ```CV_8UC1```matrices for grayscale images. 
+
+All intrinsic matrices are represented as 3x3 matrices, all extrinsic matrices are represented as 4x4, even if they only contain rotations. 
+
+## Compiling 
+
+Cmake and a c++13 compiler are required. For example ```clang 7.2.0``` or ```gcc 4.9```. 
+
+OpenCV is the main dependency. Build Flags used for OpenCV:
 ```
 cmake -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules -DWITH_OPENGL=ON -DWITH_OPENEXR=OFF -DBUILD_TIFF=OFF -DWITH_CUDA=OFF -DWITH_NVCUVID=OFF -DBUILD_PNG=OFF ..
 ```
+The contrib modules are used for the experimental SFM support. 
 
 Please set the environment variable OpenCV_DIR to the path of opencv. 
 
@@ -72,3 +97,7 @@ Please keep track of all the dependencies when compiling OpenCV. Ceres solver is
 ** minimal - Contains code to use parts of this project in a very simple and minimal way. Great for testing!
 
 
+Please keep track of all the dependencies when compiling OpenCV. Ceres solver and Eigen are only important for SFM. 
+The visual debug hook and the SFM preview depends on the 3D library irrlicht. 
+
+The code can be compiled by running ```./compile.sh``` in the root directory. 
