@@ -191,12 +191,22 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
             line(resA, corners[i] - tl, 
                     corners[(i + 1) % corners.size()] - tl, 
                     Scalar(0, 0, 255), 3);
+            
+            line(a.image->image.data, corners[i], 
+                    corners[(i + 1) % corners.size()], 
+                    Scalar(0, 0, 255), 3);
 
             line(resB, corners[i] - tl, 
                     corners[(i + 1) % corners.size()] - tl, 
                     Scalar(0, 0, 255), 3);
+
+            line(b.image->image.data, corners[i], 
+                    corners[(i + 1) % corners.size()], 
+                    Scalar(0, 0, 255), 3);
         }
         
+        imwrite("dbg/" + ToString(a.image->id) + "_input_A.jpg", a.image->image.data);
+        imwrite("dbg/" + ToString(a.image->id) + "_input_B.jpg", a.image->image.data);
         imwrite("dbg/" + ToString(a.image->id) + "_warped_A.jpg", resA);
         imwrite("dbg/" + ToString(a.image->id) + "_warped_B.jpg", resB);
     }

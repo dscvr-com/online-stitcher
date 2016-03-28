@@ -69,7 +69,7 @@ void Record(vector<string> &files, StereoSink &sink) {
 
         if(i == 0) {
             recorder = shared_ptr<Recorder>(
-                    new Recorder(Recorder::iosBase, Recorder::androidZero, 
+                    new Recorder(Recorder::androidBase, Recorder::androidZero, 
                         image->intrinsics, sink, "", RecorderGraph::ModeCenter, 
                         isAsync));
 
