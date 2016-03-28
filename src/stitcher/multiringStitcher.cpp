@@ -13,7 +13,6 @@
 #include "../common/ringProcessor.hpp"
 #include "../common/static_timer.hpp"
 #include "../common/functional.hpp"
-#include "../imgproc/correlation.hpp"
 #include "ringStitcher.hpp"
 #include "multiringStitcher.hpp"
 #include "stitchingResult.hpp"

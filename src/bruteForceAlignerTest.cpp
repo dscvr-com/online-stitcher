@@ -34,8 +34,10 @@ int main(int argc, char** argv) {
 
     RecorderGraph fullGraph = RecorderGraphGenerator::Generate(
             allImages[0]->intrinsics, 
-            RecorderGraph::ModeCenter, 
+            RecorderGraph::ModeTruncated, 
             1, 0, 4);
+
+    RecorderGraph halfGraph = RecorderGraphGenerator::Sparse(fullGraph, 2);
 
     BiMap<size_t, uint32_t> imagesToTargets;
 
@@ -45,7 +47,7 @@ int main(int argc, char** argv) {
     
     cout << "Selecting " << n << " images for further processing." << endl;
 
-    auto miniImages = minimal::ImagePreperation::CreateMinifiedCopy(fullImages);
+    auto miniImages = minimal::ImagePreperation::CreateMinifiedCopy(fullImages, 3);
 
     if(outputUnalignedStereo) {
         minimal::StereoConverter::StitchAndWrite(
@@ -57,12 +59,12 @@ int main(int argc, char** argv) {
     minimal::ImagePreperation::CopyExtrinsics(miniImages, fullImages);
 
     //Just for testing. 
-    auto finalImages = fullGraph.SelectBestMatches(fullImages, imagesToTargets); 
+    auto finalImages = halfGraph.SelectBestMatches(fullImages, imagesToTargets); 
     
     minimal::ImagePreperation::LoadAllImages(finalImages);
         
     minimal::StereoConverter::StitchAndWrite(
-                fullImages, fullGraph, "aligned");
+                finalImages, halfGraph, "aligned");
     
     return 0;
 }

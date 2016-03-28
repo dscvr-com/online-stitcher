@@ -100,6 +100,8 @@ namespace optonaut {
              */ 
             virtual AlignmentDiff GetCorrespondence(InputImageP imgA, InputImageP imgB, AlignmentDiff &aToB, AlignmentDiff &bToA) {
 
+                STimer tFindCorrespondence;
+
                 const bool dampUncorrelatedNeighbors = true;
                 const bool dampAllNeighbors = false;
 
@@ -135,7 +137,9 @@ namespace optonaut {
                         || areNeighbors) {
                     int minSize = min(imgA->image.cols, imgA->image.rows) / 1.8;
 
+                    STimer tMatch;
                     auto res = aligner.Match(imgB, imgA, minSize, minSize);
+                    tMatch.Tick("Matching");
 
                     // If our match was invalid, just do damping it. 
                     if(!res.valid && areNeighbors && dampUncorrelatedNeighbors) {
@@ -178,6 +182,8 @@ namespace optonaut {
                     // Insert this extra correspondence.  
                     InsertCorrespondence(imgA->id, imgB->id, aToBDamp, bToADamp);
                 }
+
+                tFindCorrespondence.Tick("Find Correspondence");
                
                 return aToB;
             };
@@ -187,6 +193,7 @@ namespace optonaut {
              */
             Edges FindAlignment(double &outError) {
 
+                STimer tFindAlignment;
                 // Pre-calculate the size of our equation system. 
                 size_t maxId = 0;
                 Edges allEdges;
@@ -310,6 +317,8 @@ namespace optonaut {
                     this->alignmentCorrections[invmap[i]] = res.at<double>(i, 0);
                     //cout << invmap[i] << " alignment: " << x.at<double>(i, 0) << endl;
                 }
+
+                tFindAlignment.Tick("Find Alignment");
 
                 return allEdges;
             }
