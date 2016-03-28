@@ -446,7 +446,7 @@ public:
                 p.vPos = vCenter;
                 p.ringId = i;
                 p.localId = j;
-                p.vFov = vFov;
+                p.vFov = maxVFov;
                 p.hFov = hFov;
                 p.ringSize = hCount;
                 
