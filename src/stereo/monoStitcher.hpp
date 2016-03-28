@@ -1,11 +1,3 @@
-////////////////////////////////////////////////////////////////////////////////////////
-//
-// Beem mono stitcher test by Emi
-//
-// Let there be MSV!
-//
-//
-
 #include "../common/image.hpp"
 #include "../recorder/imageSelector.hpp"
 #include "../recorder/exposureCompensator.hpp"

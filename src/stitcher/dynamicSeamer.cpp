@@ -51,9 +51,14 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
     Rect roi = Rect(tlA.x, tlA.y, acols, arows) & 
                Rect(tlB.x, tlB.y, bcols, brows);
 
+    if(debug) {
+        cout << "ROI: " << roi << endl;
+    }
+
     // Margin larger than overlapping image area. We can't handle that. 
-    if(roi.width <= border * 2) 
+    if(roi.width <= border * 2) { 
         return;
+    }
 
     if(debug) {
         cout << "Roi: " << roi << endl;
@@ -95,10 +100,12 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
             int tyB = y - bToRoiY;
             
             // Must be satisfied, or else we calculate ROI wrong. 
-            assert(tyA >= 0 && tyB >= 0);
-            assert(tyA < arows && tyB < brows);
-            assert(txA >= 0 && txB >= 0);
-            assert(txA < acols && txB < bcols);
+            AssertGE(tyA, 0);
+            AssertGE(tyB, 0);
+            
+            Assert(tyA < arows && tyB < brows);
+            Assert(txA >= 0 && txB >= 0);
+            Assert(txA < acols && txB < bcols);
 
             int xA = REMAPX(txA, tyA);
             int yA = REMAPY(txA, tyA);
@@ -116,7 +123,8 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
     }
 
     if(debug) {
-       //imwrite("dbg/" + ToString(id) + "_cost_inv.jpg", invCost);
+       cout << "Writing cost " << id << endl;
+       imwrite("dbg/" + ToString(id) + "_cost_inv.jpg", invCost);
     }
     
     // Calculate all paths, from top to bottom.  
@@ -133,8 +141,8 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
                 }
             }
 
-            assert(min + x >= border);
-            assert(min + x < roi.width - border);
+            AssertGE(min + x, border);
+            AssertGE(roi.width - border, min + x);
             
             path.at<uchar>(y, x) = (min + 1);
             invCost.at<float>(y, x) += invCost.at<float>(y - 1, x + min);
@@ -142,11 +150,12 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
     }
    
     if(debug) { 
-       // imwrite("dbg/" + ToString(id) + "_path.jpg", path * 100);
+       cout << "Writing path " << id << endl;
+       imwrite("dbg/" + ToString(id) + "_path.jpg", path * 100);
     }
     
     // Start at the bottom, find the best bath.  
-    int start = 0;
+    int start = 1 + border;
 
     for(int x = 1 + border; x < roi.width - border; x++) {
         if(invCost.at<float>(roi.height - 1, x) > 
@@ -170,6 +179,10 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
 
     int x = start;
 
+    if(debug) {
+        cout << "start: " << x << endl;
+    }
+
     for(int y = roi.height - 1; y >= 0; y--) {
         for(int q = std::min<int>(x - leftToRoiX + 1 + overlap, leftCols); q < leftCols; q++) {
             //Left mask is black right of path.
@@ -191,8 +204,9 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
             if(debug) {
                 cout << "x: " << x << endl;
             }
-            assert(x >= border);
-            assert(x < roi.width - border);
+
+            AssertGE(x, border);
+            AssertGE(roi.width - border, x);
         }   
     }   
    

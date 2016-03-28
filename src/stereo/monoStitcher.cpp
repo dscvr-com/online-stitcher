@@ -1,10 +1,3 @@
-//////////////////////////////////////////////////////////////////////////////////////
-//
-// Beem mono stitcher test by Emi
-//
-// Let there be MSV!
-//
-//
 #define _USE_MATH_DEFINES
 #include <vector>
 #include <opencv2/imgcodecs.hpp>
