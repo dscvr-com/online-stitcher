@@ -24,7 +24,7 @@ namespace optonaut {
                 CheckpointStore::DebugStore->SaveRectifiedImage(ring.back());
             }
 
-            auto result = corr.Match(ring.front(), ring.back(), 4, 4, true); 
+            auto result = corr.Match(ring.front(), ring.back(), 4, 4, true, 0.5, 1.8);
 
             // Todo - if the result is invalid or too negative, it might be better to 
             // correlate additional images instead only the last image. 

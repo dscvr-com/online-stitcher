@@ -156,7 +156,7 @@ namespace optonaut {
 
                     // Copy matching information to the correspondence info
                     aToB.dphi = res.angularOffset.y;
-                    aToB.overlap = res.correlationCoefficient;
+                    aToB.overlap = res.correlationCoefficient * 2;
                     aToB.valid = res.valid;
                     aToB.rejectionReason = res.rejectionReason;
                     aToB.error = res.inverseTestDifference.x;

@@ -28,7 +28,9 @@ using namespace std::chrono;
 int main(int argc, char** argv) {
     cv::ocl::setUseOpenCL(false);
     //cout << cv::getBuildInformation() << endl;
-    bool outputUnalignedStereo = false;
+    bool outputUnaligned = true;
+            
+    SimpleSphereStitcher debugger;
 
     auto allImages = minimal::ImagePreperation::LoadAndPrepareArgs(argc, argv);
 
@@ -39,7 +41,10 @@ int main(int argc, char** argv) {
 
     RecorderGraph halfGraph = RecorderGraphGenerator::Sparse(fullGraph, 2);
 
-    BiMap<size_t, uint32_t> imagesToTargets;
+    RecorderGraph centerGraph = RecorderGraphGenerator::Sparse(halfGraph, 1, 
+            halfGraph.GetRings().size() / 2);
+
+    BiMap<size_t, uint32_t> imagesToTargets, d;
 
     auto fullImages = fullGraph.SelectBestMatches(allImages, imagesToTargets);
 
@@ -48,15 +53,40 @@ int main(int argc, char** argv) {
     cout << "Selecting " << n << " images for further processing." << endl;
 
     auto miniImages = minimal::ImagePreperation::CreateMinifiedCopy(fullImages, 3);
-
-    if(outputUnalignedStereo) {
-        minimal::StereoConverter::StitchAndWrite(
-                fullImages, fullGraph, "unaligned");
+    
+    if(outputUnaligned) {
+        auto res = debugger.Stitch(miniImages);
+        imwrite("dbg/unaligned.jpg", res->image.data);
     }
 
-    IterativeBundleAligner::Align(miniImages, fullGraph, imagesToTargets, 10, 0.5);
+    cout << "Performing in/extrinsics adjustment via center ring." << endl;
+    
+    auto centerImages = centerGraph.SelectBestMatches(miniImages, d);
+    minimal::ImagePreperation::SortById(centerImages);
 
+    RingCloser::CloseRing(centerImages);
+
+    for(int i = 0; i < n; i++) {
+        centerImages[0]->intrinsics.copyTo(miniImages[i]->intrinsics);
+    }
+
+    if(outputUnaligned) {
+        auto res = debugger.Stitch(miniImages);
+        imwrite("dbg/center_ring_aligned.jpg", res->image.data);
+    }
+
+    cout << "Performing in/extrinsics adjustment bundle adjustment." << endl;
+
+    IterativeBundleAligner aligner;
+    aligner.Align(miniImages, fullGraph, imagesToTargets, 5, 0.5);
+
+    minimal::ImagePreperation::CopyIntrinsics(miniImages, fullImages);
     minimal::ImagePreperation::CopyExtrinsics(miniImages, fullImages);
+
+    auto res = debugger.Stitch(miniImages);
+        imwrite("dbg/aligned.jpg", res->image.data);
+
+    cout << "Create final stereo output." << endl;
 
     //Just for testing. 
     auto finalImages = halfGraph.SelectBestMatches(fullImages, imagesToTargets); 
@@ -64,7 +94,7 @@ int main(int argc, char** argv) {
     minimal::ImagePreperation::LoadAllImages(finalImages);
         
     minimal::StereoConverter::StitchAndWrite(
-                finalImages, halfGraph, "aligned");
-    
+                finalImages, halfGraph, "aligned_stereo");
+
     return 0;
 }
