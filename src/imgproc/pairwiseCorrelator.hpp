@@ -103,11 +103,14 @@ public:
 
         cTimer.Tick("Finding Correlation");
 
-        int maxX = max(wa.cols, wb.cols) * w;
-        int maxY = max(wa.rows, wb.rows) * w;
+        int maxX = max(wa.cols, wb.cols) * w * 1.5;
+        int maxY = max(wa.rows, wb.rows) * w * 1.5;
 
         if(enableOutOfWindowTest && (res.offset.x < -maxX || res.offset.x > maxX 
                 || res.offset.y < -maxY || res.offset.y > maxY)) {
+
+            cout << "Rejected because the correlation found an extremum at the border of the image." << endl;
+
             result.valid = false;
             result.rejectionReason = RejectionOutOfWindow;
             return result;

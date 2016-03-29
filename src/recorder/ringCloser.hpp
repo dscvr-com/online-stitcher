@@ -40,8 +40,12 @@ namespace optonaut {
                 cout << "Ring closure: Rejected because it would lead to black stripes"<< endl;
                 return false;
             }
-
+           
             cout << "Ring closure: Adjusting by: " << result.angularOffset.y << endl;
+
+            double focalLenAdjustment = (1 - result.angularOffset.y / M_PI * 2);
+            
+            cout << "Ring closure: Adjusting focal len by: " << focalLenAdjustment << endl;
 
             size_t n = ring.size();
 
@@ -53,6 +57,9 @@ namespace optonaut {
                 CreateRotationY(ydiff, correction);
                 ring[i]->adjustedExtrinsics = correction * 
                     ring[i]->adjustedExtrinsics;
+
+                ring[i]->intrinsics.at<double>(0, 2) *= focalLenAdjustment;
+                ring[i]->intrinsics.at<double>(1, 2) *= focalLenAdjustment;
             }
             return true;
         }

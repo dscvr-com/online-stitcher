@@ -185,8 +185,8 @@ class PyramidPlanarAligner {
                         ToString(sqrt(pool.GetMeasurements().back().s) / 
                             pool.GetMeasurements().back().n);
 
-            int maxX = max(a.cols, b.cols) * wx;
-            int maxY = max(a.rows, b.rows) * wy;
+            int maxX = max(a.cols, b.cols) * wx * 1.5;
+            int maxY = max(a.rows, b.rows) * wy * 1.5;
 
             if(res.x < -maxX || res.x > maxX || res.y < -maxY || res.y > maxY) {
                filename = filename + "_reject"; 
