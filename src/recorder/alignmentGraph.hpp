@@ -106,7 +106,7 @@ namespace optonaut {
                 const bool dampAllNeighbors = false;
                 const bool dampSuccessors = true;
 
-                uint32_t pidA, pidB;
+                uint32_t pidA = 0, pidB = 0;
                 SelectionPoint tA, tB;
 
                 Assert(imagesToTargets.GetValue(imgA->id, pidA));

@@ -41,7 +41,7 @@ class IterativeBundleAligner {
                        InputImageP a = imageById[edge.from]; 
                        InputImageP b = imageById[edge.to]; 
 
-                       uint32_t pidA, pidB;
+                       uint32_t pidA = 0, pidB = 0;
                        Assert(imagesToTargets.GetValue(a->id, pidA));
                        Assert(imagesToTargets.GetValue(b->id, pidB));
                        SelectionPoint tA, tB;

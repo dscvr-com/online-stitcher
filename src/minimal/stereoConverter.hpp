@@ -78,7 +78,7 @@ class StereoConverter {
         for(auto img : best) {
             SelectionPoint target; 
             //Reassign points
-            uint32_t pointId; 
+            uint32_t pointId = 0; 
             Assert(imagesToTargets.GetValue(img->id, pointId));
             Assert(graph.GetPointById(pointId, target));
             
