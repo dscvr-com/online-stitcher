@@ -55,7 +55,7 @@ public:
    
     // Note: An outlier threshold of 2 is fine (1 pixel in each dimension), since
     // we don't do sub-pixel alignment.  
-    CorrelationDiff Match(const InputImageP a, const InputImageP b, int minWidth = 0, int minHeight = 0, bool forceWholeImage = false) {
+    CorrelationDiff Match(const InputImageP a, const InputImageP b, int minWidth = 0, int minHeight = 0, bool forceWholeImage = false, float w = 0.5, float wTolerance = 1) {
 
         AssertFalseInProduction(debug);
 
@@ -95,19 +95,22 @@ public:
             return result;
         }
 
-        float w = 0.5;
-
         Mat corr; //Debug stuff
 
         PlanarCorrelationResult res = Aligner::Align(wa, wb, corr, w, w, 0);
 
         cTimer.Tick("Finding Correlation");
 
-        int maxX = max(wa.cols, wb.cols) * w;
-        int maxY = max(wa.rows, wb.rows) * w;
+        int maxX = max(wa.cols, wb.cols) * w * wTolerance;
+        int maxY = max(wa.rows, wb.rows) * w * wTolerance;
 
         if(enableOutOfWindowTest && (res.offset.x < -maxX || res.offset.x > maxX 
                 || res.offset.y < -maxY || res.offset.y > maxY)) {
+
+            if(debug) {
+                cout << "Rejected because the correlation found an extremum at the border of the image." << endl;
+            }
+
             result.valid = false;
             result.rejectionReason = RejectionOutOfWindow;
             return result;
@@ -117,7 +120,9 @@ public:
             result.valid = false;
             result.rejectionReason = RejectionDeviationTest;
             
-            cout << "Rejected because top deviation == " << res.topDeviation << " < 1.5." << endl;
+            if(debug) {
+                cout << "Rejected because top deviation == " << res.topDeviation << " < 1.5." << endl;
+            }
 
             return result;
         }

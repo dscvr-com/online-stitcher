@@ -185,15 +185,7 @@ class PyramidPlanarAligner {
                         ToString(sqrt(pool.GetMeasurements().back().s) / 
                             pool.GetMeasurements().back().n);
 
-            int maxX = max(a.cols, b.cols) * wx;
-            int maxY = max(a.rows, b.rows) * wy;
-
-            if(res.x < -maxX || res.x > maxX || res.y < -maxY || res.y > maxY) {
-               filename = filename + "_reject"; 
-            }
-
             imwrite("dbg/" + filename + ".jpg", target->image.data);
-
             
             float max = 255;
 

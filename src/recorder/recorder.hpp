@@ -88,6 +88,8 @@ namespace optonaut {
         int lastRingId;
         
         string debugPath;
+
+        Mat refinedIntrinsics;
         
         InputImageP GetParentKeyframe(const Mat &extrinsics) {
             return aligner->GetClosestKeyframe(extrinsics);
@@ -108,6 +110,8 @@ namespace optonaut {
         static bool exposureEnabled;
         static bool alignmentEnabled;
 
+        static constexpr double dt = 1;
+
         Recorder(Mat base, Mat zeroWithoutBase, Mat intrinsics, 
                 StereoSink &sink, string debugPath = "",
                 int graphConfiguration = RecorderGraph::ModeAll, 
@@ -123,10 +127,10 @@ namespace optonaut {
             recorderGraph(RecorderGraphGenerator::Sparse(preRecorderGraph, 2)),
             preController(preRecorderGraph, [this] (const SelectionInfo &x) {
                 inputBufferQueue.Push(x);
-            }, Vec3d(M_PI / 64, M_PI / 128, M_PI / 16)),
+            }, Vec3d(M_PI / 64 * dt, M_PI / 128 * dt, M_PI / 16 * dt)),
             recorderController(recorderGraph, [this] (const SelectionInfo &x) {
                 ForwardToStereoConversionQueue(x);
-            }, Vec3d(M_PI / 16, M_PI / 16, M_PI / 8), false),
+            }, Vec3d(M_PI / 16 * dt, M_PI / 16 * dt, M_PI / 8 * dt), false),
             imagesToRecord(preRecorderGraph.Size()),
             recordedImages(0),
             keyframeCount(0),
@@ -160,7 +164,8 @@ namespace optonaut {
                         1,
                         recorderGraph.ringCount / 2)),
             lastRingId(-1),
-            debugPath(debugPath)
+            debugPath(debugPath),
+            refinedIntrinsics(0, 0, CV_64F)
         {
             baseInv = base.inv();
             zero = zeroWithoutBase;
@@ -441,6 +446,9 @@ namespace optonaut {
                    FinishFirstRing(); 
                 }
             } else {
+                if(refinedIntrinsics.cols != 0) {
+                    refinedIntrinsics.copyTo(image->intrinsics);
+                }
                 recorderController.Push(image);
             }
         }
@@ -452,6 +460,8 @@ namespace optonaut {
             [](const SelectionInfo &x) {
                 return x.image;
             }));
+            refinedIntrinsics = Mat::eye(3, 3, CV_64F);
+            firstRing[0].image->intrinsics.copyTo(refinedIntrinsics);
 
             for(size_t i = 0; i < firstRing.size(); i++) {
                 PushToPreview(firstRing[i]);
@@ -468,8 +478,18 @@ namespace optonaut {
             
             if(debugPath != "" && !isIdle) {
                 AssertFalseInProduction(false);
+                static int debugCounter = 0;
                 image->LoadFromDataRef();
-                debugQueue.Push(image);
+                // create a copy of the image
+                InputImageP copy(new InputImage());
+ 			          copy->image = Image(image->image);
+      		      copy->dataRef = image->dataRef;
+                copy->originalExtrinsics = image->originalExtrinsics.clone();
+                copy->adjustedExtrinsics = image->adjustedExtrinsics.clone();
+                copy->intrinsics = image->intrinsics.clone();
+                copy->exposureInfo = image->exposureInfo;
+                copy->id = image->id;
+                debugQueue.Push(copy);
             }
 
             AssertM(!isFinished, "Warning: Push after finish - this is probably a racing condition");

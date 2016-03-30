@@ -19,13 +19,14 @@ class IterativeBundleAligner {
         static const bool drawDebug = true;
         static const bool drawWeights = true;
 
-        static void DrawDebugGraph(const vector<InputImageP> &images,
+        SimpleSphereStitcher debugger;
+
+        void DrawDebugGraph(const vector<InputImageP> &images,
                 const RecorderGraph &graph, 
                 const BiMap<size_t, uint32_t> &imagesToTargets,
                 const AlignmentGraph::Edges &edges,
                 int k) {
 
-            SimpleSphereStitcher debugger;
             auto res = debugger.Stitch(images);
             cv::Point imgCenter = res->corner;
             std::map<size_t, InputImageP> imageById;
@@ -97,7 +98,9 @@ class IterativeBundleAligner {
         }
 
     public: 
-        static void Align(const vector<InputImageP> &images, 
+        IterativeBundleAligner() : debugger(300) { }
+
+        void Align(const vector<InputImageP> &images, 
                 const RecorderGraph &graph, 
                 const BiMap<size_t, uint32_t> &imagesToTargets,
                 const int roundTresh = 15, const double errorTresh = 10) {
@@ -106,7 +109,6 @@ class IterativeBundleAligner {
             AssertFalseInProduction(drawWeights);
             
             if(drawDebug) {
-                SimpleSphereStitcher debugger;
                 auto res = debugger.Stitch(images);
                 imwrite("dbg/iterative_bundler_input.jpg", res->image.data);
             }
@@ -146,14 +148,14 @@ class IterativeBundleAligner {
                     ", outliers: " << outliers << ", no overlap: " << noOverlap << 
                     ", forced: " << forced<< endl;
 
-                if(drawDebug) { 
-                    DrawDebugGraph(images, graph, imagesToTargets, edges, k);
-                }
-                
                 //Needed for iteration
                 for(auto img : images) {
                     aligner.Apply(img);
                     img->adjustedExtrinsics.copyTo(img->originalExtrinsics);
+                }
+                
+                if(drawDebug) { 
+                    DrawDebugGraph(images, graph, imagesToTargets, edges, k);
                 }
 
                 if(outError < errorTresh) {

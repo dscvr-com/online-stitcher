@@ -79,6 +79,28 @@ namespace minimal {
                 byId.at(img->id)->originalExtrinsics.copyTo(img->originalExtrinsics);
             }
         }
+        
+        /*
+         * Copies intrinsics from all images in from to all images in to. 
+         */
+        static void CopyIntrinsics(
+                const std::vector<InputImageP> &from, std::vector<InputImageP> &to) {
+            auto byId = CreateImageMap(from);
+
+            for(auto img : to) {
+                byId.at(img->id)->intrinsics.copyTo(img->intrinsics);
+            }
+        }
+
+        /*
+         * Sorts the given image list by ID. 
+         */
+        static void SortById(std::vector<InputImageP> &images) {
+            std::sort(images.begin(), images.end(), [] 
+                    (const InputImageP &a, const InputImageP &b) {
+                        return a->id < b->id;
+                    });
+        }
       
         /*
          * Loads an prepares a set of input images.
