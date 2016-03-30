@@ -27,7 +27,7 @@ class SimpleSphereStitcher {
             
         }
 
-		StitchingResultP Stitch(const std::vector<InputImageP> &images, bool debug = false);
+		StitchingResultP Stitch(const std::vector<InputImageP> &images, bool smallImages = false, bool drawRotationCenters = false);
         cv::Rect Warp(const cv::Mat &intrinsics, const cv::Mat &extrinsics, const cv::Size &imageSize);
        
         // Point is relative to image center.  

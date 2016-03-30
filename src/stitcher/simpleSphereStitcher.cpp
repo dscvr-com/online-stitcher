@@ -13,7 +13,7 @@ using namespace cv::detail;
 
 namespace optonaut {
 
-StitchingResultP SimpleSphereStitcher::Stitch(const std::vector<InputImageP> &in, bool debug) {
+StitchingResultP SimpleSphereStitcher::Stitch(const std::vector<InputImageP> &in, bool smallImages, bool drawRotationCenters) {
     //TODO: Cleanup this mess. 
 	size_t n = in.size();
     assert(n > 0);
@@ -49,7 +49,8 @@ StitchingResultP SimpleSphereStitcher::Stitch(const std::vector<InputImageP> &in
             
         Mat k;
         Mat scaledIntrinsics;
-        ScaleIntrinsicsToImage(image->intrinsics, images[i], scaledIntrinsics, debug ? 10 : 1);
+        ScaleIntrinsicsToImage(image->intrinsics, images[i], scaledIntrinsics, 
+                smallImages ? 10 : 1);
         From3DoubleTo3Float(scaledIntrinsics, k);
         //Decide wether to take tl/bl. We have 1 px error margin. 
         Point tl = warper.warpPoint(Point(0, image->image.rows), k, 
@@ -78,12 +79,14 @@ StitchingResultP SimpleSphereStitcher::Stitch(const std::vector<InputImageP> &in
         predictedCorners[i] = predictedRoi.tl();
         corners[i].y = predictedCorners[i].y;
 
-
         auto candidate = imageCache.find(in[i]->id);
 
         // Only allow cache serving if image is there and y coordinate did not change.
         if(candidate != imageCache.end() && 
                 cornerCache.at(in[i]->id).y == corners[i].y) {
+
+            AssertM(false, 
+                    "This feature does not work correctly due to positional errors.");
             warpedImages[i] = imageCache.at(in[i]->id);
             warpedMasks[i] = maskCache.at(in[i]->id);
         } else {
@@ -101,12 +104,12 @@ StitchingResultP SimpleSphereStitcher::Stitch(const std::vector<InputImageP> &in
                 Mat ry4, ry3;
                 CreateRotationY(M_PI, ry4);
                 From4DoubleTo3Float(ry4, ry3);
-                warper.warp(images[i], k, ry3 * cameras[i].R, 
+                corners[i] = warper.warp(images[i], k, ry3 * cameras[i].R, 
                         INTER_LINEAR, BORDER_CONSTANT, warpedImages[i]);
                 warper.warp(mask, k, ry3 * cameras[i].R, 
                         INTER_NEAREST, BORDER_CONSTANT, warpedMasks[i]);
             } else {
-                warper.warp(images[i], k, cameras[i].R, 
+                corners[i] = warper.warp(images[i], k, cameras[i].R, 
                     INTER_LINEAR, BORDER_CONSTANT, warpedImages[i]);
                 warper.warp(mask, k, cameras[i].R, 
                         INTER_NEAREST, BORDER_CONSTANT, warpedMasks[i]);
@@ -116,8 +119,8 @@ StitchingResultP SimpleSphereStitcher::Stitch(const std::vector<InputImageP> &in
             maskCache[in[i]->id] = warpedMasks[i]; 
         }
         cornerCache[in[i]->id] = corners[i];
-        corners[i].x += cameras[i].t.at<float>(0);
-        corners[i].y += cameras[i].t.at<float>(1);
+        //corners[i].x += cameras[i].t.at<float>(0);
+        //corners[i].y += cameras[i].t.at<float>(1);
     }
 
     //Final blending
@@ -162,6 +165,28 @@ StitchingResultP SimpleSphereStitcher::Stitch(const std::vector<InputImageP> &in
     Mat image;
     Mat mask;
 	blender->blend(image, mask);
+   
+    if(drawRotationCenters) { 
+        for(size_t i = 0; i < n; i++) {    
+            Mat k;
+            Mat scaledIntrinsics;
+            auto img = in[i];
+
+            ScaleIntrinsicsToImage(img->intrinsics, img->image.size(), 
+                    scaledIntrinsics, smallImages ? 10 : 1);
+
+            From3DoubleTo3Float(scaledIntrinsics, k);
+
+            Point c = warper.warpPoint(
+                    Point(img->image.cols / 2, img->image.rows / 2),
+                    k, cameras[i].R);
+
+            c = c - resultRoi.tl();
+
+            // Draw smth. 
+            cv::circle(image, c, 3, Scalar(0, 0, 255), -1);
+        }
+    }
 
     res->image = Image(image);
     res->mask = Image(mask);
