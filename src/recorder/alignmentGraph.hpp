@@ -57,7 +57,7 @@ namespace optonaut {
             PairwiseCorrelator aligner;
             const RecorderGraph &graph; 
             const BiMap<size_t, uint32_t> &imagesToTargets;
-            static const bool debug = false;
+            static const bool debug = true;
             map<size_t, double> alignmentCorrections;
         public:
 
