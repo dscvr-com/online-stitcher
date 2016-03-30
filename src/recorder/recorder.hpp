@@ -472,7 +472,10 @@ namespace optonaut {
                 static int debugCounter = 0;
                 if (debugCounter % 10 == 0 ) {
                     image->LoadFromDataRef();
-                    debugQueue.Push(image);
+                     // create a copy of the image
+                    InputImageP imageTemp = InputImageP(image);
+
+                    debugQueue.Push(imageTemp);
                 }
                 debugCounter++;
             }
