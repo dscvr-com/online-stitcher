@@ -61,7 +61,6 @@ public:
         angularOffset(0, 0), 
         rejectionReason(-1),
         correlationCoefficient(0),
-        inverseTestDifference(0, 0) {}
 
 };
 
