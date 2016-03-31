@@ -18,9 +18,6 @@ namespace optonaut {
 class SimpleSphereStitcher {
     private: 
         cv::detail::SphericalWarper warper; //Random warper scale. 
-        std::map<size_t, cv::Mat> imageCache;
-        std::map<size_t, cv::Mat> maskCache;
-        std::map<size_t, cv::Point> cornerCache;
 	public:
 
         SimpleSphereStitcher(float warperScale = 800) : warper(warperScale) {

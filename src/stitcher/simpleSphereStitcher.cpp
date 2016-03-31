@@ -41,8 +41,7 @@ StitchingResultP SimpleSphereStitcher::Stitch(const std::vector<InputImageP> &in
 	vector<Point> corners(n);
 	vector<Mat> warpedImages(n);
 	vector<Mat> warpedMasks(n);
-	vector<Size> predictedSizes(n);
-	vector<Point> predictedCorners(n);
+    vector<Size> sizes(n);
 
 	for (size_t i = 0; i < n; i++) {
         auto image = in[i];
@@ -52,75 +51,18 @@ StitchingResultP SimpleSphereStitcher::Stitch(const std::vector<InputImageP> &in
         ScaleIntrinsicsToImage(image->intrinsics, images[i], scaledIntrinsics, 
                 smallImages ? 10 : 1);
         From3DoubleTo3Float(scaledIntrinsics, k);
-        //Decide wether to take tl/bl. We have 1 px error margin. 
-        Point tl = warper.warpPoint(Point(0, image->image.rows), k, 
-                cameras[i].R);
 
-        Point bl = warper.warpPoint(Point(0, 0), k, cameras[i].R);
+        Mat mask(images[i].size(), CV_8U);
+        mask.setTo(Scalar::all(255));
 
-        Rect predictedRoi = warper.warpRoi(in[i]->image.size(), k, cameras[i].R);
-        if(abs(bl.x - tl.x) > predictedRoi.width / 2) {
-            //OMG - we have a corner case.
-            if(bl.x < tl.x) {
-                corners[i] = tl;
-            } else {
-                corners[i] = bl;
-            }
-        } else {
-            //Standard case. 
-            if(bl.x > tl.x) {
-                corners[i] = tl;
-            } else {
-                corners[i] = bl;
-            }
-        }
+        corners[i] = warper.warp(images[i], k, cameras[i].R, 
+            INTER_LINEAR, BORDER_CONSTANT, warpedImages[i]);
+        sizes[i] = warpedImages[i].size();
+        warper.warp(mask, k, cameras[i].R, 
+                INTER_NEAREST, BORDER_CONSTANT, warpedMasks[i]);
 
-        predictedSizes[i] = predictedRoi.size(); 
-        predictedCorners[i] = predictedRoi.tl();
-        corners[i].y = predictedCorners[i].y;
-
-        auto candidate = imageCache.find(in[i]->id);
-
-        // Only allow cache serving if image is there and y coordinate did not change.
-        if(candidate != imageCache.end() && 
-                cornerCache.at(in[i]->id).y == corners[i].y) {
-
-            AssertM(false, 
-                    "This feature does not work correctly due to positional errors.");
-            warpedImages[i] = imageCache.at(in[i]->id);
-            warpedMasks[i] = maskCache.at(in[i]->id);
-        } else {
-
-            Mat mask(images[i].size(), CV_8U);
-            mask.setTo(Scalar::all(255));
-
-            //Prevent warping around. 
-            if(abs(predictedCorners[i].x - corners[i].x) > 2) {
-                
-                //AssertWGTM(predictedSizes[i].width, 
-                //    predictedSizes[i].height * 4, 
-                //    "Is Corner Case");
-
-                Mat ry4, ry3;
-                CreateRotationY(M_PI, ry4);
-                From4DoubleTo3Float(ry4, ry3);
-                corners[i] = warper.warp(images[i], k, ry3 * cameras[i].R, 
-                        INTER_LINEAR, BORDER_CONSTANT, warpedImages[i]);
-                warper.warp(mask, k, ry3 * cameras[i].R, 
-                        INTER_NEAREST, BORDER_CONSTANT, warpedMasks[i]);
-            } else {
-                corners[i] = warper.warp(images[i], k, cameras[i].R, 
-                    INTER_LINEAR, BORDER_CONSTANT, warpedImages[i]);
-                warper.warp(mask, k, cameras[i].R, 
-                        INTER_NEAREST, BORDER_CONSTANT, warpedMasks[i]);
-
-            }
-            imageCache[in[i]->id] = warpedImages[i]; 
-            maskCache[in[i]->id] = warpedMasks[i]; 
-        }
-        cornerCache[in[i]->id] = corners[i];
-        //corners[i].x += cameras[i].t.at<float>(0);
-        //corners[i].y += cameras[i].t.at<float>(1);
+        corners[i].x += cameras[i].t.at<float>(0);
+        corners[i].y += cameras[i].t.at<float>(1);
     }
 
     //Final blending
@@ -129,36 +71,16 @@ StitchingResultP SimpleSphereStitcher::Stitch(const std::vector<InputImageP> &in
 
 	blender = Blender::createDefault(Blender::FEATHER, true);
   
-    Rect resultRoi = cv::detail::resultRoi(predictedCorners, predictedSizes);
+    Rect resultRoi = cv::detail::resultRoi(corners, sizes);
     blender->prepare(resultRoi);
 
 	for (size_t i = 0; i < n; i++)
 	{
         warpedImages[i].convertTo(warpedImageAsShort, CV_16S);
 
-        Rect imageRoi(corners[i], warpedImages[i].size()); 
-        Rect overlap = imageRoi & resultRoi;
-    
-        Rect overlapI(0, 0, overlap.width, overlap.height);
-
-        if(overlap.width == imageRoi.width) {
-            //Image fits.
-            blender->feed(warpedImageAsShort(overlapI), 
-                    warpedMasks[i](overlapI), 
-                    corners[i]);
-        } else {
-            //Image overlaps on X-Axis and we have to blend two parts.
-            blender->feed(warpedImageAsShort(overlapI), 
-                    warpedMasks[i](overlapI), 
-                    overlap.tl());
-
-            Rect other(resultRoi.x, overlap.y, 
-                    imageRoi.width - overlap.width, overlap.height);
-            Rect otherI(overlap.width, 0, other.width, other.height);
-            blender->feed(warpedImageAsShort(otherI), 
-                    warpedMasks[i](otherI), 
-                    other.tl());
-        }
+        blender->feed(warpedImageAsShort, 
+                warpedMasks[i], 
+                corners[i]);
 	}
 
 	StitchingResultP res(new StitchingResult());
