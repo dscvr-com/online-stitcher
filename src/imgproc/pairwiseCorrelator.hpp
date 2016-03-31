@@ -60,8 +60,7 @@ public:
         offset(0, 0), 
         angularOffset(0, 0), 
         rejectionReason(-1),
-        correlationCoefficient(0),
-
+        correlationCoefficient(0) { }
 };
 
 /*
