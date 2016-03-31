@@ -19,16 +19,42 @@ using namespace cv::detail;
 
 namespace optonaut {
 
+/*
+ * Represents a position correspondence between two images,
+ * based on correlation based alignment.  
+ */
 class CorrelationDiff {
 public:
+    /*
+     * True, if this diff is valid, false if the diff is an outlier.  
+     */
 	bool valid;
+    /*
+     * The overlap between the correlated images, in pixels. 
+     */
     int overlap;
+    /*
+     * The offset between the correlated images, in pixels. 
+     */
     Point2f offset;
+    /*
+     * The offset between the correlated images, in radians, 
+     * based on a rotational projection model. 
+     */
     Point2f angularOffset;
+    /*
+     * If valid is false, the reason why this correlation was
+     * rejected. 
+     */
     int rejectionReason;
+    /*
+     * The correlation coefficient of the correlation. 
+     */
     double correlationCoefficient;
-    Point2f inverseTestDifference;
 
+    /*
+     * Creates a new instance of this class. 
+     */
 	CorrelationDiff() : 
         valid(false), 
         offset(0, 0), 
@@ -39,26 +65,68 @@ public:
 
 };
 
+/*
+ * Class capable of correlating image pairs. 
+ * Takes perspective into account. 
+ */
 class PairwiseCorrelator {
 
 private:
     static const bool debug = false;
+    /*
+     * Definition of the underlying planar aligner to use. 
+     */
     typedef PyramidPlanarAligner<NormedCorrelator<LeastSquares<Vec3b>>> Aligner;
 public:
     PairwiseCorrelator() { }
 
+    /*
+     * Correlation was rejected, but to unknown reasons. Do not use. 
+     */
     static const int RejectionUnknown = -1;
+    /*
+     * Correlation was not rejected. 
+     */
     static const int RejectionNone = 0;
+    /*
+     * Correlation was rejected because images did not overlap. 
+     */
     static const int RejectionNoOverlap = 1;
+    /*
+     * Correlation was rejected because deviation was to high. 
+     */
     static const int RejectionDeviationTest = 2;
+    /*
+     * Correlation was rejected because the result was
+     * too close to the image border. This is an indicator for
+     * bad matching. 
+     */
     static const int RejectionOutOfWindow = 3;
-   
-    // Note: An outlier threshold of 2 is fine (1 pixel in each dimension), since
-    // we don't do sub-pixel alignment.  
+  
+    /*
+     * Matches two immages using a correlation (pixel) based aligner. The estimated perspective 
+     * of the two images is taken into account. First, the overlapping region is recovered, then
+     * the region is aligned.  
+     *
+     * @param a The first image. 
+     * @param b The second image. 
+     *
+     * @param minWidth Minimal width of the overlapping region. 
+     * @param minHeight Minimal height of the overlapping region. 
+     *
+     * @param forceWholeImage If true, forces usage of the whole image, 
+     *                        even if the overlapping area is smaller.
+     * @param w Correlation window size, relartive to the size of the image. Default 
+     *          is 0.5, which lets the correlator try all positions up to 0.5 * width or 0.5 * heigth 
+     *          away from the center. 
+     *
+     * @param wTolerance Additional tolerance to apply when checing for out-of-window correlations. 
+     */ 
     CorrelationDiff Match(const InputImageP a, const InputImageP b, int minWidth = 0, int minHeight = 0, bool forceWholeImage = false, float w = 0.5, float wTolerance = 1) {
 
         AssertFalseInProduction(debug);
 
+        // Flags used for global configuration of outlier tests. 
         const bool enableDeviationTest = false;
         const bool enableOutOfWindowTest = true;
 
@@ -95,7 +163,7 @@ public:
             return result;
         }
 
-        Mat corr; //Debug stuff
+        Mat corr; //Debug image used to print the correlation result.  
 
         PlanarCorrelationResult res = Aligner::Align(wa, wb, corr, w, w, 0);
 
@@ -137,16 +205,14 @@ public:
         double vFov = GetVerticalFov(a->intrinsics);
 
         //cout << "hfov: " << hFov << ", vfov: " << vFov << endl;
-        
         Point2d relativeOffset = 
             Point2d((double)correctedRes.x / a->image.cols, 
                     (double)correctedRes.y / a->image.rows); 
 
         //cout << "RelativeOffset: " << relativeOffset << endl;
-       
         result.overlap = wa.cols * wa.rows; 
 
-        // Careful! Rotational axis are swapped (rotation is AROUND axis) 
+        // Careful! Rotational axis are swapped (movement along x axis corresponds to a rotation AROUND y axis) 
         result.angularOffset.y = asin(relativeOffset.x * sin(hFov));
         result.angularOffset.x = asin(relativeOffset.y * sin(vFov));
         result.offset = correctedRes;
