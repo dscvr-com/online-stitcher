@@ -17,7 +17,6 @@ namespace optonaut {
 class IterativeBundleAligner {
     private:
         static const bool drawDebug = true;
-        static const bool drawWeights = true;
 
         SimpleSphereStitcher debugger;
 
@@ -36,6 +35,7 @@ class IterativeBundleAligner {
             }
 
             imwrite("dbg/aligned_" + ToString(k) + ".jpg", res->image.data);
+
             for(auto edge : edges) {
                if(edge.value.valid) {
                    InputImageP a = imageById[edge.from]; 
@@ -106,7 +106,6 @@ class IterativeBundleAligner {
                 const int roundTresh = 15, const double errorTresh = 10) {
 
             AssertFalseInProduction(drawDebug);
-            AssertFalseInProduction(drawWeights);
             
             if(drawDebug) {
                 auto res = debugger.Stitch(images);
