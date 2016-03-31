@@ -308,7 +308,7 @@ public:
 
             for(size_t j = 0; j < rings[i].size(); j += skip) {
                 SelectionPoint copy = rings[i][j];
-                size_t imageId;
+                size_t imageId = 0;
 
                 if(denseImages.Size() > 0) {
                     Assert(denseImages.GetKey(copy.globalId, imageId));

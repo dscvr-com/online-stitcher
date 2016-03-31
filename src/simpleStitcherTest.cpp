@@ -30,11 +30,10 @@ int main(int argc, char** argv) {
     
     cv::ocl::setUseOpenCL(false);
 
-    auto allImages = minimal::ImagePreperation::LoadAndPrepareArgs(argc, argv);
-    minimal::ImagePreperation::LoadAllImages(allImages);
+    auto allImages = minimal::ImagePreperation::LoadAndPrepareArgs(argc, argv, false);
 
-    SimpleSphereStitcher stitcher(300);
-    auto scene = stitcher.Stitch(allImages);
+    SimpleSphereStitcher stitcher(800);
+    auto scene = stitcher.Stitch(allImages, false, true);
 
     imwrite("dbg/result.jpg", scene->image.data);
 

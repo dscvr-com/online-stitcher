@@ -8,6 +8,10 @@ using namespace std;
 #define OPTONAUT_PANO_BLUR_HEADER
 
 namespace optonaut {
+
+    /*
+     * Class capable of extending a single ring image by a blurry area. 
+     */
     class PanoramaBlur {
 
         private: 
@@ -17,6 +21,9 @@ namespace optonaut {
             const cv::Size ds; //Destination Size
             cv::Size ss; //Strip size;
 
+            /*
+             * Performs gradient blending on two images. 
+             */
             void VerticalBlend(cv::Mat &target, cv::Mat &source, int startRow, int endRow, bool quadratic = true) {
                 
                 bool inverse = false;
@@ -48,6 +55,9 @@ namespace optonaut {
                 }
             }
 
+            /*
+             * Does a fast blur by up- and downsampling. 
+             */
             void FastBlur(Mat &in, Mat &out, int depth) {
                 if(depth == 0)
                     return;
@@ -61,6 +71,9 @@ namespace optonaut {
                 out = out(cv::Rect(cv::Point(0, 0), inSize));
             }
 
+            /*
+             * Recursiveley downsamples an image. 
+             */
             void PyrDownRecu(const Mat &in, Mat &out, int depth) {
                 if(depth <= 0) 
                     return;
@@ -69,6 +82,9 @@ namespace optonaut {
                 PyrDownRecu(out, out, depth - 1);
             }
             
+            /*
+             * Recursively upsamples an image. 
+             */
             void PyrUpUntil(const Mat &in, Mat &out, cv::Size target) {
                 pyrUp(in, out);
                 
@@ -82,6 +98,12 @@ namespace optonaut {
             }
         public:
 
+            /*
+             * Creates a new instance of this class. 
+             *
+             * @param inputSize The size of the input image. 
+             * @param outputSize The size of the output image. 
+             */
             PanoramaBlur(const cv::Size inputSize, const cv::Size outputSize) :
                 is(inputSize), ds(outputSize) { 
 
@@ -106,6 +128,13 @@ namespace optonaut {
                 mirrorTransform = getPerspectiveTransform(src, dest);
             }
 
+            /*
+             * Performs the panorama blur. Basically it mirrors the image once to the top, 
+             * once to the bottom, and then applies a gradient blur and a gradient to black.
+             *
+             * @param input The input image. 
+             * @param output The output image. 
+             */
             void Blur(const Mat &input, Mat &output) {
                 
                 if(ss.height <= 0) {

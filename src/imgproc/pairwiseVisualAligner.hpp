@@ -55,6 +55,11 @@ inline Matcher InstantiateMatcher() {
     return Matcher();
 }
 
+/*
+ * Experimental class that provides feature-based alignment. 
+ *
+ * Useful for SFM. 
+ */
 class PairwiseVisualAligner {
 
 private:

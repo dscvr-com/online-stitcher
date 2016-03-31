@@ -7,6 +7,10 @@ using namespace std;
 #define OPTONAUT_QUEUE_PROCESSOR_HEADER
 
 namespace optonaut {
+    /*
+     * Queue that calls callbacks as soon as elements
+     * enter or leave the queue. 
+     */
     template <typename InType>
 	class QueueProcessor {
 	private:
@@ -17,6 +21,12 @@ namespace optonaut {
 
         deque<InType> buffer;
     public:
+        /*
+         * Creates a new instance of this class.
+         *
+         * @param length The length of this queue. 
+         * @param onFinish Callback that is called when elements leave the queue. 
+         */
         QueueProcessor(size_t length, 
                 function<void(const InType&)> onFinish) : 
             length(length),
@@ -24,6 +34,13 @@ namespace optonaut {
             finish(onFinish) {
         }
 
+        /*
+         * Creates a new instance of this class.
+         *
+         * @param length The length of this queue. 
+         * @param onStart Callback that is called when elements enter the queue. 
+         * @param onFinish Callback that is called when elements leave the queue. 
+         */
         QueueProcessor(size_t length, 
                 function<void(const InType&)> onStart,
                 function<void(const InType&)> onFinish) : 
@@ -31,7 +48,14 @@ namespace optonaut {
             start(onStart),
             finish(onFinish) {
         }
-        
+       
+        /*
+         * Pushes an element into the queue.
+         * It will be kept in the queue until it is at the
+         * end of the queue. 
+         * 
+         * @param in The element to push to the queue. 
+         */ 
         void Push(const InType &in) {
 
             start(in);
@@ -44,10 +68,20 @@ namespace optonaut {
             }
         }
 
+        /*
+         * Flushes the queue, calls 
+         * onFinish for each element, then clears
+         * the queue. 
+         */
         void Flush() {
             Clear();
         }
 
+        /*
+         * Clears the queue, calls 
+         * onFinish for each element, then clears
+         * the queue. 
+         */
         void Clear() {
             for(auto &b : buffer) {
                  finish(b);

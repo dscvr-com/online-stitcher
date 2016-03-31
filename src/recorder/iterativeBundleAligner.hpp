@@ -17,7 +17,6 @@ namespace optonaut {
 class IterativeBundleAligner {
     private:
         static const bool drawDebug = true;
-        static const bool drawWeights = true;
 
         SimpleSphereStitcher debugger;
 
@@ -35,66 +34,67 @@ class IterativeBundleAligner {
                 imageById[img->id] = img;
             }
 
-            if(drawWeights) { 
-                for(auto edge : edges) {
-                   if(edge.value.valid) {
-                       InputImageP a = imageById[edge.from]; 
-                       InputImageP b = imageById[edge.to]; 
-
-                       uint32_t pidA, pidB;
-                       Assert(imagesToTargets.GetValue(a->id, pidA));
-                       Assert(imagesToTargets.GetValue(b->id, pidB));
-                       SelectionPoint tA, tB;
-                       Assert(graph.GetPointById(pidA, tA));
-                       Assert(graph.GetPointById(pidB, tB));
-
-                       if(tA.ringId != 1 && tA.ringId != tB.ringId)
-                           continue; //Only draw cross-lines if origin at ring 0
-
-                       cv::Point aCenter = debugger.WarpPoint(a->intrinsics,
-                               a->adjustedExtrinsics, 
-                               a->image.size(), cv::Point(0, 0)) - imgCenter;
-                       cv::Point bCenter = debugger.WarpPoint(b->intrinsics,
-                               b->adjustedExtrinsics, 
-                               b->image.size(), cv::Point(0, 0)) - imgCenter;
-
-                       //Make sure a is always left. 
-                       if(aCenter.x > bCenter.x) {
-                            swap(aCenter, bCenter);
-                       }
-
-                       double dPhi = edge.value.dphi * 10;
-
-                       Scalar color(255 * min(1.0, max(0.0, -dPhi)), 
-                                   0, 
-                                   255 * min(1.0, max(0.0, dPhi)));
-                       
-                       int thickness = 6;
-
-                       if(edge.value.quartil) {
-                            thickness = 2;
-                       }
-
-                       if(bCenter.x - aCenter.x > res->image.cols / 2) {
-                            cv::line(res->image.data, 
-                               aCenter, bCenter - cv::Point(res->image.cols, 0),
-                               color, thickness);
-                            cv::line(res->image.data, 
-                               aCenter + cv::Point(res->image.cols, 0), bCenter,
-                               color, thickness);
-                       } else {
-                            cv::line(res->image.data, 
-                               aCenter, bCenter, color, thickness);
-                       }
-                    }
-                }
-
-                // TODO: add target ID again. 
-                DrawPointsOnPanorama(res->image.data, 
-                        ExtractExtrinsics(images), images[0]->intrinsics, 
-                        images[0]->image.size(), 800, res->corner);
-            }
             imwrite("dbg/aligned_" + ToString(k) + ".jpg", res->image.data);
+
+            for(auto edge : edges) {
+               if(edge.value.valid) {
+                   InputImageP a = imageById[edge.from]; 
+                   InputImageP b = imageById[edge.to]; 
+
+                   uint32_t pidA = 0, pidB = 0;
+                   Assert(imagesToTargets.GetValue(a->id, pidA));
+                   Assert(imagesToTargets.GetValue(b->id, pidB));
+                   SelectionPoint tA, tB;
+                   Assert(graph.GetPointById(pidA, tA));
+                   Assert(graph.GetPointById(pidB, tB));
+
+                   if(tA.ringId != 1 && tA.ringId != tB.ringId)
+                       continue; //Only draw cross-lines if origin at ring 0
+
+                   cv::Point aCenter = debugger.WarpPoint(a->intrinsics,
+                           a->adjustedExtrinsics, 
+                           a->image.size(), cv::Point(0, 0)) - imgCenter;
+                   cv::Point bCenter = debugger.WarpPoint(b->intrinsics,
+                           b->adjustedExtrinsics, 
+                           b->image.size(), cv::Point(0, 0)) - imgCenter;
+
+                   //Make sure a is always left. 
+                   if(aCenter.x > bCenter.x) {
+                        swap(aCenter, bCenter);
+                   }
+
+                   double dPhi = edge.value.dphi * 10;
+
+                   Scalar color(255 * min(1.0, max(0.0, -dPhi)), 
+                               0, 
+                               255 * min(1.0, max(0.0, dPhi)));
+                   
+                   int thickness = 6;
+
+                   if(edge.value.quartil) {
+                        thickness = 2;
+                   }
+
+                   if(bCenter.x - aCenter.x > res->image.cols / 2) {
+                        cv::line(res->image.data, 
+                           aCenter, bCenter - cv::Point(res->image.cols, 0),
+                           color, thickness);
+                        cv::line(res->image.data, 
+                           aCenter + cv::Point(res->image.cols, 0), bCenter,
+                           color, thickness);
+                   } else {
+                        cv::line(res->image.data, 
+                           aCenter, bCenter, color, thickness);
+                   }
+                }
+            }
+
+            // TODO: add target ID again. 
+            DrawPointsOnPanorama(res->image.data, 
+                    ExtractExtrinsics(images), images[0]->intrinsics, 
+                    images[0]->image.size(), 800, res->corner);
+
+            imwrite("dbg/aligned_" + ToString(k) + "_weights.jpg", res->image.data);
         }
 
     public: 
@@ -106,7 +106,6 @@ class IterativeBundleAligner {
                 const int roundTresh = 15, const double errorTresh = 10) {
 
             AssertFalseInProduction(drawDebug);
-            AssertFalseInProduction(drawWeights);
             
             if(drawDebug) {
                 auto res = debugger.Stitch(images);
