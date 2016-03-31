@@ -159,7 +159,6 @@ namespace optonaut {
                     aToB.overlap = res.correlationCoefficient * 2;
                     aToB.valid = res.valid;
                     aToB.rejectionReason = res.rejectionReason;
-                    aToB.error = res.inverseTestDifference.x;
                 } else {
                     aToB.dphi = 0;
                     aToB.overlap = 0;
@@ -298,7 +297,7 @@ namespace optonaut {
                             O.at<double>(remap[edge.from], remap[edge.from]) += 
                                 alpha * weight;
                             R.at<double>(remap[edge.from]) += 
-                                2 * weight * edge.value.dphi;
+                                2 * weight * edge.value.dphi / 2;
 
                             //Use non-linear weights - less penalty for less overlap. 
                             if(!edge.value.forced) {
