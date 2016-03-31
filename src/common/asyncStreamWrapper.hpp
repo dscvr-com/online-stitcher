@@ -7,6 +7,14 @@ using namespace std;
 #define OPTONAUT_ASYNC_STREAM_HEADER
 
 namespace optonaut {
+
+    /*
+     * Processes elements asynchronously, but without a queue. 
+     * If elements are pushed faster than they can be processed, they are discarded. 
+     *
+     * @tparam InType The input type. 
+     * @tparam OutType the output type. 
+     */
     template <typename InType, typename OutType>
 	class AsyncStream {
 	private:
@@ -49,6 +57,11 @@ namespace optonaut {
         }
 
 	public:
+        /*
+         * Creates a new instance of this class. 
+         *
+         * @param core The processing function to call for each element. 
+         */
 		AsyncStream(function<OutType(InType)> core) : core(core), running(false), isInitialized(false), workerReady(true) { }
        
         void Push(InType in) {
@@ -72,18 +85,31 @@ namespace optonaut {
             }
         }
 
+        /*
+         * @returns True if the worker is idle. 
+         */
         bool Finished() {
             return workerReady;
         }
 
+        /*
+         * @returns The result of the last processing run. 
+         */
         OutType Result() {
             return outData;
         }
-        
+       
+        /*
+         * True, if the worker thread is active. 
+         */ 
         bool IsRunning() {
             return running;
         }
 
+        /*
+         * Waits for execution of the current task,
+         * then terminates the worker thread. 
+         */
         void Dispose() {
             if(!running)
                 return;

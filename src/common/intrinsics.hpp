@@ -1,5 +1,8 @@
 #include <opencv2/opencv.hpp>
 
+/*
+ * Collection of approximate intrinsics data. 
+ */
 namespace optonaut {
     double iPhone6IntrinsicsData[9] = {
         5.9066119, 0, 1.6875, 
