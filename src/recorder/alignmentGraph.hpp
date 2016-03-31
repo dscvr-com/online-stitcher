@@ -102,9 +102,9 @@ namespace optonaut {
 
                 STimer tFindCorrespondence;
 
-                const bool dampUncorrelatedNeighbors = true;
+                const bool dampUncorrelatedNeighbors = false;
                 const bool dampAllNeighbors = false;
-                const bool dampSuccessors = true;
+                const bool dampSuccessors = false;
 
                 uint32_t pidA = 0, pidB = 0;
                 SelectionPoint tA, tB;
@@ -248,7 +248,7 @@ namespace optonaut {
                 double edgeCount = 0;
 
                 // Quartil for selecting edges that are used when optimizing. 
-                const double quartil = 0.1;
+                const double quartil = 0.0;
 
                 for(auto &adj : relations.GetEdges()) { // For adjacency list each node in our graph...
                     // Find all edges created by the aligner. 
