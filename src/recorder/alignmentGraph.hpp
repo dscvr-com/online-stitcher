@@ -21,6 +21,7 @@ namespace optonaut {
      */
     struct AlignmentDiff {
         double dphi; //Difference for rotating around the vertical axis
+        double dtheta; //Difference for rotating around the horizontal axis
         double valid; //Is it valid?
         int overlap;
         int error; 
@@ -30,6 +31,7 @@ namespace optonaut {
 
         AlignmentDiff() : 
             dphi(0), 
+            dtheta(0),
             valid(false), 
             overlap(0), 
             error(0),
@@ -149,6 +151,7 @@ namespace optonaut {
                     if(!res.valid && areNeighbors && dampUncorrelatedNeighbors) {
                         res.valid = true;
                         res.angularOffset.y = 0;
+                        res.angularOffset.x = 0;
                         res.overlap = imgA->image.cols * imgA->image.rows * 100 *
                             (1 + abs(angularDiff)) * (1 + abs(angularDiff));
                         aToB.forced = true;
@@ -156,11 +159,13 @@ namespace optonaut {
 
                     // Copy matching information to the correspondence info
                     aToB.dphi = res.angularOffset.y;
+                    aToB.dtheta = res.angularOffset.y;
                     aToB.overlap = res.correlationCoefficient * 2;
                     aToB.valid = res.valid;
                     aToB.rejectionReason = res.rejectionReason;
                 } else {
                     aToB.dphi = 0;
+                    aToB.dtheta = 0;
                     aToB.overlap = 0;
                     aToB.valid = false;
                 }
@@ -175,6 +180,7 @@ namespace optonaut {
 
                     AlignmentDiff aToBDamp, bToADamp; 
                     aToBDamp.dphi = -angularDiff / 8; 
+                    aToBDamp.dtheta = 0;
                     aToBDamp.overlap = imgA->image.cols * imgA->image.rows * 0.01 *
                             (1 + abs(angularDiff)) * (1 + abs(angularDiff));
                     aToBDamp.forced = true;
@@ -189,6 +195,7 @@ namespace optonaut {
                 if(dampSuccessors && areSuccessors) {
                     AlignmentDiff aToBDamp, bToADamp; 
                     aToBDamp.dphi = 0; 
+                    aToBDamp.dtheta = 0;
                     aToBDamp.overlap = imgA->image.cols * imgA->image.rows * 0.5;
                     aToBDamp.forced = true;
                     aToBDamp.valid = true;
@@ -205,9 +212,59 @@ namespace optonaut {
             };
 
             /*
-             * From the alignment graph, finds a solution for re-aligning all images with minimal error. 
+             * Optimizes for vertical alignment. 
+             */
+            Edges FindAlignmentHorizontal(double &outError) {
+                return FindAlignmentInternal(outError,
+                        [] (const AlignmentDiff &x) {
+                            return x.dphi;
+                        }, 
+                        [] (AlignmentDiff &x, const double v) {
+                            x.dphi = v;
+                        });
+            }
+            
+            /*
+             * Optimizes for horizontal alignment. 
+             */
+            Edges FindAlignmentVertical(double &outError) {
+                return FindAlignmentInternal(outError,
+                        [] (const AlignmentDiff &x) {
+                            return x.dtheta;
+                        }, 
+                        [] (AlignmentDiff &x, const double v) {
+                            x.dtheta = v;
+                        });
+            }
+
+            /*
+             * From the alignment graph, finds a solution for re-aligning all 
+             * images with minimal error. 
              */
             Edges FindAlignment(double &outError) {
+                double vError = 0, hError = 0;
+
+                FindAlignmentVertical(vError);
+                Edges edges = FindAlignmentHorizontal(hError);
+
+                outError = vError + hError;
+
+                return edges;
+            }
+
+            /*  
+             * Performs alignment for a given property of the graph. 
+             * While solving, the property is treated as an offset. 
+             *
+             * That means that the result is applied by adding it to the value. 
+             *
+             * @param outError The overall error of the found solution. 
+             * @param extractor Property extractor function.
+             * @param applier Property apply function. 
+             */
+            Edges FindAlignmentInternal(double &outError, 
+                    std::function<double(const AlignmentDiff&)> extractor, 
+                    std::function<void(AlignmentDiff&, const double)> applier) {
 
                 STimer tFindAlignment;
                 // Pre-calculate the size of our equation system. 
@@ -267,8 +324,8 @@ namespace optonaut {
 
                     //Reject upper quartil of correlator edges only and sort by absolute delta. 
                     std::sort(correlatorEdges.begin(), correlatorEdges.end(), 
-                        [] (const Edge &a, const Edge &b) {
-                            return abs(a.value.dphi) < abs(b.value.dphi);
+                        [&] (const Edge &a, const Edge &b) {
+                            return abs(extractor(a.value)) < abs(extractor(b.value));
                         });
 
                     size_t m = correlatorEdges.size();
@@ -297,11 +354,11 @@ namespace optonaut {
                             O.at<double>(remap[edge.from], remap[edge.from]) += 
                                 alpha * weight;
                             R.at<double>(remap[edge.from]) += 
-                                2 * weight * edge.value.dphi / 2;
+                                2 * weight * extractor(edge.value) / 2;
 
                             //Use non-linear weights - less penalty for less overlap. 
                             if(!edge.value.forced) {
-                                error += weight * abs(edge.value.dphi);
+                                error += weight * abs(extractor(edge.value));
                                 weightSum += weight;
                                 edgeCount++;
                             }
@@ -321,8 +378,13 @@ namespace optonaut {
                 // Extract solution from equation system. 
                 for(auto &adj : relations.GetEdges()) {
                    for(auto &edge : adj.second) {
-                        edge.value.dphi -= x.at<double>(remap[edge.from]);
-                        edge.value.dphi += x.at<double>(remap[edge.to]);
+                        applier(edge.value, 
+                                extractor(edge.value) - 
+                                x.at<double>(remap[edge.from]));
+
+                        applier(edge.value, 
+                                extractor(edge.value) + 
+                                x.at<double>(remap[edge.to]));
                    } 
                 }
                 

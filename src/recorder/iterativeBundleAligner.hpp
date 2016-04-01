@@ -63,11 +63,12 @@ class IterativeBundleAligner {
                         swap(aCenter, bCenter);
                    }
 
-                   double dPhi = edge.value.dphi * 10;
+                   //double dPhi = edge.value.dphi * 10;
+                   double dTheta = edge.value.dtheta * 10;
 
-                   Scalar color(255 * min(1.0, max(0.0, -dPhi)), 
+                   Scalar color(255 * min(1.0, max(0.0, -dTheta)), 
                                0, 
-                               255 * min(1.0, max(0.0, dPhi)));
+                               255 * min(1.0, max(0.0, dTheta)));
                    
                    int thickness = 6;
 

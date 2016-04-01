@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
     
     cout << "Selecting " << n << " images for further processing." << endl;
 
-    auto miniImages = minimal::ImagePreperation::CreateMinifiedCopy(fullImages, 2);
+    auto miniImages = minimal::ImagePreperation::CreateMinifiedCopy(fullImages, 3);
     
     if(outputUnaligned) {
         auto res = debugger.Stitch(miniImages);
@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
     cout << "Performing in/extrinsics adjustment bundle adjustment." << endl;
 
     IterativeBundleAligner aligner;
-    aligner.Align(miniImages, fullGraph, imagesToTargets, 1, 0.5);
+    aligner.Align(miniImages, fullGraph, imagesToTargets, 3, 0.5);
 
     minimal::ImagePreperation::CopyIntrinsics(miniImages, fullImages);
     minimal::ImagePreperation::CopyExtrinsics(miniImages, fullImages);
