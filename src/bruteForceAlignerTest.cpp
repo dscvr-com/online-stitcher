@@ -58,7 +58,6 @@ int main(int argc, char** argv) {
     cout << "Performing in/extrinsics adjustment via center ring." << endl;
   
     //TODO: Fix this code. 
-   /* 
     vector<vector<InputImageP>> rings = fullGraph.SplitIntoRings(miniImages);
 
     for(size_t k = 0; k < rings.size(); k++) { 
@@ -69,7 +68,6 @@ int main(int argc, char** argv) {
         //    centerImages[0]->intrinsics.copyTo(miniImages[i]->intrinsics);
         //}
     }
-    */
 
     if(outputUnaligned) {
         auto res = debugger.Stitch(miniImages);
