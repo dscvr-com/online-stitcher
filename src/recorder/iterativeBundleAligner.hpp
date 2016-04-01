@@ -98,7 +98,7 @@ class IterativeBundleAligner {
         }
 
     public: 
-        IterativeBundleAligner() : debugger(300) { }
+        IterativeBundleAligner() : debugger(200) { }
 
         void Align(const vector<InputImageP> &images, 
                 const RecorderGraph &graph, 
