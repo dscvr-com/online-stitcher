@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
     //cout << cv::getBuildInformation() << endl;
     bool outputUnaligned = true;
             
-    SimpleSphereStitcher debugger;
+    SimpleSphereStitcher debugger(400);
 
     auto allImages = minimal::ImagePreperation::LoadAndPrepareArgs(argc, argv);
 
@@ -57,23 +57,22 @@ int main(int argc, char** argv) {
 
     cout << "Performing in/extrinsics adjustment via center ring." << endl;
   
-    //TODO: Fix this code. 
     vector<vector<InputImageP>> rings = fullGraph.SplitIntoRings(miniImages);
 
-    for(size_t k = 0; k < rings.size(); k++) { 
-        minimal::ImagePreperation::SortById(rings[k]);
-        RingCloser::CloseRing(rings[k]);
-    }
+    //size_t k = rings.size() / 2;
 
-    if(outputUnaligned) {
-        auto res = debugger.Stitch(miniImages);
-        imwrite("dbg/center_ring_aligned.jpg", res->image.data);
-    }
+    //minimal::ImagePreperation::SortById(rings[k]);
+    //RingCloser::CloseRing(rings[k]);
+
+    //if(outputUnaligned) {
+    //    auto res = debugger.Stitch(miniImages);
+    //    imwrite("dbg/center_ring_aligned.jpg", res->image.data);
+    //}
 
     cout << "Performing in/extrinsics adjustment bundle adjustment." << endl;
 
     IterativeBundleAligner aligner;
-    aligner.Align(miniImages, fullGraph, imagesToTargets, 3, 0.5);
+    aligner.Align(miniImages, fullGraph, imagesToTargets, 5, 0.5);
 
     minimal::ImagePreperation::CopyIntrinsics(miniImages, fullImages);
     minimal::ImagePreperation::CopyExtrinsics(miniImages, fullImages);

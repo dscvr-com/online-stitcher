@@ -47,8 +47,8 @@ int main(int argc, char** argv) {
         auto zero = Recorder::iosZero;
         auto baseInv = base.t();
 
-        //imgA->originalExtrinsics = base * zero * imgA->originalExtrinsics.inv() * baseInv;
-        //imgB->originalExtrinsics = base * zero * imgB->originalExtrinsics.inv() * baseInv;
+        imgA->originalExtrinsics = base * zero * imgA->originalExtrinsics.inv() * baseInv;
+        imgB->originalExtrinsics = base * zero * imgB->originalExtrinsics.inv() * baseInv;
         imgA->adjustedExtrinsics = imgA->originalExtrinsics;
         imgB->adjustedExtrinsics = imgB->originalExtrinsics;
         
@@ -59,17 +59,19 @@ int main(int argc, char** argv) {
         STimer timer;
 
         PairwiseCorrelator corr;
-        auto result = corr.Match(imgA, imgB, 4, 4, true); 
+        auto result = corr.Match(imgA, imgB, 4, 4, false, 0.5, 1.8); 
 
         if(!result.valid) {
             cout << "Correlation: Rejected " << result.rejectionReason << "." << endl;
         }
+      
+        cout << "[" << i << "] BiasY: " << result.angularOffset.y << endl;
+        cout << "[" << i << "] BiasX: " << result.angularOffset.x << endl;
 
-        cout << "BiasY: " << result.angularOffset.y << endl;
-
-        Mat rotY;
+        Mat rotY, rotX;
         CreateRotationY(result.angularOffset.y, rotY);
-        imgA->adjustedExtrinsics = rotY * imgA->adjustedExtrinsics; 
+        CreateRotationX(-result.angularOffset.x, rotX);
+        imgA->adjustedExtrinsics = imgA->adjustedExtrinsics * rotY * rotX; 
         imgA->originalExtrinsics = imgA->adjustedExtrinsics;
         
         scene = stitcher.Stitch({imgA, imgB});

@@ -60,7 +60,7 @@ namespace optonaut {
             const RecorderGraph &graph; 
             const BiMap<size_t, uint32_t> &imagesToTargets;
             static const bool debug = false;
-            map<size_t, double> alignmentCorrections;
+            map<size_t, Point2d> alignmentCorrections;
         public:
 
             /*
@@ -85,7 +85,7 @@ namespace optonaut {
             /*
              * Sets given alignment offsets.
              */ 
-            void SetAlignment(map<size_t, double> alignment)
+            void SetAlignment(map<size_t, Point2d> alignment)
             {
                 this->alignmentCorrections = alignment;
             }
@@ -93,7 +93,7 @@ namespace optonaut {
             /*
              * Gets the alignment offsets associated with this graph. 
              */
-            const map<size_t, double>& GetAlignment() const {
+            const map<size_t, Point2d>& GetAlignment() const {
                 return alignmentCorrections;
             }
        
@@ -144,7 +144,9 @@ namespace optonaut {
                     int minSize = min(imgA->image.cols, imgA->image.rows) / 1.8;
 
                     STimer tMatch;
-                    auto res = aligner.Match(imgB, imgA, minSize, minSize);
+                    auto res = aligner.Match(imgB, imgA, minSize, 
+                            minSize, false, 0.5);
+
                     tMatch.Tick("Matching");
 
                     // If our match was invalid, just do damping it. 
@@ -159,7 +161,7 @@ namespace optonaut {
 
                     // Copy matching information to the correspondence info
                     aToB.dphi = res.angularOffset.y;
-                    aToB.dtheta = res.angularOffset.y;
+                    aToB.dtheta = res.angularOffset.x;
                     aToB.overlap = res.correlationCoefficient * 2;
                     aToB.valid = res.valid;
                     aToB.rejectionReason = res.rejectionReason;
@@ -215,26 +217,48 @@ namespace optonaut {
              * Optimizes for vertical alignment. 
              */
             Edges FindAlignmentHorizontal(double &outError) {
-                return FindAlignmentInternal(outError,
+                Mat res;
+                vector<int> invmap;
+
+                Edges edges = FindAlignmentInternal(outError,
                         [] (const AlignmentDiff &x) {
                             return x.dphi;
                         }, 
                         [] (AlignmentDiff &x, const double v) {
                             x.dphi = v;
-                        });
+                        }, res, invmap);
+                
+                // Remember the alignment corrections. 
+                for (size_t i = 0; i < invmap.size(); ++i) {
+                    this->alignmentCorrections[invmap[i]].y = res.at<double>(i, 0);
+                    //cout << invmap[i] << " alignment: " << x.at<double>(i, 0) << endl;
+                }
+                
+                return edges;
             }
             
             /*
              * Optimizes for horizontal alignment. 
              */
             Edges FindAlignmentVertical(double &outError) {
-                return FindAlignmentInternal(outError,
+                Mat res;
+                vector<int> invmap;
+
+                Edges edges = FindAlignmentInternal(outError,
                         [] (const AlignmentDiff &x) {
                             return x.dtheta;
                         }, 
                         [] (AlignmentDiff &x, const double v) {
                             x.dtheta = v;
-                        });
+                        }, res, invmap);
+                
+                // Remember the alignment corrections. 
+                for (size_t i = 0; i < invmap.size(); ++i) {
+                    this->alignmentCorrections[invmap[i]].x = res.at<double>(i, 0);
+                    //cout << invmap[i] << " alignment: " << x.at<double>(i, 0) << endl;
+                }
+                
+                return edges;
             }
 
             /*
@@ -264,7 +288,9 @@ namespace optonaut {
              */
             Edges FindAlignmentInternal(double &outError, 
                     std::function<double(const AlignmentDiff&)> extractor, 
-                    std::function<void(AlignmentDiff&, const double)> applier) {
+                    std::function<void(AlignmentDiff&, const double)> applier, 
+                    Mat &res, 
+                    vector<int> &invmap) {
 
                 STimer tFindAlignment;
                 // Pre-calculate the size of our equation system. 
@@ -277,7 +303,6 @@ namespace optonaut {
                
                 // Build forward/backward lookup tables.  
                 vector<int> remap(maxId);
-                vector<int> invmap;
                 
                 for(auto &adj : relations.GetEdges()) {
                     remap[adj.first] = (int)invmap.size();
@@ -286,7 +311,7 @@ namespace optonaut {
 
                 int n = (int)invmap.size();
 
-                Mat res = Mat::zeros(n, 1, CV_64F);
+                res = Mat::zeros(n, 1, CV_64F);
                
                 // Build equation systen
                 // R = sum of relative offsets.
@@ -390,12 +415,6 @@ namespace optonaut {
                 
                 assert((int)invmap.size() == n);
 
-                // Remember the alignment corrections. 
-                for (int i = 0; i < n; ++i) {
-                    this->alignmentCorrections[invmap[i]] = res.at<double>(i, 0);
-                    //cout << invmap[i] << " alignment: " << x.at<double>(i, 0) << endl;
-                }
-
                 tFindAlignment.Tick("Find Alignment");
 
                 return allEdges;
@@ -405,11 +424,13 @@ namespace optonaut {
              * Applies the calculated alignment correction to the submitted image. 
              */
             void Apply(InputImageP in) const {
-                Mat bias(4, 4, CV_64F);
+                Mat ybias(4, 4, CV_64F);
+                //Mat xbias(4, 4, CV_64F);
 
                 if(alignmentCorrections.find(in->id) != alignmentCorrections.end()) {
-                    CreateRotationY(alignmentCorrections.at(in->id), bias);
-                    in->adjustedExtrinsics = bias * in->adjustedExtrinsics; 
+                    CreateRotationY(alignmentCorrections.at(in->id).y, ybias);
+                    //CreateRotationX(-alignmentCorrections.at(in->id).x, xbias);
+                    in->adjustedExtrinsics = in->adjustedExtrinsics * ybias; // * xbias; 
                 }
             }
     };
