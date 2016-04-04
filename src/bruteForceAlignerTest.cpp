@@ -59,15 +59,15 @@ int main(int argc, char** argv) {
   
     vector<vector<InputImageP>> rings = fullGraph.SplitIntoRings(miniImages);
 
-    //size_t k = rings.size() / 2;
+    size_t k = rings.size() / 2;
 
-    //minimal::ImagePreperation::SortById(rings[k]);
-    //RingCloser::CloseRing(rings[k]);
+    minimal::ImagePreperation::SortById(rings[k]);
+    RingCloser::CloseRing(rings[k]);
 
-    //if(outputUnaligned) {
-    //    auto res = debugger.Stitch(miniImages);
-    //    imwrite("dbg/center_ring_aligned.jpg", res->image.data);
-    //}
+    if(outputUnaligned) {
+        auto res = debugger.Stitch(miniImages);
+        imwrite("dbg/center_ring_aligned.jpg", res->image.data);
+    }
 
     cout << "Performing in/extrinsics adjustment bundle adjustment." << endl;
 

@@ -47,7 +47,7 @@ namespace optonaut {
             double angleAdjustment = 0;
           
             if(adjustExtrinsics) {
-                angleAdjustment = -result.angularOffset.y;
+                angleAdjustment = result.angularOffset.y;
                 cout << "Ring closure: Adjusting by: " 
                     << result.angularOffset.y << endl;
             }
