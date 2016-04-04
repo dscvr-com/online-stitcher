@@ -18,6 +18,9 @@ namespace optonaut {
          */
         static inline bool CloseRing(std::vector<InputImageP> ring) {
             PairwiseCorrelator corr;
+
+            const bool adjustExtrinsics = true;
+            const bool adjustIntrinsics = false;
             
             if(CheckpointStore::DebugStore != nullptr) {
                 CheckpointStore::DebugStore->SaveRectifiedImage(ring.front());
@@ -37,21 +40,31 @@ namespace optonaut {
             // that would lead to black stripes. A better solution would be to
             // just record more ring. 
             if(result.angularOffset.y > 0.12) {
-                cout << "Ring closure: Rejected because it would lead to black stripes"<< endl;
-                return false;
+                cout << "Ring closure: Warning it could lead to black stripes"<< endl;
+                //return false;
             }
-           
-            cout << "Ring closure: Adjusting by: " << result.angularOffset.y << endl;
 
-            double focalLenAdjustment = (1 - result.angularOffset.y / M_PI * 2);
-            
-            cout << "Ring closure: Adjusting focal len by: " << focalLenAdjustment << endl;
+            double angleAdjustment = 0;
+          
+            if(adjustExtrinsics) {
+                angleAdjustment = -result.angularOffset.y;
+                cout << "Ring closure: Adjusting by: " 
+                    << result.angularOffset.y << endl;
+            }
+
+            double focalLenAdjustment = 1; 
+           
+            if(adjustIntrinsics)  {
+                focalLenAdjustment = (1 - result.angularOffset.y / M_PI * 2);
+                cout << "Ring closure: Adjusting focal len by: " 
+                    << focalLenAdjustment << endl;
+            } 
 
             size_t n = ring.size();
 
             // Move images according to their position. 
             for(size_t i = 0; i < n; i++) {
-                double ydiff = result.angularOffset.y * 
+                double ydiff = angleAdjustment * 
                     (1.0 - ((double)i) / ((double)n));
                 Mat correction;
                 CreateRotationY(ydiff, correction);
