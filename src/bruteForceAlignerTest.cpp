@@ -84,8 +84,9 @@ int main(int argc, char** argv) {
 
     //Just for testing. 
     RecorderGraph halfGraph = RecorderGraphGenerator::Sparse(fullGraph, 2);
-    auto finalImages = halfGraph.SelectBestMatches(fullImages, imagesToTargets); 
-    
+    auto finalImages = halfGraph.SelectBestMatches(fullImages, imagesToTargets, true); 
+    cout << "Selecting " << finalImages.size() << " images for final step." << endl;
+
     minimal::ImagePreperation::LoadAllImages(finalImages);
         
     minimal::StereoConverter::StitchAndWrite(
