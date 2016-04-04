@@ -46,7 +46,8 @@ int main(int argc, char** argv) {
 
     int n = fullImages.size();
     
-    cout << "Selecting " << n << " images for further processing." << endl;
+    cout << "Selecting " << n << "/" << fullGraph.Size() << 
+        " images for further processing." << endl;
 
     auto miniImages = minimal::ImagePreperation::CreateMinifiedCopy(fullImages, 3);
     
@@ -85,7 +86,8 @@ int main(int argc, char** argv) {
     //Just for testing. 
     RecorderGraph halfGraph = RecorderGraphGenerator::Sparse(fullGraph, 2);
     auto finalImages = halfGraph.SelectBestMatches(fullImages, imagesToTargets, true); 
-    cout << "Selecting " << finalImages.size() << " images for final step." << endl;
+    cout << "Selecting " << finalImages.size() << "/" << halfGraph.Size() << 
+        " images for final step." << endl;
 
     minimal::ImagePreperation::LoadAllImages(finalImages);
         
