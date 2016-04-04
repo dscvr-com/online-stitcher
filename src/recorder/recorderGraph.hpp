@@ -331,16 +331,18 @@ namespace optonaut {
         /*
          * Greedely selects the best matches for the given images. 
          */
-        vector<InputImageP> SelectBestMatches(const vector<InputImageP> &imgs) {
+        vector<InputImageP> SelectBestMatches(const vector<InputImageP> &imgs, 
+                bool allowDuplicates = false) {
             BiMap<size_t, uint32_t> dummy;
-            return SelectBestMatches(imgs, dummy); 
+            return SelectBestMatches(imgs, dummy, allowDuplicates); 
         }
 
         /*
          * Greedely selects the best matches for the given images. 
          */
         vector<InputImageP> SelectBestMatches(const vector<InputImageP> &_imgs, 
-                BiMap<size_t, uint32_t> &imagesToTargets) const {
+                BiMap<size_t, uint32_t> &imagesToTargets,
+                bool allowDuplicates = false) const {
 
             const double thresh = M_PI / 16;
 
@@ -375,7 +377,9 @@ namespace optonaut {
                         continue;
 
 
-                    imgs.erase(it);
+                    if(!allowDuplicates) {
+                        imgs.erase(it);
+                    }
                     imagesToTargets.Insert(min->id, target.globalId);
 
                     res.push_back(min);
