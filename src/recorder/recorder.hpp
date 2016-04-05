@@ -74,6 +74,7 @@ namespace optonaut {
         RingProcessor<SelectionInfo> stereoRingBuffer;
         AsyncQueue<StereoImage> saveQueue;
         AsyncQueue<InputImageP> debugQueue;
+        AsyncQueue<SelectionInfo> postProcessImageQueue;
 
         vector<SelectionInfo> firstRing;
         bool firstRingFinished;
@@ -129,7 +130,11 @@ namespace optonaut {
                 inputBufferQueue.Push(x);
             }, Vec3d(M_PI / 64 * dt, M_PI / 128 * dt, M_PI / 16 * dt)),
             recorderController(recorderGraph, [this] (const SelectionInfo &x) {
-                ForwardToStereoConversionQueue(x);
+                // mca: save the image here? and not forward the it to the stereo conversion
+                // what about the external extrinsics? do we need the original extrinsics? or just the image itself?
+            
+                //ForwardToStereoConversionQueue(x);
+                postProcessImageQueue.Push(x);
             }, Vec3d(M_PI / 16 * dt, M_PI / 16 * dt, M_PI / 8 * dt), false),
             imagesToRecord(preRecorderGraph.Size()),
             recordedImages(0),
@@ -157,7 +162,15 @@ namespace optonaut {
                 static int debugCounter = 0;
                 InputImageToFile(x, 
                         this->debugPath + "/" + ToString(debugCounter++) + ".jpg");
- 	    }),
+ 	           }),
+            postProcessImageQueue([this] (const SelectionInfo &x) {
+                // mca:image name will be the globalId
+                AssertNEQ(x.image, InputImageP(NULL));
+                // mca:must be in storage Sink? 
+                InputImageToFile(x.image, 
+                         "post/" + ToString(x.closestPoint.globalId) + ".jpg");
+ 	          }),
+
             firstRingFinished(false),
             previewGraph(RecorderGraphGenerator::Sparse(
                         recorderGraph, 
@@ -558,6 +571,7 @@ namespace optonaut {
             stereoRingBuffer.Flush();
             saveQueue.Finish();
             debugQueue.Finish();
+            postProcessImageQueue.Finish();
             
             if(debugPath != "") {
                 std::abort();
