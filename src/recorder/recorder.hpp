@@ -134,7 +134,7 @@ namespace optonaut {
                 // what about the external extrinsics? do we need the original extrinsics? or just the image itself?
             
                 //ForwardToStereoConversionQueue(x);
-                postProcessImageQueue.Push(x);
+                ForwardToPostProcessImageQueue(x);
             }, Vec3d(M_PI / 16 * dt, M_PI / 16 * dt, M_PI / 8 * dt), false),
             imagesToRecord(preRecorderGraph.Size()),
             recordedImages(0),
@@ -167,8 +167,10 @@ namespace optonaut {
                 // mca:image name will be the globalId
                 AssertNEQ(x.image, InputImageP(NULL));
                 // mca:must be in storage Sink? 
+                // testing if right data will be saved
                 InputImageToFile(x.image, 
                          "post/" + ToString(x.closestPoint.globalId) + ".jpg");
+                
  	          }),
 
             firstRingFinished(false),
@@ -221,7 +223,31 @@ namespace optonaut {
                 aligner = shared_ptr<Aligner>(new TrivialAligner());
             }
         }
-        
+  
+        void ForwardToPostProcessImageQueue(SelectionInfo in) {
+            
+            if(recorderGraph.HasChildRing(in.closestPoint.ringId)) {
+                if(keyframeCount % 2 == 0) {
+                    //Save some memory by sparse keyframing.
+                    if(!in.image->image.IsLoaded()) {
+                        in.image->image.Load();
+                    }
+                    aligner->AddKeyframe(CloneAndDownsample(in.image));
+                }
+
+                keyframeCount++;
+            }
+
+            int size = postProcessImageQueue.Push(in);
+            if(size > 100) {
+                cout << "Warning: Post Process Image Queue overflow: " <<  size << endl;
+                this_thread::sleep_for(chrono::seconds(1));
+            }
+        }
+       
+
+
+
         void ForwardToStereoConversionQueue(SelectionInfo in) {
             
             if(recorderGraph.HasChildRing(in.closestPoint.ringId)) {
