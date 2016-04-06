@@ -18,14 +18,15 @@ namespace optonaut {
     public:
         virtual void Push(SelectionInfo in) {
             imageStore.SaveRectifiedImage(in.image);
-            
-            //in.image.Unload();
         }
 
         virtual void Finish(std::vector<std::vector<InputImageP>> &postRings, 
                             const std::map<size_t, double> &gains) {
             
-            imageStore.SaveStitcherInput(postRings, gains);
+             imageStore.SaveStitcherInput(postRings, gains);
+
+
+
         }
 
 

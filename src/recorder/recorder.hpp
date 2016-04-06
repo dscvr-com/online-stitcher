@@ -447,7 +447,10 @@ namespace optonaut {
 
         void SavePostProcessImage(SelectionInfo in) {
             sink.Push(in);
-            postImages.push_back(in.image);
+
+            auto copy = std::make_shared<InputImage>(*in.image);
+            copy->image = Image();
+            postImages.push_back(copy);
             
         }
  
@@ -702,6 +705,10 @@ namespace optonaut {
                     preRecorderGraph.SplitIntoRings(postImages);
 
                 sink.Finish(postRings, exposure.GetGains());
+                
+
+
+
             } else {
                 AssertWM(false, "No results in recorder.");
             }

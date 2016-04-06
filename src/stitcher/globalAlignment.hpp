@@ -117,6 +117,10 @@ namespace optonaut {
             // preLoad
             auto loadFullImage = 
             	[&] (const SelectionInfo &img) {
+                   // unload the last minified image
+                   if (img.image->image.IsLoaded())
+                   		img.image->image.Unload();          
+                   // load the full image ( data from the source att)
                    img.image->image.Load();          
             };
 
