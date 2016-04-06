@@ -6,7 +6,7 @@
 #include <opencv2/stitching/detail/blenders.hpp>
 #include <opencv2/core/ocl.hpp>
 
-#include "recorder/recorderMotor.hpp"
+#include "recorder/recorder.hpp"
 #include "recorder/storageSink.hpp"
 #include "stitcher/stitcherSink.hpp"
 #include "common/intrinsics.hpp"
