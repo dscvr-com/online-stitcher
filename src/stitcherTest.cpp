@@ -8,7 +8,9 @@
 
 #include "recorder/recorder.hpp"
 #include "recorder/storageSink.hpp"
+#include "recorder/imageSink.hpp"
 #include "stitcher/stitcherSink.hpp"
+#include "stitcher/globalAlignment.hpp"
 #include "common/intrinsics.hpp"
 #include "common/backtrace.hpp"
 #include "common/drawing.hpp"
@@ -32,7 +34,7 @@ Size imageSize;
 vector<InputImageP> allImages;
 vector<Mat> originalExtrinsics;
 
-void Record(vector<string> &files, StereoSink &sink) {
+void Record(vector<string> &files, ImageSink &sink) {
 
     if(files.size() == 0) {
         cout << "No Input." << endl;
@@ -47,7 +49,7 @@ void Record(vector<string> &files, StereoSink &sink) {
     for(size_t i = 0; i < files.size(); i++) {
         auto lt = system_clock::now();
         auto image = InputImageFromFile(files[i], false);
-        cout << "[Record] InputImageFromFile :" << files[i] << endl;
+        //cout << "[Record] InputImageFromFile :" << files[i] << endl;
             
         //image->intrinsics = iPhone6Intrinsics;
         
@@ -70,8 +72,10 @@ void Record(vector<string> &files, StereoSink &sink) {
         if(i == 0) {
             recorder = shared_ptr<Recorder>(
                     new Recorder(Recorder::iosBase, Recorder::iosZero, 
-                        image->intrinsics, sink, "", RecorderGraph::ModeCenter, 
-                        isAsync));
+                        //image->intrinsics, sink, "", RecorderGraph::ModeCenter, 
+                        image->intrinsics, sink, "", RecorderGraph::ModeTruncated
+                       // isAsync));
+                        ));
 
             // Needed for debug. 
             intrinsics = image->intrinsics;
@@ -128,12 +132,14 @@ int main(int argc, char** argv) {
     CheckpointStore leftStore("tmp/left/", "tmp/shared/");
     CheckpointStore rightStore("tmp/right/", "tmp/shared/");
     CheckpointStore commonStore("tmp/common/", "tmp/shared/");
+    CheckpointStore postProcStore("tmp/post/", "tmp/shared/");
     
     //DummyCheckpointStore leftStore;
     //DummyCheckpointStore rightStore;
     //DummyCheckpointStore commonStore;
     
-    StorageSink storeSink(leftStore, rightStore);
+  //  StorageSink storeSink(leftStore, rightStore);
+    ImageSink imageSink(postProcStore);
     StitcherSink stitcherSink;
 
     cout << "Starting." << endl;
@@ -143,7 +149,7 @@ int main(int argc, char** argv) {
 
     for(int i = 0; i < n; i++) {
         string imageName(argv[i + 1]);
-        cout << "imageName :" << imageName << endl;
+        //cout << "imageName :" << imageName << endl;
         files.push_back(imageName);
     }
 
@@ -151,12 +157,42 @@ int main(int argc, char** argv) {
 
     if(!leftStore.HasUnstitchedRecording()) {
         cout << "Recording." << endl;
-        if(useStitcherSink) {
-            Record(files, stitcherSink);
-        } else {
-            Record(files, storeSink);
-        }
+       // if(useStitcherSink) {
+       //     Record(files, stitcherSink);
+      //  } else {
+            //Record(files, storeSink);
+            Record(files, imageSink);
+      //  }
     }
+
+
+		GlobalAlignment globalAlignment = GlobalAlignment(postProcStore, leftStore, rightStore );
+    globalAlignment.Finish();
+		ExposureCompensator dummyCompensator;
+
+
+    MultiRingStitcher leftStitcher(leftStore);
+    MultiRingStitcher rightStitcher(rightStore);
+
+		vector<vector<InputImageP>> leftRings;
+   	vector<vector<InputImageP>> rightRings;
+    map<size_t, double> gains;
+    leftStore.LoadStitcherInput(leftRings, gains);
+    rightStore.LoadStitcherInput(rightRings, gains);
+
+   	leftStitcher.InitializeForStitching(leftRings, dummyCompensator);
+		rightStitcher.InitializeForStitching(rightRings, dummyCompensator);
+
+
+
+    auto resLeft = leftStitcher.Stitch(ProgressCallback::Empty);
+    auto resRight = rightStitcher.Stitch(ProgressCallback::Empty);
+
+
+
+
+
+
     
     if(!useStitcherSink) {
 

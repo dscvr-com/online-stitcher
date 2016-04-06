@@ -1,3 +1,4 @@
+
 #include "../io/inputImage.hpp"
 #include "../io/io.hpp"
 #include "../io/checkpointStore.hpp"
@@ -13,6 +14,7 @@
 #include "../stitcher/ringStitcher.hpp"
 #include "../debug/debugHook.hpp"
 #include "../recorder/stereoSink.hpp"
+#include "../recorder/imageSink.hpp"
 
 #include "recorderGraph.hpp"
 #include "recorderGraphGenerator.hpp"
@@ -24,8 +26,13 @@
 
 #include <chrono>
 
+
+
 #ifndef OPTONAUT_RECORDER_HEADER
 #define OPTONAUT_RECORDER_HEADER
+
+
+
 
 namespace optonaut {
     
@@ -45,10 +52,12 @@ namespace optonaut {
         JumpFilter jumpFilter;
         shared_ptr<Aligner> aligner;
 
-        StereoSink &sink;
+       // StereoSink &sink;
+        ImageSink &sink;
         
         vector<InputImageP> leftImages;
         vector<InputImageP> rightImages;
+        vector<InputImageP> postImages;
 
         ExposureCompensator exposure;
 
@@ -60,19 +69,19 @@ namespace optonaut {
         
         RecorderGraphGenerator generator;
         RecorderGraph preRecorderGraph;
-        RecorderGraph recorderGraph;
+     //   RecorderGraph recorderGraph;
         FeedbackImageSelector preController;
-        ImageSelector recorderController;
+        //ImageSelector recorderController;
         
         uint32_t imagesToRecord;
         uint32_t recordedImages;
-        uint32_t keyframeCount;
+     //   uint32_t keyframeCount;
         
-        AsyncQueue<SelectionInfo> inputBufferQueue;
-        QueueProcessor<SelectionInfo> alignerDelayQueue;
-        AsyncQueue<SelectionInfo> stereoConversionQueue;
-        RingProcessor<SelectionInfo> stereoRingBuffer;
-        AsyncQueue<StereoImage> saveQueue;
+        //AsyncQueue<SelectionInfo> inputBufferQueue;
+        //QueueProcessor<SelectionInfo> alignerDelayQueue;
+      //  AsyncQueue<SelectionInfo> stereoConversionQueue;
+     //   RingProcessor<SelectionInfo> stereoRingBuffer;
+      //  AsyncQueue<StereoImage> saveQueue;
         AsyncQueue<InputImageP> debugQueue;
         AsyncQueue<SelectionInfo> postProcessImageQueue;
 
@@ -92,9 +101,11 @@ namespace optonaut {
 
         Mat refinedIntrinsics;
         
+/*
         InputImageP GetParentKeyframe(const Mat &extrinsics) {
             return aligner->GetClosestKeyframe(extrinsics);
         }
+*/
         
     public:
 
@@ -111,12 +122,12 @@ namespace optonaut {
         static bool exposureEnabled;
         static bool alignmentEnabled;
 
-        static constexpr double dt = 1;
+        static constexpr double dt = 3;
 
         Recorder(Mat base, Mat zeroWithoutBase, Mat intrinsics, 
-                StereoSink &sink, string debugPath = "",
-                int graphConfiguration = RecorderGraph::ModeAll, 
-                bool isAsync = true) :
+                ImageSink &sink, string debugPath = "",
+                int graphConfiguration = RecorderGraph::ModeAll
+                ) :
             base(base),
             sink(sink),
             stereoConverter(),
@@ -125,38 +136,48 @@ namespace optonaut {
             hasStarted(false),
             generator(),
             preRecorderGraph(generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityNormal, 0, 8)),
-            recorderGraph(RecorderGraphGenerator::Sparse(preRecorderGraph, 2)),
+           // recorderGraph(RecorderGraphGenerator::Sparse(preRecorderGraph, 2)),
             preController(preRecorderGraph, [this] (const SelectionInfo &x) {
-                inputBufferQueue.Push(x);
+               // inputBufferQueue.Push(x);
+                 
+               //ForwardToRecorderController(x);
+                ForwardToPostProcessImageQueue(x);
+
+
             }, Vec3d(M_PI / 64 * dt, M_PI / 128 * dt, M_PI / 16 * dt)),
-            recorderController(recorderGraph, [this] (const SelectionInfo &x) {
+          //  recorderController(recorderGraph, [this] (const SelectionInfo &x) {
                 // mca: save the image here? and not forward the it to the stereo conversion
                 // what about the external extrinsics? do we need the original extrinsics? or just the image itself?
             
                 //ForwardToStereoConversionQueue(x);
-                ForwardToPostProcessImageQueue(x);
-            }, Vec3d(M_PI / 16 * dt, M_PI / 16 * dt, M_PI / 8 * dt), false),
+           //     ForwardToPostProcessImageQueue(x);
+          //  }, Vec3d(M_PI / 16 , M_PI / 16 , M_PI / 8 ), false),
             imagesToRecord(preRecorderGraph.Size()),
             recordedImages(0),
-            keyframeCount(0),
-            inputBufferQueue([this] (const SelectionInfo &x) {
-                ForwardToAligner(x);
-            }),
-            alignerDelayQueue(1,
-                std::bind(&Recorder::ApplyAlignment,
-                          this, placeholders::_1)),
-            stereoConversionQueue(
+            //keyframeCount(0),
+        //    inputBufferQueue([this] (const SelectionInfo &x) {
+        //        ForwardToAligner(x);
+        //    }),
+        //    alignerDelayQueue(1,
+        //        std::bind(&Recorder::ApplyAlignment,
+        //                  this, placeholders::_1)),
+   /*         stereoConversionQueue(
                 std::bind(&Recorder::ForwardToStereoRingBuffer,
                     this, placeholders::_1)),
-            stereoRingBuffer(1,
+*/
+/* 
+           stereoRingBuffer(1,
                 std::bind(&Recorder::ForwardToStereoProcess,
                     this, placeholders::_1,
                     placeholders::_2),
-                std::bind(&Recorder::FinishImage, 
-                    this, placeholders::_1)),
-            saveQueue(
+              //  std::bind(&Recorder::FinishImage, 
+              //      this, placeholders::_1)),
+*/
+     /*       saveQueue(
                     std::bind(&Recorder::SaveStereoResult,
-                    this, placeholders::_1)),
+                    this, placeholders::_1)
+            ),
+*/
 
             debugQueue([this] (const InputImageP &x) {
                 static int debugCounter = 0;
@@ -168,16 +189,15 @@ namespace optonaut {
                 AssertNEQ(x.image, InputImageP(NULL));
                 // mca:must be in storage Sink? 
                 // testing if right data will be saved
-                InputImageToFile(x.image, 
-                         "post/" + ToString(x.closestPoint.globalId) + ".jpg");
+                SavePostProcessImage(x);
                 
  	          }),
 
             firstRingFinished(false),
             previewGraph(RecorderGraphGenerator::Sparse(
-                        recorderGraph, 
+                        preRecorderGraph, 
                         1,
-                        recorderGraph.ringCount / 2)),
+                        preRecorderGraph.ringCount / 2)),
             lastRingId(-1),
             debugPath(debugPath),
             refinedIntrinsics(0, 0, CV_64F)
@@ -218,35 +238,41 @@ namespace optonaut {
             //cout << "Zero: " << zero << endl;
         
             if(Recorder::alignmentEnabled) {
-                aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph, isAsync));
+                //aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph, isAsync));
             } else {
-                aligner = shared_ptr<Aligner>(new TrivialAligner());
+               // aligner = shared_ptr<Aligner>(new TrivialAligner());
             }
         }
   
         void ForwardToPostProcessImageQueue(SelectionInfo in) {
-            
-            if(recorderGraph.HasChildRing(in.closestPoint.ringId)) {
-                if(keyframeCount % 2 == 0) {
-                    //Save some memory by sparse keyframing.
-                    if(!in.image->image.IsLoaded()) {
-                        in.image->image.Load();
-                    }
-                    aligner->AddKeyframe(CloneAndDownsample(in.image));
+                  
+            auto image = in.image;
+
+            recordedImages++;
+            SCounters::Increase("Used Images");
+            //recorderController.Push(x.image);
+           // image->adjustedExtrinsics = 
+           //     aligner->GetCurrentBias() * image->originalExtrinsics;
+
+            if(!firstRingFinished) {
+                if(firstRing.size() == 0 || 
+                   firstRing.back().closestPoint.ringId == in.closestPoint.ringId) {
+                    firstRing.push_back(in);
+                } else {
+                   FinishFirstRing(); 
                 }
-
-                keyframeCount++;
+            } else {
+                if(refinedIntrinsics.cols != 0) {
+                    refinedIntrinsics.copyTo(image->intrinsics);
+                }
+                postProcessImageQueue.Push(in);
             }
-
-            int size = postProcessImageQueue.Push(in);
-            if(size > 100) {
-                cout << "Warning: Post Process Image Queue overflow: " <<  size << endl;
-                this_thread::sleep_for(chrono::seconds(1));
-            }
+       
         }
        
 
 
+/*
 
         void ForwardToStereoConversionQueue(SelectionInfo in) {
             
@@ -256,7 +282,7 @@ namespace optonaut {
                     if(!in.image->image.IsLoaded()) {
                         in.image->image.Load();
                     }
-                    aligner->AddKeyframe(CloneAndDownsample(in.image));
+                   // aligner->AddKeyframe(CloneAndDownsample(in.image));
                 }
 
                 keyframeCount++;
@@ -268,22 +294,25 @@ namespace optonaut {
                 this_thread::sleep_for(chrono::seconds(1));
             }
         }
-
+*/
+/*
         void ForwardToAligner(SelectionInfo in) {
             recordedImages++;
             SCounters::Increase("Used Images");
-            aligner->Push(in.image);
-            alignerDelayQueue.Push(in);
+           // aligner->Push(in.image);
+            //alignerDelayQueue.Push(in);
         }
 
+*/
         RecorderGraph& GetRecorderGraph() {
-            return recorderGraph;
+            return preRecorderGraph;
         }
         
         RecorderGraph& GetPreRecorderGraph() {
             return preRecorderGraph;
         }
 
+/*
         void ForwardToStereoProcess(const SelectionInfo &a, const SelectionInfo &b) {
 
             SelectionEdge dummy;
@@ -302,6 +331,7 @@ namespace optonaut {
         
             ConvertToStereo(pair);
         }
+*/
         
         Mat ConvertFromStitcher(const Mat &in) const {
             return (zero.inv() * baseInv * in * base).inv();
@@ -357,15 +387,19 @@ namespace optonaut {
 
         void Dispose() {
             //cout << "Pipeline Dispose called by " << std::this_thread::get_id() << endl;
-            inputBufferQueue.Dispose();
-            aligner->Dispose();
-            stereoConversionQueue.Dispose();
-            saveQueue.Dispose();
+            //inputBufferQueue.Dispose();
+           // aligner->Dispose();
+           // stereoConversionQueue.Dispose();
+            //saveQueue.Dispose();
         }
         
+/*
         void FinishImage(const SelectionInfo &fin) {
             ExposureFeed(fin.image);
         }   
+*/
+
+/*
         
         void ConvertToStereo(const StereoPair &pair) {
             
@@ -403,12 +437,22 @@ namespace optonaut {
         }
         
         void SaveStereoResult(StereoImage stereo) {
-            sink.Push(stereo);
+          //  sink.Push(stereo);
             
             leftImages.push_back(stereo.A);
             rightImages.push_back(stereo.B);
         }
+*/
+
+
+        void SavePostProcessImage(SelectionInfo in) {
+            sink.Push(in);
+            postImages.push_back(in.image);
+            
+        }
+ 
         
+/*
         void ExposureFeed(InputImageP a) {
             
             if(!exposureEnabled)
@@ -419,6 +463,7 @@ namespace optonaut {
                 exposure.Register(a, b);
             }
         }
+*/
 
         void PushToPreview(SelectionInfo in) {
             if(previewRecorder == nullptr) {
@@ -431,26 +476,27 @@ namespace optonaut {
         }
 
         bool PreviewAvailable() {
-            return true;
+   
+            return previewRecorder != nullptr;
         }
 
         StitchingResultP FinishPreview() {
 
             STimer finishPreview;
             
-            if(recorderGraph.ringCount == 1) {
+            if(preRecorderGraph.ringCount == 1) {
                 // If the input buffer queue is still running,
                 // end it. Otherwise, the preview generation already stopped this.
                 preController.Flush();
-                inputBufferQueue.Finish();
-                aligner->Finish();
-                alignerDelayQueue.Flush();
+               // inputBufferQueue.Finish();
+               // aligner->Finish();
+                //alignerDelayQueue.Flush();
                 if(!firstRingFinished) {
                     FinishFirstRing();
                 }
             } 
-            recorderController.Flush();
-            stereoConversionQueue.Finish();
+            //recorderController.Flush();
+           // stereoConversionQueue.Finish();
             
             Assert(previewRecorder != nullptr);
             
@@ -463,13 +509,14 @@ namespace optonaut {
         
         void ForwardToStereoRingBuffer(const SelectionInfo in) {
             if(lastRingId != (int)in.closestPoint.ringId) {
-                stereoRingBuffer.Flush();
+               // stereoRingBuffer.Flush();
                 lastRingId = in.closestPoint.ringId;
             }
 
-            stereoRingBuffer.Push(in);
+           // stereoRingBuffer.Push(in);
         }
 
+/*
         void ApplyAlignment(SelectionInfo info) {
             
             auto image = info.image;
@@ -492,6 +539,39 @@ namespace optonaut {
             }
         }
 
+
+
+        void ForwardToRecorderController(SelectionInfo info) {
+            
+            auto image = info.image;
+
+            recordedImages++;
+            SCounters::Increase("Used Images");
+            //recorderController.Push(x.image);
+           // image->adjustedExtrinsics = 
+           //     aligner->GetCurrentBias() * image->originalExtrinsics;
+
+            if(!firstRingFinished) {
+                if(firstRing.size() == 0 || 
+                   firstRing.back().closestPoint.ringId == info.closestPoint.ringId) {
+                    firstRing.push_back(info);
+                } else {
+                   FinishFirstRing(); 
+                }
+            } else {
+                if(refinedIntrinsics.cols != 0) {
+                    refinedIntrinsics.copyTo(image->intrinsics);
+                }
+                recorderController.Push(image);
+            }
+        }
+
+
+*/
+
+
+
+
         void FinishFirstRing() {
             firstRingFinished = true; 
 
@@ -504,7 +584,8 @@ namespace optonaut {
 
             for(size_t i = 0; i < firstRing.size(); i++) {
                 PushToPreview(firstRing[i]);
-                recorderController.Push(firstRing[i].image);
+                //recorderController.Push(firstRing[i].image);
+                postProcessImageQueue.Push(firstRing[i]);
             }
             
             firstRing.clear();
@@ -579,23 +660,24 @@ namespace optonaut {
         void Finish() {
             //cout << "Pipeline Finish called by " << std::this_thread::get_id() << endl;
             isFinished = true;
-
+         /*
             if(inputBufferQueue.IsRunning()) {
                 // If the input buffer queue is still running,
                 // end it. Otherwise, the preview generation already stopped this.
                 preController.Flush();
-                inputBufferQueue.Finish();
+               // inputBufferQueue.Finish();
                 aligner->Finish();
-                alignerDelayQueue.Flush();
+                //alignerDelayQueue.Flush();
                 if(!firstRingFinished) {
                     FinishFirstRing();
                 }
             } 
-            recorderController.Flush();
-            stereoConversionQueue.Finish();
+*/
+           // recorderController.Flush();
+          //  stereoConversionQueue.Finish();
             
-            stereoRingBuffer.Flush();
-            saveQueue.Finish();
+           // stereoRingBuffer.Flush();
+            //saveQueue.Finish();
             debugQueue.Finish();
             postProcessImageQueue.Finish();
             
@@ -607,7 +689,7 @@ namespace optonaut {
 
                 if(exposureEnabled)
                     exposure.FindGains();
-               
+              /* 
                 aligner->Postprocess(leftImages);
                 aligner->Postprocess(rightImages);
 
@@ -615,15 +697,20 @@ namespace optonaut {
                     recorderGraph.SplitIntoRings(rightImages);
                 vector<vector<InputImageP>> leftRings = 
                     recorderGraph.SplitIntoRings(leftImages);
+*/
+                vector<vector<InputImageP>> postRings = 
+                    preRecorderGraph.SplitIntoRings(postImages);
 
-                sink.Finish(leftRings, rightRings, exposure.GetGains());
+                sink.Finish(postRings, exposure.GetGains());
             } else {
                 AssertWM(false, "No results in recorder.");
             }
+
+
         }
 
         bool HasResults() {
-            return leftImages.size() > 0;
+            return postImages.size() > 0;
         }
                 
         bool AreAdjacent(SelectionPoint a, SelectionPoint b) {
