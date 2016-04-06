@@ -1,6 +1,7 @@
 #include <memory>
 
 #include "../common/support.hpp"
+#include "../common/static_timer.hpp"
 #include "../common/drawing.hpp"
 #include "../math/stat.hpp"
 #include "../common/assert.hpp"
@@ -34,6 +35,7 @@ class BruteForcePlanarAligner {
     static inline PlanarCorrelationResult Align(const Mat &a, const Mat &b, Mat &corr, int wx, int wy, int ox, int oy) {
 
         AssertFalseInProduction(debug);
+        STimer cTimer;
 
         int mx = 0;
         int my = 0;
@@ -68,6 +70,8 @@ class BruteForcePlanarAligner {
             }
         }
 
+        cTimer.Tick("BF correlator step - wx: " + ToString(wx) + ", wy: " + ToString(wy));
+
         double variance = var.Result();
         size_t count = static_cast<size_t>(wx * 2 + wy * 2);
 
@@ -88,11 +92,13 @@ class PyramidPlanarAligner {
                 && a.rows > minSize / wy && b.rows > minSize / wy) {
             Mat ta, tb;
 
+            STimer cPyrDownTimer;
             pyrDown(a, ta);
             pyrDown(b, tb);
+            cPyrDownTimer.Tick("Aligner PyrDown");
 
             cv::Point guess = PyramidPlanarAligner<Correlator>::AlignInternal(ta, tb, corr, corrXOff, corrYOff, wx, wy, dskip - 1, depth + 1, pool);
-    
+
             if(debug) {
                 pyrUp(corr, corr);
             }
@@ -101,6 +107,7 @@ class PyramidPlanarAligner {
                 res = guess * 2;
             } else {
 
+                STimer cTimer;
                 Mat corrBf;
 
                 PlanarCorrelationResult detailedRes = 
@@ -134,8 +141,10 @@ class PyramidPlanarAligner {
                 auto weight = pow(2, depth);
                 pool.Push(detailedRes.variance, detailedRes.n * weight, 
                         detailedRes.cost * weight);
+                cTimer.Tick("BF Alignment step");
             }
         } else {
+            STimer cTimer;
             PlanarCorrelationResult detailedRes = 
                 BruteForcePlanarAligner<Correlator>::Align(a, b, corr, wx, wy);
                 
@@ -143,6 +152,7 @@ class PyramidPlanarAligner {
             auto weight = pow(2, depth);
             pool.Push(detailedRes.variance, detailedRes.n * weight, 
                     detailedRes.cost * weight);
+            cTimer.Tick("Lowest BF Alignment step");
         }
         
         return res;
@@ -175,15 +185,7 @@ class PyramidPlanarAligner {
                         ToString(sqrt(pool.GetMeasurements().back().s) / 
                             pool.GetMeasurements().back().n);
 
-            int maxX = max(a.cols, b.cols) * wx;
-            int maxY = max(a.rows, b.rows) * wy;
-
-            if(res.x < -maxX || res.x > maxX || res.y < -maxY || res.y > maxY) {
-               filename = filename + "_reject"; 
-            }
-
             imwrite("dbg/" + filename + ".jpg", target->image.data);
-
             
             float max = 255;
 
@@ -272,7 +274,7 @@ class AbsoluteDifference<Vec3b> {
         float dr = (float)va[1] - (float)vb[1];
         float dg = (float)va[2] - (float)vb[2];
                 
-        return (abs(db) + abs(dr) + abs(dg)) / 3;
+        return (std::abs(db) + std::abs(dr) + std::abs(dg)) / 3;
     }
     static inline float Sign() {
         return 1;

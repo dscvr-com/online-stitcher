@@ -16,9 +16,15 @@ namespace minimal {
         return IdFromFileName(a) < IdFromFileName(b);
     }
 
+    /*
+     * Provides multiple methods for loading and selecting images in a test environment. 
+     */
     class ImagePreperation {
         public:
 
+        /*
+         * For all images, creates a copy of the metadata and the downsampled image data. 
+         */
         static std::vector<InputImageP> CreateMinifiedCopy(
                 const std::vector<InputImageP> &in, int downsample = 2) {
 
@@ -61,6 +67,9 @@ namespace minimal {
             return copies;
         }
 
+        /*
+         * Copies extrinsics from all images in from to all images in to. 
+         */
         static void CopyExtrinsics(
                 const std::vector<InputImageP> &from, std::vector<InputImageP> &to) {
             auto byId = CreateImageMap(from);
@@ -70,7 +79,33 @@ namespace minimal {
                 byId.at(img->id)->originalExtrinsics.copyTo(img->originalExtrinsics);
             }
         }
-       
+        
+        /*
+         * Copies intrinsics from all images in from to all images in to. 
+         */
+        static void CopyIntrinsics(
+                const std::vector<InputImageP> &from, std::vector<InputImageP> &to) {
+            auto byId = CreateImageMap(from);
+
+            for(auto img : to) {
+                byId.at(img->id)->intrinsics.copyTo(img->intrinsics);
+            }
+        }
+
+        /*
+         * Sorts the given image list by ID. 
+         */
+        static void SortById(std::vector<InputImageP> &images) {
+            std::sort(images.begin(), images.end(), [] 
+                    (const InputImageP &a, const InputImageP &b) {
+                        return a->id < b->id;
+                    });
+        }
+      
+        /*
+         * Loads an prepares a set of input images.
+         * Intrinsics are converted as if they would come from an iPhone. 
+         */ 
         static std::vector<InputImageP> LoadAndPrepare(
                 std::vector<std::string> files, 
                 bool shallow = true, int limit = -1, int step = 1) {
@@ -102,6 +137,9 @@ namespace minimal {
             return allImages;
         } 
 
+        /*
+         * Loads all the image data of all images, if not already loaded. 
+         */
         static void LoadAllImages(std::vector<InputImageP> &images) {
             for(auto img : images) {
                 if(!img->image.IsLoaded()) {
@@ -110,6 +148,9 @@ namespace minimal {
             }
         }
 
+        /*
+         * Loads a set of input images frmo args. Supports count and skip arguments. 
+         */
         static std::vector<InputImageP> LoadAndPrepareArgs(
                 const int argc, char** argv, bool shallow = true, 
                 int limit = -1, int step = 1) {
@@ -136,6 +177,9 @@ namespace minimal {
             return LoadAndPrepare(files, shallow, limit, step);
         }
 
+        /*
+         * Creates a lookup table that maps image Ids to their respective images. 
+         */
         static std::map<size_t, InputImageP> CreateImageMap(
                 const std::vector<InputImageP> &images) {
             

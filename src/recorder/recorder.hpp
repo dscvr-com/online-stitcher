@@ -1,4 +1,4 @@
-    #include "../io/inputImage.hpp"
+#include "../io/inputImage.hpp"
 #include "../io/io.hpp"
 #include "../io/checkpointStore.hpp"
 #include "../stereo/monoStitcher.hpp"
@@ -16,8 +16,6 @@
 
 #include "recorderGraph.hpp"
 #include "recorderGraphGenerator.hpp"
-#include "streamingRecorderController.hpp"
-#include "asyncAligner.hpp"
 #include "trivialAligner.hpp"
 #include "ringwiseStreamAligner.hpp"
 #include "asyncTolerantRingRecorder.hpp"
@@ -90,6 +88,8 @@ namespace optonaut {
         int lastRingId;
         
         string debugPath;
+
+        Mat refinedIntrinsics;
         
         InputImageP GetParentKeyframe(const Mat &extrinsics) {
             return aligner->GetClosestKeyframe(extrinsics);
@@ -100,6 +100,7 @@ namespace optonaut {
         static Mat androidBase;
         static Mat iosBase;
         static Mat iosZero;
+        static Mat androidZero;
         
         int uselessVariable = 0;
 
@@ -108,6 +109,8 @@ namespace optonaut {
 
         static bool exposureEnabled;
         static bool alignmentEnabled;
+
+        static constexpr double dt = 1;
 
         Recorder(Mat base, Mat zeroWithoutBase, Mat intrinsics, 
                 StereoSink &sink, string debugPath = "",
@@ -124,10 +127,10 @@ namespace optonaut {
             recorderGraph(RecorderGraphGenerator::Sparse(preRecorderGraph, 2)),
             preController(preRecorderGraph, [this] (const SelectionInfo &x) {
                 inputBufferQueue.Push(x);
-            }, Vec3d(M_PI / 64, M_PI / 128, M_PI / 16)),
+            }, Vec3d(M_PI / 64 * dt, M_PI / 128 * dt, M_PI / 16 * dt)),
             recorderController(recorderGraph, [this] (const SelectionInfo &x) {
                 ForwardToStereoConversionQueue(x);
-            }, Vec3d(M_PI / 16, M_PI / 16, M_PI / 8), false),
+            }, Vec3d(M_PI / 16 * dt, M_PI / 16 * dt, M_PI / 8 * dt), false),
             imagesToRecord(preRecorderGraph.Size()),
             recordedImages(0),
             keyframeCount(0),
@@ -161,7 +164,8 @@ namespace optonaut {
                         1,
                         recorderGraph.ringCount / 2)),
             lastRingId(-1),
-            debugPath(debugPath)
+            debugPath(debugPath),
+            refinedIntrinsics(0, 0, CV_64F)
         {
             baseInv = base.inv();
             zero = zeroWithoutBase;
@@ -199,7 +203,7 @@ namespace optonaut {
             //cout << "Zero: " << zero << endl;
         
             if(Recorder::alignmentEnabled) {
-                aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph, exposure, isAsync));
+                aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph, isAsync));
             } else {
                 aligner = shared_ptr<Aligner>(new TrivialAligner());
             }
@@ -442,6 +446,9 @@ namespace optonaut {
                    FinishFirstRing(); 
                 }
             } else {
+                if(refinedIntrinsics.cols != 0) {
+                    refinedIntrinsics.copyTo(image->intrinsics);
+                }
                 recorderController.Push(image);
             }
         }
@@ -453,6 +460,8 @@ namespace optonaut {
             [](const SelectionInfo &x) {
                 return x.image;
             }));
+            refinedIntrinsics = Mat::eye(3, 3, CV_64F);
+            firstRing[0].image->intrinsics.copyTo(refinedIntrinsics);
 
             for(size_t i = 0; i < firstRing.size(); i++) {
                 PushToPreview(firstRing[i]);
@@ -481,10 +490,9 @@ namespace optonaut {
                 copy->exposureInfo = image->exposureInfo;
                 copy->id = image->id;
                 debugQueue.Push(copy);
-                debugQueue.Push(imageTemp);
                 debugCounter++;
             }
-            
+
             AssertM(!isFinished, "Warning: Push after finish - this is probably a racing condition");
             
             //pipeTimer.Tick("Push");
@@ -516,9 +524,9 @@ namespace optonaut {
             
             if(shouldLoad) {
                 //static STimer loadingTime(true);
-                if (!image->IsLoaded()) {
-                    image->LoadFromDataRef();
-                }
+								if (!image->IsLoaded()) {
+                  image->LoadFromDataRef();
+								}
                 //SCounters::Increase("Loaded Images");
                 hasStarted = true;
                 //loadingTime.Tick("## Loading Time");

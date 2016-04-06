@@ -12,7 +12,9 @@
 #define OPTONAUT_SIMPLE_SPHERE_STITCHER_HEADER
 
 namespace optonaut {
-//Fast pure R-Matrix based stitcher
+/*
+ * Fast rotational model stitcher. No seaming, no blending. 
+ */
 class SimpleSphereStitcher {
     private: 
         cv::detail::SphericalWarper warper; //Random warper scale. 

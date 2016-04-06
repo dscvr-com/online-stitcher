@@ -36,10 +36,19 @@ namespace optonaut {
         0, 0, 0, 1
     };
 
+    //Base picked from exsiting data - we might find something better here.
+    double androidZeroData[16] = {
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1
+    };
+
 
     Mat Recorder::androidBase(4, 4, CV_64F, androidBaseData);
     Mat Recorder::iosBase(4, 4, CV_64F, iosBaseData);
     Mat Recorder::iosZero = Recorder::iosBase * Mat(4, 4, CV_64F, iosZeroData) * Recorder::iosBase.inv();
+    Mat Recorder::androidZero = Recorder::androidBase * Mat(4, 4, CV_64F, androidZeroData) * Recorder::androidBase.inv();
 
     string Recorder::tempDirectory = "tmp/";
     string Recorder::version = "0.7.0";

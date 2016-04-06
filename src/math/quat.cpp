@@ -1,3 +1,7 @@
+/*
+ * Quaternion module.  
+ */
+
 #include <opencv2/opencv.hpp>
 #include "quat.hpp"
 #include "support.hpp"
@@ -16,15 +20,14 @@ namespace quat {
         q = Mat(4, 1, CV_64F);
     }
 
-    //Mat To Quaterion Conversion from http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/
     void FromMat(const Mat &a, Mat &q) {
 
         assert(IsQuat(q));
         assert(MatIs(a, 3, 3, CV_64F));
 
         QT w, x, y, z;
-        QT trace = a.at<QT>(0, 0) + a.at<QT>(1, 1) + a.at<QT>(2, 2); // I removed + 1.0f; see discussion with Ethan
-        if( trace > 0 ) {// I changed M_EPSILON to 0
+        QT trace = a.at<QT>(0, 0) + a.at<QT>(1, 1) + a.at<QT>(2, 2);
+        if( trace > 0 ) {
             QT s = 0.5f / sqrtf(trace+ 1.0f);
             w = 0.25f / s;
             x = ( a.at<QT>(2, 1) - a.at<QT>(1, 2) ) * s;
@@ -73,9 +76,8 @@ namespace quat {
         QT sqy = y*y;
         QT sqz = z*z;
 
-        // invs (inverse square length) is only required if quaternion is not already normalised
         QT invs = 1 / (sqx + sqy + sqz + sqw);
-        QT m00 = ( sqx - sqy - sqz + sqw)*invs ; // since sqw + sqx + sqy + sqz =1/invs*invs
+        QT m00 = ( sqx - sqy - sqz + sqw)*invs ; 
         QT m11 = (-sqx + sqy - sqz + sqw)*invs ;
         QT m22 = (-sqx - sqy + sqz + sqw)*invs ;
         

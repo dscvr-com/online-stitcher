@@ -31,6 +31,9 @@ target_link_libraries(optonaut-lib ${OpenCV_LIBS})
 #target_link_libraries(visual-debug-hook ${OSX_LIBS})
 #target_link_libraries(visual-debug-hook ${CMAKE_CURRENT_LIST_DIR}/../vendor/libIrrlicht.a)
 
+add_executable(simple-stitcher simpleStitcherTest.cpp)
+target_link_libraries(simple-stitcher optonaut-lib)
+
 add_executable(to-polar toPol.cpp)
 target_link_libraries(to-polar optonaut-lib)
 

@@ -12,6 +12,10 @@ namespace optonaut {
 
         public: 
 
+        /*
+         * Closes a ring by comparing the first and last image and applying the resulting rotation
+         * offset to all images. The applied offset is interpolated depending on image position. 
+         */
         static inline bool CloseRing(std::vector<InputImageP> ring) {
             PairwiseCorrelator corr;
             
@@ -20,8 +24,10 @@ namespace optonaut {
                 CheckpointStore::DebugStore->SaveRectifiedImage(ring.back());
             }
 
-            auto result = corr.Match(ring.front(), ring.back(), 4, 4, true); 
+            auto result = corr.Match(ring.front(), ring.back(), 4, 4, true, 0.5, 1.8);
 
+            // Todo - if the result is invalid or too negative, it might be better to 
+            // correlate additional images instead only the last image. 
             if(!result.valid) {
                 cout << "Ring closure: Rejected." << endl;
                 return false;
@@ -34,11 +40,16 @@ namespace optonaut {
                 cout << "Ring closure: Rejected because it would lead to black stripes"<< endl;
                 return false;
             }
-
+           
             cout << "Ring closure: Adjusting by: " << result.angularOffset.y << endl;
+
+            double focalLenAdjustment = (1 - result.angularOffset.y / M_PI * 2);
+            
+            cout << "Ring closure: Adjusting focal len by: " << focalLenAdjustment << endl;
 
             size_t n = ring.size();
 
+            // Move images according to their position. 
             for(size_t i = 0; i < n; i++) {
                 double ydiff = result.angularOffset.y * 
                     (1.0 - ((double)i) / ((double)n));
@@ -46,6 +57,9 @@ namespace optonaut {
                 CreateRotationY(ydiff, correction);
                 ring[i]->adjustedExtrinsics = correction * 
                     ring[i]->adjustedExtrinsics;
+
+                ring[i]->intrinsics.at<double>(0, 2) *= focalLenAdjustment;
+                ring[i]->intrinsics.at<double>(1, 2) *= focalLenAdjustment;
             }
             return true;
         }

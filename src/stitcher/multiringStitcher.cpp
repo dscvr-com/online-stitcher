@@ -13,7 +13,6 @@
 #include "../common/ringProcessor.hpp"
 #include "../common/static_timer.hpp"
 #include "../common/functional.hpp"
-#include "../imgproc/correlation.hpp"
 #include "ringStitcher.hpp"
 #include "multiringStitcher.hpp"
 #include "stitchingResult.hpp"
@@ -27,6 +26,9 @@ namespace optonaut {
     
     STimer stitcherTimer;
 
+    /*
+     * Loads a stitching result from the disk cache. 
+     */
     void LoadSRP(CheckpointStore&, const StitchingResultP &a) {
         if(!a->image.IsLoaded()) {
             a->image.Load();
@@ -34,6 +36,9 @@ namespace optonaut {
         }
     }
     
+    /*
+     * Loads a stitching result in grayscale without mask. 
+     */
     void LoadSRPGrayscaleDropMask(CheckpointStore&, 
             const StitchingResultP &a) {
         if(!a->image.IsLoaded()) {
@@ -41,13 +46,19 @@ namespace optonaut {
         }
     }
 
+    /*
+     * Unloads a stitching result from main memory. 
+     */
     void UnLoadSRP(CheckpointStore &store, const StitchingResultP &a) {
         if(store.SupportsPaging()) {
             a->image.Unload();
             a->mask.Unload();
         }
     } 
-    
+   
+    /*
+     * Unloads a stitching result from main memory. Saves the image mask to the disk cache. 
+     */ 
     void UnLoadSRPStoreMask(CheckpointStore &store, const StitchingResultP &a) {
         if(store.SupportsPaging()) {
             a->image.Unload();
@@ -62,6 +73,10 @@ namespace optonaut {
          
     void MultiRingStitcher::AdjustCorners(std::vector<StitchingResultP> &rings, ProgressCallback &progress) {
 
+        /*
+         * Correlates an image pair using OpenCVs extended correlation coefficients. 
+         * Adds the correlation result (the approximate horizontal offset) to the dy cache. 
+         */
         auto correlate = [this] (const StitchingResultP &imgA, const StitchingResultP &imgB) {
             const int warp = MOTION_TRANSLATION;
             Mat affine = Mat::eye(2, 3, CV_32F);
@@ -95,23 +110,36 @@ namespace optonaut {
             dyCache.push_back(dy);
         };
 
+        // Load ring adjustment, if we already have one (for example if we're stitching the right
+        // image, and we want to use the adjustment of the left image). 
         store.LoadRingAdjustment(dyCache);
 
+        // Setup a ring processor without overlap and process our list of rings. 
+        // Process is: Load image in grayscale, correlate, then unload the image.
         if(dyCache.size() == 0) {
             RingProcessor<StitchingResultP> queue(1, 0, 
                 std::bind(&LoadSRPGrayscaleDropMask, std::ref(store), std::placeholders::_1), 
                 correlate, 
                 std::bind(&UnLoadSRP, std::ref(store), std::placeholders::_1));
             queue.Process(rings, progress);
+            
+            // If we did ring adjustment, save the resulting horizontal offset to our cache. 
             store.SaveRingAdjustment(dyCache);
         }
 
+        // Apply the horizontal offset to all rings. 
         for(size_t i = 1; i < rings.size(); i++) {
             rings[i]->corner.y = rings[i - 1]->corner.y - dyCache[i - 1];
         }
     }
 
+    /*
+     * Find seams between all rings. 
+     */
     void FindSeams(std::vector<StitchingResultP> &rings, CheckpointStore &store) {
+
+        // Setup a processing queue without overlap. 
+        // Process is: Load image and mask, find seam, then unload image and mask. 
         RingProcessor<StitchingResultP> queue(1, 0, 
                 std::bind(&LoadSRP, std::ref(store), std::placeholders::_1), 
                 DynamicSeamer::FindHorizontalFromStitchingResult, 
@@ -124,7 +152,6 @@ namespace optonaut {
     }
     
     void MultiRingStitcher::InitializeForStitching(std::vector<std::vector<InputImageP>> &rings, ExposureCompensator &exposure, double ev) {
-        
         this->rings = rings;
         this->exposure.SetGains(exposure.GetGains());
         this->ev = ev;
@@ -135,13 +162,17 @@ namespace optonaut {
         
         cout << "Attempting to stitch ring " << ringId << endl;
 
+        // Attempt to load the ring.
         StitchingResultP res = store.LoadRing(ringId);
 
+        // If ring could be loaded, we can use it instead of stitching it again. 
+        // This happens in case of continuing from a checkpoint. 
         if(res != NULL) {
             progress(1);
             return res;
         }
-        
+       
+        // Otherwise, use the ring stitcher and save the result. 
         RingStitcher stitcher;
         
         res = stitcher.Stitch(ring, progress);
@@ -160,7 +191,8 @@ namespace optonaut {
     StitchingResultP MultiRingStitcher::Stitch(ProgressCallback &progress, const string &debugName) {
 
         stitcherTimer.Tick("StitchStart");
-        
+       
+        // Try to load the result. If we can load it, we don't have to stitch it.  
         StitchingResultP res = store.LoadOptograph();
         if(res != NULL) {
             //Caller expects a loaded image. 
@@ -170,7 +202,8 @@ namespace optonaut {
         }
         
         res = StitchingResultP(new StitchingResult());
-    
+   
+        // Setup a cummulated progress callback for all stages.  
         vector<float> weights(rings.size() + 2);
         fill(weights.begin(), weights.end(), 1.0f / weights.size());
         ProgressCallbackAccumulator progressCallbacks(progress, weights);
@@ -181,7 +214,8 @@ namespace optonaut {
        
         cout << "Attempting to stitch rings." << endl;
         int margin = -1; 
-        
+       
+        // For each ring, stitch. 
         for(size_t i = 0; i < rings.size(); i++) {
             if(rings[i].size() == 0) {
                 progressCallbacks.At(i)(1);
@@ -210,6 +244,8 @@ namespace optonaut {
             stitcherTimer.Tick("Ring Finished");
         }
 
+        // If we have more than one ring, adjust the rings, 
+        // find seams and blend them together. 
         if(stitchedRings.size() > 1) {
             assert(margin != -1);
                
@@ -311,7 +347,6 @@ namespace optonaut {
         
         
         // Final Step, trim away a few pixels to avoid masking issues.
-        
         static const int trim = 2;
         
         res->image = Image(res->image.data(cv::Rect(0, trim, res->image.cols, res->image.rows - trim * 2)));

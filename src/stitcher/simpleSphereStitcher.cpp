@@ -92,11 +92,11 @@ StitchingResultP SimpleSphereStitcher::Stitch(const std::vector<InputImageP> &in
             mask.setTo(Scalar::all(255));
 
             //Prevent warping around. 
-            if(abs(predictedCorners[i].x - corners[i].x) > 3) {
+            if(abs(predictedCorners[i].x - corners[i].x) > 2) {
                 
-                AssertGTM(predictedSizes[i].width, 
-                    predictedSizes[i].height * 4, 
-                    "Is Corner Case");
+                //AssertWGTM(predictedSizes[i].width, 
+                //    predictedSizes[i].height * 4, 
+                //    "Is Corner Case");
 
                 Mat ry4, ry3;
                 CreateRotationY(M_PI, ry4);

@@ -6,6 +6,9 @@
 #define OPTONAUT_JUMP_FILTER_HEADER 
 
 namespace optonaut {
+    /*
+     * Class to remove horizontal jumps in sensor input data. 
+     */
     class JumpFilter {
         private:
             double threshold;
@@ -21,17 +24,24 @@ namespace optonaut {
             // Jump thresh of 0.06 found via matlab. 
             JumpFilter(double threshold = 0.015) : threshold(threshold) { }
 
+            /*
+             * Returns the current rotation estimated by the jump filter. 
+             */
             const Mat &GetState() const {
                 return state;
             }
 
+            /*
+             * Pushes extrinsics into the jump filter. 
+             * Returns true if the extrinsics were valid, false if they needed to be corrected. 
+             */
             bool Push(Mat &in) {
                 
+                // If globally disabled, just return input. 
                 if(!enabled) {
                     in.copyTo(state);
                     return true;
                 }
-                
                 
                 if(state.cols == 0) {
                     //Init case. 
@@ -43,7 +53,8 @@ namespace optonaut {
                 } else {
                     
                     //cout << "State: " << state << endl;
-                    
+                   
+                    // Calculate horizontal rotation difference.  
                     AssertEQ(determinant(state), 1.0);
                     
                     Mat rvec;
@@ -56,6 +67,7 @@ namespace optonaut {
                     double hMovement = abs(rvec.at<double>(1));
 
                     if(hMovement > threshold) {
+                        // Correction case. We update our state by the previous movement we had. 
                         // Todo: Interpolate from last n. n >= 2. 
                         offs = offs * (lastDiff.inv() * diff);
                         state = state * lastDiff;
@@ -66,6 +78,7 @@ namespace optonaut {
                         cout << "Avoiding Jump, offset: " << rvec.t() << endl;
                         return false;
                     } else {
+                        // Valid case. We update our state by the current movement. 
                         diff.copyTo(lastDiff);
                         state = state * diff;
                         state.copyTo(in);

@@ -1,10 +1,3 @@
-//////////////////////////////////////////////////////////////////////////////////////
-//
-// Beem mono stitcher test by Emi
-//
-// Let there be MSV!
-//
-//
 #define _USE_MATH_DEFINES
 #include <vector>
 #include <opencv2/imgcodecs.hpp>
@@ -32,19 +25,23 @@ struct StereoTarget {
 
 //Maps the target area from sphere to image space.
 void AreaToCorners(const Size targetDimensions, const Mat &targetCenter, 
-        const vector<Mat> &targetCorners, vector<Point2f> &corners) {
+        const Mat &targetK, const vector<Mat> &targetCorners, 
+        vector<Point2f> &corners) {
 
 	Mat I = Mat::eye(4, 4, CV_64F);
     corners.resize(4);
+        
+    double hFov = GetHorizontalFov(targetK);
+    double vFov = GetVerticalFov(targetK); 
 
     for(int i = 0; i < 4; i++) { 
         Mat rot = targetCenter.inv() * targetCorners[i];
         
-	    corners[i].x = -tan(GetDistanceByDimension(I, rot, 0)) + 0.5;
-	    corners[i].y = -tan(GetDistanceByDimension(I, rot, 1)) + 0.5;
+	    corners[i].x = -tan(GetDistanceByDimension(I, rot, 0)) / tan(hFov / 2) + 0.5;
+	    corners[i].y = -tan(GetDistanceByDimension(I, rot, 1)) / tan(vFov / 2) + 0.5;
        
-        corners[i].x *= targetDimensions.width;
-        corners[i].y *= targetDimensions.height;
+        corners[i].x *= targetDimensions.width / 2;
+        corners[i].y *= targetDimensions.height / 2;
     }
 }
 
@@ -64,11 +61,11 @@ Rect CornersToRoi(const vector<Point2f> &corners) {
 }
 
 
+const double hBufferRatio = 1.5;
+const double vBufferRatio = -0.02;
+
 //Extracts the target area, as points on a sphere surface, 
 //encoded as rotation matrices. 
-const double hBufferRatio = 3;
-const double vBufferRatio = 0.00;
-
 void GetTargetArea(const SelectionPoint &a, const SelectionPoint &b, Mat &center, vector<Mat> &corners) {
     double hLeft = a.hPos;
     double hRight = b.hPos;
@@ -106,7 +103,7 @@ void GetTargetArea(const SelectionPoint &a, const SelectionPoint &b, Mat &center
     assert(hLeft - hBuffer < hRight + hBuffer); 
 }
 
-void MapToTarget(const InputImageP a, const StereoTarget &target, Mat &result, Mat &targetK) {
+void MapToTarget(const InputImageP a, const StereoTarget &target, Mat &result, Mat &targetK, bool debug = false) {
     Mat rot, rot4 = target.R.inv() * a->adjustedExtrinsics;
     From4DoubleTo3Double(rot4, rot);
     double t = -0.02; //"Arm length" in homogenic space, 
@@ -138,6 +135,23 @@ void MapToTarget(const InputImageP a, const StereoTarget &target, Mat &result, M
 
     warpPerspective(a->image.data, result, transformationF, target.size, 
             INTER_LINEAR, BORDER_CONSTANT, 0);
+
+    if(debug) { 
+        vector<Point2f> corners = {
+            Point2f(0, 0),
+            Point2f(0, target.size.height),
+            Point2f(target.size.width, target.size.height),
+            Point2f(target.size.width, 0)
+        };
+
+        perspectiveTransform(corners, corners, transformationF.inv());
+
+        for(size_t i = 0; i < corners.size(); i++) {
+            line(a->image.data, corners[i], 
+                    corners[(i + 1) % corners.size()], 
+                    Scalar(255, 0, 0), 3);
+        }
+    }
 }
 
 InputImageP MonoStitcher::RectifySingle(const SelectionInfo &a) {
@@ -148,7 +162,9 @@ InputImageP MonoStitcher::RectifySingle(const SelectionInfo &a) {
     target.R = a.closestPoint.extrinsics;
 
     GetTargetArea(a.closestPoint, a.closestPoint, target.R, targetArea);
-    AreaToCorners(a.image->image.size(), target.R, targetArea, corners);
+    AreaToCorners(a.image->image.size(), target.R, a.image->intrinsics, 
+            targetArea, corners);
+
     Rect roi = CornersToRoi(corners);
     target.size = roi.size();
 
@@ -183,14 +199,16 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
     Mat newKA, newKB;
 
     GetTargetArea(a.closestPoint, b.closestPoint, target.R, targetArea);
-    AreaToCorners(a.image->image.size(), target.R, targetArea, corners);
+    AreaToCorners(a.image->image.size(), target.R, a.image->intrinsics, 
+            targetArea, corners);
+
     Rect roi = CornersToRoi(corners);
     target.size = roi.size();
 
     Mat resA, resB;
 
-    MapToTarget(a.image, target, resA, newKA);
-    MapToTarget(b.image, target, resB, newKB);
+    MapToTarget(a.image, target, resA, newKA, debug);
+    MapToTarget(b.image, target, resB, newKB, debug);
 
     if(debug) {
         Point2f tl(roi.x, roi.y);
@@ -198,12 +216,14 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
             line(resA, corners[i] - tl, 
                     corners[(i + 1) % corners.size()] - tl, 
                     Scalar(0, 0, 255), 3);
-
+            
             line(resB, corners[i] - tl, 
                     corners[(i + 1) % corners.size()] - tl, 
                     Scalar(0, 0, 255), 3);
         }
         
+        imwrite("dbg/" + ToString(a.image->id) + "_input_A.jpg", a.image->image.data);
+        imwrite("dbg/" + ToString(a.image->id) + "_input_B.jpg", b.image->image.data);
         imwrite("dbg/" + ToString(a.image->id) + "_warped_A.jpg", resA);
         imwrite("dbg/" + ToString(a.image->id) + "_warped_B.jpg", resB);
     }

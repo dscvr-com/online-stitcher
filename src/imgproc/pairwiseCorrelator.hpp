@@ -9,7 +9,6 @@
 #include "../math/projection.hpp"
 #include "../math/stat.hpp"
 #include "../recorder/exposureCompensator.hpp"
-#include "correlation.hpp"
 
 using namespace cv;
 using namespace std;
@@ -56,7 +55,7 @@ public:
    
     // Note: An outlier threshold of 2 is fine (1 pixel in each dimension), since
     // we don't do sub-pixel alignment.  
-    CorrelationDiff Match(const InputImageP a, const InputImageP b, int minWidth = 0, int minHeight = 0, bool forceWholeImage = false) {
+    CorrelationDiff Match(const InputImageP a, const InputImageP b, int minWidth = 0, int minHeight = 0, bool forceWholeImage = false, float w = 0.5, float wTolerance = 1) {
 
         AssertFalseInProduction(debug);
 
@@ -69,8 +68,10 @@ public:
         Mat wa, wb;
 
         cv::Point appliedBorder;
-       
+
         cv::Point2d locationDiff = GetOverlappingRegion(a, b, a->image, b->image, wa, wb, a->image.cols * 0.2, appliedBorder);
+
+        cTimer.Tick("Getting overlapping region");
 
         // Forces to use the whole image instead of predicted overlays.
         // Good for ring closure. We still have to guess the offset tough. 
@@ -79,8 +80,6 @@ public:
             wb = b->image.data;
             wa = a->image.data;
         }
-
-        cTimer.Tick("Overlap found");
 
         if(minWidth < 4)
             minWidth = 4;
@@ -96,17 +95,22 @@ public:
             return result;
         }
 
-        float w = 0.5;
-
         Mat corr; //Debug stuff
 
         PlanarCorrelationResult res = Aligner::Align(wa, wb, corr, w, w, 0);
 
-        int maxX = max(wa.cols, wb.cols) * w;
-        int maxY = max(wa.rows, wb.rows) * w;
+        cTimer.Tick("Finding Correlation");
+
+        int maxX = max(wa.cols, wb.cols) * w * wTolerance;
+        int maxY = max(wa.rows, wb.rows) * w * wTolerance;
 
         if(enableOutOfWindowTest && (res.offset.x < -maxX || res.offset.x > maxX 
                 || res.offset.y < -maxY || res.offset.y > maxY)) {
+
+            if(debug) {
+                cout << "Rejected because the correlation found an extremum at the border of the image." << endl;
+            }
+
             result.valid = false;
             result.rejectionReason = RejectionOutOfWindow;
             return result;
@@ -116,7 +120,9 @@ public:
             result.valid = false;
             result.rejectionReason = RejectionDeviationTest;
             
-            cout << "Rejected because top deviation == " << res.topDeviation << " < 1.5." << endl;
+            if(debug) {
+                cout << "Rejected because top deviation == " << res.topDeviation << " < 1.5." << endl;
+            }
 
             return result;
         }
@@ -130,13 +136,13 @@ public:
         double hFov = GetHorizontalFov(a->intrinsics);
         double vFov = GetVerticalFov(a->intrinsics);
 
-        cout << "hfov: " << hFov << ", vfov: " << vFov << endl;
+        //cout << "hfov: " << hFov << ", vfov: " << vFov << endl;
         
         Point2d relativeOffset = 
             Point2d((double)correctedRes.x / a->image.cols, 
                     (double)correctedRes.y / a->image.rows); 
 
-        cout << "RelativeOffset: " << relativeOffset << endl;
+        //cout << "RelativeOffset: " << relativeOffset << endl;
        
         result.overlap = wa.cols * wa.rows; 
 
@@ -146,7 +152,8 @@ public:
         result.offset = correctedRes;
         result.valid = true;
         result.correlationCoefficient = sqrt(res.variance) / res.n;
-        cTimer.Tick("Correalted");
+        
+        cTimer.Tick("Estimating angular correlation");
 
         return result;
     }

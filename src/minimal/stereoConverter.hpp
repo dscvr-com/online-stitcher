@@ -22,6 +22,9 @@ namespace optonaut {
 namespace minimal {
 class StereoConverter {
     public:
+    /*
+     * Convenience wrapper for stitch method that writes the output to files directly. 
+     */
     static void StitchAndWrite(const vector<InputImageP> &images, 
             const RecorderGraph &graph, const string &name) {
         std::pair<StitchingResultP, StitchingResultP> stereoRes; 
@@ -32,6 +35,11 @@ class StereoConverter {
         imwrite("dbg/stereo_" + name + "_right.jpg", stereoRes.second->image.data);
     }
 
+    /*
+     * Minimal implementation of the recording, stereo and stitching part. 
+     *
+     * From a list of images and a recorder graph, creates two stereo panoramas. 
+     */
     static std::pair<StitchingResultP, StitchingResultP>
     Stitch(const vector<InputImageP> &images, const RecorderGraph &graph) {
     

@@ -10,7 +10,9 @@
 #define OPTONAUT_PLANE_SPHERE_STITCHER_HEADER
 
 namespace optonaut {
-//Fast pure Planar based stitcher
+/*
+ * Fast planar model stitcher. 
+ */
 class SimplePlaneStitcher {
 	public:
 		StitchingResultP Stitch(const std::vector<ImageP> &images, const std::vector<cv::Point> &corners) const;

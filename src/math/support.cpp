@@ -28,7 +28,6 @@ namespace optonaut {
 		double scaleFactor = image.width / (intrinsics.at<double>(0, 2) * 2);
 		scaled.at<double>(0, 2) = image.width / 2;
 		scaled.at<double>(1, 2) = image.height / 2;
-		//Todo: Remove factor 10 - only for debug. 
 		scaled.at<double>(0, 0) = intrinsics.at<double>(0, 0) * scaleFactor * fupscaling;
 		scaled.at<double>(1, 1) = intrinsics.at<double>(1, 1) * scaleFactor * fupscaling;
 		scaled.at<double>(2, 2) = 1;
@@ -51,7 +50,7 @@ namespace optonaut {
 
 		return 2 * atan2(h, f);
 	}
-    
+   
     double IsPortrait(const Mat &intrinsics) {
         assert(MatIs(intrinsics, 3, 3, CV_64F));
         
@@ -106,7 +105,7 @@ namespace optonaut {
 
 		t = rot.clone();
 	}
-    
+   
     void Lerp(const Mat &a, const Mat &b, const double t, Mat &out) {
         assert(MatIs(a, 4, 4, CV_64F));
         assert(MatIs(b, 4, 4, CV_64F));
@@ -121,7 +120,7 @@ namespace optonaut {
             }
         }
     }
-    
+   
     void Slerp(const Mat &a, const Mat &b, const double t, Mat &out) {
         //cout << a << endl;
         //cout << b << endl;
@@ -169,12 +168,12 @@ namespace optonaut {
         
 		return acos((t - 1) / 2);
 	}
-    
+   
     double GetAngleOfRotation(const Mat &a, const Mat &b) {
         Mat expr = a.inv() * b;
         return GetAngleOfRotation(expr);
     }
-   
+  
     double GetDistanceByDimension(const Mat &a, const Mat &b, int dim) {
 		assert(MatIs(a, 4, 4, CV_64F));
 		assert(MatIs(b, 4, 4, CV_64F));
@@ -203,8 +202,6 @@ namespace optonaut {
 	double GetDistanceZ(const Mat &a, const Mat &b) {
 	    return GetDistanceByDimension(a, b, 2);
 	}
-
-	//TODO: Cleanup conversion mess. 
 
 	void From4DoubleTo3Float(const Mat &in, Mat &out) {
 		assert(MatIs(in, 4, 4, CV_64F));
@@ -259,19 +256,6 @@ namespace optonaut {
 		}
 	}
 
-	bool ContainsNaN(const Mat &in) {
-		assert(in.type() == CV_64F);
-		for(int i = 0; i < in.rows; i++) {
-			for(int j = 0; j < in.cols; j++) {
-				if(in.at<double>(i, j) != in.at<double>(i, j)) {
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-
-
 	void From3DoubleTo4Double(const Mat &in, Mat &out) {
 		assert(MatIs(in, 3, 3, CV_64F));
 
@@ -282,6 +266,18 @@ namespace optonaut {
 			}
 		}
 		out.at<double>(3, 3) = 1;
+	}
+
+	bool ContainsNaN(const Mat &in) {
+		assert(in.type() == CV_64F);
+		for(int i = 0; i < in.rows; i++) {
+			for(int j = 0; j < in.cols; j++) {
+				if(in.at<double>(i, j) != in.at<double>(i, j)) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	double min2(double a, double b) {

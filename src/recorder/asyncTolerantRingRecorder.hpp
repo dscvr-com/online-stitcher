@@ -14,7 +14,7 @@ class AsyncTolerantRingRecorder {
     public:
         AsyncTolerantRingRecorder(const SelectionInfo &firstImage, 
                 RecorderGraph &graph, float warperScale = 400) :
-            // For initialization, take extrinsics from grap
+            // For initialization, take extrinsics from graph
             stitcher(MonoStitcher::RectifySingle(firstImage),
                    fun::map<SelectionPoint*, Mat>(graph.GetTargetsById(), 
                        [](const SelectionPoint* x) {

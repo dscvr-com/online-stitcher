@@ -1,3 +1,7 @@
+/*
+ * Statistics module. Contains classes related to statistics. 
+ */
+
 #include <algorithm>
 #include <string>
 #include <opencv2/opencv.hpp>
@@ -9,8 +13,12 @@
 
 namespace optonaut {
 
-    //Welford's sweet online variance algorithm. Approved by Grandmaster Knuth. 
-    //This algorithm is bessel-corrected. 
+    /*
+     * Class to calculate the the variance of a data set without having all values available at the same time. 
+     * The implemented algorithm is called "Welford's online variance algorithm". Bessel correction is applied. 
+     *
+     * For basic usage, push values of the dataset into the Push method. Then query the result. 
+     */
     template <typename T>
     class OnlineVariance {
         size_t n = 0; 
@@ -39,9 +47,13 @@ namespace optonaut {
         }
     };
 
-    //Calculate pooled variance of independent measurements
-    //of the same population with different means but assumes same variances.  
-    //We remove the bessel correction here. 
+    /*
+     * Calculates pooled variance of independent measurements
+     * of the same population with different means but assumes same variances.  
+     * We remove the bessel correction here. 
+     *
+     * For use, pass pool variance, sum and pool size to the Push method, then query results. 
+     */
     template <typename T>
     class VariancePool {
         struct Measurement {
@@ -90,6 +102,9 @@ namespace optonaut {
         }
     };
 
+    /*
+     * Calculates the mean of a given dataset. Supports trimming. 
+     */
     template <typename T>
     static inline T Mean(const std::deque<T> &in, float trim = 0) {
         size_t start = in.size() * trim;
@@ -107,8 +122,10 @@ namespace optonaut {
         
         return value;
     };
-   
-    //Bessel-Corrected variance.  
+  
+    /*
+     * Calculates bessel corrected variance of a dataset. Supports trimming. 
+     */ 
     template <typename T>
     static inline T Variance(const std::deque<T> &in, float trim = 0) {
         size_t start = in.size() * trim;
@@ -131,6 +148,9 @@ namespace optonaut {
         return value;
     };
     
+    /*
+     * Calculates the median of a dataset. 
+     */
     template <typename T>
     static inline T Median(const std::deque<T> &in) {
         std::vector<T> buf(in.begin(), in.end());

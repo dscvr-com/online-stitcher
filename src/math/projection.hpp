@@ -1,3 +1,8 @@
+/*
+ * Contains functions to do different geometric calculations, 
+ * especially related to projective transforms and homographies. 
+ */
+
 #include <algorithm>
 #include <string>
 #include <opencv2/opencv.hpp>
@@ -17,6 +22,9 @@ using namespace std;
 using namespace cv;
 
 namespace optonaut {
+    /**
+     * Returns the corners of an image, transformed by the given homography. 
+     */
     static inline vector<Point2f> GetSceneCorners(const Image &img, const Mat &homography) {
         std::vector<Point2f> obj_corners(4);
         obj_corners[0] = cvPoint(0,0); 
@@ -30,6 +38,9 @@ namespace optonaut {
         return scene_corners;
     }
 
+    /*
+     * Returns the outer bounding box of the quad defined by the given points. 
+     */
     static inline cv::Rect GetBoundingBox(const vector<Point2f> &points) {
         assert(points.size() > 0);
 
@@ -48,6 +59,10 @@ namespace optonaut {
         return cv::Rect(l, t, r - l, b - t);
     }
     
+    /*
+     * Returns the inner box for the given scene. This function relies on the order
+     * of the given points and is meant to be used together with GetSceneCorners. 
+     */
     static inline cv::Rect GetInnerBoxForScene(const vector<Point2f> &c) {
         assert(c.size() == 4);
 
@@ -59,14 +74,25 @@ namespace optonaut {
         return cv::Rect(l, t, r - l, b - t);
     }
     
+    /*
+     * For any given relative rotation and camera intrinsics, calculates
+     * the homography between the two projection planes. 
+     */
     static inline void HomographyFromRotation(const Mat &rot, const Mat &k, Mat &hom) {
         hom = k * rot * k.inv();
     }
 
+    /*
+     * For two given images, calculates rotational difference between them. 
+     */
     static inline void RotationFromImages(const InputImageP a, const InputImageP b, Mat &rot) {
         rot = b->adjustedExtrinsics.inv() * a->adjustedExtrinsics;
     }
 
+    /*
+     * For two given images, calcualtes the homography between their projective planes. Output coordinates are given in pixels, 
+     * in case translations happen. 
+     */
     static inline void HomographyFromImages(const InputImageP a, const InputImageP b, Mat &hom, Mat &rot, cv::Size scale) {
         Mat R3(3, 3, CV_64F);
         Mat aK3(3, 3, CV_64F);
@@ -87,11 +113,17 @@ namespace optonaut {
 
         AssertEQM(rot.at<double>(2, 3), 0.0, "Given transformation is translating along z axis. This is not supported for generating homographies.");
     }
-    
+   
+    /*
+     * Convenience overload for HomographyFromImages that automatically sets the scale. 
+     */ 
     static inline void HomographyFromImages(const InputImageP a, const InputImageP b, Mat &hom, Mat &rot) {
         HomographyFromImages(a, b, hom, rot, a->image.size());
     }
 
+    /*
+     * Checks wether two images projected on a unit sphere are overlapping or not. 
+     */
     static inline bool ImagesAreOverlapping(const InputImageP a, const InputImageP b, double minOverlap = 0.1) {
         Mat hom, rot;
 
@@ -112,7 +144,11 @@ namespace optonaut {
         
         return overlapArea >= b->image.cols * b->image.rows * minOverlap;
     }
-    
+   
+    /*
+     * Decomposes a homography into rotational and translational components. 
+     * Camera intrinsics are extracted from the input images. 
+     */ 
     static inline bool DecomposeHomography(const InputImageP a, const InputImageP b, const Mat &hom, Mat &r, Mat &t, bool useINRA = true) {
 
         if(!useINRA) {
@@ -165,7 +201,8 @@ namespace optonaut {
      *
      * @returns The location difference of b a nd a measured on the image plane. 
      */
-    static inline cv::Point GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, const Image &bi, Mat &overlapA, Mat &overlapB, int buffer, cv::Point &appliedBorder) {
+    static inline cv::Point GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, 
+            const Image &bi, Mat &overlapA, Mat &overlapB, int buffer, cv::Point &appliedBorder) {
         Mat hom(3, 3, CV_64F);
         Mat rot(4, 4, CV_64F);
         
@@ -222,12 +259,18 @@ namespace optonaut {
 
         return locationDiff;
     }
- 
+
+    /*
+     * Convenience overload of GetOverlappingRegion.
+     */ 
     static inline void GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, const Image &bi, Mat &overlapA, Mat &overlapB) {
         cv::Point dummy;
         GetOverlappingRegion(a, b, ai, bi, overlapA, overlapB, 0, dummy);
     }
-    
+   
+    /*
+     * Converts spherical coordinates to their rotation matrix representation. 
+     */ 
     static inline void GeoToRot(double hAngle, double vAngle, Mat &res) {
         Mat hRot;
         Mat vRot;
@@ -239,7 +282,20 @@ namespace optonaut {
         
         res = hRot * vRot;
     }
-    
+   
+    /*
+     * Extracts a cube map face from a equirectangular panorama. 
+     *
+     * @param optograph The equirectangular panorama to extract the cube face from.
+     * @param face The resulting cubeface
+     * @param faceId The index of the cubeface, from 0 to 5, inclusive
+     * @param width The desired width of the result
+     * @param height The height of the result
+     * @param subX Relative horizontal offset for a sub cube face
+     * @param subY Relative vertical offset for a sub cuve face
+     * @param subW Relative witdh for a sub cube face
+     * @param subH Relative height for a sub cube face
+     */ 
     static inline void CreateCubeMapFace(const Mat &optograph, Mat &face,
                                   const int faceId, const int width, const int height,
                                   const float subX = 0, const float subY = 0,
@@ -370,6 +426,9 @@ namespace optonaut {
                 BORDER_CONSTANT, Scalar(0, 0, 0));
     }
 
+    /*
+     * For a vector of input images, returns a vector containing their intrinsics. 
+     */
     static inline std::vector<cv::Mat> ExtractExtrinsics(
             const std::vector<InputImageP> &in) {
         return fun::map<InputImageP, cv::Mat>(in, [](const InputImageP &q) { 
@@ -377,6 +436,9 @@ namespace optonaut {
                 });
     }
     
+    /*
+     * For a vector of input images, returns a vector containing their extrinsics.  
+     */
     static inline std::vector<cv::Mat> ExtractExtrinsics(
             const std::vector<SelectionPoint> &in) {
         return fun::map<SelectionPoint, cv::Mat>(in, [](const SelectionPoint &q) { 
