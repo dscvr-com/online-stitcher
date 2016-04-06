@@ -50,7 +50,9 @@ The test programs in the main directory have the following functions:
 All test programs except stitcherTest support the following command line arguments: 
 * -s [NUMBER] skips NUMBER images between each input image. 
 * -l [NUMBER] limits the processed input images to NUMBER
-* -m [MODE] Set MODE to a for android. IOS is default. 
+* -m [MODE] Set MODE to ```a``` for Android, ```n``` for no conversion. IOS is default. 
+
+For changing the mode of stitcherTest, please edit the ```mode``` constant in stitcherTest.cpp.
 
 ## Utility Programs
 

@@ -104,6 +104,7 @@ namespace minimal {
 
         static constexpr int ModeIOS = 0;
         static constexpr int ModeAndroid = 1;
+        static constexpr int ModeNone = 2;
       
         /*
          * Loads an prepares a set of input images.
@@ -122,6 +123,9 @@ namespace minimal {
             if(mode == ModeIOS) {
                 base = optonaut::Recorder::iosBase;
                 zero = Recorder::iosZero;
+            } else if(mode == ModeNone) {
+                base = Mat::eye(4, 4, CV_64F);
+                zero = Mat::eye(4, 4, CV_64F);
             } else {
                 base = optonaut::Recorder::androidBase;
                 zero = Recorder::androidZero;
@@ -138,8 +142,10 @@ namespace minimal {
             
             for(int i = 0; i < n; i += step) {
                 auto img = InputImageFromFile(files[i], shallow); 
-                img->originalExtrinsics = base * zero * 
-                    img->originalExtrinsics.inv() * baseInv;
+                if(mode != ModeNone) {
+                    img->originalExtrinsics = base * zero * 
+                        img->originalExtrinsics.inv() * baseInv;
+                }
                 img->adjustedExtrinsics = img->originalExtrinsics;
 
                 allImages.push_back(img);
@@ -185,6 +191,8 @@ namespace minimal {
                 } else if (imageName == "-m") {
                     if(argv[i + 2][0] == 'a' || argv[i + 2][0] == 'A') {
                         mode = ModeAndroid; 
+                    } else if(argv[i + 2][0] == 'n' || argv[i + 2][0] == 'N') {
+                        mode = ModeNone; 
                     }
                     i++;
                 } else {

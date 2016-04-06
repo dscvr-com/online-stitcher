@@ -41,7 +41,7 @@ void Record(vector<string> &files, StereoSink &sink) {
     }
 
     static const bool isAsync = true;
-    int mode = minimal::ImagePreperation::ModeIOS;
+    static const int mode = minimal::ImagePreperation::ModeNone;
     shared_ptr<Recorder> recorder(NULL);
         
     Mat base, zero;
@@ -49,6 +49,9 @@ void Record(vector<string> &files, StereoSink &sink) {
     if(mode == minimal::ImagePreperation::ModeIOS) {
         base = optonaut::Recorder::iosBase;
         zero = Recorder::iosZero;
+    } else if(mode == minimal::ImagePreperation::ModeNone) {
+        base = Mat::eye(4, 4, CV_64F);
+        zero = Mat::eye(4, 4, CV_64F);
     } else {
         base = optonaut::Recorder::androidBase;
         zero = Recorder::androidZero;
@@ -61,6 +64,14 @@ void Record(vector<string> &files, StereoSink &sink) {
         auto lt = system_clock::now();
         auto image = InputImageFromFile(files[i], false);
         cout << "[Record] InputImageFromFile :" << files[i] << endl;
+        
+        if(mode == minimal::ImagePreperation::ModeNone) {
+            // If we deactivate base adjustment, apply a transposition to 
+            // the extrinsics, to counter the transposition that 
+            // happens inside recorder. 
+            image->originalExtrinsics = image->originalExtrinsics.t();
+            image->adjustedExtrinsics = image->adjustedExtrinsics.t();
+        }
             
         //image->intrinsics = iPhone6Intrinsics;
         
