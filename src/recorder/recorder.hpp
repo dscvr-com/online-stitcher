@@ -470,13 +470,18 @@ namespace optonaut {
             if(debugPath != "" && !isIdle) {
                 AssertFalseInProduction(false);
                 static int debugCounter = 0;
-                if (debugCounter % 10 == 0 ) {
-                    image->LoadFromDataRef();
-                     // create a copy of the image
-                    InputImageP imageTemp = InputImageP(image);
-
-                    debugQueue.Push(imageTemp);
-                }
+                image->LoadFromDataRef();
+                // create a copy of the image
+                InputImageP copy(new InputImage());
+                copy->image = Image(image->image);
+                copy->dataRef = image->dataRef;
+                copy->originalExtrinsics = image->originalExtrinsics.clone();
+                copy->adjustedExtrinsics = image->adjustedExtrinsics.clone();
+                copy->intrinsics = image->intrinsics.clone();
+                copy->exposureInfo = image->exposureInfo;
+                copy->id = image->id;
+                debugQueue.Push(copy);
+                debugQueue.Push(imageTemp);
                 debugCounter++;
             }
             
