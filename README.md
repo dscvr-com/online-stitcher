@@ -45,7 +45,14 @@ The test programs in the main directory have the following functions:
 * perspectiveAlignerTest - testbed for testing pixel-baded alignment on two images + metadata. The images are transformed accordingly prior alignment. Usage: perspective-aligner-test image1 image2
 * ringClosureTest - testbed for testing closing of first ring. Usage: ring-closure-test inputImages
 * stereoConversionTest - testbed for testing stereo conversion with two images + metadata. Usage: stereo-conversion-test image1 image2
-* stitcherTest - testbed for whole recording/stitching pipeline on a collection of images + metadata. Usage: optonaut-test inputImages
+* stitcherTest/optonautTest - testbed for whole recording/stitching pipeline on a collection of images + metadata. Usage: optonaut-test inputImages
+
+All test programs except stitcherTest support the following command line arguments: 
+* -s [NUMBER] skips NUMBER images between each input image. 
+* -l [NUMBER] limits the processed input images to NUMBER
+* -m [MODE] Set MODE to ```a``` for Android, ```n``` for no conversion. IOS is default. 
+
+For changing the mode of stitcherTest, please edit the ```mode``` constant in stitcherTest.cpp.
 
 ## Utility Programs
 
@@ -85,16 +92,17 @@ Please keep track of all the dependencies when compiling OpenCV. Ceres solver is
 ## Some notes on the image-processing code structure: 
 * Most code is placed in header files. This is due to compile-time optimization and ease-of-use. There are some exceptions with code that does not work with the iOS/Android build process. 
 * There are some examples and tests in the root folder. Also, there are unit tests for some low level modules in the test folder. 
-* The code consists roughly of the following modules: 
-** debug - Contains debug code that is not used on the phone. 
-** common - Contains several general classes and modules, mainly generic helpers for other modules. Example: Graph, Ring Buffers, Timers, other Collection Types. 
-** imgproc - Contains classes that work on image data directly. For example alignment.  
-** io - Contains classes for image IO, especially for storing contextual information during stitching. 
-** math - Contains mathematical functions. Especially related to projection, quaternions and statistics. 
-** recorder - Contains classes specific for recording. The main class here is Recorder. 
-** stereo - Contains the code responsible for stereo conversion. 
-** stitcher - Contains code responsible for stitching results together. The main class here is RingStitcher (and MultiRingStitcher). Also, classes for very simple debug stitching exist. 
-** minimal - Contains code to use parts of this project in a very simple and minimal way. Great for testing!
+
+The code consists roughly of the following modules: 
+* debug - Contains debug code that is not used on the phone. 
+* common - Contains several general classes and modules, mainly generic helpers for other modules. Example: Graph, Ring Buffers, Timers, other Collection Types. 
+* imgproc - Contains classes that work on image data directly. For example alignment.  
+* io - Contains classes for image IO, especially for storing contextual information during stitching. 
+* math - Contains mathematical functions. Especially related to projection, quaternions and statistics. 
+* recorder - Contains classes specific for recording. The main class here is Recorder. 
+* stereo - Contains the code responsible for stereo conversion. 
+* stitcher - Contains code responsible for stitching results together. The main class here is RingStitcher (and MultiRingStitcher). Also, classes for very simple debug stitching exist. 
+* minimal - Contains code to use parts of this project in a very simple and minimal way. Great for testing!
 
 
 Please keep track of all the dependencies when compiling OpenCV. Ceres solver and Eigen are only important for SFM. 

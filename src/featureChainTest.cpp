@@ -35,33 +35,9 @@ void FinishImage(const InputImageP) { }
 int main(int argc, char** argv) {
     cv::ocl::setUseOpenCL(false);
 
-    int n = argc - 1;
-    vector<string> files;
-
-    if(n > 100) {
-        n = 100;
-    }
-
-    for(int i = 0; i < n; i++) {
-        string imageName(argv[i + 1]);
-        files.push_back(imageName);
-    }
-
-    std::sort(files.begin(), files.end(), CompareByFilename);
-        
-    auto base = Recorder::iosBase;
-    auto zero = Recorder::iosZero;
-    auto baseInv = base.t();
-
     RingProcessor<InputImageP> combiner(1, &MatchImages, &FinishImage); 
 
-    for(int i = 0; i < n; i++) {
-        auto img = InputImageFromFile(files[i], false);
-
-        img->originalExtrinsics = base * zero * img->originalExtrinsics.inv() * baseInv;
-        cout << "Pushing " << img->id << endl;
-        combiner.Push(img);
-    }
+    combiner.Process(minimal::imagePreperation::LoadAndPrepare(arc, argv, false));
 
     int i = 0;
     for(auto chain : aligner.GetFeatureChains()) {
