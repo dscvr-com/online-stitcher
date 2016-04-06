@@ -478,7 +478,6 @@ namespace optonaut {
             
             if(debugPath != "" && !isIdle) {
                 AssertFalseInProduction(false);
-                static int debugCounter = 0;
                 image->LoadFromDataRef();
                 // create a copy of the image
                 InputImageP copy(new InputImage());

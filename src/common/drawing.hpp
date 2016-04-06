@@ -16,6 +16,13 @@ using namespace std;
 
 namespace optonaut {
 
+    /*
+     * Draws a polygon, given as a list of points. 
+     *
+     * @param target The image to draw to.
+     * @param corners The corners of the polygon to draw. 
+     * @param color The color to use for drawing (optional). 
+     */
     static inline void DrawPoly(const Mat &target, const vector<Point2f> &corners, const Scalar color = Scalar(255, 0, 0)) {
         
         Point2f last = corners.back();
@@ -26,6 +33,13 @@ namespace optonaut {
         }
     }
 
+    /*
+     * Draws a rectangle.
+     *
+     * @param target The image to draw to.
+     * @param roi The rectangle to draw.
+     * @param color The color to use for drawing (optional).
+     */
     static inline void DrawBox(const Mat &target, const cv::Rect &roi, const Scalar color = Scalar(255, 0, 0)) {
         std::vector<Point2f> corners;
         corners.emplace_back(roi.x, roi.y);
@@ -37,6 +51,12 @@ namespace optonaut {
     }
 
     
+    /*
+     * Draws a bar.
+     *
+     * @param image The image to draw to.
+     * @param color The color to use for drawing (optional).
+     */
     static inline void DrawBar(cv::Mat &image, double val) {
         Scalar color;
         if(val < 0) {
@@ -47,6 +67,15 @@ namespace optonaut {
         cv::rectangle(image, cv::Point(0, image.rows * (0.5 - val)), cv::Point(image.cols, image.rows * 0.5), color, CV_FILLED);
     }
     
+    
+    /*
+     * Draws the border of another image related by a homography. 
+     *
+     * @param homography The homography that relates the image. 
+     * @param left The image that is releated by the homography. 
+     * @param color The color to use for drawing (optional).
+     * @param target The image to draw to.
+     */
     static inline void DrawMatchingHomographyBorder(const Mat &homography, const Mat &left, const Scalar &color, Mat &target) {
         std::vector<Point2f> scene_corners = GetSceneCorners(left, homography);
 
@@ -59,6 +88,15 @@ namespace optonaut {
         DrawPoly(target, scene_corners, color);
     }
 
+    /*
+     * Draws matching results from two different homographies. 
+     *
+     * @param homography The homography that relates the image. 
+     * @param homographyFromRot The second homography that relates the image. 
+     * @param a The image that is releated by the homography. 
+     * @param b The second image that is releated by the homography. 
+     * @param target The image to draw to, usually the same as a.
+     */
     static inline void DrawMatchingResults(const Mat &homography, const Mat &homographyFromRot, const Mat &a, const Mat &b, Mat &target) {
         
         a.copyTo(target(cv::Rect(0, 0, a.cols, a.rows)));
@@ -68,6 +106,18 @@ namespace optonaut {
         DrawMatchingHomographyBorder(homographyFromRot, a, Scalar(255, 0, 0), target);
     }
 
+    /*
+     * Draws points given in a rotational model onto an equirectangular panorama. 
+     *
+     * @param target The image to draw to.
+     * @param positions The positions, given in rotational coordinates. 
+     * @param intrinsics The camera intrinsics associated with the images on the panorama. 
+     * @param imageSize The size of images in the panorama. 
+     * @param warperScale Scale of the cv::Warper that applies coordinate transform. 
+     * @param offset Offset to apply to target coordinates when drawing. 
+     * @param color The color to use. 
+     * @param size The size of the circle to draw. 
+     */
     static inline void DrawPointsOnPanorama(Mat &target, const vector<Mat> &positions,
             const cv::Mat &intrinsics, const cv::Size &imageSize, const float warperScale,
             const cv::Point &offset,

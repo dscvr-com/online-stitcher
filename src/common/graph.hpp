@@ -10,11 +10,25 @@ using namespace std;
 
 namespace optonaut {
     
+    /*
+     * Edge in a graph. 
+     *
+     * @tparam ValueType The type of the data associated with the edge. 
+     */
     template <typename ValueType>
     struct _Edge {
+        /*
+         * Source node of the edge. 
+         */
         size_t from;
+        /*
+         * Destination node of the edge. 
+         */
         size_t to;
 
+        /*
+         * Value associated with the edge. 
+         */
         ValueType value;
         
         _Edge(size_t from, size_t to, const ValueType &value) : 
@@ -23,6 +37,12 @@ namespace optonaut {
         }
     };
     
+    /*
+     * General-purpose graph, based on an adjacency list. 
+     * Good for sparse data. 
+     *
+     * @tparam ValueType The type of the data associated with each edge. 
+     */
     template <typename ValueType>
     class SparseGraph {
     public:
@@ -32,16 +52,25 @@ namespace optonaut {
 
         AdjList adj;
 
+        /*
+         * Creates a new, empty graph. 
+         */
         SparseGraph() : adj() {
 
         }
         
+        /*
+         * Gets the adjacency list of this graph. 
+         */
         AdjList &GetEdges() {
             return adj;
         }
 
+        /*
+         * Inserts a new edge into the graph. 
+         */
         void Insert(size_t from, size_t to, const ValueType &value) {
-            adj[from].push_back(Edge(from, to, value));
+            adj[from].emplace_back(from, to, value);
         }
     };
 }

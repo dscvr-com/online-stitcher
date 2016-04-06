@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
     //cout << cv::getBuildInformation() << endl;
     bool outputUnaligned = true;
             
-    SimpleSphereStitcher debugger;
+    SimpleSphereStitcher debugger(400);
 
     auto allImages = minimal::ImagePreperation::LoadAndPrepareArgs(argc, argv);
 
@@ -39,10 +39,6 @@ int main(int argc, char** argv) {
             RecorderGraph::ModeTruncated, 
             1, 0, 4);
 
-    RecorderGraph halfGraph = RecorderGraphGenerator::Sparse(fullGraph, 2);
-
-    RecorderGraph centerGraph = RecorderGraphGenerator::Sparse(halfGraph, 1, 
-            halfGraph.GetRings().size() / 2);
 
     BiMap<size_t, uint32_t> imagesToTargets, d;
 
@@ -50,7 +46,8 @@ int main(int argc, char** argv) {
 
     int n = fullImages.size();
     
-    cout << "Selecting " << n << " images for further processing." << endl;
+    cout << "Selecting " << n << "/" << fullGraph.Size() << 
+        " images for further processing." << endl;
 
     auto miniImages = minimal::ImagePreperation::CreateMinifiedCopy(fullImages, 3);
     
@@ -60,15 +57,13 @@ int main(int argc, char** argv) {
     }
 
     cout << "Performing in/extrinsics adjustment via center ring." << endl;
-    
-    auto centerImages = centerGraph.SelectBestMatches(miniImages, d);
-    minimal::ImagePreperation::SortById(centerImages);
+  
+    vector<vector<InputImageP>> rings = fullGraph.SplitIntoRings(miniImages);
 
-    RingCloser::CloseRing(centerImages);
+    size_t k = rings.size() / 2;
 
-    for(int i = 0; i < n; i++) {
-        centerImages[0]->intrinsics.copyTo(miniImages[i]->intrinsics);
-    }
+    minimal::ImagePreperation::SortById(rings[k]);
+    RingCloser::CloseRing(rings[k]);
 
     if(outputUnaligned) {
         auto res = debugger.Stitch(miniImages);
@@ -89,8 +84,11 @@ int main(int argc, char** argv) {
     cout << "Create final stereo output." << endl;
 
     //Just for testing. 
-    auto finalImages = halfGraph.SelectBestMatches(fullImages, imagesToTargets); 
-    
+    RecorderGraph halfGraph = RecorderGraphGenerator::Sparse(fullGraph, 2);
+    auto finalImages = halfGraph.SelectBestMatches(fullImages, imagesToTargets, true); 
+    cout << "Selecting " << finalImages.size() << "/" << halfGraph.Size() << 
+        " images for final step." << endl;
+
     minimal::ImagePreperation::LoadAllImages(finalImages);
         
     minimal::StereoConverter::StitchAndWrite(

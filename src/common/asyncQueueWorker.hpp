@@ -8,6 +8,12 @@ using namespace std;
 #define OPTONAUT_ASYNC_QUEUE_HEADER
 
 namespace optonaut {
+    /*
+     * Worker thread wrapper that asynchronously calls a function for 
+     * each element in a queue. 
+     *
+     * @tparam InType The type of the elements in the processor queue. 
+     */
     template <typename InType>
 	class AsyncQueue {
 	private:
@@ -42,6 +48,13 @@ namespace optonaut {
         }
 
 	public:
+        /*
+         * Creates a new instance of this class. The processing
+         * thread is started immideately. 
+         * 
+         * @param core The function to be called for each element 
+         * asynchronously. 
+         */
 		AsyncQueue(function<void(InType)> core) : 
             core(core), 
             inData(), 
@@ -51,6 +64,12 @@ namespace optonaut {
             m(), 
             sem() { }
        
+        /*
+         * Adds a new element to the processing queue.
+         *
+         * @param in The element to add.  
+         * @returns The size of the queue. 
+         */
         int Push(InType in) {
             int size = 0;
             {
@@ -69,12 +88,19 @@ namespace optonaut {
             
             return size;
         }
-        
+       
+        /*
+         * @returns true if this worker is running, 
+         * else false. 
+         */ 
         bool IsRunning() {
             return running;
         }
-        
-        // Finishes current queue, then exits.
+       
+        /*
+         * Finishes processing of all elements that are currently 
+         * in the queue, then exits. 
+         */
         void Finish() {
             if(!running)
                 return;
@@ -87,7 +113,10 @@ namespace optonaut {
             worker.join();
         }
 
-        // Finishes current operation, then exit
+        /*
+         * Finishes the current operation, then clears the queue
+         * and exits. 
+         */
         void Dispose() {
             cancel = true;
             Finish();

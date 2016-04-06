@@ -6,6 +6,7 @@
 #include <opencv2/stitching/detail/blenders.hpp>
 #include <opencv2/core/ocl.hpp>
 
+#include "minimal/imagePreperation.hpp"
 #include "common/intrinsics.hpp"
 #include "common/static_timer.hpp"
 #include "imgproc/planarCorrelator.hpp"
@@ -27,31 +28,15 @@ bool CompareByFilename (const string &a, const string &b) {
 int main(int argc, char** argv) {
     cv::ocl::setUseOpenCL(false);
 
-    int n = argc - 1;
-    vector<string> files;
-
-    for(int i = 0; i < n; i++) {
-        string imageName(argv[i + 1]);
-        files.push_back(imageName);
-    }
-
-    std::sort(files.begin(), files.end(), CompareByFilename);
+    auto images = minimal::ImagePreperation::LoadAndPrepareArgs(argc, argv, false);
+    auto n = images.size();
 
     assert(n % 2 == 0);
 
-    for(int i = 0; i < n; i += 2) {
-        auto imgA = InputImageFromFile(files[i], false);
-        auto imgB = InputImageFromFile(files[i + 1], false);
+    for(size_t i = 0; i < n; i += 2) {
+        auto imgA = images[i];
+        auto imgB = images[i + 1];
 
-        auto base = Recorder::iosBase;
-        auto zero = Recorder::iosZero;
-        auto baseInv = base.t();
-
-        //imgA->originalExtrinsics = base * zero * imgA->originalExtrinsics.inv() * baseInv;
-        //imgB->originalExtrinsics = base * zero * imgB->originalExtrinsics.inv() * baseInv;
-        imgA->adjustedExtrinsics = imgA->originalExtrinsics;
-        imgB->adjustedExtrinsics = imgB->originalExtrinsics;
-        
         SimpleSphereStitcher stitcher;
         auto scene = stitcher.Stitch({imgA, imgB});
         imwrite("dbg/" + ToString(i) + "_scene.jpg", scene->image.data);
@@ -59,17 +44,19 @@ int main(int argc, char** argv) {
         STimer timer;
 
         PairwiseCorrelator corr;
-        auto result = corr.Match(imgA, imgB, 4, 4, true); 
+        auto result = corr.Match(imgA, imgB, 4, 4, false, 0.5, 1.8); 
 
         if(!result.valid) {
             cout << "Correlation: Rejected " << result.rejectionReason << "." << endl;
         }
+      
+        cout << "[" << i << "] BiasY: " << result.angularOffset.y << endl;
+        cout << "[" << i << "] BiasX: " << result.angularOffset.x << endl;
 
-        cout << "BiasY: " << result.angularOffset.y << endl;
-
-        Mat rotY;
+        Mat rotY, rotX;
         CreateRotationY(result.angularOffset.y, rotY);
-        imgA->adjustedExtrinsics = rotY * imgA->adjustedExtrinsics; 
+        CreateRotationX(-result.angularOffset.x, rotX);
+        imgA->adjustedExtrinsics = imgA->adjustedExtrinsics * rotY * rotX; 
         imgA->originalExtrinsics = imgA->adjustedExtrinsics;
         
         scene = stitcher.Stitch({imgA, imgB});

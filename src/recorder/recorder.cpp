@@ -14,9 +14,9 @@ using namespace std;
 namespace optonaut {
     //Portrait to landscape (use with ios app)
     double iosBaseData[16] = {
-        -1, 0, 0, 0,
-        0, 1, 0, 0,	
-        0, 0, 1, 0,
+        1, 0, 0, 0,
+        0, -1, 0, 0,	
+        0, 0, -1, 0,
         0, 0, 0, 1
     };
 

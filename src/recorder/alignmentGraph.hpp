@@ -21,6 +21,7 @@ namespace optonaut {
      */
     struct AlignmentDiff {
         double dphi; //Difference for rotating around the vertical axis
+        double dtheta; //Difference for rotating around the horizontal axis
         double valid; //Is it valid?
         int overlap;
         int error; 
@@ -30,6 +31,7 @@ namespace optonaut {
 
         AlignmentDiff() : 
             dphi(0), 
+            dtheta(0),
             valid(false), 
             overlap(0), 
             error(0),
@@ -58,7 +60,7 @@ namespace optonaut {
             const RecorderGraph &graph; 
             const BiMap<size_t, uint32_t> &imagesToTargets;
             static const bool debug = false;
-            map<size_t, double> alignmentCorrections;
+            map<size_t, Point2d> alignmentCorrections;
         public:
 
             /*
@@ -83,7 +85,7 @@ namespace optonaut {
             /*
              * Sets given alignment offsets.
              */ 
-            void SetAlignment(map<size_t, double> alignment)
+            void SetAlignment(map<size_t, Point2d> alignment)
             {
                 this->alignmentCorrections = alignment;
             }
@@ -91,7 +93,7 @@ namespace optonaut {
             /*
              * Gets the alignment offsets associated with this graph. 
              */
-            const map<size_t, double>& GetAlignment() const {
+            const map<size_t, Point2d>& GetAlignment() const {
                 return alignmentCorrections;
             }
        
@@ -102,11 +104,11 @@ namespace optonaut {
 
                 STimer tFindCorrespondence;
 
-                const bool dampUncorrelatedNeighbors = true;
+                const bool dampUncorrelatedNeighbors = false;
                 const bool dampAllNeighbors = false;
-                const bool dampSuccessors = true;
+                const bool dampSuccessors = false;
 
-                uint32_t pidA, pidB;
+                uint32_t pidA = 0, pidB = 0;
                 SelectionPoint tA, tB;
 
                 Assert(imagesToTargets.GetValue(imgA->id, pidA));
@@ -142,13 +144,16 @@ namespace optonaut {
                     int minSize = min(imgA->image.cols, imgA->image.rows) / 1.8;
 
                     STimer tMatch;
-                    auto res = aligner.Match(imgB, imgA, minSize, minSize);
+                    auto res = aligner.Match(imgB, imgA, minSize, 
+                            minSize, false, 0.5);
+
                     tMatch.Tick("Matching");
 
                     // If our match was invalid, just do damping it. 
                     if(!res.valid && areNeighbors && dampUncorrelatedNeighbors) {
                         res.valid = true;
                         res.angularOffset.y = 0;
+                        res.angularOffset.x = 0;
                         res.overlap = imgA->image.cols * imgA->image.rows * 100 *
                             (1 + abs(angularDiff)) * (1 + abs(angularDiff));
                         aToB.forced = true;
@@ -156,12 +161,13 @@ namespace optonaut {
 
                     // Copy matching information to the correspondence info
                     aToB.dphi = res.angularOffset.y;
+                    aToB.dtheta = res.angularOffset.x;
                     aToB.overlap = res.correlationCoefficient * 2;
                     aToB.valid = res.valid;
                     aToB.rejectionReason = res.rejectionReason;
-                    aToB.error = res.inverseTestDifference.x;
                 } else {
                     aToB.dphi = 0;
+                    aToB.dtheta = 0;
                     aToB.overlap = 0;
                     aToB.valid = false;
                 }
@@ -176,6 +182,7 @@ namespace optonaut {
 
                     AlignmentDiff aToBDamp, bToADamp; 
                     aToBDamp.dphi = -angularDiff / 8; 
+                    aToBDamp.dtheta = 0;
                     aToBDamp.overlap = imgA->image.cols * imgA->image.rows * 0.01 *
                             (1 + abs(angularDiff)) * (1 + abs(angularDiff));
                     aToBDamp.forced = true;
@@ -190,6 +197,7 @@ namespace optonaut {
                 if(dampSuccessors && areSuccessors) {
                     AlignmentDiff aToBDamp, bToADamp; 
                     aToBDamp.dphi = 0; 
+                    aToBDamp.dtheta = 0;
                     aToBDamp.overlap = imgA->image.cols * imgA->image.rows * 0.5;
                     aToBDamp.forced = true;
                     aToBDamp.valid = true;
@@ -206,9 +214,83 @@ namespace optonaut {
             };
 
             /*
-             * From the alignment graph, finds a solution for re-aligning all images with minimal error. 
+             * Optimizes for vertical alignment. 
+             */
+            Edges FindAlignmentHorizontal(double &outError) {
+                Mat res;
+                vector<int> invmap;
+
+                Edges edges = FindAlignmentInternal(outError,
+                        [] (const AlignmentDiff &x) {
+                            return x.dphi;
+                        }, 
+                        [] (AlignmentDiff &x, const double v) {
+                            x.dphi = v;
+                        }, res, invmap);
+                
+                // Remember the alignment corrections. 
+                for (size_t i = 0; i < invmap.size(); ++i) {
+                    this->alignmentCorrections[invmap[i]].y = res.at<double>(i, 0);
+                    //cout << invmap[i] << " alignment: " << x.at<double>(i, 0) << endl;
+                }
+                
+                return edges;
+            }
+            
+            /*
+             * Optimizes for horizontal alignment. 
+             */
+            Edges FindAlignmentVertical(double &outError) {
+                Mat res;
+                vector<int> invmap;
+
+                Edges edges = FindAlignmentInternal(outError,
+                        [] (const AlignmentDiff &x) {
+                            return x.dtheta;
+                        }, 
+                        [] (AlignmentDiff &x, const double v) {
+                            x.dtheta = v;
+                        }, res, invmap);
+                
+                // Remember the alignment corrections. 
+                for (size_t i = 0; i < invmap.size(); ++i) {
+                    this->alignmentCorrections[invmap[i]].x = res.at<double>(i, 0);
+                    //cout << invmap[i] << " alignment: " << x.at<double>(i, 0) << endl;
+                }
+                
+                return edges;
+            }
+
+            /*
+             * From the alignment graph, finds a solution for re-aligning all 
+             * images with minimal error. 
              */
             Edges FindAlignment(double &outError) {
+                double vError = 0, hError = 0;
+
+                FindAlignmentVertical(vError);
+                Edges edges = FindAlignmentHorizontal(hError);
+
+                outError = vError + hError;
+
+                return edges;
+            }
+
+            /*  
+             * Performs alignment for a given property of the graph. 
+             * While solving, the property is treated as an offset. 
+             *
+             * That means that the result is applied by adding it to the value. 
+             *
+             * @param outError The overall error of the found solution. 
+             * @param extractor Property extractor function.
+             * @param applier Property apply function. 
+             */
+            Edges FindAlignmentInternal(double &outError, 
+                    std::function<double(const AlignmentDiff&)> extractor, 
+                    std::function<void(AlignmentDiff&, const double)> applier, 
+                    Mat &res, 
+                    vector<int> &invmap) {
 
                 STimer tFindAlignment;
                 // Pre-calculate the size of our equation system. 
@@ -221,7 +303,6 @@ namespace optonaut {
                
                 // Build forward/backward lookup tables.  
                 vector<int> remap(maxId);
-                vector<int> invmap;
                 
                 for(auto &adj : relations.GetEdges()) {
                     remap[adj.first] = (int)invmap.size();
@@ -230,7 +311,7 @@ namespace optonaut {
 
                 int n = (int)invmap.size();
 
-                Mat res = Mat::zeros(n, 1, CV_64F);
+                res = Mat::zeros(n, 1, CV_64F);
                
                 // Build equation systen
                 // R = sum of relative offsets.
@@ -249,7 +330,7 @@ namespace optonaut {
                 double edgeCount = 0;
 
                 // Quartil for selecting edges that are used when optimizing. 
-                const double quartil = 0.1;
+                const double quartil = 0.0;
 
                 for(auto &adj : relations.GetEdges()) { // For adjacency list each node in our graph...
                     // Find all edges created by the aligner. 
@@ -268,8 +349,8 @@ namespace optonaut {
 
                     //Reject upper quartil of correlator edges only and sort by absolute delta. 
                     std::sort(correlatorEdges.begin(), correlatorEdges.end(), 
-                        [] (const Edge &a, const Edge &b) {
-                            return abs(a.value.dphi) < abs(b.value.dphi);
+                        [&] (const Edge &a, const Edge &b) {
+                            return abs(extractor(a.value)) < abs(extractor(b.value));
                         });
 
                     size_t m = correlatorEdges.size();
@@ -298,11 +379,11 @@ namespace optonaut {
                             O.at<double>(remap[edge.from], remap[edge.from]) += 
                                 alpha * weight;
                             R.at<double>(remap[edge.from]) += 
-                                2 * weight * edge.value.dphi;
+                                2 * weight * extractor(edge.value) / 2;
 
                             //Use non-linear weights - less penalty for less overlap. 
                             if(!edge.value.forced) {
-                                error += weight * abs(edge.value.dphi);
+                                error += weight * abs(extractor(edge.value));
                                 weightSum += weight;
                                 edgeCount++;
                             }
@@ -322,18 +403,17 @@ namespace optonaut {
                 // Extract solution from equation system. 
                 for(auto &adj : relations.GetEdges()) {
                    for(auto &edge : adj.second) {
-                        edge.value.dphi -= x.at<double>(remap[edge.from]);
-                        edge.value.dphi += x.at<double>(remap[edge.to]);
+                        applier(edge.value, 
+                                extractor(edge.value) - 
+                                x.at<double>(remap[edge.from]));
+
+                        applier(edge.value, 
+                                extractor(edge.value) + 
+                                x.at<double>(remap[edge.to]));
                    } 
                 }
                 
                 assert((int)invmap.size() == n);
-
-                // Remember the alignment corrections. 
-                for (int i = 0; i < n; ++i) {
-                    this->alignmentCorrections[invmap[i]] = res.at<double>(i, 0);
-                    //cout << invmap[i] << " alignment: " << x.at<double>(i, 0) << endl;
-                }
 
                 tFindAlignment.Tick("Find Alignment");
 
@@ -344,11 +424,13 @@ namespace optonaut {
              * Applies the calculated alignment correction to the submitted image. 
              */
             void Apply(InputImageP in) const {
-                Mat bias(4, 4, CV_64F);
+                Mat ybias(4, 4, CV_64F);
+                //Mat xbias(4, 4, CV_64F);
 
                 if(alignmentCorrections.find(in->id) != alignmentCorrections.end()) {
-                    CreateRotationY(alignmentCorrections.at(in->id), bias);
-                    in->adjustedExtrinsics = bias * in->adjustedExtrinsics; 
+                    CreateRotationY(alignmentCorrections.at(in->id).y, ybias);
+                    //CreateRotationX(-alignmentCorrections.at(in->id).x, xbias);
+                    in->adjustedExtrinsics = in->adjustedExtrinsics * ybias; // * xbias; 
                 }
             }
     };

@@ -101,22 +101,33 @@ namespace minimal {
                         return a->id < b->id;
                     });
         }
+
+        static constexpr int ModeIOS = 0;
+        static constexpr int ModeAndroid = 1;
       
         /*
          * Loads an prepares a set of input images.
          * Intrinsics are converted as if they would come from an iPhone. 
          */ 
         static std::vector<InputImageP> LoadAndPrepare(
-                std::vector<std::string> files, 
+                std::vector<std::string> files, int mode = ModeIOS,
                 bool shallow = true, int limit = -1, int step = 1) {
             
             std::sort(files.begin(), files.end(), CompareByFilename);
 
             std::vector<InputImageP> allImages;
 
-            auto base = optonaut::Recorder::iosBase;
-            auto zero = Recorder::iosZero;
-            auto baseInv = base.t();
+            Mat base, zero, baseInv;
+
+            if(mode == ModeIOS) {
+                base = optonaut::Recorder::iosBase;
+                zero = Recorder::iosZero;
+            } else {
+                base = optonaut::Recorder::androidBase;
+                zero = Recorder::androidZero;
+            }
+
+            baseInv = base.t();
 
             int n = files.size();
             limit = limit * step;
@@ -149,7 +160,7 @@ namespace minimal {
         }
 
         /*
-         * Loads a set of input images frmo args. Supports count and skip arguments. 
+         * Loads a set of input images frmo args. Supports count, skip and phone arguments. 
          */
         static std::vector<InputImageP> LoadAndPrepareArgs(
                 const int argc, char** argv, bool shallow = true, 
@@ -157,6 +168,8 @@ namespace minimal {
             int n = argc - 1;
 
             std::vector<std::string> files;
+
+            int mode = ModeIOS;
 
             for(int i = 0; i < n; i++) {
                 std::string imageName(argv[i + 1]);
@@ -169,12 +182,17 @@ namespace minimal {
                     AssertGT(n, i + 1);
                     step = ParseInt(std::string(argv[i + 2]));
                     i++;
+                } else if (imageName == "-m") {
+                    if(argv[i + 2][0] == 'a' || argv[i + 2][0] == 'A') {
+                        mode = ModeAndroid; 
+                    }
+                    i++;
                 } else {
                     files.push_back(imageName);
                 }
             }
 
-            return LoadAndPrepare(files, shallow, limit, step);
+            return LoadAndPrepare(files, mode, shallow, limit, step);
         }
 
         /*

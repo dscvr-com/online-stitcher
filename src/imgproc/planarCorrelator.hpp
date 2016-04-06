@@ -15,23 +15,71 @@ using namespace std;
 
 namespace optonaut {
 
+/*
+ * Correlator debug flag - switch on for pairwise debug output. 
+ */ 
 static const bool debug = false;
 
+/*
+ * Represents the result of a planar correlation operation. 
+ */
 struct PlanarCorrelationResult {
+    /*
+     * The offset between the two images.
+     */
     cv::Point offset;
+    /*
+     * The count of pixels in the overlapping area. 
+     */
     size_t n; 
+    /*
+     * The error for the given correlation. 
+     */
     double cost;
+    /*
+     * The variance for all the correlated pixels.
+     */
     double variance;
+    /*
+     * The deviation for all the correlated pixels. 
+     */
     double topDeviation;
 };
 
+/*
+ * Finds a position with maximum correlation 
+ * by trying all the possible positions. 
+ *
+ * @tparam Correlator The correlator function to use, 
+ */ 
 template <typename Correlator>
 class BruteForcePlanarAligner {
     public:
+
+    /*
+     * Alignes to given images. 
+     *
+     * @param a The first image.
+     * @param b The second image. 
+     * @param corr The correlation result, just for debugging purposes. 
+     * @param wx The correlation window in x direction.
+     * @param wy The correlation window in y direction. 
+     */
     static inline PlanarCorrelationResult Align(const Mat &a, const Mat &b, Mat &corr, double wx = 0.5, double wy = 0.5) {
         return Align(a, b, corr, max(a.cols, b.cols) * wx, max(a.rows, b.rows) * wy, 0, 0);
     }
     
+    /*
+     * Alignes to given images. 
+     *
+     * @param a The first image.
+     * @param b The second image. 
+     * @param corr The correlation result, just for debugging purposes. 
+     * @param wx The correlation window in x direction.
+     * @param wy The correlation window in y direction. 
+     * @param ox The predefined offset in x direction.
+     * @param oy The predefined offset in y direction. 
+     */
     static inline PlanarCorrelationResult Align(const Mat &a, const Mat &b, Mat &corr, int wx, int wy, int ox, int oy) {
 
         AssertFalseInProduction(debug);
@@ -52,9 +100,14 @@ class BruteForcePlanarAligner {
 
         float costSum = 0;
 
+        // Iterate over all possible offsets in our window. 
         for(int dx = -wx; dx <= wx; dx++) {
             for(int dy = -wy; dy <= wy; dy++) {
+                
+                // Run correlation for each position. 
                 float res = Correlator::Calculate(a, b, dx + ox, dy + oy);
+
+                // Collect results (add them to variance and cost caluclations) 
                 var.Push(res);
                 costSum += res;
                 if(debug) {
@@ -62,6 +115,8 @@ class BruteForcePlanarAligner {
                     AssertGTM(corr.cols, dx + wx, "Correlation matrix too small.");
                     corr.at<float>(dy + wy, dx + wx) = res; 
                 }
+
+                // If we found a new minimum, remember it. 
                 if(res < min) {
                     min = res;
                     mx = dx;
@@ -79,10 +134,20 @@ class BruteForcePlanarAligner {
     }
 };
 
+/*
+ * Finds a position with maximum correlation 
+ * by using a pyramid correlation scheme. Downsampled versions
+ * of the image are compared first, to constrain the window. 
+ *
+ * @tparam Correlator The correlator function to use, 
+ */ 
 template <typename Correlator>
 class PyramidPlanarAligner {
     private:
 
+    /*
+     * Internal alignment function. Performs a recursive alignment step. 
+     */
     static inline cv::Point AlignInternal(const Mat &a, const Mat &b, Mat &corr, int &corrXOff, int corrYOff, double wx, double wy, int dskip, int depth, VariancePool<double> &pool) {
         const int minSize = 4;
 
@@ -90,6 +155,7 @@ class PyramidPlanarAligner {
 
         if(a.cols > minSize / wx && b.cols > minSize / wx 
                 && a.rows > minSize / wy && b.rows > minSize / wy) {
+            // If the image is large enough, perform a further pyramid alignment step. 
             Mat ta, tb;
 
             STimer cPyrDownTimer;
@@ -104,12 +170,14 @@ class PyramidPlanarAligner {
             }
 
             if(dskip > 0) {
+                // If we skip, just upsample the guess. 
                 res = guess * 2;
             } else {
 
                 STimer cTimer;
                 Mat corrBf;
 
+                // Perform a brute force correlation, but just for a very small area. 
                 PlanarCorrelationResult detailedRes = 
                     BruteForcePlanarAligner<Correlator>::Align(
                             a, b, corrBf, 2, 2, guess.x * 2, guess.y * 2);
@@ -144,6 +212,8 @@ class PyramidPlanarAligner {
                 cTimer.Tick("BF Alignment step");
             }
         } else {
+            // If we are at the bottom of our pyramid and the image is already very small, 
+            // perform a brute-force correlation. 
             STimer cTimer;
             PlanarCorrelationResult detailedRes = 
                 BruteForcePlanarAligner<Correlator>::Align(a, b, corr, wx, wy);
@@ -158,13 +228,26 @@ class PyramidPlanarAligner {
         return res;
     }
     public:
+    
+    /*
+     * Alignes to given images. 
+     *
+     * @param a The first image.
+     * @param b The second image. 
+     * @param corr The correlation result, just for debugging purposes. 
+     * @param wx The correlation window in x direction.
+     * @param wy The correlation window in y direction.
+     * @param dskip Skips dskip correlation steps from the top.  
+     */
     static inline PlanarCorrelationResult Align(const Mat &a, const Mat &b, Mat &corr, double wx = 0.5, double wy = 0.5, int dskip = 0) {
         VariancePool<double> pool;
         int corrXOff = 0;
         int corrYOff = 0;
+
+        // Invoke the internal alignment operation. 
         cv::Point res = PyramidPlanarAligner<Correlator>::AlignInternal(a, b, corr, corrXOff, corrYOff, wx, wy, dskip, 0, pool);
 
-        //debug - draw resulting image. 
+        // Debug - draw the resulting image pair and correlation. 
         if(debug) {
             static int dbgctr = 0;
             Mat eye = Mat::eye(3, 3, CV_64F);
@@ -209,10 +292,24 @@ class PyramidPlanarAligner {
     }
 };
 
+/*
+ * Base correlator. Just sums up the pixel-wise errors
+ * for each overlapping region. 
+ */
 template <typename ErrorMetric>
 class BaseCorrelator {
     public:
+    /*
+     * Calculates the correlation value.
+     * 
+     * @param a The first image.
+     * @param b The second image.
+     * @param dx Offset in x direction.
+     * @param dy Offset in y direction. 
+     */
     static inline float Calculate(const Mat &a, const Mat &b, int dx, int dy) {
+
+        // Get overlapping area.
         int sx = max(0, -dx);
         int ex = min(a.cols, b.cols - dx);
         
@@ -221,6 +318,7 @@ class BaseCorrelator {
 
         float corr = 0;
 
+        // Lop over overlapping area and calculate correlation value. 
         for(int x = sx; x < ex; x++) {
             for(int y = sy; y < ey; y++) {
                  corr += ErrorMetric::Calculate(a, b, x, y, x + dx, y + dy);
@@ -231,9 +329,21 @@ class BaseCorrelator {
     }
 };
 
+/*
+ * Normed correlator. Norms the pixel-wise error sum according
+ * to the overlapping area. 
+ */
 template <typename ErrorMetric>
 class NormedCorrelator {
     public:
+    /*
+     * Calculates the correlation value.
+     * 
+     * @param a The first image.
+     * @param b The second image.
+     * @param dx Offset in x direction.
+     * @param dy Offset in y direction. 
+     */
     static inline float Calculate(const Mat &a, const Mat &b, int dx, int dy) {
         float sx = max(0, -dx);
         float ex = min(a.cols, b.cols - dx);
@@ -241,7 +351,9 @@ class NormedCorrelator {
         float sy = max(0, -dy);
         float ey = min(a.rows, b.rows - dy);
 
+        // Get base correlation value. 
         float corr = BaseCorrelator<ErrorMetric>::Calculate(a, b, dx, dy);
+        // Divide by area. 
         return corr / ((ex - sx) * (ey - sy));
     }
     static inline float Sign() {
@@ -249,6 +361,9 @@ class NormedCorrelator {
     }
 };
 
+/*
+ * Error metric - absolute difference of pixel values. 
+ */
 template <typename T>
 class AbsoluteDifference {
     public:
@@ -261,6 +376,10 @@ class AbsoluteDifference {
     }
 };
 
+/*
+ * Error metric - absolute difference of pixel values. 
+ * Implementation for color images. 
+ */
 template <>
 class AbsoluteDifference<Vec3b> {
     public:
@@ -281,6 +400,9 @@ class AbsoluteDifference<Vec3b> {
     }
 };
 
+/*
+ * Error metric - squared difference of pixel values. 
+ */
 template <typename T>
 class LeastSquares {
     public:
@@ -293,6 +415,11 @@ class LeastSquares {
     }
 };
 
+
+/*
+ * Error metric - squared difference of pixel values.
+ * Overload for color images.  
+ */
 template <>
 class LeastSquares<Vec3b> {
     public:
@@ -311,7 +438,9 @@ class LeastSquares<Vec3b> {
     }
 };
 
-
+/*
+ * Error metric - GemanMcClure metric. 
+ */
 template <typename T, int alpha>
 class GemanMcClure {
     public:
@@ -325,6 +454,10 @@ class GemanMcClure {
     }
 };
 
+/*
+* Error metric - cross correlation. Only works for floating-point based images
+* that are centered around some average (alpha).  
+*/
 template <typename T, int alpha>
 class CrossCorrelation {
     public:
@@ -336,6 +469,11 @@ class CrossCorrelation {
         return -1;
     }
 };
+
+/*
+* Error metric - cross correlation. Only works for floating-point based images
+* that are centered around some average (alpha). Overload for color images. 
+*/
 template <int alpha>
 class CrossCorrelation<Vec3b, alpha> {
     public:

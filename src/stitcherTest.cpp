@@ -6,6 +6,7 @@
 #include <opencv2/stitching/detail/blenders.hpp>
 #include <opencv2/core/ocl.hpp>
 
+#include "minimal/imagePreperation.hpp"
 #include "recorder/recorder.hpp"
 #include "recorder/storageSink.hpp"
 #include "stitcher/stitcherSink.hpp"
@@ -40,7 +41,19 @@ void Record(vector<string> &files, StereoSink &sink) {
     }
 
     static const bool isAsync = true;
+    int mode = minimal::ImagePreperation::ModeIOS;
     shared_ptr<Recorder> recorder(NULL);
+        
+    Mat base, zero;
+
+    if(mode == minimal::ImagePreperation::ModeIOS) {
+        base = optonaut::Recorder::iosBase;
+        zero = Recorder::iosZero;
+    } else {
+        base = optonaut::Recorder::androidBase;
+        zero = Recorder::androidZero;
+    }
+
 
     //DebugHook::Instance = &hook;
 
@@ -69,7 +82,7 @@ void Record(vector<string> &files, StereoSink &sink) {
 
         if(i == 0) {
             recorder = shared_ptr<Recorder>(
-                    new Recorder(Recorder::iosBase, Recorder::iosZero, 
+                    new Recorder(base, zero, 
                         image->intrinsics, sink, "", RecorderGraph::ModeCenter, 
                         isAsync));
 
