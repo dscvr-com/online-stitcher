@@ -489,7 +489,6 @@ namespace optonaut {
                 copy->exposureInfo = image->exposureInfo;
                 copy->id = image->id;
                 debugQueue.Push(copy);
-                debugCounter++;
             }
 
             AssertM(!isFinished, "Warning: Push after finish - this is probably a racing condition");
