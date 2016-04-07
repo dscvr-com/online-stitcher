@@ -6,6 +6,7 @@
 #include <opencv2/stitching/detail/blenders.hpp>
 #include <opencv2/core/ocl.hpp>
 
+#include "minimal/imagePreperation.hpp"
 #include "recorder/recorder.hpp"
 #include "recorder/storageSink.hpp"
 #include "recorder/imageSink.hpp"
@@ -42,14 +43,37 @@ void Record(vector<string> &files, ImageSink &sink) {
     }
 
     static const bool isAsync = true;
+    static const int mode = minimal::ImagePreperation::ModeIOS;
     shared_ptr<Recorder> recorder(NULL);
+        
+    Mat base, zero;
+
+    if(mode == minimal::ImagePreperation::ModeIOS) {
+        base = optonaut::Recorder::iosBase;
+        zero = Recorder::iosZero;
+    } else if(mode == minimal::ImagePreperation::ModeNone) {
+        base = Mat::eye(4, 4, CV_64F);
+        zero = Mat::eye(4, 4, CV_64F);
+    } else {
+        base = optonaut::Recorder::androidBase;
+        zero = Recorder::androidZero;
+    }
+
 
     //DebugHook::Instance = &hook;
 
     for(size_t i = 0; i < files.size(); i++) {
         auto lt = system_clock::now();
         auto image = InputImageFromFile(files[i], false);
-        //cout << "[Record] InputImageFromFile :" << files[i] << endl;
+        cout << "[Record] InputImageFromFile :" << files[i] << endl;
+        
+        if(mode == minimal::ImagePreperation::ModeNone) {
+            // If we deactivate base adjustment, apply a transposition to 
+            // the extrinsics, to counter the transposition that 
+            // happens inside recorder. 
+            image->originalExtrinsics = image->originalExtrinsics.t();
+            image->adjustedExtrinsics = image->adjustedExtrinsics.t();
+        }
             
         //image->intrinsics = iPhone6Intrinsics;
         
@@ -71,10 +95,10 @@ void Record(vector<string> &files, ImageSink &sink) {
 
         if(i == 0) {
             recorder = shared_ptr<Recorder>(
-                    new Recorder(Recorder::iosBase, Recorder::iosZero, 
+                    new Recorder(base, zero, 
                         //image->intrinsics, sink, "", RecorderGraph::ModeCenter, 
                         image->intrinsics, sink, "", RecorderGraph::ModeTruncated
-                       // isAsync));
+                        //isAsync));
                         ));
 
             // Needed for debug. 

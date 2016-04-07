@@ -65,9 +65,6 @@ namespace optonaut {
                     pyrDown(small, small);
                 }              
   
-                if(loaded) {   
-                    img->image.Unload();            
-                }
                 img->image = Image(small); 
                 img->image.source = source; 
 
@@ -110,6 +107,12 @@ namespace optonaut {
             cout << "best size" << ToString(best.size()) << endl;
             cout << "miniimages size" << ToString(miniImages.size()) << endl;
 
+            vector<vector<InputImageP>> rings = recorderGraph.SplitIntoRings(miniImages);
+            size_t k = rings.size() / 2;
+            
+
+            minimal::ImagePreperation::SortById(rings[k]);
+            RingCloser::CloseRing(rings[k]);
 
    				  IterativeBundleAligner aligner;
     				aligner.Align(best, recorderGraph, imagesToTargets, 5, 0.5);
