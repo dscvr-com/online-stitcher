@@ -231,7 +231,6 @@ namespace optonaut {
                 // Remember the alignment corrections. 
                 for (size_t i = 0; i < invmap.size(); ++i) {
                     this->alignmentCorrections[invmap[i]].y = res.at<double>(i, 0);
-                    //cout << invmap[i] << " alignment: " << x.at<double>(i, 0) << endl;
                 }
                 
                 return edges;

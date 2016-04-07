@@ -33,7 +33,6 @@ namespace optonaut {
         
         _Edge(size_t from, size_t to, const ValueType &value) : 
             from(from), to(to), value(value) {
-            
         }
     };
     
@@ -71,6 +70,21 @@ namespace optonaut {
          */
         void Insert(size_t from, size_t to, const ValueType &value) {
             adj[from].emplace_back(from, to, value);
+        }
+           
+        /*
+         * Gets the edge between two nodes. 
+         *
+         * Returns true, if the operation was successful.
+         */ 
+        bool GetEdge(const size_t from, const size_t to, Edge &edge) {
+            for(auto &e : GetEdges()[from]) {
+                if(e.to == to) {
+                    edge = e;
+                    return true;
+                }
+            } 
+            return false;
         }
     };
 }
