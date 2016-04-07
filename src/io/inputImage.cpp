@@ -18,7 +18,12 @@ using namespace cv;
 namespace optonaut {
 
     void InputImage::LoadFromDataRef(bool copy) {
-        //STimer loadTimer(true);
+
+        // This method should be tuned. A lot. 
+        // Some parts are protected by asserts on purpose, since they should
+        // not be used in production. 
+        
+        // STimer loadTimer(true);
         
         Assert(!IsLoaded());
         Assert(dataRef.data != NULL);
