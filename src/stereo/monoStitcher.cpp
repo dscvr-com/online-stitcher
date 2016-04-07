@@ -18,6 +18,9 @@ using namespace cv::detail;
 
 namespace optonaut {
 
+/*
+ * Represents the target plane in rotational space. 
+ */
 struct StereoTarget {
     Mat R;
     Size size;

@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
 
     RecorderGraph fullGraph = RecorderGraphGenerator::Generate(
             allImages[0]->intrinsics, 
-            RecorderGraph::ModeTruncated, 
+            RecorderGraph::ModeCenter, 
             1, 0, 4);
     
     BiMap<size_t, uint32_t> imagesToTargets, d;
@@ -100,10 +100,8 @@ int main(int argc, char** argv) {
 
     //Just for testing. 
 
-    miniImages = minimal::ImagePreperation::CreateMinifiedCopy(finalImages);
-        
     minimal::StereoConverter::StitchAndWrite(
-                miniImages, halfGraph, "aligned_stereo");
+                finalImages, halfGraph, "aligned_stereo");
 
     return 0;
 }
