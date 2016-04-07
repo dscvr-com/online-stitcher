@@ -55,7 +55,7 @@ namespace optonaut {
             double focalLenAdjustment = 1; 
            
             if(adjustIntrinsics)  {
-                focalLenAdjustment = (1 - result.angularOffset.y / M_PI * 2);
+                focalLenAdjustment = (1 - result.angularOffset.y / (M_PI * 2));
                 cout << "Ring closure: Adjusting focal len by: " 
                     << focalLenAdjustment << endl;
             } 

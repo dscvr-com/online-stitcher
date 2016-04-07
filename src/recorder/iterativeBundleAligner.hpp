@@ -7,6 +7,8 @@
 #include "../recorder/alignmentGraph.hpp"
 #include "../recorder/recorderGraph.hpp"
 
+#include "../common/ringProcessor.hpp"
+
 using namespace std;
 using namespace cv;
 
@@ -147,6 +149,45 @@ class IterativeBundleAligner {
                     << matches << " (real: " << (matches - forced) << ")" << 
                     ", outliers: " << outliers << ", no overlap: " << noOverlap << 
                     ", forced: " << forced<< endl;
+
+                auto rings = graph.SplitIntoRings(images);
+
+                deque<double> adjustments;
+
+                for(size_t i = 0; i < rings.size(); i++) {
+                    auto &ring = rings[i];
+                    double dist = 0;
+                    auto addDist = [&dist, &aligner] 
+                        (const InputImageP a, const InputImageP b) {
+                        AlignmentDiff diff;
+                        AlignmentGraph::Edge edge(0, 0, diff);
+
+                        if(aligner.GetEdge(a->id, b->id, edge)) {
+                            dist += edge.value.dphi;
+                        }
+                    };
+
+                    RingProcessor<InputImageP> 
+                        sum(1, addDist, [](const InputImageP&) {});
+
+                    sum.Process(ring);
+
+                    cout << "Ring dist sum: " << dist << endl;
+                    double focalLenAdjustment = (1 - dist / (M_PI * 2));
+                    cout << "Estimated focal length adjustment factor: " 
+                        << focalLenAdjustment << endl;
+
+                    adjustments.push_back(focalLenAdjustment);
+                }
+
+                double focalLenAdjustment = Mean(adjustments);
+                cout << " Final focal length adjustment factor: " 
+                    << focalLenAdjustment << endl;
+
+                for(auto img : images) {
+                   img->intrinsics.at<double>(0, 0) *= focalLenAdjustment; 
+                   img->intrinsics.at<double>(1, 1) *= focalLenAdjustment; 
+                }
 
                 //Needed for iteration
                 for(auto img : images) {

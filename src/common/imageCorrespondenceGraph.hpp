@@ -87,6 +87,10 @@ namespace optonaut {
             const AdjList &GetEdges() const {
                 return relations.GetEdges();
             }
+
+            bool GetEdge(const int aId, const int bId, Edge &edge) {
+                return relations.GetEdge(aId, bId, edge);
+            }
             
             /*
              * Prints all correspondences, for testing. 
