@@ -101,7 +101,7 @@ namespace fun {
     std::vector<In> orderby(const std::vector<In> &input, std::function<Key(const In&)> extractor) {
         std::vector<In> out = input;
 
-        std::sort(out.begin(), out.end(), [&extractor] (In &a, In &b) {
+        std::sort(out.begin(), out.end(), [&extractor] (const In &a, const In &b) {
                     return extractor(a) < extractor(b);
                 });
 
