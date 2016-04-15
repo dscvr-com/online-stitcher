@@ -1,8 +1,9 @@
 #include "../io/inputImage.hpp"
-#include "../imgproc/planarCorrelator.hpp"
+#include "../imgproc/pairwiseCorrelator.hpp"
 #include "../math/support.hpp"
 
 #include "../io/checkpointStore.hpp"
+
 
 #ifndef OPTONAUT_RING_CLOSER_HEADER
 #define OPTONAUT_RING_CLOSER_HEADER

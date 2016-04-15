@@ -16,8 +16,10 @@
 #include "multiringStitcher.hpp"
 #include "stitcher.hpp"
 #include "../recorder/recorderGraph.hpp"
+#include "../recorder/ringCloser.hpp"
 #include "../recorder/recorderGraphGenerator.hpp"
 #include "../recorder/iterativeBundleAligner.hpp"
+#include "../minimal/imagePreperation.hpp"
 
 #include <chrono>
 
@@ -49,6 +51,7 @@ namespace optonaut {
         void minifyImages ( vector<InputImageP> &images, int downsample = 2) {
            AssertGT(downsample, 0);
 
+           int  counter = 0;
            for(auto img : images) {            
                 bool loaded = false;        
                 std::string source = img->image.source;
@@ -65,14 +68,17 @@ namespace optonaut {
                     pyrDown(small, small);
                 }              
   
+                counter++;
                 img->image = Image(small); 
                 img->image.source = source; 
+                cout << "[minifyImages] " << counter << " source: " << source << endl;
 
             }
        		}
         
 
         void Finish() {
+            
             vector<std::vector<InputImageP>> loadedImages;
             vector<std::vector<InputImageP>> fullImages;
             BiMap<size_t, uint32_t> imagesToTargets, d;
@@ -117,14 +123,23 @@ namespace optonaut {
    				  IterativeBundleAligner aligner;
     				aligner.Align(best, recorderGraph, imagesToTargets, 5, 0.5);
 
+            
+            int current_minified_height = miniImages[0]->image.cols;
+            cout << "current_minified_height : " << current_minified_height << endl;
             // preLoad
+            static int count = 0;
             auto loadFullImage = 
-            	[&] (const SelectionInfo &img) {
+            	[] (const SelectionInfo &img) {
+                  /*
                    // unload the last minified image
                    if (img.image->image.IsLoaded())
                    		img.image->image.Unload();          
                    // load the full image ( data from the source att)
                    img.image->image.Load();          
+                   count++;
+                   cout << "image source " << img.image->image.source << endl;
+                   cout << "image size " << img.image->image.size() << "  " << count << endl;
+                 */
             };
 
 						// onProcess
@@ -139,6 +154,18 @@ namespace optonaut {
                 	return;
            	 		}
 
+                if ( current_minified_height == a.image->image.cols ) 
+                    a.image->image.Load();
+
+                if ( current_minified_height == b.image->image.cols ) 
+                    b.image->image.Load();
+
+
+                cout << "current_minified_height " << current_minified_height << endl;
+                cout << "a.image->image.cols " << a.image->image.cols << endl;
+                cout << "b.image->image.cols " << b.image->image.cols << endl;
+                cout << "img size a" << a.image->image.size() << endl;
+                cout << "img size b" << b.image->image.size() << endl;
             		stereoConverter.CreateStereo(a, b, stereo);
 
             		while(stereoRings.size() <= a.closestPoint.ringId) {
@@ -177,7 +204,7 @@ namespace optonaut {
             	if(lastRingId != -1 && lastRingId != (int)target.ringId) {
                 stereoRingBuffer.Flush();
             	}
-
+                    
             	stereoRingBuffer.Push(info);
             	lastRingId = target.ringId;
         		}

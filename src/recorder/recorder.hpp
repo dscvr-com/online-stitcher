@@ -122,7 +122,7 @@ namespace optonaut {
         static bool exposureEnabled;
         static bool alignmentEnabled;
 
-        static constexpr double dt = 4;
+        static constexpr double dt = 1;
 
         Recorder(Mat base, Mat zeroWithoutBase, Mat intrinsics, 
                 ImageSink &sink, string debugPath = "",
@@ -255,9 +255,13 @@ namespace optonaut {
            //     aligner->GetCurrentBias() * image->originalExtrinsics;
 
             if(!firstRingFinished) {
+                // if image last overlap or the same point on the current image
+                cout << "firstRing.size() = " << firstRing.size() << endl;
                 if(firstRing.size() == 0 || 
                    firstRing.back().closestPoint.ringId == in.closestPoint.ringId) {
                     firstRing.push_back(in);
+                    cout << "firstRing.push_back(in)" << endl;
+                    cout << firstRing.back().closestPoint.ringId <<  " == " << in.closestPoint.ringId  << endl ;
                 } else {
                    FinishFirstRing(); 
                 }
@@ -447,7 +451,7 @@ namespace optonaut {
 
         void SavePostProcessImage(SelectionInfo in) {
             sink.Push(in);
-
+            cout << "saving image" << endl;
             auto copy = std::make_shared<InputImage>(*in.image);
             copy->image = Image();
             postImages.push_back(copy);
@@ -577,6 +581,7 @@ namespace optonaut {
 
         void FinishFirstRing() {
             firstRingFinished = true; 
+            cout << "finish first ring" << endl;
 
             RingCloser::CloseRing(fun::map<SelectionInfo, InputImageP>(firstRing, 
             [](const SelectionInfo &x) {
@@ -661,7 +666,7 @@ namespace optonaut {
         }
 
         void Finish() {
-            //cout << "Pipeline Finish called by " << std::this_thread::get_id() << endl;
+            cout << "Pipeline Finish called by " << std::this_thread::get_id() << endl;
             isFinished = true;
          /*
             if(inputBufferQueue.IsRunning()) {
@@ -678,6 +683,9 @@ namespace optonaut {
 */
            // recorderController.Flush();
           //  stereoConversionQueue.Finish();
+                if(!firstRingFinished) {
+                    FinishFirstRing();
+                }
             
            // stereoRingBuffer.Flush();
             //saveQueue.Finish();
