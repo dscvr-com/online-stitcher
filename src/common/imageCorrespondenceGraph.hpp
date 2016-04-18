@@ -20,7 +20,7 @@ namespace optonaut {
         protected: 
             SparseGraph<ValueType> relations;
             mutex graphLock;
-            static const bool debug = true;
+            static const bool debug = false;
 
         public:
             /*

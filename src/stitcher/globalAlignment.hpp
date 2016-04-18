@@ -93,7 +93,6 @@ namespace optonaut {
             // minify the images
             minifyImages(miniImages, downsample);
             cout << "Done minifying " << endl;
-
             Mat intrinsics;
             intrinsics = miniImages[0]->intrinsics;
             int ringsize = loadedImages.size();
@@ -119,6 +118,7 @@ namespace optonaut {
 
             minimal::ImagePreperation::SortById(rings[k]);
             RingCloser::CloseRing(rings[k]);
+
 
    				  IterativeBundleAligner aligner;
     				aligner.Align(best, recorderGraph, imagesToTargets, 5, 0.5);
@@ -146,13 +146,13 @@ namespace optonaut {
             auto ForwardToStereoProcess = 
             	[&] (const SelectionInfo &a, const SelectionInfo &b) {
     
-         				StereoImage stereo;
-            		SelectionEdge dummy;        
+         	    StereoImage stereo;
+                SelectionEdge dummy;        
             
-           	 		if(!recorderGraph.GetEdge(a.closestPoint, b.closestPoint, dummy)) {
+           	    if(!recorderGraph.GetEdge(a.closestPoint, b.closestPoint, dummy)) {
                 	cout << "Skipping pair due to misalignment." << endl;
                 	return;
-           	 		}
+           	    }
 
                 if ( current_minified_height == a.image->image.cols ) 
                     a.image->image.Load();
@@ -166,12 +166,12 @@ namespace optonaut {
                 cout << "b.image->image.cols " << b.image->image.cols << endl;
                 cout << "img size a" << a.image->image.size() << endl;
                 cout << "img size b" << b.image->image.size() << endl;
-            		stereoConverter.CreateStereo(a, b, stereo);
+                stereoConverter.CreateStereo(a, b, stereo);
 
-            		while(stereoRings.size() <= a.closestPoint.ringId) {
-              	  stereoRings.push_back(vector<StereoImage>());
-            		}
-            		stereoRings[a.closestPoint.ringId].push_back(stereo);
+                while(stereoRings.size() <= a.closestPoint.ringId) {
+                    stereoRings.push_back(vector<StereoImage>());
+                }
+                stereoRings[a.closestPoint.ringId].push_back(stereo);
             };
 
             auto FinishImage = [] (const SelectionInfo) { };
@@ -185,10 +185,11 @@ namespace optonaut {
             RecorderGraph halfGraph = RecorderGraphGenerator::Sparse(recorderGraph, 2);
 
             vector<InputImageP> bestAlignment = halfGraph.SelectBestMatches(best, finalImagesToTargets, true);
+
             cout << "bestAlignment size" << bestAlignment.size() << endl;
             cout << "halfGraph size" << halfGraph.Size() << endl;
             
-       			int lastRingId = -1;
+       	    int lastRingId = -1;
         		for(auto img : bestAlignment) {
             	SelectionPoint target;
             	//Reassign points
@@ -202,41 +203,38 @@ namespace optonaut {
             	info.image = img;
 
             	if(lastRingId != -1 && lastRingId != (int)target.ringId) {
-                stereoRingBuffer.Flush();
+                    stereoRingBuffer.Flush();
             	}
                     
             	stereoRingBuffer.Push(info);
             	lastRingId = target.ringId;
-        		}
-        		stereoRingBuffer.Flush();
+            }
+            stereoRingBuffer.Flush();
 
         		// push the images to the stores
             vector<InputImageP> rightImages;
             vector<InputImageP> leftImages;
 
-        		for(vector<StereoImage> rings : stereoRings) {
-        		    for(StereoImage stereo : rings) {
+            for(vector<StereoImage> rings : stereoRings) {
+                for(StereoImage stereo : rings) {
 
-            	     leftStore.SaveRectifiedImage(stereo.A);
-            	     rightStore.SaveRectifiedImage(stereo.B);
+                    leftStore.SaveRectifiedImage(stereo.A);
+            	    rightStore.SaveRectifiedImage(stereo.B);
 
-                   leftImages.push_back(stereo.A);
-                   rightImages.push_back(stereo.B);
+                    leftImages.push_back(stereo.A);
+                    rightImages.push_back(stereo.B);
                                
                  	 stereo.A->image.Unload();
                  	 stereo.B->image.Unload();
-             }
+                }
 
                 vector<vector<InputImageP>> rightRings = 
                     halfGraph.SplitIntoRings(rightImages);
                 vector<vector<InputImageP>> leftRings = 
                     halfGraph.SplitIntoRings(leftImages);
 
-
                 leftStore.SaveStitcherInput(leftRings, gains );
                 rightStore.SaveStitcherInput(rightRings, gains );
-
-
        		}
 
 
