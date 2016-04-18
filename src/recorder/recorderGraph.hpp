@@ -65,11 +65,11 @@ namespace optonaut {
         vector<SelectionPoint*> targetsById;
     public:
         // Recorder graph modes, usually used while generating. 
-        static const int ModeAll = 0; // Full sphere
-        static const int ModeCenter = 1; // Only center ring
-        static const int ModeTruncated = 2; // Omit top and bottom ring (usually leads three rings)
-        static const int ModeNoBot = 3; // Omits bottom ring
-        static const int ModeTinyDebug = 1337; // Three ring slices. Good for debugging state transistions during recording.  
+        static constexpr int ModeAll = 0; // Full sphere
+        static constexpr int ModeCenter = 1; // Only center ring
+        static constexpr int ModeTruncated = 2; // Omit top and bottom ring (usually leads three rings)
+        static constexpr int ModeNoBot = 3; // Omits bottom ring
+        static constexpr int ModeTinyDebug = 1337; // Three ring slices. Good for debugging state transistions during recording.  
        
         // Some predefined densities.  
         static constexpr float DensityHalf = 0.5;

@@ -18,7 +18,12 @@ using namespace cv;
 namespace optonaut {
 
     void InputImage::LoadFromDataRef(bool copy) {
-        //STimer loadTimer(true);
+
+        // This method should be tuned. A lot. 
+        // Some parts are protected by asserts on purpose, since they should
+        // not be used in production. 
+        
+        // STimer loadTimer(true);
         
         Assert(!IsLoaded());
         Assert(dataRef.data != NULL);
@@ -33,7 +38,7 @@ namespace optonaut {
             cv::cvtColor(
                     cv::Mat(dataRef.height, dataRef.width, CV_8UC4, dataRef.data), 
                     result,
-                         cv::COLOR_RGBA2RGB);
+                         cv::COLOR_RGBA2BGR);
             //loadTimer.Tick("## cvtColor");
             
             image = Image(result);
@@ -63,6 +68,8 @@ namespace optonaut {
         
         if(image.data.cols != WorkingWidth && image.data.rows != WorkingHeight) {
             AssertFalseInProduction(false); //Resize should be unnecassary
+            // TODO: implement cropping
+            AssertM(false, "expected correct size: " + ToString(image.data.cols) + ", " + ToString(image.data.rows));
             Mat res;
             cv::resize(image.data, res, cv::Size(WorkingWidth, WorkingHeight));
             image = Image(res);

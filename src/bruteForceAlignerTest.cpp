@@ -36,20 +36,23 @@ int main(int argc, char** argv) {
 
     RecorderGraph fullGraph = RecorderGraphGenerator::Generate(
             allImages[0]->intrinsics, 
-            RecorderGraph::ModeTruncated, 
+            RecorderGraph::ModeCenter, 
             1, 0, 4);
-
-
+    
     BiMap<size_t, uint32_t> imagesToTargets, d;
 
     auto fullImages = fullGraph.SelectBestMatches(allImages, imagesToTargets);
-
+    
     int n = fullImages.size();
     
     cout << "Selecting " << n << "/" << fullGraph.Size() << 
         " images for further processing." << endl;
-
+    
     auto miniImages = minimal::ImagePreperation::CreateMinifiedCopy(fullImages, 3);
+    
+    minimal::StereoConverter::StitchAndWrite(
+                miniImages, fullGraph, "unaligned_stereo");
+
     
     if(outputUnaligned) {
         auto res = debugger.Stitch(miniImages);
@@ -78,19 +81,25 @@ int main(int argc, char** argv) {
     minimal::ImagePreperation::CopyIntrinsics(miniImages, fullImages);
     minimal::ImagePreperation::CopyExtrinsics(miniImages, fullImages);
 
-    auto res = debugger.Stitch(miniImages);
+    minimal::ImagePreperation::LoadAllImages(fullImages);
+
+    auto res = debugger.Stitch(fullImages);
         imwrite("dbg/aligned.jpg", res->image.data);
 
     cout << "Create final stereo output." << endl;
 
-    //Just for testing. 
     RecorderGraph halfGraph = RecorderGraphGenerator::Sparse(fullGraph, 2);
     auto finalImages = halfGraph.SelectBestMatches(fullImages, imagesToTargets, true); 
     cout << "Selecting " << finalImages.size() << "/" << halfGraph.Size() << 
         " images for final step." << endl;
 
-    minimal::ImagePreperation::LoadAllImages(finalImages);
-        
+    //Just for testing - center Part
+    //RingStitcher stitcher;
+    //auto result = stitcher.Stitch(finalImages, ProgressCallback::Empty);
+    //imwrite("dbg/mono_result.jpg", result->image.data);
+
+    //Just for testing. 
+
     minimal::StereoConverter::StitchAndWrite(
                 finalImages, halfGraph, "aligned_stereo");
 

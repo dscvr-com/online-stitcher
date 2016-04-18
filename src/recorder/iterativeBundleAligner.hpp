@@ -68,6 +68,9 @@ class IterativeBundleAligner {
                    //double dPhi = edge.value.dphi * 10;
                    double dTheta = edge.value.dtheta * 10;
 
+                   if(dTheta != dTheta)
+                       continue;
+
                    Scalar color(255 * min(1.0, max(0.0, -dTheta)), 
                                0, 
                                255 * min(1.0, max(0.0, dTheta)));

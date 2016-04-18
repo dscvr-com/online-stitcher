@@ -18,12 +18,23 @@ using namespace cv::detail;
 
 namespace optonaut {
 
+/*
+ * Represents the target plane in rotational space. 
+ */
 struct StereoTarget {
     Mat R;
     Size size;
 };
 
-//Maps the target area from sphere to image space.
+/*
+ * Maps a target area given from rotational coordinates
+ * to the image plane given by center.
+ *
+ * @param targetDimensions Size of the target image, in pixes.
+ * @param targetCenter Location of the target image, rotation matrix.
+ * @param targetK Intrinsic parameters of the target's camera.
+ * @param targetCorners The corners of the area to map, in rotational coords. 
+ */
 void AreaToCorners(const Size targetDimensions, const Mat &targetCenter, 
         const Mat &targetK, const vector<Mat> &targetCorners, 
         vector<Point2f> &corners) {
@@ -45,8 +56,10 @@ void AreaToCorners(const Size targetDimensions, const Mat &targetCenter,
     }
 }
 
-//Gets the outer bounding rectangle of the target area. 
-//Is only consistent with the GetTargetArea method below. 
+/*
+ * Gets the outer bounding rectangle of the target area. 
+ * Is only consistent with the GetTargetArea method below. 
+ */
 Rect CornersToRoi(const vector<Point2f> &corners) {
     float x = min2(corners[0].x, corners[3].x);
     float y = min2(corners[2].y, corners[3].y);
@@ -64,8 +77,15 @@ Rect CornersToRoi(const vector<Point2f> &corners) {
 const double hBufferRatio = 1.5;
 const double vBufferRatio = -0.02;
 
-//Extracts the target area, as points on a sphere surface, 
-//encoded as rotation matrices. 
+/*
+ * For two given images, extracts the target area, as points on a sphere surface, 
+ * encoded as rotation matrices. 
+ *
+ * @param a The first image. 
+ * @param b The second image. 
+ * @param center The location of the image plane, as rotational matrix. 
+ * @param corners Vector for storing the result. 
+ */
 void GetTargetArea(const SelectionPoint &a, const SelectionPoint &b, Mat &center, vector<Mat> &corners) {
     double hLeft = a.hPos;
     double hRight = b.hPos;
@@ -103,6 +123,16 @@ void GetTargetArea(const SelectionPoint &a, const SelectionPoint &b, Mat &center
     assert(hLeft - hBuffer < hRight + hBuffer); 
 }
 
+/*
+ * Projects a given image to it's target plane. Applies perspective 
+ * correction and cuts the proper region. 
+ *
+ * @param a The image to project. 
+ * @param target The target plane. 
+ * @param result The resulting image. 
+ * @param targetK The resulting intrinsics of the projected image. 
+ * @param debug Debugger flag, usually set by calling method. 
+ */
 void MapToTarget(const InputImageP a, const StereoTarget &target, Mat &result, Mat &targetK, bool debug = false) {
     Mat rot, rot4 = target.R.inv() * a->adjustedExtrinsics;
     From4DoubleTo3Double(rot4, rot);
@@ -159,19 +189,23 @@ InputImageP MonoStitcher::RectifySingle(const SelectionInfo &a) {
     vector<Mat> targetArea;
     vector<Point2f> corners;
 
+    // Set our projection target to the selection point of the image. 
     target.R = a.closestPoint.extrinsics;
 
+    // Calculate target area. 
     GetTargetArea(a.closestPoint, a.closestPoint, target.R, targetArea);
     AreaToCorners(a.image->image.size(), target.R, a.image->intrinsics, 
             targetArea, corners);
 
+    // Create target image and set the size of the projectiont target. 
     Rect roi = CornersToRoi(corners);
     target.size = roi.size();
 
+    // Map our image to our predefined target. 
     Mat resA, newKA;
-
     MapToTarget(a.image, target, resA, newKA);
 
+    // Construct resulting image. 
     InputImageP res = std::make_shared<InputImage>(); 
 
     res->image = Image(resA);
@@ -198,7 +232,10 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
     vector<Point2f> corners;
     Mat newKA, newKB;
 
+    // Get the target area which lies between the two given selection points. 
     GetTargetArea(a.closestPoint, b.closestPoint, target.R, targetArea);
+
+    // Calculate target size on projection plane. 
     AreaToCorners(a.image->image.size(), target.R, a.image->intrinsics, 
             targetArea, corners);
 
@@ -207,9 +244,11 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
 
     Mat resA, resB;
 
+    // Map both images to the same projection target. 
     MapToTarget(a.image, target, resA, newKA, debug);
     MapToTarget(b.image, target, resB, newKB, debug);
 
+    // If debug is on, draw all important regions and save the images. 
     if(debug) {
         Point2f tl(roi.x, roi.y);
         for(size_t i = 0; i < corners.size(); i++) {
@@ -228,6 +267,7 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
         imwrite("dbg/" + ToString(a.image->id) + "_warped_B.jpg", resB);
     }
 
+    // Construct resulting stereo image structure. 
     stereo.A->image = Image(resA);
     stereo.B->image = Image(resB);
 

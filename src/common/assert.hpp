@@ -1,8 +1,13 @@
 #include <cassert>
 #include <string>
 #include <iostream>
+#include <sstream>
+#ifdef __ANDROID__
+#include <android/log.h>
+#endif
 
-#include "backtrace.hpp"
+
+//#include "backtrace.hpp"
 #include "support.hpp"
 
 #ifndef OPTONAUT_ASSERT_HEADER
@@ -52,23 +57,31 @@ namespace optonaut {
      * @param isWarning Indicates wether this call should terminate the program or not. 
      */
     inline void PrintAndTerminate(std::string message, std::string vars, std::string values = "", bool isWarning = false) {
-
+        std::stringstream s;
         if(isWarning) {
-            std::cerr << "Warning: "; 
+            s << "Warning: ";
         } else {
-            std::cerr << "Assertion Failed: ";
+            s << "Assertion Failed: ";
         }
         if(message != "")
-            std::cerr << message << " ";
+            s << message << " ";
         if(vars != "")
-            std::cerr << std::endl << "Expression: " << vars << " ";
+            s << std::endl << "Expression: " << vars << " ";
         if(values != "")
-            std::cerr << "(" << values << ")";
+            s << "(" << values << ")";
 
-        std::cerr << std::endl;
+        s << std::endl;
+
+        std::string ret = s.str();
+
+#ifdef __ANDROID__
+        __android_log_print(ANDROID_LOG_DEBUG, "OPTONAUT_ONLINE_STITCHER", "%s", ret.c_str());
+#else
+        std::cout << ret;
+#endif
 
         if(!isWarning) {
-            PrintBacktrace();
+            //PrintBacktrace();
             std::abort();
         }
     }

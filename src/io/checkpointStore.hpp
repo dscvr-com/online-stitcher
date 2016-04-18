@@ -10,6 +10,13 @@
 #define OPTONAUT_CHECKPOINT_HEADER
 
 namespace optonaut {
+    /*
+     * Class for providing an abstract storage for images that
+     * have to be stored and re-loaded during processing. 
+     *
+     * This is necassary for resuming interrupted calculations and for
+     * saving memory. 
+     */
     class CheckpointStore {
     private:
         const std::string basePath;
@@ -64,6 +71,9 @@ namespace optonaut {
         virtual bool SupportsPaging() { return true; }
     };
 
+    /*
+     * Checkpoint store that does nothing. 
+     */
     class DummyCheckpointStore : public CheckpointStore {
         public:
         DummyCheckpointStore() : CheckpointStore("", "") { }

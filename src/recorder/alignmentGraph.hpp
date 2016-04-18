@@ -161,7 +161,12 @@ namespace optonaut {
 
                     // Copy matching information to the correspondence info
                     aToB.dphi = res.angularOffset.y;
-                    aToB.dtheta = res.angularOffset.x;
+                    if(areNeighbors) {
+                        aToB.dtheta = res.angularOffset.x;
+                    } else {
+                        aToB.dtheta = NAN; 
+                        // Only work with vertical offsets for neighbors. 
+                    }
                     aToB.overlap = res.correlationCoefficient * 2;
                     aToB.valid = res.valid;
                     aToB.rejectionReason = res.rejectionReason;
@@ -372,22 +377,25 @@ namespace optonaut {
                         if(edge.value.overlap > 0) {
                             double weight = edge.value.overlap;
 
-                            // Add values to equation system. 
-                            O.at<double>(remap[edge.from], remap[edge.to]) += 
-                                beta * weight;
-                            O.at<double>(remap[edge.from], remap[edge.from]) += 
-                                alpha * weight;
-                            R.at<double>(remap[edge.from]) += 
-                                2 * weight * extractor(edge.value) / 2;
+                            double value = extractor(edge.value);
 
-                            //Use non-linear weights - less penalty for less overlap. 
-                            if(!edge.value.forced) {
-                                error += weight * abs(extractor(edge.value));
-                                weightSum += weight;
-                                edgeCount++;
+                            if(value == value) {
+                                // Add values to equation system. 
+                                O.at<double>(remap[edge.from], remap[edge.to]) += 
+                                    beta * weight;
+                                O.at<double>(remap[edge.from], remap[edge.from]) += 
+                                    alpha * weight;
+                                R.at<double>(remap[edge.from]) += 
+                                    2 * weight * value / 2;
+
+                                if(!edge.value.forced) {
+                                    error += weight * abs(extractor(edge.value));
+                                    weightSum += weight;
+                                    edgeCount++;
+                                }
+
+                                allEdges.push_back(edge);
                             }
-
-                            allEdges.push_back(edge);
                         }
                     }
                 }
@@ -424,12 +432,12 @@ namespace optonaut {
              */
             void Apply(InputImageP in) const {
                 Mat ybias(4, 4, CV_64F);
-                //Mat xbias(4, 4, CV_64F);
+                Mat xbias(4, 4, CV_64F);
 
                 if(alignmentCorrections.find(in->id) != alignmentCorrections.end()) {
                     CreateRotationY(alignmentCorrections.at(in->id).y, ybias);
-                    //CreateRotationX(-alignmentCorrections.at(in->id).x, xbias);
-                    in->adjustedExtrinsics = in->adjustedExtrinsics * ybias; // * xbias; 
+                    CreateRotationX(alignmentCorrections.at(in->id).x, xbias);
+                    in->adjustedExtrinsics = in->adjustedExtrinsics * ybias * xbias; 
                 }
             }
     };
