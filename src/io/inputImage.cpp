@@ -38,7 +38,8 @@ namespace optonaut {
             cv::cvtColor(
                     cv::Mat(dataRef.height, dataRef.width, CV_8UC4, dataRef.data), 
                     result,
-                         cv::COLOR_RGBA2BGR);
+                         cv::COLOR_RGBA2RGB);
+                        // cv::COLOR_RGBA2BGR);
             //loadTimer.Tick("## cvtColor");
             
             image = Image(result);

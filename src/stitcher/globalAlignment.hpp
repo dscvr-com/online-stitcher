@@ -86,14 +86,14 @@ namespace optonaut {
             map<size_t, double> gains;
             MonoStitcher stereoConverter;
             vector<vector<StereoImage>> stereoRings;
-            cout << "Loading images " << endl;
+            //cout << "Loading images " << endl;
             imageStore.LoadStitcherInput(loadedImages, gains);
-            cout << "Done Loading images. minifying " << endl;
+            //cout << "Done Loading images. minifying " << endl;
             vector <InputImageP> miniImages = fun::flat(loadedImages);
             int downsample = 3;
             // minify the images
             minifyImages(miniImages, downsample);
-            cout << "Done minifying " << endl;
+            //cout << "Done minifying " << endl;
             Mat intrinsics;
             intrinsics = miniImages[0]->intrinsics;
             int ringsize = loadedImages.size();
@@ -101,17 +101,17 @@ namespace optonaut {
 
             if (ringsize == 1) {
                graphConfiguration =  RecorderGraph::ModeCenter;
-               cout << "ModeCenter" << endl;
+               //cout << "ModeCenter" << endl;
             } else if (ringsize == 3)  {
-               cout << "ModeTruncated" << endl;
+               //cout << "ModeTruncated" << endl;
                graphConfiguration =  RecorderGraph::ModeTruncated;
             }
   
             RecorderGraph recorderGraph = generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityNormal, 0, 8);
             
             vector<InputImageP> best = recorderGraph.SelectBestMatches(miniImages, imagesToTargets, true);
-            cout << "best size" << ToString(best.size()) << endl;
-            cout << "miniimages size" << ToString(miniImages.size()) << endl;
+            //cout << "best size" << ToString(best.size()) << endl;
+            //cout << "miniimages size" << ToString(miniImages.size()) << endl;
 
             vector<vector<InputImageP>> rings = recorderGraph.SplitIntoRings(miniImages);
             size_t k = rings.size() / 2;
@@ -126,7 +126,7 @@ namespace optonaut {
 
             
             int current_minified_height = miniImages[0]->image.cols;
-            cout << "current_minified_height : " << current_minified_height << endl;
+            //cout << "current_minified_height : " << current_minified_height << endl;
             // preLoad
             static int count = 0;
             auto loadFullImage = 
@@ -147,10 +147,8 @@ namespace optonaut {
                    if (img.image->image.IsLoaded())
                    		img.image->image.Unload();          
                    // load the full image ( data from the source att)
-                   img.image->image.Load();          
-                   count++;
-                   cout << "image source " << img.image->image.source << endl;
-                   cout << "image size " << img.image->image.size() << "  " << count << endl;
+                   //img.image->image.Load();          
+                  // cout << "image source " << img.image->image.source << endl;
                 };
 
 						// onProcess
@@ -165,24 +163,46 @@ namespace optonaut {
                 	return;
            	    }
 
+                if (!a.image->image.IsLoaded())
+                    a.image->image.Load();          
+                if (!b.image->image.IsLoaded())
+                    b.image->image.Load();          
+
+
+
                 if ( current_minified_height == a.image->image.cols ) 
                     a.image->image.Load();
 
                 if ( current_minified_height == b.image->image.cols ) 
                     b.image->image.Load();
-
-
+             /*
                 cout << "current_minified_height " << current_minified_height << endl;
                 cout << "a.image->image.cols " << a.image->image.cols << endl;
                 cout << "b.image->image.cols " << b.image->image.cols << endl;
                 cout << "img size a" << a.image->image.size() << endl;
                 cout << "img size b" << b.image->image.size() << endl;
+             */
                 stereoConverter.CreateStereo(a, b, stereo);
 
                 while(stereoRings.size() <= a.closestPoint.ringId) {
                     stereoRings.push_back(vector<StereoImage>());
                 }
                 stereoRings[a.closestPoint.ringId].push_back(stereo);
+                if (a.image->image.IsLoaded())
+                    a.image->image.Unload();          
+                if (b.image->image.IsLoaded())
+                    b.image->image.Unload();          
+                leftStore.SaveRectifiedImage(stereo.A);
+            	rightStore.SaveRectifiedImage(stereo.B);
+                stereo.A->image.Unload();
+                stereo.B->image.Unload();
+
+               //  cout << "stereo conversion count  " << count << endl;
+                count++;
+                if(count % 50 == 0) {
+                    cout << "Warning: Input Queue overflow: " <<  count << endl;
+                    this_thread::sleep_for(chrono::seconds(1));
+                }
             };
 
             auto FinishImage = [] (const SelectionInfo) { };
@@ -190,15 +210,15 @@ namespace optonaut {
 
             RingProcessor<SelectionInfo> stereoRingBuffer(1, 1, loadFullImage, ForwardToStereoProcess, FinishImage);
            
-            cout << "fullGraph size" << recorderGraph.Size() << endl;
+           // cout << "fullGraph size" << recorderGraph.Size() << endl;
 
             BiMap<size_t, uint32_t> finalImagesToTargets;
             RecorderGraph halfGraph = RecorderGraphGenerator::Sparse(recorderGraph, 2);
 
             vector<InputImageP> bestAlignment = halfGraph.SelectBestMatches(best, finalImagesToTargets, true);
 
-            cout << "bestAlignment size" << bestAlignment.size() << endl;
-            cout << "halfGraph size" << halfGraph.Size() << endl;
+            //cout << "bestAlignment size" << bestAlignment.size() << endl;
+            //cout << "halfGraph size" << halfGraph.Size() << endl;
             
        	    int lastRingId = -1;
         		for(auto img : bestAlignment) {
@@ -229,14 +249,9 @@ namespace optonaut {
             for(vector<StereoImage> rings : stereoRings) {
                 for(StereoImage stereo : rings) {
 
-                    leftStore.SaveRectifiedImage(stereo.A);
-            	    rightStore.SaveRectifiedImage(stereo.B);
-
-                    leftImages.push_back(stereo.A);
+                                    leftImages.push_back(stereo.A);
                     rightImages.push_back(stereo.B);
                                
-                 	 stereo.A->image.Unload();
-                 	 stereo.B->image.Unload();
                 }
 
                 vector<vector<InputImageP>> rightRings = 
