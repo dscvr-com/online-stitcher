@@ -68,9 +68,14 @@ class RingStitcher {
         AsyncRingStitcher core(images[0], rotations, 1200, false, 0);
 
         //TODO: Place all IO, exposure compensation and so on here. 
+
+        cout << "images.size() " << images.size() << endl;
+        cout << "rotations.size() " << rotations.size() << endl;
         
         for(size_t i = 0; i < images.size(); i++) {
             progress(i / (float)images.size());
+            cout << "[stitch] ImageSource" << images[i]->image.source << endl;
+            cout << "[stitch] ImageSize" << images[i]->image.size() << endl;
             core.Push(images[i]); 
         }
 

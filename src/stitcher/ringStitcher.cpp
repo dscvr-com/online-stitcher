@@ -17,7 +17,7 @@ using namespace std;
 using namespace cv;
 using namespace cv::detail;
 
-static const bool debug = false;
+static const bool debug = true;
 
 namespace optonaut {
     
@@ -72,7 +72,10 @@ private:
         Rect overlap = imageRoi & resultRoi;
 
         Rect overlapI(0, 0, overlap.width, overlap.height);
-
+        cout << "warpedImageAsShort size " << warpedImageAsShort.size() << endl;
+        cout << "in->corner " << in->corner << endl;
+        cout << "imageRoi " << imageRoi << endl;
+        cout << "resultRoi " << resultRoi << endl;
         if(overlap.width == imageRoi.width) {
             //Image fits.
             blender->feed(warpedImageAsShort(overlapI), in->mask.data(overlapI), in->corner);
@@ -155,10 +158,11 @@ private:
         for(size_t i = 0; i < n; i++) {
             Mat R;
             From3DoubleTo3Float(rotations[i], R); 
-
-            //Warping
+                  //Warping
             Rect roi = warper->warpRoi(img->image.size(), K, R);
-
+            cout << "Rect Roi " << roi << endl; 
+          //  cout << "[init] ImageSource" << rotations[i]->image.source << endl;
+           // cout << "[init] ImageSize" << rotations[i]->image.size() << endl;
             corners[i] = Point(roi.x, roi.y);
             warpedSizes[i] = Size(roi.width, roi.height);
 
@@ -212,6 +216,8 @@ private:
         STimer detailTimer;
 
         bool autoUnload = false;
+        cout << "[push] ImageSource" << img->image.source << endl; 
+        cout << "[push] ImageSize" << img->image.size() << endl; 
         if(!img->image.IsLoaded()) {
             img->image.Load();
             autoUnload = true;
@@ -231,17 +237,39 @@ private:
                 INTER_LINEAR, BORDER_CONSTANT); 
         res->image = Image(warpedImage);
         res->id = img->id;
+      
+      /*
+            Mat rvec;
+            ExtractRotationVector( img->adjustedExtrinsics , rvec);
+            cout << "## Rotation X: " << rvec.at<double>(0) << endl;
+            cout << "## Rotation Y: " << rvec.at<double>(1) << endl;
+            cout << "## Rotation Z: " << rvec.at<double>(2) << endl;
+            cout << "## rvec : " << rvec << endl;
+        */
+
 
         //Calculate Image Position (without wrapping around)
         Point tl = warper->warpPoint(Point(0, img->image.rows), K, R);
+        cout << "Point tl " << tl << endl;
+        cout << "K matrix " << K << endl;
+        cout << "img->adjustedExtrinsics " << img->adjustedExtrinsics << endl;
+
+
         Point bl = warper->warpPoint(Point(0, 0), K, R);
         Rect roi = warper->warpRoi(img->image.size(), K, R);
         Size fullRoi = roi.size();
+
+        cout << "bl" << bl << endl;
+        cout << "roi" << roi << endl;
+        cout << "fullRoi" << fullRoi << endl;
+
+
         Point cornerLeft;
 
         if(abs(bl.x - tl.x) > fullRoi.width / 2) {
             //Corner case. Difference between left corners
             //is more than half the image. 
+            cout << "corner case" << endl;
             if(bl.x < tl.x) {
                 cornerLeft = tl;
             } else {
@@ -249,6 +277,7 @@ private:
             }
         } else {
             //Standard case. 
+            cout << "standard case" << endl;
             if(bl.x > tl.x) {
                 cornerLeft = tl;
             } else {
@@ -257,6 +286,7 @@ private:
         }
 
         res->corner = Point(cornerLeft.x, roi.y);
+        cout << " res->corner " << res->corner << endl;
        
         if(autoUnload) { 
             img->image.Unload(); 

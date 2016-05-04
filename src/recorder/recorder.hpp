@@ -122,7 +122,7 @@ namespace optonaut {
         static bool exposureEnabled;
         static bool alignmentEnabled;
 
-        static constexpr double dt = 1;
+        static constexpr double dt = 10;
 
         Recorder(Mat base, Mat zeroWithoutBase, Mat intrinsics, 
                 ImageSink &sink, string debugPath = "",
@@ -253,6 +253,7 @@ namespace optonaut {
             //recorderController.Push(x.image);
            // image->adjustedExtrinsics = 
            //     aligner->GetCurrentBias() * image->originalExtrinsics;
+            postProcessImageQueue.Push(in);
 
             if(!firstRingFinished) {
                 // if image last overlap or the same point on the current image
@@ -269,7 +270,7 @@ namespace optonaut {
                 if(refinedIntrinsics.cols != 0) {
                     refinedIntrinsics.copyTo(image->intrinsics);
                 }
-                postProcessImageQueue.Push(in);
+               // postProcessImageQueue.Push(in);
             }
        
         }
@@ -593,7 +594,7 @@ namespace optonaut {
             for(size_t i = 0; i < firstRing.size(); i++) {
                 PushToPreview(firstRing[i]);
                 //recorderController.Push(firstRing[i].image);
-                postProcessImageQueue.Push(firstRing[i]);
+                //postProcessImageQueue.Push(firstRing[i]);
             }
             
             firstRing.clear();
