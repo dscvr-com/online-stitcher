@@ -109,7 +109,7 @@ namespace optonaut {
   
             RecorderGraph recorderGraph = generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityNormal, 0, 8);
             
-            vector<InputImageP> best = recorderGraph.SelectBestMatches(miniImages, imagesToTargets, true);
+            vector<InputImageP> best = recorderGraph.SelectBestMatches(miniImages, imagesToTargets, false);
             //cout << "best size" << ToString(best.size()) << endl;
             //cout << "miniimages size" << ToString(miniImages.size()) << endl;
 
