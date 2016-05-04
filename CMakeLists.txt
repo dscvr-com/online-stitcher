@@ -14,21 +14,21 @@ option(BUILD_RING_CLOSURE_TEST "Build ring closure test" ON)
 option(BUILD_STEREO_CONVERSION_TEST "Build stereo conversion test" ON) 
 option(BUILD_BRUTE_FORCE_ALIGNER_TEST "Build iterative bindle aligner test" ON) 
 
-#find_package(OpenGL REQUIRED)
-#include_directories(${OPENGL_INCLUDE_DIR})
-#include_directories(SYSTEM src/lib/irrlicht)
-#include_directories("/usr/local/include/Eigen3")
+find_package(OpenGL REQUIRED)
+include_directories(${OPENGL_INCLUDE_DIR})
+include_directories(SYSTEM src/lib/irrlicht)
+include_directories("/usr/local/include/Eigen3")
 
 INCLUDE_DIRECTORIES ( /System/Library/Frameworks )
 
-#FIND_LIBRARY( COCOA_LIB Cocoa )
-#FIND_LIBRARY( CARBON_LIB Carbon )
-#FIND_LIBRARY( IOKIT_LIB IOKit )
+FIND_LIBRARY( COCOA_LIB Cocoa )
+FIND_LIBRARY( CARBON_LIB Carbon )
+FIND_LIBRARY( IOKIT_LIB IOKit )
 
-#MARK_AS_ADVANCED (COCOA_LIB
-#    CARBON_LIB 
-#    IOKIT_LIB)
-#SET(OSX_LIBS ${COCOA_LIB} ${CARBON_LIB} ${IOKIT_LIB})
+MARK_AS_ADVANCED (COCOA_LIB
+    CARBON_LIB 
+    IOKIT_LIB)
+SET(OSX_LIBS ${COCOA_LIB} ${CARBON_LIB} ${IOKIT_LIB})
 
 find_package( OpenCV REQUIRED )
 

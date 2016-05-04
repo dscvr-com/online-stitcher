@@ -338,6 +338,9 @@ int main(int argc, char** argv) {
         //pyrDown(img->image.data, img->image.data);
         img->image = Image(img->image.data);
         img->intrinsics = iPhone5Intrinsics;
+        // Very custom calibration
+        img->intrinsics.at<double>(0, 0) *= 0.99;
+        img->intrinsics.at<double>(1, 1) *= 0.99;
        
         static const bool undistort = true;
 
