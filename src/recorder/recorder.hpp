@@ -52,7 +52,6 @@ namespace optonaut {
         JumpFilter jumpFilter;
         shared_ptr<Aligner> aligner;
 
-       // StereoSink &sink;
         ImageSink &sink;
         
         vector<InputImageP> leftImages;
@@ -69,19 +68,11 @@ namespace optonaut {
         
         RecorderGraphGenerator generator;
         RecorderGraph preRecorderGraph;
-     //   RecorderGraph recorderGraph;
         FeedbackImageSelector preController;
-        //ImageSelector recorderController;
         
         uint32_t imagesToRecord;
         uint32_t recordedImages;
-     //   uint32_t keyframeCount;
         
-        //AsyncQueue<SelectionInfo> inputBufferQueue;
-        //QueueProcessor<SelectionInfo> alignerDelayQueue;
-      //  AsyncQueue<SelectionInfo> stereoConversionQueue;
-     //   RingProcessor<SelectionInfo> stereoRingBuffer;
-      //  AsyncQueue<StereoImage> saveQueue;
         AsyncQueue<InputImageP> debugQueue;
         AsyncQueue<SelectionInfo> postProcessImageQueue;
 
@@ -101,12 +92,6 @@ namespace optonaut {
 
         Mat refinedIntrinsics;
         
-/*
-        InputImageP GetParentKeyframe(const Mat &extrinsics) {
-            return aligner->GetClosestKeyframe(extrinsics);
-        }
-*/
-        
     public:
 
         static Mat androidBase;
@@ -122,6 +107,10 @@ namespace optonaut {
         static bool exposureEnabled;
         static bool alignmentEnabled;
 
+        // Delta tolerance: 1 for production, higher value for testing on PC. 
+        // Makes the recorder select images that are further off selection points, 
+        // because we don't have a chance to "correct" the movement of the phone
+        // wehn we're debugging on PC. 
         static constexpr double dt = 10;
 
         Recorder(Mat base, Mat zeroWithoutBase, Mat intrinsics, 
@@ -136,49 +125,13 @@ namespace optonaut {
             hasStarted(false),
             generator(),
             preRecorderGraph(generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityNormal, 0, 8)),
-           // recorderGraph(RecorderGraphGenerator::Sparse(preRecorderGraph, 2)),
             preController(preRecorderGraph, [this] (const SelectionInfo &x) {
-               // inputBufferQueue.Push(x);
-                 
-               //ForwardToRecorderController(x);
                 ForwardToPostProcessImageQueue(x);
-
-
             }, Vec3d(M_PI / 64 * dt, M_PI / 128 * dt, M_PI / 16 * dt)),
-          //  recorderController(recorderGraph, [this] (const SelectionInfo &x) {
                 // mca: save the image here? and not forward the it to the stereo conversion
                 // what about the external extrinsics? do we need the original extrinsics? or just the image itself?
-            
-                //ForwardToStereoConversionQueue(x);
-           //     ForwardToPostProcessImageQueue(x);
-          //  }, Vec3d(M_PI / 16 , M_PI / 16 , M_PI / 8 ), false),
             imagesToRecord(preRecorderGraph.Size()),
             recordedImages(0),
-            //keyframeCount(0),
-        //    inputBufferQueue([this] (const SelectionInfo &x) {
-        //        ForwardToAligner(x);
-        //    }),
-        //    alignerDelayQueue(1,
-        //        std::bind(&Recorder::ApplyAlignment,
-        //                  this, placeholders::_1)),
-   /*         stereoConversionQueue(
-                std::bind(&Recorder::ForwardToStereoRingBuffer,
-                    this, placeholders::_1)),
-*/
-/* 
-           stereoRingBuffer(1,
-                std::bind(&Recorder::ForwardToStereoProcess,
-                    this, placeholders::_1,
-                    placeholders::_2),
-              //  std::bind(&Recorder::FinishImage, 
-              //      this, placeholders::_1)),
-*/
-     /*       saveQueue(
-                    std::bind(&Recorder::SaveStereoResult,
-                    this, placeholders::_1)
-            ),
-*/
-
             debugQueue([this] (const InputImageP &x) {
                 static int debugCounter = 0;
                 InputImageToFile(x, 
@@ -204,13 +157,15 @@ namespace optonaut {
         {
             baseInv = base.inv();
             zero = zeroWithoutBase;
+
+            // Make sure we don't use debugger params in production. 
+            AssertFalseInProduction(dt != 1.0);
             
             // Allocate some useless memory.
             // We do so to "reserve" pages, so we don't have lag when allocating during the first ring.
             {
                 vector<void*> uselessMem;
                 
-                // rings = vector<vector<SelectionPoint>> targets
                 auto &rings = preRecorderGraph.GetRings();
                 
                 // Allocate a little extra for working/preview
@@ -236,12 +191,6 @@ namespace optonaut {
             //cout << "Base: " << base << endl;
             //cout << "BaseInv: " << baseInv << endl;
             //cout << "Zero: " << zero << endl;
-        
-            if(Recorder::alignmentEnabled) {
-                //aligner = shared_ptr<Aligner>(new RingwiseStreamAligner(recorderGraph, isAsync));
-            } else {
-               // aligner = shared_ptr<Aligner>(new TrivialAligner());
-            }
         }
   
         void ForwardToPostProcessImageQueue(SelectionInfo in) {
@@ -525,7 +474,6 @@ namespace optonaut {
         }
 
 /*
-        void ApplyAlignment(SelectionInfo info) {
             
             auto image = info.image;
 

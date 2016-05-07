@@ -226,6 +226,7 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
 
 	AssertEQ(a.image->image.cols, b.image->image.cols);
 	AssertEQ(a.image->image.rows, b.image->image.rows);
+    AssertMatEQ<double>(a.image->intrinsics, b.image->intrinsics);
 
     StereoTarget target;
     vector<Mat> targetArea;

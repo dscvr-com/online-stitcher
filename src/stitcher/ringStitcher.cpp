@@ -55,7 +55,9 @@ private:
     cv::Mat warpedMask;
     cv::Mat K;
     bool fast;
-    
+
+    cv::Size initialSize;
+
     //Stitcher feed function.
     void Feed(const StitchingResultP &in) {
         STimer feedTimer;
@@ -154,6 +156,8 @@ private:
         ScaleIntrinsicsToImage(img->intrinsics, img->image, scaledK);
         From3DoubleTo3Float(scaledK, K);
 
+        initialSize = img->image.size();
+
         // Calulate result ROI
         for(size_t i = 0; i < n; i++) {
             Mat R;
@@ -212,6 +216,9 @@ private:
     void Push(const InputImageP img) {
         
         Assert(img != nullptr);
+
+        // We assume equal dimensions and intrinsics for a performance gain. 
+        AssertEQM(img->image.size(), initialSize, "Image has same dimensions as initial image");
         
         STimer detailTimer;
 
@@ -238,7 +245,7 @@ private:
         res->image = Image(warpedImage);
         res->id = img->id;
       
-      /*
+        /*
             Mat rvec;
             ExtractRotationVector( img->adjustedExtrinsics , rvec);
             cout << "## Rotation X: " << rvec.at<double>(0) << endl;
@@ -250,18 +257,19 @@ private:
 
         //Calculate Image Position (without wrapping around)
         Point tl = warper->warpPoint(Point(0, img->image.rows), K, R);
-        cout << "Point tl " << tl << endl;
-        cout << "K matrix " << K << endl;
-        cout << "img->adjustedExtrinsics " << img->adjustedExtrinsics << endl;
+        
+        // cout << "Point tl " << tl << endl;
+        // cout << "K matrix " << K << endl;
+        // cout << "img->adjustedExtrinsics " << img->adjustedExtrinsics << endl;
 
 
         Point bl = warper->warpPoint(Point(0, 0), K, R);
         Rect roi = warper->warpRoi(img->image.size(), K, R);
         Size fullRoi = roi.size();
 
-        cout << "bl" << bl << endl;
-        cout << "roi" << roi << endl;
-        cout << "fullRoi" << fullRoi << endl;
+        // cout << "bl" << bl << endl;
+        // cout << "roi" << roi << endl;
+        // cout << "fullRoi" << fullRoi << endl;
 
 
         Point cornerLeft;
@@ -269,7 +277,7 @@ private:
         if(abs(bl.x - tl.x) > fullRoi.width / 2) {
             //Corner case. Difference between left corners
             //is more than half the image. 
-            cout << "corner case" << endl;
+            // cout << "corner case" << endl;
             if(bl.x < tl.x) {
                 cornerLeft = tl;
             } else {
@@ -277,7 +285,7 @@ private:
             }
         } else {
             //Standard case. 
-            cout << "standard case" << endl;
+            // cout << "standard case" << endl;
             if(bl.x > tl.x) {
                 cornerLeft = tl;
             } else {
