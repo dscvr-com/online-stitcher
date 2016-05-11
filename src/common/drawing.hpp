@@ -129,8 +129,7 @@ namespace optonaut {
 
             cv::Point center = debugger.WarpPoint(intrinsics,
                        ext, 
-                       imageSize, cv::Point(0, 0)) - 
-                cv::Point(imageSize.width / 2, imageSize.height / 2);
+                       imageSize, cv::Point(0, 0));
 
             cv::circle(target, center - offset, size, color, -1);
 
@@ -143,6 +142,14 @@ namespace optonaut {
             //}
         }
     }
+    
+    static inline void DrawImagePointsOnPanorama(StitchingResultP &target, const vector<InputImageP> &images, 
+            float warperScale, const Scalar color = Scalar(0x00, 0xFF, 0x00)) {
+       DrawPointsOnPanorama(target->image.data, 
+                ExtractExtrinsics(images), images[0]->intrinsics, 
+                images[0]->image.size(), warperScale, target->corner, color);
+    }
+
 }
 
 #endif

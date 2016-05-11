@@ -96,7 +96,7 @@ void Record(vector<string> &files, ImageSink &sink) {
         if(i == 0) {
             recorder = shared_ptr<Recorder>(
                     new Recorder(base, zero, 
-                        //image->intrinsics, sink, "", RecorderGraph::ModeCenter, 
+                        //image->intrinsics, sink, "", RecorderGraph::ModeCenter
                         image->intrinsics, sink, "", RecorderGraph::ModeTruncated
                         //isAsync));
                         ));
@@ -190,7 +190,7 @@ int main(int argc, char** argv) {
     }
 
 
-		GlobalAlignment globalAlignment = GlobalAlignment(postProcStore, leftStore, rightStore );
+		GlobalAlignment globalAlignment = GlobalAlignment(postProcStore, leftStore, rightStore);
     globalAlignment.Finish();
 		ExposureCompensator dummyCompensator;
 
@@ -211,12 +211,6 @@ int main(int argc, char** argv) {
 
     auto resLeft = leftStitcher.Stitch(ProgressCallback::Empty);
     auto resRight = rightStitcher.Stitch(ProgressCallback::Empty);
-
-
-
-
-
-
     
     if(!useStitcherSink) {
 
@@ -234,7 +228,7 @@ int main(int argc, char** argv) {
             cout << "Start left stitcher." << endl;
             optonaut::Stitcher leftStitcher(leftStore);
             auto left = leftStitcher.Finish(callbacks.At(0), "dbg/left");
-
+/*
             DrawPointsOnPanorama(left->image.data, 
                     ExtractExtrinsics(fun::flat(graph->GetRings())), 
                     intrinsics, imageSize, 1200, left->corner);
@@ -251,7 +245,7 @@ int main(int argc, char** argv) {
             DrawPointsOnPanorama(left->image.data, originalExtrinsics,
                     intrinsics, imageSize, 1200, left->corner + Point(0, -100),
                     Scalar(0xFF, 0x00, 0xFF));
-            
+*/
             imwrite("dbg/left.jpg", left->image.data);
             left->image.Unload();  
             left->mask.Unload();  

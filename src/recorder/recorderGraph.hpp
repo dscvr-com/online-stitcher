@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "../io/inputImage.hpp"
+#include "../io/io.hpp"
 #include "../common/image.hpp"
 #include "../common/bimap.hpp"
 #include "../math/support.hpp"
@@ -387,6 +388,52 @@ namespace optonaut {
             }
 
             return res;
+        }
+
+        // Todo blah
+        void AddDummyImages(vector<InputImageP> &imgs, BiMap<size_t, uint32_t> &imagesToTargets, const Scalar &color, const cv::Size &size) {
+            map<uint32_t, SelectionPoint*> targets;
+
+            for(auto &ring : this->targets) {
+                for(auto &target : ring) {
+                    targets[target.globalId] = &target;
+                }
+            }
+
+            int maxId = 0;
+
+            for(auto &img : imgs) {
+                uint32_t id;
+                Assert(imagesToTargets.GetValue(img->id, id));
+                auto it = targets.find(id);
+                if(it != targets.end()) { // In case of duplicate, do not double erase
+                    targets.erase(it); 
+                }
+
+                if(img->id <= maxId) {
+                    maxId = img->id + 1;
+                }
+            }
+
+            for(auto &pair : targets) {
+                auto target = pair.second;
+
+                Mat img(size, CV_8UC3, color);
+                InputImageP image = make_shared<InputImage>();
+                image->image = Image(img);
+                target->extrinsics.copyTo(image->originalExtrinsics);
+                target->extrinsics.copyTo(image->adjustedExtrinsics);
+                imgs[0]->intrinsics.copyTo(image->intrinsics);
+                image->id = maxId++;
+
+                imgs.push_back(image);
+                    
+                imagesToTargets.Insert(image->id, target->globalId);
+
+                auto path = "tmp/" + ToString(image->id) + ".jpg";
+                image->image.source = path;
+                InputImageToFile(image, path);
+            }
         }
        
         /*

@@ -24,6 +24,8 @@ class AsyncRingStitcher {
     class Impl;
     // Implementation pointer pattern. 
     Impl* pimpl_;
+
+    float warperScale;
     public:
 
     /*
@@ -42,6 +44,10 @@ class AsyncRingStitcher {
      * Pushes an image and adds it to the result. 
      */
     void Push(const InputImageP image);
+
+    float GetWarperScale() {
+        return warperScale;        
+    };
 
     /*
      * Finalizes and returns the result.
@@ -65,7 +71,7 @@ class RingStitcher {
         std::vector<Mat> rotations = fun::map<InputImageP, Mat>(images, 
                 [](const InputImageP &i) { return i->adjustedExtrinsics; }); 
 
-        AsyncRingStitcher core(images[0], rotations, 1200, false, 0);
+        AsyncRingStitcher core(images[0], rotations, GetWarperScale(), false, 0);
 
         //TODO: Place all IO, exposure compensation and so on here. 
 
@@ -80,6 +86,10 @@ class RingStitcher {
         }
 
         return core.Finalize();
+    }
+
+    float GetWarperScale() {
+        return 1200;
     }
 
     /*

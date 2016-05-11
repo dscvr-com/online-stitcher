@@ -17,7 +17,7 @@ using namespace std;
 using namespace cv;
 using namespace cv::detail;
 
-static const bool debug = true;
+static const bool debug = false;
 
 namespace optonaut {
     
@@ -343,7 +343,8 @@ private:
 AsyncRingStitcher::AsyncRingStitcher(const InputImageP firstImage,
         std::vector<cv::Mat> rotations, float warperScale,
         bool fast, int roiBuffer) :
-    pimpl_(new Impl(firstImage, rotations, warperScale, fast, roiBuffer)) {
+    pimpl_(new Impl(firstImage, rotations, warperScale, fast, roiBuffer)),
+    warperScale(warperScale) {
         
 }
 

@@ -32,5 +32,5 @@ INCLUDE_DIRECTORIES ( /System/Library/Frameworks )
 
 find_package( OpenCV REQUIRED )
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall -Wunreachable-code -std=c++1y -O3 -g -Werror")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall -Wunreachable-code -std=c++1y -O0 -g -Werror")
 add_subdirectory(src)

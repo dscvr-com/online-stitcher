@@ -88,6 +88,8 @@ namespace optonaut {
             vector<vector<StereoImage>> stereoRings;
             //cout << "Loading images " << endl;
             imageStore.LoadStitcherInput(loadedImages, gains);
+
+            Size originalSize = fun::flat(loadedImages)[0]->image.size();
             //cout << "Done Loading images. minifying " << endl;
             vector <InputImageP> miniImages = fun::flat(loadedImages);
             int downsample = 3;
@@ -152,23 +154,35 @@ namespace optonaut {
                 };
 
 						// onProcess
+           // cout << "fullGraph size" << recorderGraph.Size() << endl;
+
+            BiMap<size_t, uint32_t> finalImagesToTargets;
+            RecorderGraph halfGraph = RecorderGraphGenerator::Sparse(recorderGraph, 2);
+
+            vector<InputImageP> bestAlignment = halfGraph.SelectBestMatches(best, finalImagesToTargets, false);
+
+            halfGraph.AddDummyImages(bestAlignment, finalImagesToTargets, Scalar(255, 0, 0), originalSize);
+
+            sort(bestAlignment.begin(), bestAlignment.end(), [&] (auto a, auto b) {
+                uint32_t aId, bId;
+                Assert(finalImagesToTargets.GetValue(a->id, aId));
+                Assert(finalImagesToTargets.GetValue(b->id, bId));
+
+                return aId < bId;
+            });
+
             auto ForwardToStereoProcess = 
             	[&] (const SelectionInfo &a, const SelectionInfo &b) {
     
          	    StereoImage stereo;
                 SelectionEdge dummy;        
             
-           	    if(!recorderGraph.GetEdge(a.closestPoint, b.closestPoint, dummy)) {
-                	cout << "Skipping pair due to misalignment." << endl;
-                	return;
-           	    }
+           	    AssertM(halfGraph.GetEdge(a.closestPoint, b.closestPoint, dummy), "Pair is correctly ordered");
 
                 if (!a.image->image.IsLoaded())
                     a.image->image.Load();          
                 if (!b.image->image.IsLoaded())
                     b.image->image.Load();          
-
-
 
                 if ( current_minified_height == a.image->image.cols ) 
                     a.image->image.Load();
@@ -210,13 +224,6 @@ namespace optonaut {
 
             RingProcessor<SelectionInfo> stereoRingBuffer(1, 1, loadFullImage, ForwardToStereoProcess, FinishImage);
            
-           // cout << "fullGraph size" << recorderGraph.Size() << endl;
-
-            BiMap<size_t, uint32_t> finalImagesToTargets;
-            RecorderGraph halfGraph = RecorderGraphGenerator::Sparse(recorderGraph, 2);
-
-            vector<InputImageP> bestAlignment = halfGraph.SelectBestMatches(best, finalImagesToTargets, true);
-
             //cout << "bestAlignment size" << bestAlignment.size() << endl;
             //cout << "halfGraph size" << halfGraph.Size() << endl;
             

@@ -31,9 +31,6 @@
 #ifndef OPTONAUT_RECORDER_HEADER
 #define OPTONAUT_RECORDER_HEADER
 
-
-
-
 namespace optonaut {
     
     struct StereoPair {
@@ -111,7 +108,7 @@ namespace optonaut {
         // Makes the recorder select images that are further off selection points, 
         // because we don't have a chance to "correct" the movement of the phone
         // wehn we're debugging on PC. 
-        static constexpr double dt = 10;
+        static constexpr double dt = 100;
 
         Recorder(Mat base, Mat zeroWithoutBase, Mat intrinsics, 
                 ImageSink &sink, string debugPath = "",
