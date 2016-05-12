@@ -45,6 +45,13 @@ class AsyncRingStitcher {
      */
     void Push(const InputImageP image);
 
+    /*
+     * Gets the warper scale, which relates to the size
+     * of the output panorama. 
+     * That is the radius of the sphere where the panorama is
+     * projected upon. For a warper scale of x, the width of the
+     * equirectangular panorama is x * PI * 2 pixels. 
+     */
     float GetWarperScale() {
         return warperScale;        
     };
@@ -88,8 +95,17 @@ class RingStitcher {
         return core.Finalize();
     }
 
+    /*
+     * Gets the warper scale, which relates to the size
+     * of the output panorama. 
+     * That is the radius of the sphere where the panorama is
+     * projected upon. For a warper scale of x, the width of the
+     * equirectangular panorama is x * PI * 2 pixels. 
+     */
     float GetWarperScale() {
-        return 1200;
+        // use a fixed scale of 1200. That's approximately
+        // what we can fit in memory on an iPhone. 
+        return 1200;    
     }
 
     /*

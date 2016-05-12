@@ -161,10 +161,16 @@ void MapToTarget(const InputImageP a, const StereoTarget &target, Mat &result, M
     //cout << targetK << endl;
     //cout << transformation << endl;
 
-    result = Mat(target.size, a->image.data.type(), Scalar(0, 0, 255));
+    Scalar border(0);
 
+    // If we are in debug mode, use a bright red border for undefined areas. 
+    if(debug) {
+        border = Scalar(0, 0, 255);
+    }
+    
+    result = Mat(target.size, a->image.data.type(), border); 
     warpPerspective(a->image.data, result, transformationF, target.size, 
-            INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 255));
+        INTER_LINEAR, BORDER_CONSTANT, border); 
 
     if(debug) { 
         vector<Point2f> corners = {

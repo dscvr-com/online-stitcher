@@ -142,7 +142,15 @@ namespace optonaut {
             //}
         }
     }
-    
+   
+    /*
+     * Draws the center of each given image to the target panorama. 
+     *
+     * @param target The panorama to draw to.
+     * @param images The images to draw the centers for.  
+     * @param warperScale Scale of the cv::Warper that applies coordinate transform. 
+     * @param color The color to use. 
+     */ 
     static inline void DrawImagePointsOnPanorama(StitchingResultP &target, const vector<InputImageP> &images, 
             float warperScale, const Scalar color = Scalar(0x00, 0xFF, 0x00)) {
        DrawPointsOnPanorama(target->image.data, 

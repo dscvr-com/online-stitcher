@@ -38,6 +38,8 @@ namespace optonaut {
     class GlobalAlignment {
 
     private:    
+        static const bool debug = true;
+
         CheckpointStore &imageStore;
         CheckpointStore &leftStore;
         CheckpointStore &rightStore;
@@ -161,7 +163,9 @@ namespace optonaut {
 
             vector<InputImageP> bestAlignment = halfGraph.SelectBestMatches(best, finalImagesToTargets, false);
 
-            halfGraph.AddDummyImages(bestAlignment, finalImagesToTargets, Scalar(255, 0, 0), originalSize);
+            if(debug) {
+                halfGraph.AddDummyImages(bestAlignment, finalImagesToTargets, Scalar(255, 0, 0), originalSize);
+            }
 
             sort(bestAlignment.begin(), bestAlignment.end(), [&] (auto a, auto b) {
                 uint32_t aId, bId;
