@@ -38,7 +38,7 @@ namespace optonaut {
     class GlobalAlignment {
 
     private:    
-        static const bool debug = true;
+        static const bool debug = false;
 
         CheckpointStore &imageStore;
         CheckpointStore &leftStore;
@@ -74,10 +74,9 @@ namespace optonaut {
                 counter++;
                 img->image = Image(small); 
                 img->image.source = source; 
-                cout << "[minifyImages] " << counter << " source: " << source << endl;
 
             }
-       		}
+        }
         
 
         void Finish() {
@@ -88,34 +87,29 @@ namespace optonaut {
             map<size_t, double> gains;
             MonoStitcher stereoConverter;
             vector<vector<StereoImage>> stereoRings;
-            //cout << "Loading images " << endl;
             imageStore.LoadStitcherInput(loadedImages, gains);
 
-            Size originalSize = fun::flat(loadedImages)[0]->image.size();
-            //cout << "Done Loading images. minifying " << endl;
+            cv::Size originalSize = fun::flat(loadedImages)[0]->image.size();
             vector <InputImageP> miniImages = fun::flat(loadedImages);
             int downsample = 3;
             // minify the images
             minifyImages(miniImages, downsample);
-            //cout << "Done minifying " << endl;
             Mat intrinsics;
             intrinsics = miniImages[0]->intrinsics;
-            int ringsize = loadedImages.size();
             int graphConfiguration = 0;
 
-            if (ringsize == 1) {
+            /*
+             * check the number of rings and based use the correct graph configuration
+             */
+            if (loadedImages.size() == 1) {
                graphConfiguration =  RecorderGraph::ModeCenter;
-               //cout << "ModeCenter" << endl;
-            } else if (ringsize == 3)  {
-               //cout << "ModeTruncated" << endl;
+            } else if (loadedImages.size() == 3)  {
                graphConfiguration =  RecorderGraph::ModeTruncated;
             }
   
             RecorderGraph recorderGraph = generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityNormal, 0, 8);
             
             vector<InputImageP> best = recorderGraph.SelectBestMatches(miniImages, imagesToTargets, false);
-            //cout << "best size" << ToString(best.size()) << endl;
-            //cout << "miniimages size" << ToString(miniImages.size()) << endl;
 
             vector<vector<InputImageP>> rings = recorderGraph.SplitIntoRings(miniImages);
             size_t k = rings.size() / 2;
@@ -125,38 +119,20 @@ namespace optonaut {
             RingCloser::CloseRing(rings[k]);
 
 
-   				  IterativeBundleAligner aligner;
-    				aligner.Align(best, recorderGraph, imagesToTargets, 5, 0.5);
+            IterativeBundleAligner aligner;
+    	    aligner.Align(best, recorderGraph, imagesToTargets, 5, 0.5);
 
             
             int current_minified_height = miniImages[0]->image.cols;
-            //cout << "current_minified_height : " << current_minified_height << endl;
             // preLoad
             static int count = 0;
             auto loadFullImage = 
             	[] (const SelectionInfo &img) {
                    // unload the last minified image
-                   // this is a cheat. need to find the bug
-                   std::string str2 ("debug");
-                   std::string str3 ("post");
-                   std::size_t found = img.image->image.source.find(str2);
-                   if (found!=std::string::npos) {
-                        std::cout << "found 'debug' at: " << found << '\n';
-                        img.image->image.source.replace(found,5,str3); 
-                        cout << "image source replace " << img.image->image.source << endl;
-                   }
-
-
-
                    if (img.image->image.IsLoaded())
                    		img.image->image.Unload();          
-                   // load the full image ( data from the source att)
-                   //img.image->image.Load();          
-                  // cout << "image source " << img.image->image.source << endl;
                 };
 
-						// onProcess
-           // cout << "fullGraph size" << recorderGraph.Size() << endl;
 
             BiMap<size_t, uint32_t> finalImagesToTargets;
             RecorderGraph halfGraph = RecorderGraphGenerator::Sparse(recorderGraph, 2);
@@ -176,63 +152,61 @@ namespace optonaut {
             });
 
             auto ForwardToStereoProcess = 
-            	[&] (const SelectionInfo &a, const SelectionInfo &b) {
+                [&] (const SelectionInfo &a, const SelectionInfo &b) {
     
          	    StereoImage stereo;
                 SelectionEdge dummy;        
             
            	    AssertM(halfGraph.GetEdge(a.closestPoint, b.closestPoint, dummy), "Pair is correctly ordered");
 
+                /*
+                 *  Load the original image ( not the minified one )
+                 */
                 if (!a.image->image.IsLoaded())
                     a.image->image.Load();          
                 if (!b.image->image.IsLoaded())
                     b.image->image.Load();          
 
-                if ( current_minified_height == a.image->image.cols ) 
-                    a.image->image.Load();
-
-                if ( current_minified_height == b.image->image.cols ) 
-                    b.image->image.Load();
-             /*
-                cout << "current_minified_height " << current_minified_height << endl;
-                cout << "a.image->image.cols " << a.image->image.cols << endl;
-                cout << "b.image->image.cols " << b.image->image.cols << endl;
-                cout << "img size a" << a.image->image.size() << endl;
-                cout << "img size b" << b.image->image.size() << endl;
-             */
                 stereoConverter.CreateStereo(a, b, stereo);
 
                 while(stereoRings.size() <= a.closestPoint.ringId) {
                     stereoRings.push_back(vector<StereoImage>());
                 }
                 stereoRings[a.closestPoint.ringId].push_back(stereo);
+                /*
+                 * Unload image to save memory
+                 */
                 if (a.image->image.IsLoaded())
                     a.image->image.Unload();          
                 if (b.image->image.IsLoaded())
                     b.image->image.Unload();          
+
                 leftStore.SaveRectifiedImage(stereo.A);
             	rightStore.SaveRectifiedImage(stereo.B);
+
+                /*
+                 * Unload image to save memory
+                 */
                 stereo.A->image.Unload();
                 stereo.B->image.Unload();
 
-               //  cout << "stereo conversion count  " << count << endl;
                 count++;
-                if(count % 50 == 0) {
+                if(count % 100 == 0) {
                     cout << "Warning: Input Queue overflow: " <<  count << endl;
+                    /*
+                     *  Pause for 1 second every 100 images to minimize memory outage
+                     */
                     this_thread::sleep_for(chrono::seconds(1));
                 }
             };
 
             auto FinishImage = [] (const SelectionInfo) { };
 
-
             RingProcessor<SelectionInfo> stereoRingBuffer(1, 1, loadFullImage, ForwardToStereoProcess, FinishImage);
            
-            //cout << "bestAlignment size" << bestAlignment.size() << endl;
-            //cout << "halfGraph size" << halfGraph.Size() << endl;
             
        	    int lastRingId = -1;
-        		for(auto img : bestAlignment) {
+            for(auto img : bestAlignment) {
             	SelectionPoint target;
             	//Reassign points
             	uint32_t pointId = 0;
@@ -253,16 +227,16 @@ namespace optonaut {
             }
             stereoRingBuffer.Flush();
 
-        		// push the images to the stores
+        	/*
+             * push the images to the stores , this will be used for the stitching
+             */
             vector<InputImageP> rightImages;
             vector<InputImageP> leftImages;
 
             for(vector<StereoImage> rings : stereoRings) {
                 for(StereoImage stereo : rings) {
-
-                                    leftImages.push_back(stereo.A);
+                    leftImages.push_back(stereo.A);
                     rightImages.push_back(stereo.B);
-                               
                 }
 
                 vector<vector<InputImageP>> rightRings = 
