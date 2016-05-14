@@ -200,15 +200,13 @@ namespace optonaut {
            // image->adjustedExtrinsics = 
            //     aligner->GetCurrentBias() * image->originalExtrinsics;
             postProcessImageQueue.Push(in);
-
             if(!firstRingFinished) {
                 // if image last overlap or the same point on the current image
-                cout << "firstRing.size() = " << firstRing.size() << endl;
                 if(firstRing.size() == 0 || 
                    firstRing.back().closestPoint.ringId == in.closestPoint.ringId) {
                     firstRing.push_back(in);
-                    cout << "firstRing.push_back(in)" << endl;
-                    cout << firstRing.back().closestPoint.ringId <<  " == " << in.closestPoint.ringId  << endl ;
+                    // moved the push to preview here to minimize the lag when finishing the first ring
+                    PushToPreview(in);
                 } else {
                    FinishFirstRing(); 
                 }
@@ -216,7 +214,6 @@ namespace optonaut {
                 if(refinedIntrinsics.cols != 0) {
                     refinedIntrinsics.copyTo(image->intrinsics);
                 }
-               // postProcessImageQueue.Push(in);
             }
        
         }
@@ -398,7 +395,6 @@ namespace optonaut {
 
         void SavePostProcessImage(SelectionInfo in) {
             sink.Push(in);
-            cout << "saving image" << endl;
             auto copy = std::make_shared<InputImage>(*in.image);
             copy->image = Image();
             postImages.push_back(copy);
@@ -535,12 +531,6 @@ namespace optonaut {
             }));
             refinedIntrinsics = Mat::eye(3, 3, CV_64F);
             firstRing[0].image->intrinsics.copyTo(refinedIntrinsics);
-
-            for(size_t i = 0; i < firstRing.size(); i++) {
-                PushToPreview(firstRing[i]);
-                //recorderController.Push(firstRing[i].image);
-                //postProcessImageQueue.Push(firstRing[i]);
-            }
             
             firstRing.clear();
         }
