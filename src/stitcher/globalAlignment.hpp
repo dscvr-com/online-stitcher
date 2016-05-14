@@ -110,12 +110,20 @@ namespace optonaut {
                //cout << "ModeTruncated" << endl;
                graphConfiguration =  RecorderGraph::ModeTruncated;
             }
-  
+
+            if(debug) {
+                SimpleSphereStitcher debugger;
+                imwrite("dbg/aligner_input.jpg", debugger.Stitch(miniImages, false, true)->image.data);
+            }
+
             RecorderGraph recorderGraph = generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityNormal, 0, 8);
             
             vector<InputImageP> best = recorderGraph.SelectBestMatches(miniImages, imagesToTargets, false);
             //cout << "best size" << ToString(best.size()) << endl;
             //cout << "miniimages size" << ToString(miniImages.size()) << endl;
+            //
+
+            cout << "Pre-Alignment, found " << best.size() << "/" << recorderGraph.Size() << "/" << miniImages.size() << endl;
 
             vector<vector<InputImageP>> rings = recorderGraph.SplitIntoRings(miniImages);
             size_t k = rings.size() / 2;
@@ -162,6 +170,8 @@ namespace optonaut {
             RecorderGraph halfGraph = RecorderGraphGenerator::Sparse(recorderGraph, 2);
 
             vector<InputImageP> bestAlignment = halfGraph.SelectBestMatches(best, finalImagesToTargets, false);
+
+            cout << "Post-Alignment, found " << bestAlignment.size() << "/" << halfGraph.Size() << "/" << best.size() << endl;
 
             if(debug) {
                 halfGraph.AddDummyImages(bestAlignment, finalImagesToTargets, Scalar(255, 0, 0), originalSize);
