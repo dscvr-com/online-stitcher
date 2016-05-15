@@ -108,7 +108,7 @@ namespace optonaut {
         // Makes the recorder select images that are further off selection points, 
         // because we don't have a chance to "correct" the movement of the phone
         // wehn we're debugging on PC. 
-        static constexpr double dt = 1;
+        static constexpr double dt = 100;
 
         Recorder(Mat base, Mat zeroWithoutBase, Mat intrinsics, 
                 ImageSink &sink, string debugPath = "",
