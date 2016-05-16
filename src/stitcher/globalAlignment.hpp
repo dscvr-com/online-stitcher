@@ -164,9 +164,14 @@ namespace optonaut {
                 [&] (const SelectionInfo &a, const SelectionInfo &b) {
     
          	    StereoImage stereo;
-                SelectionEdge dummy;        
-            
-           	    AssertM(halfGraph.GetEdge(a.closestPoint, b.closestPoint, dummy), "Pair is correctly ordered");
+                SelectionEdge dummy;
+                    
+                bool hasEdge = halfGraph.GetEdge(a.closestPoint, b.closestPoint, dummy);
+                    
+           	    AssertWM(hasEdge, "Pair is correctly ordered");
+                    
+                if(!hasEdge)
+                    return;
 
                 /*
                  *  Load the original image ( not the minified one )
