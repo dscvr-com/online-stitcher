@@ -42,12 +42,15 @@ namespace optonaut {
             /*
              * Creates a new instance of this class.
              */
-            ExposureCompensator() { }
+            ExposureCompensator() {
+                AssertFalseInProduction(debug);
+            }
 
             /*
              * Copy constructor. 
              */ 
             ExposureCompensator(ExposureCompensator &ref) {
+                AssertFalseInProduction(debug);
                 SetGains(ref.GetGains());
             }
        

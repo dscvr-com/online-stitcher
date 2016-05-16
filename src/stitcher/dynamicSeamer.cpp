@@ -26,6 +26,8 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
 {
     STimer seamTimer;
     static const bool debug = false;
+    AssertFalseInProduction(debug);
+
 
     Point tlA;
     Point tlB;
