@@ -161,7 +161,9 @@ namespace optonaut {
     
     StitchingResultP MultiRingStitcher::StitchRing(const vector<InputImageP> &ring, ProgressCallback &progress, int ringId) const {
         
-        static const bool debug = true;
+        static const bool debug = false;
+        AssertFalseInProduction(debug);
+
 
         cout << "Attempting to stitch ring " << ringId << endl;
 

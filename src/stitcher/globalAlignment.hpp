@@ -38,7 +38,7 @@ namespace optonaut {
     class GlobalAlignment {
 
     private:    
-        static const bool debug = true;
+        static const bool debug = false;
 
         CheckpointStore &imageStore;
         CheckpointStore &leftStore;
@@ -49,6 +49,7 @@ namespace optonaut {
         GlobalAlignment(CheckpointStore &imageStore, CheckpointStore &leftStore,
                         CheckpointStore &rightStore ) :
             imageStore(imageStore), leftStore(leftStore), rightStore(rightStore), generator() {
+                AssertFalseInProduction(debug);
         }
  
         void minifyImages ( vector<InputImageP> &images, int downsample = 2) {
@@ -151,7 +152,7 @@ namespace optonaut {
                 halfGraph.AddDummyImages(bestAlignment, finalImagesToTargets, Scalar(255, 0, 0), originalSize);
             }
 
-            sort(bestAlignment.begin(), bestAlignment.end(), [&] (auto a, auto b) {
+            sort(bestAlignment.begin(), bestAlignment.end(), [&] (const InputImageP &a, const InputImageP &b) {
                 uint32_t aId, bId;
                 Assert(finalImagesToTargets.GetValue(a->id, aId));
                 Assert(finalImagesToTargets.GetValue(b->id, bId));
@@ -163,9 +164,14 @@ namespace optonaut {
                 [&] (const SelectionInfo &a, const SelectionInfo &b) {
     
          	    StereoImage stereo;
-                SelectionEdge dummy;        
-            
-           	    AssertM(halfGraph.GetEdge(a.closestPoint, b.closestPoint, dummy), "Pair is correctly ordered");
+                SelectionEdge dummy;
+                    
+                bool hasEdge = halfGraph.GetEdge(a.closestPoint, b.closestPoint, dummy);
+                    
+           	    AssertWM(hasEdge, "Pair is correctly ordered");
+                    
+                if(!hasEdge)
+                    return;
 
                 /*
                  *  Load the original image ( not the minified one )

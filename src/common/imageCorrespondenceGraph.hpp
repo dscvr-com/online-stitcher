@@ -39,7 +39,9 @@ namespace optonaut {
             /*
              * Creates a new empty graph. 
              */
-            ImageCorrespondenceGraph() { }
+            ImageCorrespondenceGraph() {
+                AssertFalseInProduction(debug);
+            }
 
             /*
              * Registers the given images with this specific implementation. 

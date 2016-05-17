@@ -81,7 +81,6 @@ class BruteForcePlanarAligner {
      * @param oy The predefined offset in y direction. 
      */
     static inline PlanarCorrelationResult Align(const Mat &a, const Mat &b, Mat &corr, int wx, int wy, int ox, int oy) {
-
         AssertFalseInProduction(debug);
         STimer cTimer;
 
@@ -152,8 +151,9 @@ class PyramidPlanarAligner {
         const int minSize = 4;
 
         cv::Point res;
+        AssertFalseInProduction(debug);
 
-        if(a.cols > minSize / wx && b.cols > minSize / wx 
+        if(a.cols > minSize / wx && b.cols > minSize / wx
                 && a.rows > minSize / wy && b.rows > minSize / wy) {
             // If the image is large enough, perform a further pyramid alignment step. 
             Mat ta, tb;
@@ -243,8 +243,9 @@ class PyramidPlanarAligner {
         VariancePool<double> pool;
         int corrXOff = 0;
         int corrYOff = 0;
+        AssertFalseInProduction(debug);
 
-        // Invoke the internal alignment operation. 
+        // Invoke the internal alignment operation.
         cv::Point res = PyramidPlanarAligner<Correlator>::AlignInternal(a, b, corr, corrXOff, corrYOff, wx, wy, dskip, 0, pool);
 
         // Debug - draw the resulting image pair and correlation. 

@@ -54,7 +54,8 @@ namespace optonaut {
             lasty(0),
             cury(0),
             async(async)
-        { 
+        {
+            AssertFalseInProduction(debug);
             worker = shared_ptr<Worker>(new Worker([this] (const InputImageP &x) { return AlignOperation(x); }));
         }
 

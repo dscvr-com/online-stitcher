@@ -315,7 +315,7 @@ AsyncRingStitcher::AsyncRingStitcher(const InputImageP firstImage,
         bool fast, int roiBuffer) :
     pimpl_(new Impl(firstImage, rotations, warperScale, fast, roiBuffer)),
     warperScale(warperScale) {
-        
+        AssertFalseInProduction(debug);        
 }
 
 void AsyncRingStitcher::Push(const InputImageP image) { pimpl_->Push(image); }

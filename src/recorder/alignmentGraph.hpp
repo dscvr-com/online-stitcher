@@ -70,7 +70,9 @@ namespace optonaut {
                     const BiMap<size_t, uint32_t> &imagesToTargets) : 
                 graph(graph), 
                 imagesToTargets(imagesToTargets)
-            { }
+            {
+                AssertFalseInProduction(debug);
+            }
 
             /*
              * Copy constructor. 
@@ -79,6 +81,7 @@ namespace optonaut {
                 graph(ref.graph), 
                 imagesToTargets(ref.imagesToTargets)
             {
+                AssertFalseInProduction(debug);
                 SetAlignment(ref.GetAlignment());
             }
        
