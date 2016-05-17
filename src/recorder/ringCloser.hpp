@@ -21,7 +21,6 @@ namespace optonaut {
             PairwiseCorrelator corr;
 
             const bool adjustExtrinsics = true;
-            const bool adjustIntrinsics = false;
             
             if(CheckpointStore::DebugStore != nullptr) {
                 CheckpointStore::DebugStore->SaveRectifiedImage(ring.front());
@@ -53,14 +52,6 @@ namespace optonaut {
                     << result.angularOffset.y << endl;
             }
 
-            double focalLenAdjustment = 1; 
-           
-            if(adjustIntrinsics)  {
-                focalLenAdjustment = (1 - result.angularOffset.y / (M_PI * 2));
-                cout << "Ring closure: Adjusting focal len by: " 
-                    << focalLenAdjustment << endl;
-            } 
-
             size_t n = ring.size();
 
             // Move images according to their position. 
@@ -71,9 +62,6 @@ namespace optonaut {
                 CreateRotationY(ydiff, correction);
                 ring[i]->adjustedExtrinsics = correction * 
                     ring[i]->adjustedExtrinsics;
-
-                ring[i]->intrinsics.at<double>(0, 2) *= focalLenAdjustment;
-                ring[i]->intrinsics.at<double>(1, 2) *= focalLenAdjustment;
             }
             return true;
         }
