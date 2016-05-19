@@ -31,6 +31,11 @@ target_link_libraries(visual-debug-hook ${OPENGL_LIBRARIES})
 target_link_libraries(visual-debug-hook ${OSX_LIBS})
 target_link_libraries(visual-debug-hook ${CMAKE_CURRENT_LIST_DIR}/../vendor/libIrrlicht.a)
 
+if(BUILD_STABILIZATION_TEST) 
+    add_executable(stabilization-test stabilizationTest.cpp)
+    target_link_libraries(stabilization-test optonaut-lib)
+endif(BUILD_STABILIZATION_TEST) 
+
 if(BUILD_SIMPLE_STITCHER_TEST) 
     add_executable(simple-stitcher simpleStitcherTest.cpp)
     target_link_libraries(simple-stitcher optonaut-lib)

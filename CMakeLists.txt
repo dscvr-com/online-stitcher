@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 project(optonaut-stitcher)
 include(GNUInstallDirs)
 
+option(BUILD_STABILIZATION_TEST "Build stabilization test program" ON) 
 option(BUILD_SIMPLE_STITCHER_TEST "Build simple stitching program" ON) 
 option(BUILD_TO_POLAR "Build to polar conversion tool" ON) 
 option(BUILD_TO_CUBE_MAP "Build equirectangular to cube map conversion tool" ON) 
