@@ -22,7 +22,7 @@
 #include "ringwiseStreamAligner.hpp"
 #include "asyncTolerantRingRecorder.hpp"
 #include "ringCloser.hpp"
-#include "jumpFilter.hpp"
+#include "visualStabilizer.hpp"
 
 #include <chrono>
 
@@ -46,8 +46,7 @@ namespace optonaut {
         Mat baseInv;
         Mat zero;
 
-        JumpFilter jumpFilter;
-        shared_ptr<Aligner> aligner;
+        VisualStabilizer stabilizer;
 
         ImageSink &sink;
         
@@ -541,7 +540,7 @@ namespace optonaut {
             //cout << "Pipeline Push called by " << std::this_thread::get_id() << endl;
             
             if(debugPath != "" && !isIdle) {
-                AssertFalseInProduction(false);
+                AssertFalseInProduction(true);
                 image->LoadFromDataRef();
                 // create a copy of the image
                 InputImageP copy(new InputImage());
@@ -561,18 +560,25 @@ namespace optonaut {
             
             ConvertToStitcher(image->originalExtrinsics, image->originalExtrinsics);
             
-            if(hasStarted && !jumpFilter.Push(image->originalExtrinsics)) {
-                cout << "Jump Detected" << endl;
+            if (!image->IsLoaded()) {
+                //static STimer loadingTime(true);
+                image->LoadFromDataRef();
+                //loadingTime.Tick("## Loading Time");
             }
-        
-            image->originalExtrinsics.copyTo(image->adjustedExtrinsics);
             
+            if(hasStarted)
+            {
+                stabilizer.Push(image);
+                stabilizer.GetCurrentEstimate().copyTo(image->originalExtrinsics);
+            }
+            image->originalExtrinsics.copyTo(image->adjustedExtrinsics);
+
             last = image;
             
-            Mat rvec;
-            ExtractRotationVector(image->originalExtrinsics, rvec);
+            //Mat rvec;
+            //ExtractRotationVector(image->originalExtrinsics, rvec);
             
-            static STimer frame(true);
+            //static STimer frame(true);
             
             //frame.Tick("## Frame Received");
             //cout << "## Rotation X: " << rvec.at<double>(0) << endl;
@@ -582,16 +588,8 @@ namespace optonaut {
             
             Assert(image != NULL);
             
-            bool shouldLoad = preController.Push(image, isIdle);
-            
-            if(shouldLoad) {
-                //static STimer loadingTime(true);
-								if (!image->IsLoaded()) {
-                  image->LoadFromDataRef();
-								}
-                //SCounters::Increase("Loaded Images");
+            if(preController.Push(image, isIdle)) {
                 hasStarted = true;
-                //loadingTime.Tick("## Loading Time");
             }
             
             if(preController.IsFinished()) {
@@ -679,9 +677,9 @@ namespace optonaut {
 
         ExposureInfo GetExposureHint() {
             assert(false); //Wrong semantics. 
-            const Mat &current = aligner->GetCurrentBias();
+            const Mat current; //= aligner->GetCurrentBias();
             
-            vector<KeyframeInfo> frames = aligner->GetClosestKeyframes(current, 2);
+            vector<KeyframeInfo> frames; // = aligner->GetClosestKeyframes(current, 2);
             
             if(frames.size() < 2) {
                 return ExposureInfo();

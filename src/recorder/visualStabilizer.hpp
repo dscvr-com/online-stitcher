@@ -82,7 +82,8 @@ class VisualStabilizer {
 
            if(estimatedDiff.cols != 0) {
                double estPhiDiff = translationToRotation(estimatedDiff.at<double>(0, 2), pxpm, r, theta);
-               double resudialPhiDiff = sensorDiffVec.at<double>(1) - estPhiDiff;
+               double phiDiff = sensorDiffVec.at<double>(1);
+               double resudialPhiDiff = phiDiff - estPhiDiff;
 
                if(debug) {
                    double estThetaDiff = translationToRotation(estimatedDiff.at<double>(1, 2), pxpm, r, theta);
@@ -100,9 +101,10 @@ class VisualStabilizer {
                       << " val=" << resudialPhiDiff << endl;
                }
 
-               if(std::abs(resudialPhiDiff) > 0.1) {
+               // If we derive by too much, and video is smaller than sensor, use video. 
+               if(std::abs(resudialPhiDiff) > 0.05 && std::abs(estPhiDiff) < std::abs(phiDiff)) {
                    Mat correction;
-                   CreateRotationY(resudialPhiDiff, correction);
+                   CreateRotationY(-resudialPhiDiff, correction);
                    sensorDiff = sensorDiff * correction;
                }
            }
