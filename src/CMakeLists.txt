@@ -21,15 +21,20 @@ debug/debugHook.cpp
 )
 target_link_libraries(optonaut-lib ${OpenCV_LIBS})
 
-#add_library(visual-debug-hook
-#debug/visualDebugHook.cpp
-#)
+add_library(visual-debug-hook
+debug/visualDebugHook.cpp
+)
 
-#target_link_libraries(visual-debug-hook ${OpenCV_LIBS})
-#target_link_libraries(visual-debug-hook optonaut-lib)
-#target_link_libraries(visual-debug-hook ${OPENGL_LIBRARIES})
-#target_link_libraries(visual-debug-hook ${OSX_LIBS})
-#target_link_libraries(visual-debug-hook ${CMAKE_CURRENT_LIST_DIR}/../vendor/libIrrlicht.a)
+target_link_libraries(visual-debug-hook ${OpenCV_LIBS})
+target_link_libraries(visual-debug-hook optonaut-lib)
+target_link_libraries(visual-debug-hook ${OPENGL_LIBRARIES})
+target_link_libraries(visual-debug-hook ${OSX_LIBS})
+target_link_libraries(visual-debug-hook ${CMAKE_CURRENT_LIST_DIR}/../vendor/libIrrlicht.a)
+
+if(BUILD_STABILIZATION_TEST) 
+    add_executable(stabilization-test stabilizationTest.cpp)
+    target_link_libraries(stabilization-test optonaut-lib)
+endif(BUILD_STABILIZATION_TEST) 
 
 if(BUILD_SIMPLE_STITCHER_TEST) 
     add_executable(simple-stitcher simpleStitcherTest.cpp)
@@ -71,32 +76,32 @@ if(BUILD_RING_CLOSURE_TEST)
     target_link_libraries(ring-closure-test optonaut-lib)
 endif(BUILD_RING_CLOSURE_TEST)
 
-#add_executable(debug-hook-test debugHookTest.cpp)
-#target_link_libraries(debug-hook-test visual-debug-hook)
+add_executable(debug-hook-test debugHookTest.cpp)
+target_link_libraries(debug-hook-test visual-debug-hook)
 
 if(BUILD_STEREO_CONVERSION_TEST)
     add_executable(stereo-conversion-test stereoConversionTest.cpp)
     target_link_libraries(stereo-conversion-test optonaut-lib)
 endif(BUILD_STEREO_CONVERSION_TEST)
 
-#add_executable(feature-chain-test featureChainTest.cpp)
-#target_link_libraries(feature-chain-test optonaut-lib)
+add_executable(feature-chain-test featureChainTest.cpp)
+target_link_libraries(feature-chain-test optonaut-lib)
 
-#add_executable(minimal-feature-test minimalFeatureTest.cpp)
-#target_link_libraries(minimal-feature-test optonaut-lib)
+add_executable(minimal-feature-test minimalFeatureTest.cpp)
+target_link_libraries(minimal-feature-test optonaut-lib)
 
-#add_executable(sfm-test sfmTest.cpp)
-#target_link_libraries(sfm-test optonaut-lib)
-#target_link_libraries(sfm-test visual-debug-hook)
+add_executable(sfm-test sfmTest.cpp)
+target_link_libraries(sfm-test optonaut-lib)
+target_link_libraries(sfm-test visual-debug-hook)
 
 if(BUILD_BRUTE_FORCE_ALIGNER_TEST)
     add_executable(brute-force-aligner-test bruteForceAlignerTest.cpp)
     target_link_libraries(brute-force-aligner-test optonaut-lib)
 endif(BUILD_BRUTE_FORCE_ALIGNER_TEST)
 
-#add_executable(stereo-match-test stereoMatchTest.cpp)
-#target_link_libraries(stereo-match-test optonaut-lib)
-#target_link_libraries(stereo-match-test visual-debug-hook)
+add_executable(stereo-match-test stereoMatchTest.cpp)
+target_link_libraries(stereo-match-test optonaut-lib)
+target_link_libraries(stereo-match-test visual-debug-hook)
 
 add_subdirectory(test)
-#add_subdirectory(debug)
+add_subdirectory(debug)

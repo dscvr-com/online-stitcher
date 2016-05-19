@@ -10,6 +10,7 @@
 
 #include "common/intrinsics.hpp"
 #include "common/static_timer.hpp"
+#include "imgproc/pairwiseVisualAligner.hpp"
 #include "io/io.hpp"
 #include "recorder/recorder.hpp"
 #include "math/projection.hpp"

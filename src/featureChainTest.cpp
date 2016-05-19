@@ -9,6 +9,8 @@
 
 #include "common/intrinsics.hpp"
 #include "common/static_timer.hpp"
+#include "imgproc/pairwiseVisualAligner.hpp"
+#include "minimal/imagePreperation.hpp"
 #include "io/io.hpp"
 #include "recorder/recorder.hpp"
 #include "math/projection.hpp"
@@ -37,7 +39,7 @@ int main(int argc, char** argv) {
 
     RingProcessor<InputImageP> combiner(1, &MatchImages, &FinishImage); 
 
-    combiner.Process(minimal::imagePreperation::LoadAndPrepare(arc, argv, false));
+    combiner.Process(minimal::ImagePreperation::LoadAndPrepareArgs(argc, argv, false));
 
     int i = 0;
     for(auto chain : aligner.GetFeatureChains()) {
