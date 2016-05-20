@@ -1,6 +1,7 @@
 #include <chrono>
 #include <iostream>
 #include "static_counter.hpp"
+#include "logger.hpp"
 
 using namespace std;
 
@@ -23,7 +24,8 @@ namespace optonaut {
         if(!enabled)
             return;
 
-        cout << label << ": " << count << endl;
+        Logger log("COUNT ", false);
+        log << label << ": " << count;
     }
     
     std::map<std::string, std::shared_ptr<SCounter>> SCounters::counters;

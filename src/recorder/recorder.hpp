@@ -1,4 +1,3 @@
-
 #include "../io/inputImage.hpp"
 #include "../io/io.hpp"
 #include "../io/checkpointStore.hpp"
@@ -15,6 +14,7 @@
 #include "../debug/debugHook.hpp"
 #include "../recorder/stereoSink.hpp"
 #include "../recorder/imageSink.hpp"
+#include "../common/logger.hpp"
 
 #include "recorderGraph.hpp"
 #include "recorderGraphGenerator.hpp"

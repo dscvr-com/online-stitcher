@@ -1,6 +1,7 @@
 #include <string>
 #include <chrono>
 
+
 #ifndef OPTONAUT_STATIC_TIMER_HEADER
 #define OPTONAUT_STATIC_TIMER_HEADER
 
