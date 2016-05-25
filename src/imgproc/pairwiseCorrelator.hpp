@@ -130,7 +130,7 @@ public:
         const bool enableDeviationTest = false;
         const bool enableOutOfWindowTest = true;
 
-        STimer cTimer;
+        STimer cTimer(false);
         CorrelationDiff result;
         
         Mat wa, wb;

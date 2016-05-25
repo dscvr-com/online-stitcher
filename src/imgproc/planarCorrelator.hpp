@@ -82,7 +82,7 @@ class BruteForcePlanarAligner {
      */
     static inline PlanarCorrelationResult Align(const Mat &a, const Mat &b, Mat &corr, int wx, int wy, int ox, int oy) {
         AssertFalseInProduction(debug);
-        STimer cTimer;
+        STimer cTimer(false);
 
         int mx = 0;
         int my = 0;
@@ -158,7 +158,7 @@ class PyramidPlanarAligner {
             // If the image is large enough, perform a further pyramid alignment step. 
             Mat ta, tb;
 
-            STimer cPyrDownTimer;
+            STimer cPyrDownTimer(false);
             pyrDown(a, ta);
             pyrDown(b, tb);
             cPyrDownTimer.Tick("Aligner PyrDown");
@@ -174,7 +174,7 @@ class PyramidPlanarAligner {
                 res = guess * 2;
             } else {
 
-                STimer cTimer;
+                STimer cTimer(false);
                 Mat corrBf;
 
                 // Perform a brute force correlation, but just for a very small area. 
@@ -214,7 +214,7 @@ class PyramidPlanarAligner {
         } else {
             // If we are at the bottom of our pyramid and the image is already very small, 
             // perform a brute-force correlation. 
-            STimer cTimer;
+            STimer cTimer(false);
             PlanarCorrelationResult detailedRes = 
                 BruteForcePlanarAligner<Correlator>::Align(a, b, corr, wx, wy);
                 

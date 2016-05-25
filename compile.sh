@@ -9,11 +9,11 @@ fi
 if [ -d "dbg" ]; then
     rm -rd dbg
 fi
-if [ -d "tmp" ]; then
-    rm -rd tmp
-fi
+#if [ -d "tmp" ]; then
+#    rm -rd tmp
+#fi
 mkdir dbg
-mkdir tmp
+#mkdir tmp
 
 echo "-- Compiling."
 cd build

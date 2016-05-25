@@ -352,6 +352,10 @@ namespace optonaut {
 
             for(auto &ring : targets) {
                 for(size_t i = 0; i < ring.size(); i++) {
+
+                    if(imgs.size() == 0)
+                        break;
+
                     auto target = ring[i];
                     auto compare = [&target](
                             const InputImageP &a, 
