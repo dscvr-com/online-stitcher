@@ -39,6 +39,7 @@ namespace optonaut {
 
     private:    
         static const bool debug = false;
+        static const bool fillMissingImages = true;
 
         CheckpointStore &imageStore;
         CheckpointStore &leftStore;
@@ -50,6 +51,10 @@ namespace optonaut {
                         CheckpointStore &rightStore ) :
             imageStore(imageStore), leftStore(leftStore), rightStore(rightStore), generator() {
                 AssertFalseInProduction(debug);
+
+                // If you want to fill missing images, please configure a dynamic path
+                // suitable for production in the AddDummyImages method. Then remove this assert. 
+                AssertFalseInProduction(fillMissingImages);
         }
  
         void minifyImages ( vector<InputImageP> &images, int downsample = 2) {
@@ -81,55 +86,64 @@ namespace optonaut {
         
 
         void Finish() {
+
+            STimer timer;
             
-            vector<std::vector<InputImageP>> loadedImages;
-            vector<std::vector<InputImageP>> fullImages;
+            vector<std::vector<InputImageP>> loadedRings;
+            //vector<std::vector<InputImageP>> fullImages;
             BiMap<size_t, uint32_t> imagesToTargets, d;
             map<size_t, double> gains;
             MonoStitcher stereoConverter;
             vector<vector<StereoImage>> stereoRings;
-            imageStore.LoadStitcherInput(loadedImages, gains);
+            imageStore.LoadStitcherInput(loadedRings, gains);
 
-            cv::Size originalSize = fun::flat(loadedImages)[0]->image.size();
-            vector <InputImageP> miniImages = fun::flat(loadedImages);
-            int downsample = 3;
-            // minify the images
-            minifyImages(miniImages, downsample);
+            vector<InputImageP> inputImages = fun::flat(loadedRings);
+            cv::Size originalSize = inputImages[0]->image.size();
+
             Mat intrinsics;
-            intrinsics = miniImages[0]->intrinsics;
+            intrinsics = inputImages[0]->intrinsics;
             int graphConfiguration = 0;
 
             /*
              * check the number of rings and based use the correct graph configuration
              */
-            if (loadedImages.size() == 1) {
+            if (loadedRings.size() == 1) {
                graphConfiguration =  RecorderGraph::ModeCenter;
-            } else if (loadedImages.size() == 3)  {
+            } else if (loadedRings.size() == 3)  {
                graphConfiguration =  RecorderGraph::ModeTruncated;
-            }
-
-            if(debug) {
-                SimpleSphereStitcher debugger;
-                imwrite("dbg/aligner_input.jpg", debugger.Stitch(miniImages, false, true)->image.data);
             }
 
             RecorderGraph recorderGraph = generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityNormal, 0, 8);
             
-            vector<InputImageP> best = recorderGraph.SelectBestMatches(miniImages, imagesToTargets, false);
+            vector<InputImageP> best = recorderGraph.SelectBestMatches(inputImages, imagesToTargets, false);
+            
+            Log << "Pre-Alignment, found " << best.size() << "/" << recorderGraph.Size() << "/" << inputImages.size();
 
-            cout << "Pre-Alignment, found " << best.size() << "/" << recorderGraph.Size() << "/" << miniImages.size() << endl;
+            if(debug) {
+                SimpleSphereStitcher debugger;
+                imwrite("dbg/aligner_input.jpg", debugger.Stitch(best, false, true)->image.data);
+            }
 
-            vector<vector<InputImageP>> rings = recorderGraph.SplitIntoRings(miniImages);
+            timer.Tick("Init'ed recorder graph and found best matches");
+            
+            int downsample = 3;
+            // minify the images
+            minifyImages(best, downsample);
+            
+            timer.Tick("Loaded mini images");
+            
+            vector<vector<InputImageP>> rings = recorderGraph.SplitIntoRings(best);
             size_t k = rings.size() / 2;
             
-
             minimal::ImagePreperation::SortById(rings[k]);
             RingCloser::CloseRing(rings[k]);
-
+            
+            timer.Tick("Closed Ring");
 
             IterativeBundleAligner aligner;
-    	    aligner.Align(best, recorderGraph, imagesToTargets, 5, 0.5);
-
+    	    aligner.Align(best, recorderGraph, imagesToTargets, 2, 0.5);
+            
+            timer.Tick("Bundle Adjustment");
             
             // preLoad
             static int count = 0;
@@ -146,9 +160,11 @@ namespace optonaut {
 
             vector<InputImageP> bestAlignment = halfGraph.SelectBestMatches(best, finalImagesToTargets, false);
 
-            cout << "Post-Alignment, found " << bestAlignment.size() << "/" << halfGraph.Size() << "/" << best.size() << endl;
+            Log << "Post-Alignment, found " << bestAlignment.size() << "/" << halfGraph.Size() << "/" << best.size();
 
-            if(debug) {
+            timer.Tick("Found best matches for post alignment");
+
+            if(fillMissingImages) {
                 halfGraph.AddDummyImages(bestAlignment, finalImagesToTargets, Scalar(255, 0, 0), originalSize);
             }
 
@@ -240,6 +256,8 @@ namespace optonaut {
             	lastRingId = target.ringId;
             }
             stereoRingBuffer.Flush();
+            
+            timer.Tick("Stereo Process");
 
         	/*
              * push the images to the stores , this will be used for the stitching
@@ -262,6 +280,7 @@ namespace optonaut {
                 rightStore.SaveStitcherInput(rightRings, gains );
        		}
 
+            timer.Tick("Save stitcher input");
 
         }
    };    
