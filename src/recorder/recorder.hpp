@@ -71,11 +71,14 @@ namespace optonaut {
         uint32_t imagesToRecord;
         uint32_t recordedImages;
         
+        //AsyncQueue<FeedbackImageSelector> preController;
+        //AsyncQueue<> ForwardToForwardToPostProcessImageQueue;
         AsyncQueue<InputImageP> debugQueue;
         AsyncQueue<SelectionInfo> postProcessImageQueue;
 
         vector<SelectionInfo> firstRing;
         bool firstRingFinished;
+        
 
         std::shared_ptr<AsyncTolerantRingRecorder> previewRecorder;
         RecorderGraph previewGraph;
@@ -125,7 +128,9 @@ namespace optonaut {
             preRecorderGraph(generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityNormal, 0, 8)),
             preController(preRecorderGraph, [this] (const SelectionInfo &x) {
                 ForwardToPostProcessImageQueue(x);
-            }, Vec3d(M_PI / 64 * dt, M_PI / 128 * dt, M_PI / 16 * dt)),
+                },
+                          
+            Vec3d(M_PI / 64 * dt, M_PI / 128 * dt, M_PI / 16 * dt)),
                 // mca: save the image here? and not forward the it to the stereo conversion
                 // what about the external extrinsics? do we need the original extrinsics? or just the image itself?
             imagesToRecord(preRecorderGraph.Size()),
