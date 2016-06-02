@@ -62,6 +62,8 @@ namespace optonaut {
         bool isFinished;
         bool hasStarted;
         
+        bool isCanceled;
+        
         RecorderGraphGenerator generator;
         RecorderGraph preRecorderGraph;
         FeedbackImageSelector preController;
@@ -657,6 +659,51 @@ namespace optonaut {
 
 
         }
+        
+        void Cancelled() {
+            cout << "Pipeline Cancel called by " << std::this_thread::get_id() << endl;
+            isCanceled = true;
+
+            
+            debugQueue.Finish();
+            postProcessImageQueue.Finish();
+            
+            if(debugPath != "") {
+                std::abort();
+            }
+            
+            if(HasResults()) {
+                
+                if(exposureEnabled)
+                    exposure.FindGains();
+                /*
+                 aligner->Postprocess(leftImages);
+                 aligner->Postprocess(rightImages);
+                 
+                 vector<vector<InputImageP>> rightRings =
+                 recorderGraph.SplitIntoRings(rightImages);
+                 vector<vector<InputImageP>> leftRings =
+                 recorderGraph.SplitIntoRings(leftImages);
+                 */
+                vector<vector<InputImageP>> postRings =
+                preRecorderGraph.SplitIntoRings(postImages);
+                
+                sink.Finish(postRings, exposure.GetGains());
+                
+                
+                
+                
+            } else {
+                AssertWM(false, "No results in recorder.");
+            }
+            
+            
+        }
+
+        
+        
+        
+        
 
         bool HasResults() {
             return postImages.size() > 0;
