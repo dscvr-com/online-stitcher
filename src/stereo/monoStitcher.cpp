@@ -149,8 +149,8 @@ void MapToTarget(const InputImageP a, const StereoTarget &target, Mat &result, M
     Mat aK;
     ScaleIntrinsicsToImage(a->intrinsics, a->image.size(), aK);
     targetK = aK.clone();
- 	targetK.at<double>(0, 2) = target.size.width / 2.0f;
- 	targetK.at<double>(1, 2) = target.size.height / 2.0f;
+        targetK.at<double>(0, 2) = target.size.width / 2.0f;
+        targetK.at<double>(1, 2) = target.size.height / 2.0f;
 
     Mat transformation = targetK * translation * rot * aK.inv();
     Mat transformationF;
@@ -231,8 +231,8 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
     Mat k;
     stereo.valid = false;
 
-	AssertEQ(a.image->image.cols, b.image->image.cols);
-	AssertEQ(a.image->image.rows, b.image->image.rows);
+        AssertEQ(a.image->image.cols, b.image->image.cols);
+        AssertEQ(a.image->image.rows, b.image->image.rows);
     AssertMatEQ<double>(a.image->intrinsics, b.image->intrinsics);
 
     StereoTarget target;

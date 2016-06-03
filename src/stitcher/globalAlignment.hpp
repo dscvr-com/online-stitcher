@@ -39,7 +39,8 @@ namespace optonaut {
 
     private:    
         static const bool debug = false;
-        static const bool fillMissingImages = true;
+        //static const bool fillMissingImages = true;
+        static const bool fillMissingImages = false;
 
         CheckpointStore &imageStore;
         CheckpointStore &leftStore;

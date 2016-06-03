@@ -62,6 +62,8 @@ namespace optonaut {
         bool isFinished;
         bool hasStarted;
         
+        bool isCanceled;
+        
         RecorderGraphGenerator generator;
         RecorderGraph preRecorderGraph;
         FeedbackImageSelector preController;
@@ -69,12 +71,15 @@ namespace optonaut {
         uint32_t imagesToRecord;
         uint32_t recordedImages;
         
+        //AsyncQueue<FeedbackImageSelector> preController;
+        //AsyncQueue<> ForwardToForwardToPostProcessImageQueue;
         AsyncQueue<InputImageP> debugQueue;
         AsyncQueue<SelectionInfo> postProcessImageQueue;
         AsyncQueue<SelectionInfo> previewImageQueue;
 
         vector<SelectionInfo> firstRing;
         bool firstRingFinished;
+        
 
         std::shared_ptr<AsyncTolerantRingRecorder> previewRecorder;
         RecorderGraph previewGraph;
@@ -124,7 +129,9 @@ namespace optonaut {
             preRecorderGraph(generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityNormal, 0, 8)),
             preController(preRecorderGraph, [this] (const SelectionInfo &x) {
                 ForwardToPostProcessImageQueue(x);
-            }, Vec3d(M_PI / 64 * dt, M_PI / 128 * dt, M_PI / 16 * dt)),
+                },
+                          
+            Vec3d(M_PI / 64 * dt, M_PI / 128 * dt, M_PI / 16 * dt)),
                 // mca: save the image here? and not forward the it to the stereo conversion
                 // what about the external extrinsics? do we need the original extrinsics? or just the image itself?
             imagesToRecord(preRecorderGraph.Size()),
@@ -687,6 +694,51 @@ namespace optonaut {
 
 
         }
+        
+        void Cancelled() {
+            cout << "Pipeline Cancel called by " << std::this_thread::get_id() << endl;
+            isCanceled = true;
+
+            
+            debugQueue.Finish();
+            postProcessImageQueue.Finish();
+            
+            if(debugPath != "") {
+                std::abort();
+            }
+            
+            if(HasResults()) {
+                
+                if(exposureEnabled)
+                    exposure.FindGains();
+                /*
+                 aligner->Postprocess(leftImages);
+                 aligner->Postprocess(rightImages);
+                 
+                 vector<vector<InputImageP>> rightRings =
+                 recorderGraph.SplitIntoRings(rightImages);
+                 vector<vector<InputImageP>> leftRings =
+                 recorderGraph.SplitIntoRings(leftImages);
+                 */
+                vector<vector<InputImageP>> postRings =
+                preRecorderGraph.SplitIntoRings(postImages);
+                
+                sink.Finish(postRings, exposure.GetGains());
+                
+                
+                
+                
+            } else {
+                AssertWM(false, "No results in recorder.");
+            }
+            
+            
+        }
+
+        
+        
+        
+        
 
         bool HasResults() {
             return postImages.size() > 0;
