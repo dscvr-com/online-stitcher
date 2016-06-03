@@ -71,8 +71,9 @@ namespace optonaut {
         uint32_t imagesToRecord;
         uint32_t recordedImages;
         
-        //AsyncQueue<FeedbackImageSelector> preController;
-        //AsyncQueue<> ForwardToForwardToPostProcessImageQueue;
+       // AsyncQueue<ImageSelector> FeedbackImageSelector;
+        
+        //AsyncQueue<SelectionInfo> ForwardToPostProcessImageQueue;
         AsyncQueue<InputImageP> debugQueue;
         AsyncQueue<SelectionInfo> postProcessImageQueue;
 
@@ -525,7 +526,7 @@ namespace optonaut {
 */
 
 
-
+        //Async
 
         void FinishFirstRing() {
             firstRingFinished = true; 

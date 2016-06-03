@@ -211,7 +211,7 @@ private:
         Assert(img != nullptr);
 
         // We assume equal dimensions and intrinsics for a performance gain. 
-        AssertEQM(img->image.size(), initialSize, "Image has same dimensions as initial image");
+        //AssertEQM(img->image.size(), initialSize, "Image has same dimensions as initial image");
         
         STimer detailTimer;
 
