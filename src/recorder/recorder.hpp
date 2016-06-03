@@ -71,6 +71,7 @@ namespace optonaut {
         
         AsyncQueue<InputImageP> debugQueue;
         AsyncQueue<SelectionInfo> postProcessImageQueue;
+        AsyncQueue<SelectionInfo> previewImageQueue;
 
         vector<SelectionInfo> firstRing;
         bool firstRingFinished;
@@ -107,7 +108,7 @@ namespace optonaut {
         // Makes the recorder select images that are further off selection points, 
         // because we don't have a chance to "correct" the movement of the phone
         // wehn we're debugging on PC. 
-        static constexpr double dt = 100.0;
+        static constexpr double dt = 1.0;
 
         Recorder(Mat base, Mat zeroWithoutBase, Mat intrinsics, 
                 ImageSink &sink, string debugPath = "",
@@ -134,13 +135,13 @@ namespace optonaut {
                         this->debugPath + "/" + ToString(debugCounter++) + ".jpg");
  	           }),
             postProcessImageQueue([this] (const SelectionInfo &x) {
-                // mca:image name will be the globalId
                 AssertNEQ(x.image, InputImageP(NULL));
-                // mca:must be in storage Sink? 
-                // testing if right data will be saved
                 SavePostProcessImage(x);
-                
  	          }),
+            previewImageQueue([this] (const SelectionInfo &x) {
+                AssertNEQ(x.image, InputImageP(NULL));
+                SavePreviewImage(x);
+              }),
 
             firstRingFinished(false),
             previewGraph(RecorderGraphGenerator::Sparse(
@@ -200,15 +201,7 @@ namespace optonaut {
            //     aligner->GetCurrentBias() * image->originalExtrinsics;
             postProcessImageQueue.Push(in);
             if(!firstRingFinished) {
-                // if image last overlap or the same point on the current image
-                if(firstRing.size() == 0 || 
-                   firstRing.back().closestPoint.ringId == in.closestPoint.ringId) {
-                    firstRing.push_back(in);
-                    // moved the push to preview here to minimize the lag when finishing the first ring
-                    PushToPreview(in);
-                } else {
-                   FinishFirstRing(); 
-                }
+                previewImageQueue.Push(in);
             } else {
                 if(refinedIntrinsics.cols != 0) {
                     refinedIntrinsics.copyTo(image->intrinsics);
@@ -400,6 +393,20 @@ namespace optonaut {
             
         }
  
+        void SavePreviewImage(SelectionInfo in) {
+            if(firstRing.size() == 0 || 
+                firstRing.back().closestPoint.ringId == in.closestPoint.ringId) {
+                firstRing.push_back(in);
+                // moved the push to preview here to minimize the lag when finishing the first ring
+                cout << "image push to preview" << endl;
+                PushToPreview(in);
+            } else {
+                cout << "FinishFirstRing" << endl;
+                FinishFirstRing(); 
+            }
+        }
+ 
+
         
 /*
         void ExposureFeed(InputImageP a) {
@@ -524,6 +531,12 @@ namespace optonaut {
             firstRingFinished = true; 
             cout << "finish first ring" << endl;
 
+            if (firstRing.size() == 0 ) {
+               firstRing.clear();
+               return;
+           }
+
+
             RingCloser::CloseRing(fun::map<SelectionInfo, InputImageP>(firstRing, 
             [](const SelectionInfo &x) {
                 return x.image;
@@ -599,6 +612,22 @@ namespace optonaut {
             //processingTime.Tick("## Processing Time");
         }
 
+
+        void Cancel() {
+            cout << "Pipeline Cancel called by " << std::this_thread::get_id() << endl;
+            isFinished = true;
+            debugQueue.Finish();
+            postProcessImageQueue.Finish();
+            previewImageQueue.Finish();
+            
+            if(debugPath != "") {
+                std::abort();
+            }
+        }
+
+
+
+
         void Finish() {
             cout << "Pipeline Finish called by " << std::this_thread::get_id() << endl;
             isFinished = true;
@@ -625,6 +654,7 @@ namespace optonaut {
             //saveQueue.Finish();
             debugQueue.Finish();
             postProcessImageQueue.Finish();
+            previewImageQueue.Finish();
             
             if(debugPath != "") {
                 std::abort();
