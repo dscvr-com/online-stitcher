@@ -27,7 +27,8 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
     STimer seamTimer;
     static const bool debug = false;
     AssertFalseInProduction(debug);
-
+    static const bool assertsInLoopsOn = false;
+    AssertFalseInProduction(assertsInLoopsOn);
 
     Point tlA;
     Point tlB;
@@ -100,14 +101,18 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
             int tyA = y - aToRoiY;
             int txB = x - bToRoiX;
             int tyB = y - bToRoiY;
-            
-            // Must be satisfied, or else we calculate ROI wrong. 
-            AssertGE(tyA, 0);
-            AssertGE(tyB, 0);
-            
-            Assert(tyA < arows && tyB < brows);
-            Assert(txA >= 0 && txB >= 0);
-            Assert(txA < acols && txB < bcols);
+           
+            if(assertsInLoopsOn) { 
+                // ej: Made it possible to disable asserts in thight loops. They cost
+                // a lot of performance otherwise!
+                // Must be satisfied, or else we calculate ROI wrong. 
+                AssertGE(tyA, 0);
+                AssertGE(tyB, 0);
+                
+                Assert(tyA < arows && tyB < brows);
+                Assert(txA >= 0 && txB >= 0);
+                Assert(txA < acols && txB < bcols);
+            }
 
             int xA = REMAPX(txA, tyA);
             int yA = REMAPY(txA, tyA);
@@ -118,7 +123,8 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
                maskB.at<uchar>(yB, xB) == 0) {
                 invCost.at<uchar>(y, x) = 0;
             } else {
-                invCost.at<float>(y, x) = 255 - sqrt(LeastSquares<cv::Vec3b>::Calculate(imgA, imgB, xA, yA, xB, yB));
+                invCost.at<float>(y, x) = 
+                    255 - sqrt(LeastSquares<cv::Vec3b>::Calculate(imgA, imgB, xA, yA, xB, yB));
             }
             path.at<uchar>(y, x) = 0;
         }
@@ -143,9 +149,10 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
                 }
             }
 
-            AssertGE(min + x, border);
-            AssertGE(roi.width - border, min + x);
-            
+            if(assertsInLoopsOn) {
+                AssertGE(min + x, border);
+                AssertGE(roi.width - border, min + x);
+            }
             path.at<uchar>(y, x) = (min + 1);
             invCost.at<float>(y, x) += invCost.at<float>(y - 1, x + min);
         }
@@ -178,7 +185,7 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
         std::swap(leftToRoiX, rightToRoiX);
         leftCols = bcols;
     }
-
+    
     int x = start;
 
     if(debug) {
@@ -207,18 +214,17 @@ void DynamicSeamer::Find(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB,
                 cout << "x: " << x << endl;
             }
 
-            AssertGE(x, border);
-            AssertGE(roi.width - border, x);
+            if(assertsInLoopsOn) {
+                AssertGE(x, border);
+                AssertGE(roi.width - border, x);
+            }
         }   
     }   
    
     if(debug) { 
-        //imwrite("dbg/" + ToString(id) + "_a.jpg", imgA);
-        //imwrite("dbg/" + ToString(id) + "_b.jpg", imgB);
         imwrite("dbg/" + ToString(id) + "_ma.jpg", maskA);
-        //imwrite("dbg/" + ToString(id) + "_mb.jpg", maskB);
     }
-
+    
     seamTimer.Tick("Image Seamed");
 }
 template void DynamicSeamer::Find<true>(Mat& imgA, Mat &imgB, Mat &maskA, Mat &maskB, 

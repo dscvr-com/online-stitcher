@@ -19,6 +19,7 @@ namespace optonaut {
  * Correlator debug flag - switch on for pairwise debug output. 
  */ 
 static const bool debug = false;
+static const bool assertsInLoopsOn = false;
 
 /*
  * Represents the result of a planar correlation operation. 
@@ -81,7 +82,6 @@ class BruteForcePlanarAligner {
      * @param oy The predefined offset in y direction. 
      */
     static inline PlanarCorrelationResult Align(const Mat &a, const Mat &b, Mat &corr, int wx, int wy, int ox, int oy) {
-        AssertFalseInProduction(debug);
         STimer cTimer(false);
 
         int mx = 0;
@@ -94,8 +94,10 @@ class BruteForcePlanarAligner {
 	        corr.setTo(Scalar::all(0));
         }
 
-        AssertGTM(wx, 0, "Correlation window exists.");
-        AssertGTM(wy, 0, "Correlation window exists.");
+        if(assertsInLoopsOn) {
+            AssertGTM(wx, 0, "Correlation window exists.");
+            AssertGTM(wy, 0, "Correlation window exists.");
+        }
 
         float costSum = 0;
 
