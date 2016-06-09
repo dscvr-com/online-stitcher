@@ -151,6 +151,18 @@ namespace optonaut {
             auto loadFullImage = 
             	[] (const SelectionInfo &img) {
                    // unload the last minified image
+                    // this is a cheat. need to find the bug
+                    std::string str2 ("debug");
+                    std::string str3 ("post");
+                    std::size_t found = img.image->image.source.find(str2);
+                    if (found!=std::string::npos) {
+                        std::cout << "found 'debug' at: " << found << '\n';
+                        img.image->image.source.replace(found,5,str3);
+                        cout << "image source replace " << img.image->image.source << endl;
+                    }
+                    
+                    
+                    
                    if (img.image->image.IsLoaded())
                    		img.image->image.Unload();          
                 };
