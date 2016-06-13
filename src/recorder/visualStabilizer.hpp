@@ -2,6 +2,7 @@
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/video.hpp>
 
+#include "../common/logger.hpp"
 #include "../math/support.hpp"
 
 
@@ -58,51 +59,45 @@ class VisualStabilizer {
            if(debug) {
                double phi = GetDistanceX(in->originalExtrinsics, Mat::eye(4, 4, CV_64F));
 
-               cout << "RESULT"
-                  << " t=" << in->id 
+               LogR << "t=" << in->id 
                   << " type=sensor-diff-x"
-                  << " val=" << sensorDiffVec.at<double>(0) << endl;
-               cout << "RESULT"
-                  << " t=" << in->id
+                  << " val=" << sensorDiffVec.at<double>(0);
+               LogR << "t=" << in->id
                   << " type=sensor-diff-y"
-                  << " val=" << sensorDiffVec.at<double>(1) << endl;
-               cout << "RESULT"
-                  << " t=" << in->id
+                  << " val=" << sensorDiffVec.at<double>(1);
+               LogR << "t=" << in->id
                   << " type=sensor-diff-z"
-                  << " val=" << sensorDiffVec.at<double>(2) << endl;
-               cout << "RESULT"
-                  << " t=" << in->id
+                  << " val=" << sensorDiffVec.at<double>(2);
+               LogR << "t=" << in->id
                   << " type=sensor-abs-x"
-                  << " val=" << phi << endl;
-               cout << "RESULT"
-                  << " t=" << in->id
+                  << " val=" << phi;
+               LogR << "t=" << in->id
                   << " type=sensor-abs-y"
-                  << " val=" << theta << endl;
+                  << " val=" << theta;
            }
 
            if(estimatedDiff.cols != 0) {
                double estPhiDiff = translationToRotation(estimatedDiff.at<double>(0, 2), pxpm, r, theta);
-               double resudialPhiDiff = sensorDiffVec.at<double>(1) - estPhiDiff;
+               double phiDiff = sensorDiffVec.at<double>(1);
+               double resudialPhiDiff = phiDiff - estPhiDiff;
 
                if(debug) {
                    double estThetaDiff = translationToRotation(estimatedDiff.at<double>(1, 2), pxpm, r, theta);
-                   cout << "RESULT"
-                      << " t=" << in->id
+                   LogR << "t=" << in->id
                       << " type=estimated-diff-x"
-                      << " val=" << estPhiDiff << endl;
-                   cout << "RESULT"
-                      << " t=" << in->id 
+                      << " val=" << estPhiDiff;
+                   LogR << "t=" << in->id 
                       << " type=estimated-diff-y"
-                      << " val=" << estThetaDiff << endl; 
-                   cout << "RESULT"
-                      << " t=" << in->id
+                      << " val=" << estThetaDiff; 
+                   LogR << "t=" << in->id
                       << " type=resudial-diff-y"
-                      << " val=" << resudialPhiDiff << endl;
+                      << " val=" << resudialPhiDiff;
                }
 
-               if(std::abs(resudialPhiDiff) > 0.1) {
+               // If we derive by too much, and video is smaller than sensor, use video. 
+               if(std::abs(resudialPhiDiff) > 0.05 && std::abs(estPhiDiff) < std::abs(phiDiff)) {
                    Mat correction;
-                   CreateRotationY(resudialPhiDiff, correction);
+                   CreateRotationY(-resudialPhiDiff, correction);
                    sensorDiff = sensorDiff * correction;
                }
            }
@@ -116,14 +111,12 @@ class VisualStabilizer {
                double intPhi = GetDistanceX(sensorEstimate, Mat::eye(4, 4, CV_64F));
                double intTheta  = GetDistanceY(sensorEstimate, Mat::eye(4, 4, CV_64F));
                
-               cout << "RESULT"
-                  << " t=" << in->id 
+               LogR << "t=" << in->id 
                   << " type=sensor-int-x"
-                  << " val=" << intPhi << endl;
-               cout << "RESULT"
-                  << " t=" << in->id
+                  << " val=" << intPhi;
+               LogR << "t=" << in->id
                   << " type=sensor-int-y"
-                  << " val=" << intTheta << endl;
+                  << " val=" << intTheta;
            }
         }
     }

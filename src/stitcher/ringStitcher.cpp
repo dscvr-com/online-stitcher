@@ -55,7 +55,9 @@ private:
     cv::Mat warpedMask;
     cv::Mat K;
     bool fast;
-    
+
+    cv::Size initialSize;
+
     //Stitcher feed function.
     void Feed(const StitchingResultP &in) {
         STimer feedTimer;
@@ -72,7 +74,6 @@ private:
         Rect overlap = imageRoi & resultRoi;
 
         Rect overlapI(0, 0, overlap.width, overlap.height);
-
         if(overlap.width == imageRoi.width) {
             //Image fits.
             blender->feed(warpedImageAsShort(overlapI), in->mask.data(overlapI), in->corner);
@@ -151,14 +152,14 @@ private:
         ScaleIntrinsicsToImage(img->intrinsics, img->image, scaledK);
         From3DoubleTo3Float(scaledK, K);
 
+        initialSize = img->image.size();
+
         // Calulate result ROI
         for(size_t i = 0; i < n; i++) {
             Mat R;
             From3DoubleTo3Float(rotations[i], R); 
-
-            //Warping
+                  //Warping
             Rect roi = warper->warpRoi(img->image.size(), K, R);
-
             corners[i] = Point(roi.x, roi.y);
             warpedSizes[i] = Size(roi.width, roi.height);
 
@@ -208,6 +209,9 @@ private:
     void Push(const InputImageP img) {
         
         Assert(img != nullptr);
+
+        // We assume equal dimensions and intrinsics for a performance gain. 
+        //AssertEQM(img->image.size(), initialSize, "Image has same dimensions as initial image");
         
         STimer detailTimer;
 
@@ -231,12 +235,16 @@ private:
                 INTER_LINEAR, BORDER_CONSTANT); 
         res->image = Image(warpedImage);
         res->id = img->id;
-
+      
         //Calculate Image Position (without wrapping around)
         Point tl = warper->warpPoint(Point(0, img->image.rows), K, R);
+        
+
         Point bl = warper->warpPoint(Point(0, 0), K, R);
         Rect roi = warper->warpRoi(img->image.size(), K, R);
         Size fullRoi = roi.size();
+
+
         Point cornerLeft;
 
         if(abs(bl.x - tl.x) > fullRoi.width / 2) {
@@ -305,8 +313,9 @@ private:
 AsyncRingStitcher::AsyncRingStitcher(const InputImageP firstImage,
         std::vector<cv::Mat> rotations, float warperScale,
         bool fast, int roiBuffer) :
-    pimpl_(new Impl(firstImage, rotations, warperScale, fast, roiBuffer)) {
-        
+    pimpl_(new Impl(firstImage, rotations, warperScale, fast, roiBuffer)),
+    warperScale(warperScale) {
+        AssertFalseInProduction(debug);        
 }
 
 void AsyncRingStitcher::Push(const InputImageP image) { pimpl_->Push(image); }

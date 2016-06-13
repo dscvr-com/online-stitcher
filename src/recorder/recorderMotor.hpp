@@ -1,4 +1,4 @@
-    #include "../io/inputImage.hpp"
+#include "../io/inputImage.hpp"
 #include "../io/io.hpp"
 #include "../io/checkpointStore.hpp"
 #include "../stereo/monoStitcher.hpp"

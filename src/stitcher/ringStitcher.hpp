@@ -24,6 +24,8 @@ class AsyncRingStitcher {
     class Impl;
     // Implementation pointer pattern. 
     Impl* pimpl_;
+
+    float warperScale;
     public:
 
     /*
@@ -42,6 +44,17 @@ class AsyncRingStitcher {
      * Pushes an image and adds it to the result. 
      */
     void Push(const InputImageP image);
+
+    /*
+     * Gets the warper scale, which relates to the size
+     * of the output panorama. 
+     * That is the radius of the sphere where the panorama is
+     * projected upon. For a warper scale of x, the width of the
+     * equirectangular panorama is x * PI * 2 pixels. 
+     */
+    float GetWarperScale() {
+        return warperScale;        
+    };
 
     /*
      * Finalizes and returns the result.
@@ -65,16 +78,34 @@ class RingStitcher {
         std::vector<Mat> rotations = fun::map<InputImageP, Mat>(images, 
                 [](const InputImageP &i) { return i->adjustedExtrinsics; }); 
 
-        AsyncRingStitcher core(images[0], rotations, 1200, false, 0);
+        AsyncRingStitcher core(images[0], rotations, GetWarperScale(), false, 0);
 
         //TODO: Place all IO, exposure compensation and so on here. 
+
+        cout << "images.size() " << images.size() << endl;
+        cout << "rotations.size() " << rotations.size() << endl;
         
         for(size_t i = 0; i < images.size(); i++) {
             progress(i / (float)images.size());
+            cout << "[stitch] ImageSource" << images[i]->image.source << endl;
+            cout << "[stitch] ImageSize" << images[i]->image.size() << endl;
             core.Push(images[i]); 
         }
 
         return core.Finalize();
+    }
+
+    /*
+     * Gets the warper scale, which relates to the size
+     * of the output panorama. 
+     * That is the radius of the sphere where the panorama is
+     * projected upon. For a warper scale of x, the width of the
+     * equirectangular panorama is x * PI * 2 pixels. 
+     */
+    float GetWarperScale() {
+        // use a fixed scale of 1200. That's approximately
+        // what we can fit in memory on an iPhone. 
+        return 1200;    
     }
 
     /*

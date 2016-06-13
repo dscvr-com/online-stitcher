@@ -1,6 +1,7 @@
 #include <string>
 #include <chrono>
 
+
 #ifndef OPTONAUT_STATIC_TIMER_HEADER
 #define OPTONAUT_STATIC_TIMER_HEADER
 
@@ -13,7 +14,7 @@ namespace optonaut {
         /*
          * Global enable/disable flag. 
          */
-        static const bool g_enabled = true;
+        static const bool g_enabled = false;
 
         bool enabled;
         std::chrono::high_resolution_clock::time_point last;

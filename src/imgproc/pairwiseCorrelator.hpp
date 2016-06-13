@@ -76,7 +76,9 @@ private:
      */
     typedef PyramidPlanarAligner<NormedCorrelator<LeastSquares<Vec3b>>> Aligner;
 public:
-    PairwiseCorrelator() { }
+    PairwiseCorrelator() {
+        AssertFalseInProduction(debug);
+    }
 
     /*
      * Correlation was rejected, but to unknown reasons. Do not use. 
@@ -128,7 +130,7 @@ public:
         const bool enableDeviationTest = false;
         const bool enableOutOfWindowTest = true;
 
-        STimer cTimer;
+        STimer cTimer(false);
         CorrelationDiff result;
         
         Mat wa, wb;

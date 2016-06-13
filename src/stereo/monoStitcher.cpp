@@ -149,8 +149,8 @@ void MapToTarget(const InputImageP a, const StereoTarget &target, Mat &result, M
     Mat aK;
     ScaleIntrinsicsToImage(a->intrinsics, a->image.size(), aK);
     targetK = aK.clone();
- 	targetK.at<double>(0, 2) = target.size.width / 2.0f;
- 	targetK.at<double>(1, 2) = target.size.height / 2.0f;
+        targetK.at<double>(0, 2) = target.size.width / 2.0f;
+        targetK.at<double>(1, 2) = target.size.height / 2.0f;
 
     Mat transformation = targetK * translation * rot * aK.inv();
     Mat transformationF;
@@ -161,10 +161,16 @@ void MapToTarget(const InputImageP a, const StereoTarget &target, Mat &result, M
     //cout << targetK << endl;
     //cout << transformation << endl;
 
-    result = Mat(target.size, a->image.data.type());
+    Scalar border(0);
 
+    // If we are in debug mode, use a bright red border for undefined areas. 
+    if(debug) {
+        border = Scalar(0, 0, 255);
+    }
+    
+    result = Mat(target.size, a->image.data.type(), border); 
     warpPerspective(a->image.data, result, transformationF, target.size, 
-            INTER_LINEAR, BORDER_CONSTANT, 0);
+        INTER_LINEAR, BORDER_CONSTANT, border); 
 
     if(debug) { 
         vector<Point2f> corners = {
@@ -220,12 +226,14 @@ InputImageP MonoStitcher::RectifySingle(const SelectionInfo &a) {
 void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo) {
 
     const static bool debug = false;
+    AssertFalseInProduction(debug);
 
     Mat k;
     stereo.valid = false;
 
-	AssertEQ(a.image->image.cols, b.image->image.cols);
-	AssertEQ(a.image->image.rows, b.image->image.rows);
+        //AssertEQ(a.image->image.cols, b.image->image.cols);
+        //AssertEQ(a.image->image.rows, b.image->image.rows);
+    AssertMatEQ<double>(a.image->intrinsics, b.image->intrinsics);
 
     StereoTarget target;
     vector<Mat> targetArea;

@@ -205,7 +205,8 @@ public:
         detector(AKAZE::create()), 
         extractor(AKAZE::create()),
         matcher(new BFMatcher())
-    { 
+    {
+        AssertFalseInProduction(debug);
     }
 	
     PairwiseVisualAligner(Ptr<FeatureDetector> detector,
@@ -214,7 +215,8 @@ public:
         detector(detector), 
         extractor(extractor),
         matcher(matcher)
-    { 
+    {
+        AssertFalseInProduction(debug);
     }
 
 

@@ -136,8 +136,8 @@ cv::Point SimpleSphereStitcher::WarpPoint(const cv::Mat &intrinsics, const cv::M
    From4DoubleTo3Float(extrinsics, r);
    ScaleIntrinsicsToImage(intrinsics, imageSize, sk);
    From3DoubleTo3Float(sk, k);
-   k.at<float>(0, 2) = 0;
-   k.at<float>(1, 2) = 0;
-   return warper.warpPoint(point, k, r); 
+   //k.at<float>(0, 2) = 0;
+   //k.at<float>(1, 2) = 0;
+   return warper.warpPoint(point + Point(imageSize.width / 2, imageSize.height / 2), k, r); 
 }
 }

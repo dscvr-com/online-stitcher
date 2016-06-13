@@ -19,6 +19,7 @@ namespace optonaut {
  * Correlator debug flag - switch on for pairwise debug output. 
  */ 
 static const bool debug = false;
+static const bool assertsInLoopsOn = false;
 
 /*
  * Represents the result of a planar correlation operation. 
@@ -81,9 +82,7 @@ class BruteForcePlanarAligner {
      * @param oy The predefined offset in y direction. 
      */
     static inline PlanarCorrelationResult Align(const Mat &a, const Mat &b, Mat &corr, int wx, int wy, int ox, int oy) {
-
-        AssertFalseInProduction(debug);
-        STimer cTimer;
+        STimer cTimer(false);
 
         int mx = 0;
         int my = 0;
@@ -95,8 +94,10 @@ class BruteForcePlanarAligner {
 	        corr.setTo(Scalar::all(0));
         }
 
-        AssertGTM(wx, 0, "Correlation window exists.");
-        AssertGTM(wy, 0, "Correlation window exists.");
+        if(assertsInLoopsOn) {
+            AssertGTM(wx, 0, "Correlation window exists.");
+            AssertGTM(wy, 0, "Correlation window exists.");
+        }
 
         float costSum = 0;
 
@@ -152,13 +153,14 @@ class PyramidPlanarAligner {
         const int minSize = 4;
 
         cv::Point res;
+        AssertFalseInProduction(debug);
 
-        if(a.cols > minSize / wx && b.cols > minSize / wx 
+        if(a.cols > minSize / wx && b.cols > minSize / wx
                 && a.rows > minSize / wy && b.rows > minSize / wy) {
             // If the image is large enough, perform a further pyramid alignment step. 
             Mat ta, tb;
 
-            STimer cPyrDownTimer;
+            STimer cPyrDownTimer(false);
             pyrDown(a, ta);
             pyrDown(b, tb);
             cPyrDownTimer.Tick("Aligner PyrDown");
@@ -174,7 +176,7 @@ class PyramidPlanarAligner {
                 res = guess * 2;
             } else {
 
-                STimer cTimer;
+                STimer cTimer(false);
                 Mat corrBf;
 
                 // Perform a brute force correlation, but just for a very small area. 
@@ -214,7 +216,7 @@ class PyramidPlanarAligner {
         } else {
             // If we are at the bottom of our pyramid and the image is already very small, 
             // perform a brute-force correlation. 
-            STimer cTimer;
+            STimer cTimer(false);
             PlanarCorrelationResult detailedRes = 
                 BruteForcePlanarAligner<Correlator>::Align(a, b, corr, wx, wy);
                 
@@ -243,8 +245,9 @@ class PyramidPlanarAligner {
         VariancePool<double> pool;
         int corrXOff = 0;
         int corrYOff = 0;
+        AssertFalseInProduction(debug);
 
-        // Invoke the internal alignment operation. 
+        // Invoke the internal alignment operation.
         cv::Point res = PyramidPlanarAligner<Correlator>::AlignInternal(a, b, corr, corrXOff, corrYOff, wx, wy, dskip, 0, pool);
 
         // Debug - draw the resulting image pair and correlation. 

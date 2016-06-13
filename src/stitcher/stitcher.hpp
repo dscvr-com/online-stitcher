@@ -34,12 +34,14 @@ namespace optonaut {
             vector<vector<InputImageP>> rings;
             ExposureCompensator exposure;
             map<size_t, double> gains;
+           
 
             store.LoadStitcherInput(rings, gains);
             
             exposure.SetGains(gains);
             
             StitchingResultP res;
+            cout << "Stitching " << endl;
             
             core.InitializeForStitching(rings, exposure, 0.4);
             res = core.Stitch(progress, debugName);

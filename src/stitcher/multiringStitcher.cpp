@@ -9,6 +9,7 @@
 
 #include "../math/support.hpp"
 #include "../common/image.hpp"
+#include "../common/drawing.hpp"
 #include "../common/support.hpp"
 #include "../common/ringProcessor.hpp"
 #include "../common/static_timer.hpp"
@@ -160,6 +161,10 @@ namespace optonaut {
     
     StitchingResultP MultiRingStitcher::StitchRing(const vector<InputImageP> &ring, ProgressCallback &progress, int ringId) const {
         
+        static const bool debug = false;
+        AssertFalseInProduction(debug);
+
+
         cout << "Attempting to stitch ring " << ringId << endl;
 
         // Attempt to load the ring.
@@ -177,6 +182,10 @@ namespace optonaut {
         
         res = stitcher.Stitch(ring, progress);
         res->id = ringId;
+
+        if(debug) {
+            DrawImagePointsOnPanorama(res, ring, stitcher.GetWarperScale(), Scalar(0, 0, 255));
+        }
 
         if(store.SupportsPaging()) {
             store.SaveRing(ringId, res);

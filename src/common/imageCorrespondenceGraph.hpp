@@ -20,7 +20,7 @@ namespace optonaut {
         protected: 
             SparseGraph<ValueType> relations;
             mutex graphLock;
-            static const bool debug = true;
+            static const bool debug = false;
 
         public:
             /*
@@ -39,7 +39,9 @@ namespace optonaut {
             /*
              * Creates a new empty graph. 
              */
-            ImageCorrespondenceGraph() { }
+            ImageCorrespondenceGraph() {
+                AssertFalseInProduction(debug);
+            }
 
             /*
              * Registers the given images with this specific implementation. 
