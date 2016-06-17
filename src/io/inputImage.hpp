@@ -18,6 +18,7 @@ namespace optonaut {
     namespace colorspace {
         const int RGBA = 0;
         const int RGB = 1;
+        const int BGRA = 2;
     }
 
     /*

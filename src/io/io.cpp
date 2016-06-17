@@ -17,6 +17,7 @@
 
 #include "../common/support.hpp"
 #include "../common/image.hpp"
+#include "../common/logger.hpp"
 #include "../stitcher/stitchingResult.hpp"
 
 #include "inputImage.hpp"
@@ -549,7 +550,7 @@ namespace optonaut {
             closedir(dir);
         } else {
             //Could not open dir.
-            assert(false);
+            AssertM(false, "Could not open dir: " + path);
         }
         
         return images;
