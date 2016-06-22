@@ -81,32 +81,34 @@ namespace optonaut {
                 Mat rvec;
                 ExtractRotationVector(a.inv() *  b, rvec);
                 
+                int ringCount = (int)graph.ringCount;
                 
-                if (GetNextRing()>= 1){
-                    
+                if(int currentRing = (ringCount - 1) / 2){
+                    for(int i = 0; i < 3; i++) {
+                        if(abs(rvec.at<double>(i)) > tolerance(i)) {
+                            return false;
+                        }
+                    }
+
+                }
+                
+                else{
                     for(int i = 0; i < 3; i++) {
                         /*if(abs(rvec.at<double>(i)) > tolerance(i)) {
-                        return false;
-                        }*/
+                         return false;
+                         }*/
                         if (i == 2){
                             if(abs(rvec.at<double>(i)) > (tolerance(i)* 1.5)) {
-                             return false;
+                                return false;
                             }
                         }
                         else{
                             if(abs(rvec.at<double>(i)) > tolerance(i)) {
-                             return false;
+                                return false;
                             }
                         }
                     }
-                }
-                
-                else {
-                    for(int i = 0; i < 3; i++) {
-                        if(abs(rvec.at<double>(i)) > tolerance(i)) {
-                        return false;
-                        }
-                    }
+                    
                 }
                 
                 return true;
