@@ -81,14 +81,36 @@ namespace optonaut {
                 Mat rvec;
                 ExtractRotationVector(a.inv() *  b, rvec);
                 
-                for(int i = 0; i < 3; i++) {
-                    if(abs(rvec.at<double>(i)) > tolerance(i)) {
+                
+                if (GetNextRing()>= 1){
+                    
+                    for(int i = 0; i < 3; i++) {
+                        /*if(abs(rvec.at<double>(i)) > tolerance(i)) {
                         return false;
+                        }*/
+                        if (i == 2){
+                            if(abs(rvec.at<double>(i)) > (tolerance(i)* 1.5)) {
+                             return false;
+                            }
+                        }
+                        else{
+                            if(abs(rvec.at<double>(i)) > tolerance(i)) {
+                             return false;
+                            }
+                        }
+                    }
+                }
+                
+                else {
+                    for(int i = 0; i < 3; i++) {
+                        if(abs(rvec.at<double>(i)) > tolerance(i)) {
+                        return false;
+                        }
                     }
                 }
                 
                 return true;
-            }
+           }
 
         protected:
             RecorderGraph &graph;
@@ -301,7 +323,7 @@ namespace optonaut {
                 hasStarted(false), errorVec(Mat::zeros(3, 1, CV_64F)), error(0) {
             
             }
-
+        
             using ImageSelector::Push;
 
             /*
