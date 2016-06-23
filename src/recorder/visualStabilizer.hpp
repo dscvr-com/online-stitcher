@@ -16,7 +16,7 @@ namespace optonaut {
 class VisualStabilizer {
     private: 
 
-    static const bool debug = true;
+    static const bool debug = false;
 
     double translationToRotation(double t, double pxpm, double r, double theta) {
        auto mm = t / pxpm;  

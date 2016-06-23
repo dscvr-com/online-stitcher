@@ -248,6 +248,7 @@ namespace optonaut {
             RingProcessor<SelectionInfo> stereoRingBuffer(1, 1, loadFullImage, ForwardToStereoProcess, FinishImage);
            
             
+            double focalLenAdjustment = aligner.GetFocalLenAdjustment();
        	    int lastRingId = -1;
             for(auto img : bestAlignment) {
             	SelectionPoint target;
@@ -256,6 +257,7 @@ namespace optonaut {
             	Assert(finalImagesToTargets.GetValue(img->id, pointId));
             	Assert(halfGraph.GetPointById(pointId, target));
 
+                target.vFov = target.vFov * focalLenAdjustment;
             	SelectionInfo info;
             	info.isValid = true;
             	info.closestPoint = target;
