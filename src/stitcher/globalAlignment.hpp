@@ -38,7 +38,7 @@ namespace optonaut {
     class GlobalAlignment {
 
     private:    
-        static const bool debug = false;
+        static const bool debug = true;
         //static const bool fillMissingImages = true;
         static const bool fillMissingImages = false;
 
@@ -122,6 +122,7 @@ namespace optonaut {
 
             if(debug) {
                 SimpleSphereStitcher debugger;
+                minimal::ImagePreperation::LoadAllImages(best);
                 imwrite("dbg/aligner_input.jpg", debugger.Stitch(best, false, true)->image.data);
             }
 
