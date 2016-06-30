@@ -105,6 +105,12 @@ class IterativeBundleAligner {
 
     public: 
         IterativeBundleAligner() : debugger(200) { }
+        double focalLenAdjustment;
+
+
+        double GetFocalLenAdjustment() {
+            return focalLenAdjustment;
+        }   
 
         void Align(const vector<InputImageP> &images, 
                 const RecorderGraph &graph, 
@@ -183,7 +189,7 @@ class IterativeBundleAligner {
                     adjustments.push_back(focalLenAdjustment);
                 }
 
-                double focalLenAdjustment = Mean(adjustments);
+                focalLenAdjustment = Mean(adjustments);
                 cout << " Final focal length adjustment factor: " 
                     << focalLenAdjustment << endl;
 

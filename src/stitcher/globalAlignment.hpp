@@ -84,6 +84,13 @@ namespace optonaut {
 
             }
         }
+
+        // this is a copy of getVerticalFov 
+        double GetVerticalFov ( const Mat &intrinsics ) {
+             double h = intrinsics.at<double>(1,2);
+             double f = intrinsics.at<double>(0,0);
+             return 2 * atan2(h,f);
+        }
         
 
         void Finish() {
@@ -256,7 +263,8 @@ namespace optonaut {
             	uint32_t pointId = 0;
             	Assert(finalImagesToTargets.GetValue(img->id, pointId));
             	Assert(halfGraph.GetPointById(pointId, target));
-
+                double maxVFov = GetVerticalFov(img->intrinsics);
+                target.vFov = maxVFov;
             	SelectionInfo info;
             	info.isValid = true;
             	info.closestPoint = target;
