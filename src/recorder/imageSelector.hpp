@@ -83,20 +83,17 @@ namespace optonaut {
                 
                 int ringCount = (int)graph.ringCount;
                 
-                if(int currentRing = (ringCount - 1) / 2){
+                if(currentRing == (ringCount) / 2){
+                    // Currently working on center ring - normal tolerance. 
                     for(int i = 0; i < 3; i++) {
                         if(abs(rvec.at<double>(i)) > tolerance(i)) {
                             return false;
                         }
                     }
 
-                }
-                
-                else{
+                } else {
+                    // Working on outer rings - extended tolerance. 
                     for(int i = 0; i < 3; i++) {
-                        /*if(abs(rvec.at<double>(i)) > tolerance(i)) {
-                         return false;
-                         }*/
                         if (i == 2){
                             if(abs(rvec.at<double>(i)) > (tolerance(i)* 1.5)) {
                                 return false;

@@ -38,7 +38,7 @@ namespace optonaut {
     class GlobalAlignment {
 
     private:    
-        static const bool debug = true;
+        static const bool debug = false;
         //static const bool fillMissingImages = true;
         static const bool fillMissingImages = false;
 
@@ -58,7 +58,7 @@ namespace optonaut {
                 AssertFalseInProduction(fillMissingImages);
         }
  
-        void minifyImages ( vector<InputImageP> &images, int downsample = 2) {
+        void minifyImages (vector<InputImageP> &images, int downsample = 2) {
            AssertGT(downsample, 0);
 
            int  counter = 0;
@@ -67,7 +67,8 @@ namespace optonaut {
                 std::string source = img->image.source;
                 if(!img->image.IsLoaded()) {
                     loaded = true;              
-                    img->image.Load();          
+                    img->image.Load();
+                    AssertM(img->image.data.cols != 0, "Image loaded successfully");
                 }
     
                 cv::Mat small; 
@@ -111,6 +112,18 @@ namespace optonaut {
             Mat intrinsics;
             intrinsics = inputImages[0]->intrinsics;
             int graphConfiguration = 0;
+
+            // Quick hack to align all images relative to the first image recorded.
+            /*
+            Mat baseOrientation = loadedRings[loadedRings.size() / 2][0]->adjustedExtrinsics.inv();
+
+            for(auto ring : loadedRings) {
+                for(auto image : ring) {
+                    image->adjustedExtrinsics *= baseOrientation;
+                    image->originalExtrinsics *= baseOrientation;
+                }
+            }
+            */
 
             /*
              * check the number of rings and based use the correct graph configuration
