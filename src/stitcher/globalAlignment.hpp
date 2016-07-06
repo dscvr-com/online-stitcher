@@ -38,7 +38,7 @@ namespace optonaut {
     class GlobalAlignment {
 
     private:    
-        static const bool debug = true;
+        static const bool debug = false;
         //static const bool fillMissingImages = true;
         static const bool fillMissingImages = false;
 
