@@ -309,7 +309,7 @@ namespace optonaut {
                 }
                
                 // Build forward/backward lookup tables.  
-                vector<int> remap(maxId);
+                vector<int> remap(maxId + 1);
                 
                 for(auto &adj : relations.GetEdges()) {
                     remap[adj.first] = (int)invmap.size();

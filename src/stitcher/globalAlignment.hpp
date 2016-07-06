@@ -38,7 +38,7 @@ namespace optonaut {
     class GlobalAlignment {
 
     private:    
-        static const bool debug = false;
+        static const bool debug = true;
         //static const bool fillMissingImages = true;
         static const bool fillMissingImages = false;
 
@@ -129,8 +129,10 @@ namespace optonaut {
              * check the number of rings and based use the correct graph configuration
              */
             if (loadedRings.size() == 1) {
+               Log << "Find center mode";
                graphConfiguration =  RecorderGraph::ModeCenter;
             } else if (loadedRings.size() == 3)  {
+               Log << "Find truncated mode";
                graphConfiguration =  RecorderGraph::ModeTruncated;
             }
 
