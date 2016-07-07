@@ -14,7 +14,7 @@ namespace optonaut {
 
 StitchingResultP SimplePlaneStitcher::Stitch(const std::vector<ImageP> &in, const std::vector<cv::Point> &corners) const {
 	size_t n = in.size();
-    assert(n > 0);
+    Assert(n > 0);
 
     vector<Mat> images(n);
     vector<Size> sizes(n);

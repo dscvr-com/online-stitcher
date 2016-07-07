@@ -18,7 +18,7 @@ int main(int argc, char** argv) {
     auto images = minimal::ImagePreperation::LoadAndPrepareArgs(argc, argv, false);
     auto n = images.size();
 
-    assert(n == 2);
+    Assert(n == 2);
 
     SelectionInfo a, b;
 

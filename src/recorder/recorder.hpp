@@ -559,7 +559,15 @@ namespace optonaut {
             //STimer processingTime(true);
 
             //cout << "Pipeline Push called by " << std::this_thread::get_id() << endl;
-            
+
+            Mat extrinsics = image->originalExtrinsics;
+
+            image->originalExtrinsics = Mat(4, 4, CV_64F);
+            image->adjustedExtrinsics = Mat(4, 4, CV_64F);
+
+            extrinsics.copyTo(image->originalExtrinsics);
+            extrinsics.copyTo(image->adjustedExtrinsics);
+
             if(debugPath != "" && !isIdle) {
                 AssertFalseInProduction(true);
                 image->LoadFromDataRef();
@@ -567,8 +575,8 @@ namespace optonaut {
                 InputImageP copy(new InputImage());
                 copy->image = Image(image->image);
                 copy->dataRef = image->dataRef;
-                copy->originalExtrinsics = image->originalExtrinsics.clone();
-                copy->adjustedExtrinsics = image->adjustedExtrinsics.clone();
+                copy->originalExtrinsics = image->originalExtrinsics;
+                copy->adjustedExtrinsics = image->adjustedExtrinsics;
                 copy->intrinsics = image->intrinsics.clone();
                 copy->exposureInfo = image->exposureInfo;
                 copy->id = image->id;
@@ -589,8 +597,8 @@ namespace optonaut {
             
             if(hasStarted)
             {
-                stabilizer.Push(image);
-                stabilizer.GetCurrentEstimate().copyTo(image->originalExtrinsics);
+                //stabilizer.Push(image);
+                //stabilizer.GetCurrentEstimate().copyTo(image->originalExtrinsics);
             }
             image->originalExtrinsics.copyTo(image->adjustedExtrinsics);
 
@@ -759,7 +767,7 @@ namespace optonaut {
         }
 
         ExposureInfo GetExposureHint() {
-            assert(false); //Wrong semantics. 
+            Assert(false); //Wrong semantics.
             const Mat current; //= aligner->GetCurrentBias();
             
             vector<KeyframeInfo> frames; // = aligner->GetClosestKeyframes(current, 2);

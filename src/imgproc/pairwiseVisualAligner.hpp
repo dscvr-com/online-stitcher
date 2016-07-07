@@ -84,7 +84,7 @@ private:
     }
 
     void AllocateChainRefs(size_t imageId, size_t featureCount) {
-        assert(chainRefs.size() == imageId);
+        Assert(chainRefs.size() == imageId);
         chainRefs.emplace_back(featureCount);
         std::fill(chainRefs[imageId].begin(), chainRefs[imageId].end(), NO_CHAIN);
     }
@@ -223,7 +223,7 @@ public:
 	void FindKeyPoints(InputImageP img) {
         size_t id = GetImageId(img);
 
-        assert(features.size() == id);
+        Assert(features.size() == id);
 
         ImageFeatures f;
 
@@ -279,8 +279,8 @@ public:
     }
 
 	MatchInfoP FindCorrespondence(const InputImageP a, const InputImageP b) {
-        assert(a != NULL);
-        assert(b != NULL);
+        Assert(a != NULL);
+        Assert(b != NULL);
         AllocateDebug(a, b);
         
 		MatchInfoP info(new MatchInfo());

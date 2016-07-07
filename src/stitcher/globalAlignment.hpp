@@ -129,17 +129,20 @@ namespace optonaut {
              * check the number of rings and based use the correct graph configuration
              */
             if (loadedRings.size() == 1) {
-               Log << "Find center mode";
-               graphConfiguration =  RecorderGraph::ModeCenter;
+                Log << "Find center mode";
+                graphConfiguration =  RecorderGraph::ModeCenter;
+                Log << "Creating centered reorder graph";
             } else if (loadedRings.size() == 3)  {
-               Log << "Find truncated mode";
-               graphConfiguration =  RecorderGraph::ModeTruncated;
+                Log << "Find truncated mode";
+                graphConfiguration =  RecorderGraph::ModeTruncated;
+                Log << "Creating truncated reorder graph";
             }
+
+            Log << "Using Intrinsics " << intrinsics;
 
             RecorderGraph recorderGraph = generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityNormal, 0, 8);
             
             vector<InputImageP> best = recorderGraph.SelectBestMatches(inputImages, imagesToTargets, false);
-            
             Log << "Pre-Alignment, found " << best.size() << "/" << recorderGraph.Size() << "/" << inputImages.size();
 
             if(debug) {

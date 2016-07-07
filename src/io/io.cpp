@@ -18,6 +18,7 @@
 #include "../common/support.hpp"
 #include "../common/image.hpp"
 #include "../common/logger.hpp"
+#include "../common/assert.hpp"
 #include "../stitcher/stitchingResult.hpp"
 
 #include "inputImage.hpp"
@@ -118,7 +119,7 @@ namespace optonaut {
         if(dir == "")
             return;
 
-       assert(path.length() < 512);
+       Assert(path.length() < 512);
        _mkdir(dir.c_str());
     }
 
@@ -142,14 +143,14 @@ namespace optonaut {
     }
 
 	int MatrixFromJson(const Value& matrix, Mat &out) {
-		assert(matrix.IsArray());
+		Assert(matrix.IsArray());
 
 		int size = matrix.Size();
 
         int dim = sqrt(size);
         
         //Check for quadratical matrix.
-        assert(size == dim * dim);
+        Assert(size == dim * dim);
 
 		out = Mat(dim, dim, CV_64F);
 
@@ -163,7 +164,7 @@ namespace optonaut {
 	}
     
     int MatrixToJson(const Mat &in, Value& out, Document::AllocatorType& allocator) {
-        assert(in.cols == in.rows); //Only square matrices supported.
+        Assert(in.cols == in.rows); //Only square matrices supported.
         out.SetArray();
         
         int dim = in.cols;
@@ -181,10 +182,8 @@ namespace optonaut {
         
         char buffer[65536];
         FILE* fileRef = fopen(path.c_str(), "r");
-        if(fileRef == NULL) {
-            cout << "Unable to read data file " << path << endl;
-            assert(false);
-        }
+        AssertM(fileRef != NULL, "Able to read data file");
+
         
         FileReadStream file(fileRef, buffer, sizeof(buffer));
         doc.ParseStream<0>(file);
@@ -196,10 +195,7 @@ namespace optonaut {
         CreateDirectories(path);
 
         FILE* fileRef = fopen(path.c_str(), "w+");
-        if(fileRef == NULL) {
-            cout << "Unable to write data file " << path << endl;
-            assert(false);
-        }
+        AssertM(fileRef != NULL, "Able to write data file");
         char buffer[65536];
         FileWriteStream os(fileRef, buffer, sizeof(buffer));
         Writer<FileWriteStream> writer(os);
@@ -213,20 +209,22 @@ namespace optonaut {
         ReadJsonDocument(doc, path);
         
 		result->id = doc["id"].GetInt();
-		assert(MatrixFromJson(doc["intrinsics"], result->intrinsics) == 3);
+		Assert(MatrixFromJson(doc["intrinsics"], result->intrinsics) == 3);
         if(doc.HasMember("originalExtrinsics")) {
             //Internal temporary image format
-            assert(MatrixFromJson(doc["originalExtrinsics"],
+            Assert(MatrixFromJson(doc["originalExtrinsics"],
                                   result->originalExtrinsics) == 4);
-            assert(MatrixFromJson(doc["adjustedExtrinsics"],
+            Assert(MatrixFromJson(doc["adjustedExtrinsics"],
                                   result->adjustedExtrinsics) == 4);
             result->image.cols = doc["width"].GetInt();
             result->image.rows = doc["height"].GetInt();
         } else {
             //External debug format
-            assert(MatrixFromJson(doc["extrinsics"], result->originalExtrinsics) == 4);
+            Assert(MatrixFromJson(doc["extrinsics"], result->originalExtrinsics) == 4);
             result->adjustedExtrinsics = result->originalExtrinsics.clone();
         }
+
+        //Log << "Loading intrinsics" << result->intrinsics;
  	}
     
     void WriteInputImageInfoFile(const string &path, InputImageP result) {
@@ -296,7 +294,7 @@ namespace optonaut {
 	}
     
     string GetDataFilePath(const string &imagePath) {
-        assert(StringEndsWith(imagePath, ".jpg") || StringEndsWith(imagePath, ".bmp"));
+        AssertM(StringEndsWith(imagePath, ".jpg") || StringEndsWith(imagePath, ".bmp"), "File ending correct");
         
         string pathWithoutExtensions = imagePath.substr(0, imagePath.length() - 4);
         string jsonPath = pathWithoutExtensions + ".json";
@@ -389,7 +387,7 @@ namespace optonaut {
         Document doc;
         ReadJsonDocument(doc, path);
         
-        assert(doc.IsArray());
+        Assert(doc.IsArray());
         size_t size = doc.Size();
         vector<T> res;
         
@@ -409,7 +407,7 @@ namespace optonaut {
 	    for(i = 0; i < len && input.good(); i++) {
 	        buf[i] = input.get();
 	    }
-	    assert(i == len);
+	    Assert(i == len);
 	}
 
 	void BufferToBinFile(unsigned char buf[], size_t len, const string &file) {

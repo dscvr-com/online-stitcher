@@ -1,5 +1,8 @@
 #include <functional>
 #include <vector>
+// Note: We need to stick with cassert here
+// since this code might be included from app side
+// and that does not work well with the Assert header.
 #include <cassert>
 
 #ifndef OPTONAUT_PROGRESS_CALLBACK_HEADER
