@@ -121,7 +121,7 @@ void GetTargetArea(const SelectionPoint &a, const SelectionPoint &b, Mat &center
     GeoToRot(hRight + hBuffer, vBot + vBuffer, corners[2]);
     GeoToRot(hLeft - hBuffer, vBot + vBuffer, corners[3]);
 
-    assert(hLeft - hBuffer < hRight + hBuffer); 
+    Assert(hLeft - hBuffer < hRight + hBuffer);
 }
 
 /*

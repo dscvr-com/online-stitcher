@@ -71,7 +71,7 @@ namespace optonaut {
             process(process),
             finish(onFinish) {
             //Necassary for the below implementation. 
-            assert(prefixSize <= dist);
+            Assert(prefixSize <= dist);
         }
        
         /*
@@ -87,7 +87,7 @@ namespace optonaut {
             process(process),
             finish(onFinish) {
             //Necassary for the below implementation. 
-            assert(prefixSize <= dist);
+            Assert(prefixSize <= dist);
         }
 
         /*

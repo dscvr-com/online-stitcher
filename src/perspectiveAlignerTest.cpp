@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
     auto images = minimal::ImagePreperation::LoadAndPrepareArgs(argc, argv, false);
     auto n = images.size();
 
-    assert(n % 2 == 0);
+    Assert(n % 2 == 0);
 
     for(size_t i = 0; i < n; i += 2) {
         auto imgA = images[i];

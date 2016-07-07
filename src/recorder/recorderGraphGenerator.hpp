@@ -5,7 +5,8 @@
 #include "../math/support.hpp"
 #include "../math/projection.hpp"
 #include "../common/ringProcessor.hpp"
-#include "../common/bimap.hpp"
+#include "../common/bimap.hpp""
+#include "../common/logger.hpp"
 #include "recorderGraph.hpp"
 
 using namespace cv;
@@ -358,9 +359,9 @@ public:
 		double hFov = maxHFov * (1.0 - hOverlap);
 		double vFov = maxVFov * (1.0 - vOverlap);
 
-        cout << "[RecorderGraph Generate] H-FOV: " << (maxHFov * 180 / M_PI) << endl;
-        cout << "[RecorderGraph Generate] V-FOV: " << (maxVFov * 180 / M_PI) << endl;
-        cout << "[RecorderGraph Generate] Ratio: " << (sin(maxVFov) / sin(maxHFov)) << endl;
+        Log << "H-FOV: " << (maxHFov * 180 / M_PI);
+        Log << "V-FOV: " << (maxVFov * 180 / M_PI);
+        Log << "Ratio: " << (sin(maxVFov) / sin(maxHFov));
 
         uint32_t vCount = ceil(M_PI / vFov);
         double vStart = 0;
@@ -395,8 +396,7 @@ public:
         }
 
         if(vCount % 2 == 0 && mode == RecorderGraph::ModeCenter) {
-            cout << "Center mode not possible with even number of rings." << endl;
-            assert(false);
+            AssertM(false, "Center mode not possible with even number of rings." );
         }
         
         RecorderGraph res(vCount, intrinsics);
