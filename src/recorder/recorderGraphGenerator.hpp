@@ -5,7 +5,7 @@
 #include "../math/support.hpp"
 #include "../math/projection.hpp"
 #include "../common/ringProcessor.hpp"
-#include "../common/bimap.hpp""
+#include "../common/bimap.hpp"
 #include "../common/logger.hpp"
 #include "recorderGraph.hpp"
 
