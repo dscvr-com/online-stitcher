@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
         files.push_back(imageName);
     }
 
-    assert(n == 2);
+    Assert(n == 2);
 
     Mat imgA, imgB, corr;
 

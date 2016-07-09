@@ -76,7 +76,7 @@ namespace optonaut {
          * Returns the size of this image, regardless if data is loaded. 
          */
         inline cv::Size size() const {
-            assert(cols != 0 && rows != 0); //Image was never loaded
+            Assert(cols != 0 && rows != 0); //Image was never loaded
             return cv::Size(cols, rows);
         }
 
@@ -107,7 +107,7 @@ namespace optonaut {
             cols = data.cols;
             rows = data.rows;
 
-            assert(cols != 0 && rows != 0);
+            Assert(cols != 0 && rows != 0);
         }
 	};
 

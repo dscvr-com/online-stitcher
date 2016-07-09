@@ -16,7 +16,7 @@ namespace optonaut {
 StitchingResultP SimpleSphereStitcher::Stitch(const std::vector<InputImageP> &in, bool smallImages, bool drawRotationCenters) {
     //TODO: Cleanup this mess. 
 	size_t n = in.size();
-    assert(n > 0);
+    Assert(n > 0);
 
     vector<Mat> images(n);
     vector<cv::detail::CameraParams> cameras(n);

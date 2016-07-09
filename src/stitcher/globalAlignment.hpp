@@ -39,7 +39,8 @@ namespace optonaut {
 
     private:    
         static const bool debug = false;
-        static const bool fillMissingImages = true;
+        //static const bool fillMissingImages = true;
+        static const bool fillMissingImages = false;
 
         CheckpointStore &imageStore;
         CheckpointStore &leftStore;
@@ -57,7 +58,7 @@ namespace optonaut {
                 AssertFalseInProduction(fillMissingImages);
         }
  
-        void minifyImages ( vector<InputImageP> &images, int downsample = 2) {
+        void minifyImages (vector<InputImageP> &images, int downsample = 2) {
            AssertGT(downsample, 0);
 
            int  counter = 0;
@@ -66,7 +67,8 @@ namespace optonaut {
                 std::string source = img->image.source;
                 if(!img->image.IsLoaded()) {
                     loaded = true;              
-                    img->image.Load();          
+                    img->image.Load();
+                    AssertM(img->image.data.cols != 0, "Image loaded successfully");
                 }
     
                 cv::Mat small; 
@@ -82,6 +84,13 @@ namespace optonaut {
                 img->image.source = source; 
 
             }
+        }
+
+        // this is a copy of getVerticalFov 
+        double GetVerticalFov ( const Mat &intrinsics ) {
+             double h = intrinsics.at<double>(1,2);
+             double f = intrinsics.at<double>(0,0);
+             return 2 * atan2(h,f);
         }
         
 
@@ -104,23 +113,41 @@ namespace optonaut {
             intrinsics = inputImages[0]->intrinsics;
             int graphConfiguration = 0;
 
+            // Quick hack to align all images relative to the first image recorded.
+            /*
+            Mat baseOrientation = loadedRings[loadedRings.size() / 2][0]->adjustedExtrinsics.inv();
+
+            for(auto ring : loadedRings) {
+                for(auto image : ring) {
+                    image->adjustedExtrinsics *= baseOrientation;
+                    image->originalExtrinsics *= baseOrientation;
+                }
+            }
+            */
+
             /*
              * check the number of rings and based use the correct graph configuration
              */
             if (loadedRings.size() == 1) {
-               graphConfiguration =  RecorderGraph::ModeCenter;
+                Log << "Find center mode";
+                graphConfiguration =  RecorderGraph::ModeCenter;
+                Log << "Creating centered reorder graph";
             } else if (loadedRings.size() == 3)  {
-               graphConfiguration =  RecorderGraph::ModeTruncated;
+                Log << "Find truncated mode";
+                graphConfiguration =  RecorderGraph::ModeTruncated;
+                Log << "Creating truncated reorder graph";
             }
+
+            Log << "Using Intrinsics " << intrinsics;
 
             RecorderGraph recorderGraph = generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityNormal, 0, 8);
             
             vector<InputImageP> best = recorderGraph.SelectBestMatches(inputImages, imagesToTargets, false);
-            
             Log << "Pre-Alignment, found " << best.size() << "/" << recorderGraph.Size() << "/" << inputImages.size();
 
             if(debug) {
                 SimpleSphereStitcher debugger;
+                minimal::ImagePreperation::LoadAllImages(best);
                 imwrite("dbg/aligner_input.jpg", debugger.Stitch(best, false, true)->image.data);
             }
 
@@ -150,6 +177,18 @@ namespace optonaut {
             auto loadFullImage = 
             	[] (const SelectionInfo &img) {
                    // unload the last minified image
+                    // this is a cheat. need to find the bug
+                    std::string str2 ("debug");
+                    std::string str3 ("post");
+                    std::size_t found = img.image->image.source.find(str2);
+                    if (found!=std::string::npos) {
+                        std::cout << "found 'debug' at: " << found << '\n';
+                        img.image->image.source.replace(found,5,str3);
+                        cout << "image source replace " << img.image->image.source << endl;
+                    }
+                    
+                    
+                    
                    if (img.image->image.IsLoaded())
                    		img.image->image.Unload();          
                 };
@@ -242,7 +281,8 @@ namespace optonaut {
             	uint32_t pointId = 0;
             	Assert(finalImagesToTargets.GetValue(img->id, pointId));
             	Assert(halfGraph.GetPointById(pointId, target));
-
+                double maxVFov = GetVerticalFov(img->intrinsics);
+                target.vFov = maxVFov;
             	SelectionInfo info;
             	info.isValid = true;
             	info.closestPoint = target;

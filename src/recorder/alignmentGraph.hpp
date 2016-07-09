@@ -3,6 +3,7 @@
 
 #include "../common/imageCorrespondenceGraph.hpp"
 #include "../common/support.hpp"
+#include "../common/logger.hpp"
 #include "../common/functional.hpp"
 #include "../math/projection.hpp"
 #include "../imgproc/pairwiseCorrelator.hpp"
@@ -104,7 +105,6 @@ namespace optonaut {
              * Calculates the alignment difference for two given images. 
              */ 
             virtual AlignmentDiff GetCorrespondence(InputImageP imgA, InputImageP imgB, AlignmentDiff &aToB, AlignmentDiff &bToA) {
-
                 STimer tFindCorrespondence(false);
 
                 const bool dampUncorrelatedNeighbors = false;
@@ -309,7 +309,7 @@ namespace optonaut {
                 }
                
                 // Build forward/backward lookup tables.  
-                vector<int> remap(maxId);
+                vector<int> remap(maxId + 1);
                 
                 for(auto &adj : relations.GetEdges()) {
                     remap[adj.first] = (int)invmap.size();

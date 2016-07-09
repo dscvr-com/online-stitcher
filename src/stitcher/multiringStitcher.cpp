@@ -14,6 +14,7 @@
 #include "../common/ringProcessor.hpp"
 #include "../common/static_timer.hpp"
 #include "../common/functional.hpp"
+#include "../common/logger.hpp"
 #include "ringStitcher.hpp"
 #include "multiringStitcher.hpp"
 #include "stitchingResult.hpp"
@@ -65,7 +66,7 @@ namespace optonaut {
             a->image.Unload();
         }
         a->seamed = true;
-        cout << "Saving mask" << a->id << endl;
+        Log << "Saving mask" << a->id;
         if(store.SupportsPaging()) {
             store.SaveRingMask(a->id, a);
             a->mask.Unload();
@@ -165,7 +166,7 @@ namespace optonaut {
         AssertFalseInProduction(debug);
 
 
-        cout << "Attempting to stitch ring " << ringId << endl;
+        Log << "Attempting to stitch ring " << ringId;
 
         // Attempt to load the ring.
         StitchingResultP res = store.LoadRing(ringId);
@@ -220,8 +221,8 @@ namespace optonaut {
         ProgressCallback &finalBlendingProgress = progressCallbacks.At(weights.size() - 1);
 
         vector<StitchingResultP> stitchedRings;
-       
-        cout << "Attempting to stitch rings." << endl;
+
+        Log << "Attempting to stitch rings.";
         int margin = -1; 
        
         // For each ring, stitch. 
@@ -256,9 +257,9 @@ namespace optonaut {
         // If we have more than one ring, adjust the rings, 
         // find seams and blend them together. 
         if(stitchedRings.size() > 1) {
-            assert(margin != -1);
+            Assert(margin != -1);
                
-            cout << "Attempting ring adjustment." << endl;
+            Log << "Attempting ring adjustment.";
             ringAdjustmentProgress(1);
             
             AdjustCorners(stitchedRings, ringAdjustmentProgress);
@@ -289,10 +290,10 @@ namespace optonaut {
             float dx = (float)outRoi.width / (float)inRoi.width;
             float dy = (float)outRoi.height / (float)(inRoi.height + 2 * margin);
 
-            cout << "InRoi: " << inRoi << " OutRoi: " << outRoi << endl;
+            Log << "InRoi: " << inRoi << " OutRoi: " << outRoi;
             blender->prepare(outRoi);
-           
-            cout << "Attempting ring blending." << endl;
+
+            Log << "Attempting ring blending.";
             for(size_t i = 0; i < stitchedRings.size(); i++) {
                 finalBlendingProgress((float)i / (float)stitchedRings.size());
                 auto res = stitchedRings[i];
@@ -303,7 +304,7 @@ namespace optonaut {
                 if(!res->image.IsLoaded()) {
                     res->image.Load();
                 }
-                assert(res->image.type() == CV_8UC3);
+                Assert(res->image.type() == CV_8UC3);
                 resize(res->image.data, resizedImage, cv::Size(0, 0), dx, dy);
                 if(store.SupportsPaging()) {
                     res->image.Unload();
@@ -312,7 +313,7 @@ namespace optonaut {
                 if(!res->image.IsLoaded()) {
                     res->mask.Load(IMREAD_GRAYSCALE);
                 }
-                assert(res->mask.type() == CV_8U);
+                Assert(res->mask.type() == CV_8U);
                 resize(res->mask.data, resizedMask, cv::Size(0, 0), dx, dy);
                 if(store.SupportsPaging()) {
                     res->mask.Unload();

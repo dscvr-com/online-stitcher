@@ -265,7 +265,7 @@ namespace optonaut {
          * Finds the ring closest to the given position. 
          */
         int FindAssociatedRing(const Mat &extrinsics, const double tolerance = M_PI / 8) const {
-            assert(targets.size() > 0);
+            Assert(targets.size() > 0);
 
             SelectionPoint pt;
             if(FindClosestPoint(extrinsics, pt) <= tolerance) {

@@ -6,6 +6,7 @@
 #include <opencv2/stitching/detail/warpers.hpp>
 
 #include "../common/image.hpp"
+#include "../common/logger.hpp"
 #include "../common/assert.hpp"
 #include "../math/quat.hpp"
 #include "../math/support.hpp"
@@ -120,7 +121,7 @@ void GetTargetArea(const SelectionPoint &a, const SelectionPoint &b, Mat &center
     GeoToRot(hRight + hBuffer, vBot + vBuffer, corners[2]);
     GeoToRot(hLeft - hBuffer, vBot + vBuffer, corners[3]);
 
-    assert(hLeft - hBuffer < hRight + hBuffer); 
+    Assert(hLeft - hBuffer < hRight + hBuffer);
 }
 
 /*
@@ -141,6 +142,7 @@ void MapToTarget(const InputImageP a, const StereoTarget &target, Mat &result, M
     double unit[] = {t, 0.0, 0.0, 0.0};
     Mat translation = Mat::eye(3, 3, CV_64F);
     translation(Rect(2, 0, 1, 3)) = rot * Mat(3, 1, CV_64F, unit);
+    translation.at<double>(1, 2) = 0;
     translation.at<double>(2, 2) = 1;
 
     //cout << rot << endl;
@@ -149,9 +151,9 @@ void MapToTarget(const InputImageP a, const StereoTarget &target, Mat &result, M
     Mat aK;
     ScaleIntrinsicsToImage(a->intrinsics, a->image.size(), aK);
     targetK = aK.clone();
- 	targetK.at<double>(0, 2) = target.size.width / 2.0f;
- 	targetK.at<double>(1, 2) = target.size.height / 2.0f;
-
+        targetK.at<double>(0, 2) = target.size.width / 2.0f;
+        targetK.at<double>(1, 2) = target.size.height / 2.0f;
+    
     Mat transformation = targetK * translation * rot * aK.inv();
     Mat transformationF;
     From3DoubleTo3Float(transformation, transformationF);
@@ -231,8 +233,8 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
     Mat k;
     stereo.valid = false;
 
-	AssertEQ(a.image->image.cols, b.image->image.cols);
-	AssertEQ(a.image->image.rows, b.image->image.rows);
+        //AssertEQ(a.image->image.cols, b.image->image.cols);
+        //AssertEQ(a.image->image.rows, b.image->image.rows);
     AssertMatEQ<double>(a.image->intrinsics, b.image->intrinsics);
 
     StereoTarget target;

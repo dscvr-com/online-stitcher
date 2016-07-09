@@ -1,4 +1,5 @@
 #include "../common/support.hpp"
+#include "../common/logger.hpp"
 
 #include "checkpointStore.hpp"
 #include "io.hpp"
@@ -32,6 +33,9 @@ namespace optonaut {
     }
     
     void CheckpointStore::LoadStitcherInput(vector<vector<InputImageP>> &rings, map<size_t, double> &exposure) {
+
+        Log << "Loading images from " << rawImagesPath;
+
         rings.clear();
         vector<InputImageP> images = LoadAllImagesFromDirectory(rawImagesPath, defaultExtension);
         vector<vector<size_t>> ringmap = LoadRingMap(ringMapPath);
