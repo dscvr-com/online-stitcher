@@ -107,7 +107,7 @@ namespace optonaut {
         // Makes the recorder select images that are further off selection points, 
         // because we don't have a chance to "correct" the movement of the phone
         // wehn we're debugging on PC. 
-        static constexpr double dt = 100.0;
+        static constexpr double dt = 1.0;
 
         Recorder(Mat base, Mat zeroWithoutBase, Mat intrinsics, 
                 ImageSink &sink, string debugPath = "",
@@ -338,6 +338,9 @@ namespace optonaut {
            // aligner->Dispose();
            // stereoConversionQueue.Dispose();
             //saveQueue.Dispose();
+            
+            debugQueue.Dispose();
+            postProcessImageQueue.Dispose();
         }
         
 /*
@@ -597,6 +600,11 @@ namespace optonaut {
             }
             
             //processingTime.Tick("## Processing Time");
+        }
+        
+        void Cancel() {
+            debugQueue.Finish();
+            postProcessImageQueue.Finish();
         }
 
         void Finish() {
