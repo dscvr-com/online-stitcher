@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
         printUsage();
         return 0;
     }
-    Assert(argc == 3);
+    assert(argc == 3);
 
     Mat in = imread(argv[1]);
 

@@ -14,6 +14,7 @@ option(BUILD_PERSPECTIVE_ALIGNER_TEST "Build perspective aligner test" ON)
 option(BUILD_RING_CLOSURE_TEST "Build ring closure test" ON) 
 option(BUILD_STEREO_CONVERSION_TEST "Build stereo conversion test" ON) 
 option(BUILD_BRUTE_FORCE_ALIGNER_TEST "Build iterative bindle aligner test" ON) 
+option(BUILD_FLOW_FIELD_TEST "Build flow field test program" ON) 
 
 find_package(OpenGL REQUIRED)
 include_directories(${OPENGL_INCLUDE_DIR})

@@ -38,7 +38,7 @@ namespace optonaut {
     class GlobalAlignment {
 
     private:    
-        static const bool debug = false;
+        static const bool debug = true;
         //static const bool fillMissingImages = true;
         static const bool fillMissingImages = false;
 
@@ -237,6 +237,10 @@ namespace optonaut {
                     b.image->image.Load();          
 
                 stereoConverter.CreateStereo(a, b, stereo);
+                //stereo.A = stereoConverter.RectifySingle(a);
+                //stereo.B = stereoConverter.RectifySingle(b);
+                //stereo.extrinsics = a.image->originalExtrinsics.clone();
+                //stereo.valid = true;
 
                 while(stereoRings.size() <= a.closestPoint.ringId) {
                     stereoRings.push_back(vector<StereoImage>());

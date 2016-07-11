@@ -1,6 +1,7 @@
 #include <thread>
 
 #include "progressCallback.hpp"
+#include "assert.hpp"
 
 using namespace std;
 

@@ -99,6 +99,11 @@ if(BUILD_BRUTE_FORCE_ALIGNER_TEST)
     target_link_libraries(brute-force-aligner-test optonaut-lib)
 endif(BUILD_BRUTE_FORCE_ALIGNER_TEST)
 
+if(BUILD_FLOW_FIELD_TEST)
+    add_executable(flow-field-test flowFieldLKTest.cpp)
+    target_link_libraries(flow-field-test optonaut-lib)
+endif(BUILD_FLOW_FIELD_TEST)
+
 add_executable(stereo-match-test stereoMatchTest.cpp)
 target_link_libraries(stereo-match-test optonaut-lib)
 target_link_libraries(stereo-match-test visual-debug-hook)

@@ -267,6 +267,8 @@ namespace optonaut {
 		}
 		out.at<double>(3, 3) = 1;
 	}
+	
+    template<int N, int M, int U, int V> void FromNMDoubleToUVFloat(const cv::Mat &in, cv::Mat &out);
 
 	bool ContainsNaN(const Mat &in) {
 		assert(in.type() == CV_64F);

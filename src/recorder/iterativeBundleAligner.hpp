@@ -18,7 +18,7 @@ using namespace cv;
 namespace optonaut {
 class IterativeBundleAligner {
     private:
-        static const bool drawDebug = false;
+        static const bool drawDebug = true;
 
         SimpleSphereStitcher debugger;
 

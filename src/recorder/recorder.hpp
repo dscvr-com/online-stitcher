@@ -632,12 +632,6 @@ namespace optonaut {
         }
         
         void Cancel() {
-            debugQueue.Finish();
-            postProcessImageQueue.Finish();
-        }
-
-
-        void Cancel() {
             cout << "Pipeline Cancel called by " << std::this_thread::get_id() << endl;
             isFinished = true;
             debugQueue.Finish();

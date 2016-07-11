@@ -113,6 +113,24 @@ namespace optonaut {
 	void From3FloatTo3Double(const cv::Mat &in, cv::Mat &out);
 	void From3DoubleTo4Double(const cv::Mat &in, cv::Mat &out);
 	void From4DoubleTo3Double(const cv::Mat &in, cv::Mat &out);
+
+    /*
+     * Converts NxM double matrix to UxV float matrix, where N and U are width (column count), M and V are height (row count)
+     * of the matrices. If out matrix is bigger, the remaining entries are filled according to an identity matrix. 
+     */
+	template<int N, int M, int U, int V> void FromNMDoubleToUVFloat(const cv::Mat &in, cv::Mat &out) {
+		assert(MatIs(in, M, N, CV_64F));
+
+		out = cv::Mat::zeros(V, U, CV_32F);
+		for(int i = 0; i < std::min(M, V); i++) {
+			for(int j = 0; j < std::min(N, U); j++) {
+				out.at<float>(i, j) = in.at<double>(i, j);
+			}
+		}
+		for(int i = std::min(N, M); i < std::min(U, V); i++) {
+            out.at<float>(i, i) = 1;
+        }
+	}
     
     /*
      * Checks if a matrix contains NaN entries. 
