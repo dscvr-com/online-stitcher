@@ -630,12 +630,6 @@ namespace optonaut {
             
             //processingTime.Tick("## Processing Time");
         }
-        
-        void Cancel() {
-            debugQueue.Finish();
-            postProcessImageQueue.Finish();
-        }
-
 
         void Cancel() {
             cout << "Pipeline Cancel called by " << std::this_thread::get_id() << endl;
@@ -648,10 +642,7 @@ namespace optonaut {
                 std::abort();
             }
         }
-
-
-
-
+        
         void Finish() {
             cout << "Pipeline Finish called by " << std::this_thread::get_id() << endl;
             isFinished = true;
