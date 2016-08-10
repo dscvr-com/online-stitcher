@@ -157,7 +157,7 @@ void MapToTarget(const InputImageP a, const StereoTarget &target, Mat &result, M
     Mat transformation = targetK * translation * rot * aK.inv();
     Mat transformationF;
     From3DoubleTo3Float(transformation, transformationF);
-    
+
     //cout << rot << endl;
     //cout << aK.inv() << endl;
     //cout << targetK << endl;

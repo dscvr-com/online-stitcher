@@ -29,6 +29,7 @@ int main(int argc, char** argv) {
     cv::ocl::setUseOpenCL(false);
     //cout << cv::getBuildInformation() << endl;
     bool outputUnaligned = true;
+    bool outputStereo = false;
             
     SimpleSphereStitcher debugger(400);
 
@@ -50,8 +51,10 @@ int main(int argc, char** argv) {
     
     auto miniImages = minimal::ImagePreperation::CreateMinifiedCopy(fullImages, 3);
     
-    minimal::StereoConverter::StitchAndWrite(
+    if(outputStereo) {
+        minimal::StereoConverter::StitchAndWrite(
                 miniImages, fullGraph, "unaligned_stereo");
+    }
 
     
     if(outputUnaligned) {
@@ -100,8 +103,10 @@ int main(int argc, char** argv) {
 
     //Just for testing. 
 
-    minimal::StereoConverter::StitchAndWrite(
-                finalImages, halfGraph, "aligned_stereo");
+    if(outputStereo) {
+        minimal::StereoConverter::StitchAndWrite(
+            finalImages, halfGraph, "aligned_stereo");
+    }
 
     return 0;
 }

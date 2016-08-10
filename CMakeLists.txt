@@ -15,6 +15,7 @@ option(BUILD_RING_CLOSURE_TEST "Build ring closure test" ON)
 option(BUILD_STEREO_CONVERSION_TEST "Build stereo conversion test" ON) 
 option(BUILD_BRUTE_FORCE_ALIGNER_TEST "Build iterative bindle aligner test" ON) 
 option(BUILD_FLOW_FIELD_TEST "Build flow field test program" ON) 
+option(BUILD_FLOW_BLENDING_TEST "Build flow field blending test program" ON) 
 
 find_package(OpenGL REQUIRED)
 include_directories(${OPENGL_INCLUDE_DIR})
@@ -34,5 +35,5 @@ SET(OSX_LIBS ${COCOA_LIB} ${CARBON_LIB} ${IOKIT_LIB})
 
 find_package( OpenCV REQUIRED )
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall -Wunreachable-code -std=c++1y -O0 -g -Werror")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall -Wunreachable-code -std=c++1y -O3 -g -Werror")
 add_subdirectory(src)

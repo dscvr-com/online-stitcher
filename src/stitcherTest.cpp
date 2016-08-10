@@ -192,7 +192,7 @@ int main(int argc, char** argv) {
 
 		GlobalAlignment globalAlignment = GlobalAlignment(postProcStore, leftStore, rightStore);
     globalAlignment.Finish();
-		ExposureCompensator dummyCompensator;
+    optonaut::ExposureCompensator dummyCompensator;
 
 
     MultiRingStitcher leftStitcher(leftStore);

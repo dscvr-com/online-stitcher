@@ -104,6 +104,11 @@ if(BUILD_FLOW_FIELD_TEST)
     target_link_libraries(flow-field-test optonaut-lib)
 endif(BUILD_FLOW_FIELD_TEST)
 
+if(BUILD_FLOW_BLENDING_TEST)
+    add_executable(flow-blending-test flowBlendingTest.cpp)
+    target_link_libraries(flow-blending-test optonaut-lib)
+endif(BUILD_FLOW_BLENDING_TEST)
+
 add_executable(stereo-match-test stereoMatchTest.cpp)
 target_link_libraries(stereo-match-test optonaut-lib)
 target_link_libraries(stereo-match-test visual-debug-hook)

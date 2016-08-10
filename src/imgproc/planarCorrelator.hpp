@@ -19,6 +19,7 @@ namespace optonaut {
  * Correlator debug flag - switch on for pairwise debug output. 
  */ 
 static const bool debug = false;
+static const bool outputMatch = true;
 static const bool assertsInLoopsOn = false;
 
 /*
@@ -246,12 +247,13 @@ class PyramidPlanarAligner {
         int corrXOff = 0;
         int corrYOff = 0;
         AssertFalseInProduction(debug);
+        AssertFalseInProduction(outputMatch);
 
         // Invoke the internal alignment operation.
         cv::Point res = PyramidPlanarAligner<Correlator>::AlignInternal(a, b, corr, corrXOff, corrYOff, wx, wy, dskip, 0, pool);
 
         // Debug - draw the resulting image pair and correlation. 
-        if(debug) {
+        if(outputMatch) {
             static int dbgctr = 0;
             Mat eye = Mat::eye(3, 3, CV_64F);
             Mat hom = Mat::eye(3, 3, CV_64F);
@@ -268,11 +270,13 @@ class PyramidPlanarAligner {
             //DrawMatchingResults(hom, eye, a, b, target);
             
             std::string filename =  
+                        "match_" + 
+                        ToString(dbgctr) + "_" +  
                         ToString(sqrt(pool.GetMeasurements().back().s) / 
                             pool.GetMeasurements().back().n);
 
             imwrite("dbg/" + filename + ".jpg", target->image.data);
-            
+            /*
             float max = 255;
 
             for(int i = 0; i < corr.cols; i++) {
@@ -284,7 +288,7 @@ class PyramidPlanarAligner {
             }
             
             imwrite("dbg/" + filename + "_corr.jpg", corr / max * 255);
-
+            */
             dbgctr++;
         }
         

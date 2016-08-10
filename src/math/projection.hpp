@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <string>
 #include <opencv2/opencv.hpp>
+#include <opencv2/stitching.hpp>
 
 #include "../io/inputImage.hpp"
 #include "../common/image.hpp"
@@ -185,6 +186,41 @@ namespace optonaut {
             return false;
         }
     } 
+
+    static inline cv::Point GetOverlappingRegionWarper(const InputImageP a, const InputImageP b, const Image &ai, 
+            const Image &bi, Mat &overlapA, Mat &overlapB, int, cv::Point &) {
+
+        AssertM(ai.IsLoaded(), "Input a exists");
+        AssertM(bi.IsLoaded(), "Input b exists");
+
+        auto warperFactory = new cv::SphericalWarper();
+        auto warper = warperFactory->create(800.0f);
+
+        Mat scaledK;
+        Mat K, RA, RB;
+        ScaleIntrinsicsToImage(a->intrinsics, ai, scaledK);
+        From3DoubleTo3Float(scaledK, K);
+        From4DoubleTo3Float(a->originalExtrinsics, RA);
+        From4DoubleTo3Float(b->originalExtrinsics, RB);
+
+        Mat awarp, bwarp;
+
+        Rect aroi = warper->warpRoi(ai.size(), K, RA);
+        Rect broi = warper->warpRoi(bi.size(), K, RB);
+        
+        Point aLoc= warper->warp(ai.data, K, RA, INTER_NEAREST, BORDER_CONSTANT, awarp);
+        Point bLoc = warper->warp(bi.data, K, RB, INTER_NEAREST, BORDER_CONSTANT, bwarp);
+
+        Rect roi = aroi & broi;
+
+        Rect aDestRoi(roi.x - aLoc.x + 10, roi.y - aLoc.y + 10, roi.width - 20, roi.height - 20);
+        Rect bDestRoi(roi.x - bLoc.x + 10, roi.y - bLoc.y + 10, roi.width - 20, roi.height - 20);
+
+        overlapA = awarp(aDestRoi);
+        overlapB = bwarp(bDestRoi);
+    
+        return Point(broi.x - aroi.x, broi.y - aroi.y);
+    }
   
     /**
      * Gets the overlapping region between two images related by a perspective 
@@ -199,7 +235,7 @@ namespace optonaut {
      * @param overlapB On completion, is set to the overlapping, undistorted part of b
      * @param buffer Additional image border to be included in the overlap, wherever possible, relative to the position of a.
      *
-     * @returns The location difference of b a nd a measured on the image plane. 
+     * @returns The location difference of b and a measured on the image plane. 
      */
     static inline cv::Point GetOverlappingRegion(const InputImageP a, const InputImageP b, const Image &ai, 
             const Image &bi, Mat &overlapA, Mat &overlapB, int buffer, cv::Point &appliedBorder) {

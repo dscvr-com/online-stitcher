@@ -168,7 +168,7 @@ namespace optonaut {
             timer.Tick("Closed Ring");
 
             IterativeBundleAligner aligner;
-    	    aligner.Align(best, recorderGraph, imagesToTargets, 2, 0.5);
+    	    aligner.Align(best, recorderGraph, imagesToTargets, 5, 0.5);
             
             timer.Tick("Bundle Adjustment");
             
