@@ -15,6 +15,7 @@ stereo/monoStitcher.cpp
 stitcher/dynamicSeamer.cpp
 stitcher/multiringStitcher.cpp
 stitcher/ringStitcher.cpp
+stitcher/flowBlender.cpp
 stitcher/simpleSphereStitcher.cpp
 stitcher/simplePlaneStitcher.cpp
 debug/debugHook.cpp

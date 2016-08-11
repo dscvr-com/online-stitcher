@@ -1,5 +1,7 @@
 #include <string>
 #include <sstream>
+#include <iostream>
+#include <opencv2/core.hpp>
 
 #ifndef OPTONAUT_SUPPORT_HEADER
 #define OPTONAUT_SUPPORT_HEADER
@@ -71,6 +73,41 @@ namespace optonaut {
         std::ostringstream text;
         text << i;
         return text.str();
+    }
+
+    /*
+     * Samples a subpixel from an image. 
+     * No mat checking for speed. 
+     */
+    template <typename T>
+    inline T Sample(const cv::Mat& img, const float inx, const float iny)
+    {
+        int x = (int)inx;
+        int y = (int)iny;
+
+        if((float)x == inx && (float)y == iny) {
+           // Special case - we have EXACTLY a single pixel. 
+           return img.at<T>(y, x); 
+        }
+
+        int x0 = x;
+        int x1 = x + 1;
+        int y0 = y; 
+        int y1 = y + 1; 
+
+        if(y1 >= img.rows) {
+            y1 = img.rows - 1;
+        }
+        if(x1 >= img.cols) {
+            x1 = img.cols - 1;
+        }
+
+        float a = inx - (float)x;
+        float c = iny - (float)y;
+
+        return 
+            (img.at<T>(y0, x0) * (1.f - a) + img.at<T>(y0, x1) * a) * (1.f - c) +
+            (img.at<T>(y1, x0) * (1.f - a) + img.at<cv::Vec3b>(y1, x1) * a) * c;
     }
 }
 

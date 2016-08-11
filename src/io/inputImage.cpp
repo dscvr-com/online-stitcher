@@ -7,13 +7,13 @@
 #include <opencv2/opencv.hpp>
 
 #include "inputImage.hpp"
-#include "../math/support.hpp"
-#include "../common/assert.hpp"
-#include "../common/static_timer.hpp"
-
 
 using namespace std;
 using namespace cv;
+
+#include "../math/support.hpp"
+#include "../common/assert.hpp"
+#include "../common/static_timer.hpp"
 
 namespace optonaut {
 

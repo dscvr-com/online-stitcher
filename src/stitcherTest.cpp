@@ -179,26 +179,27 @@ int main(int argc, char** argv) {
 
     sort(files.begin(), files.end(), CompareByFilename);
 
-    if(!leftStore.HasUnstitchedRecording()) {
+    if(!postProcStore.HasUnstitchedRecording()) {
         cout << "Recording." << endl;
-       // if(useStitcherSink) {
-       //     Record(files, stitcherSink);
-      //  } else {
-            //Record(files, storeSink);
-            Record(files, imageSink);
-      //  }
+        Record(files, imageSink);
+    } else {
+        cout << "Skipping Recording." << endl;
     }
 
 
-		GlobalAlignment globalAlignment = GlobalAlignment(postProcStore, leftStore, rightStore);
-    globalAlignment.Finish();
+    if(!leftStore.HasUnstitchedRecording()) {
+        cout << "Aligning." << endl;
+        GlobalAlignment globalAlignment = GlobalAlignment(postProcStore, leftStore, rightStore);
+        globalAlignment.Finish();
+    } else {
+        cout << "Skipping Aligning." << endl;
+    }
+
     optonaut::ExposureCompensator dummyCompensator;
-
-
     MultiRingStitcher leftStitcher(leftStore);
     MultiRingStitcher rightStitcher(rightStore);
 
-		vector<vector<InputImageP>> leftRings;
+    vector<vector<InputImageP>> leftRings;
    	vector<vector<InputImageP>> rightRings;
     map<size_t, double> gains;
     leftStore.LoadStitcherInput(leftRings, gains);

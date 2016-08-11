@@ -35,6 +35,13 @@ int main(int argc, char** argv) {
     SimpleSphereStitcher stitcher(800);
     auto scene = stitcher.Stitch(allImages, false, true);
 
+    for(auto img : allImages) {
+        auto inner = GetInnerRectangle(stitcher.GetWarper(), img);
+        rectangle(scene->image.data, Rect(inner.tl() - scene->corner, inner.size()), Scalar(0, 255, 0), 2);
+        auto outer = GetOuterRectangle(stitcher.GetWarper(), img);
+        rectangle(scene->image.data, Rect(outer.tl() - scene->corner, outer.size()), Scalar(0, 0, 255), 2);
+    }
+
     imwrite("dbg/result.jpg", scene->image.data);
 
     return 0;

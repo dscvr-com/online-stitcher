@@ -12,6 +12,7 @@
 #include "../common/static_timer.hpp"
 #include "ringStitcher.hpp"
 #include "dynamicSeamer.hpp"
+#include "flowBlender.hpp"
 
 using namespace std;
 using namespace cv;
@@ -20,6 +21,14 @@ using namespace cv::detail;
 static const bool debug = false;
 
 namespace optonaut {
+
+struct FlowImage {
+    Point corner;
+    Mat image;
+    Mat flow;
+};
+
+typedef shared_ptr<FlowImage> FlowImageP;
     
 void RingStitcher::PrepareMatrices(const vector<InputImageP> &r) {
 
@@ -32,7 +41,7 @@ void RingStitcher::PrepareMatrices(const vector<InputImageP> &r) {
 
     //Do wave correction
     waveCorrect(matrices, WAVE_CORRECT_HORIZ);
-
+ 
     for(size_t i = 0; i <  r.size(); i++) {
         From3FloatTo4Double(matrices[i], r[i]->adjustedExtrinsics);
     }
@@ -42,7 +51,7 @@ class AsyncRingStitcher::Impl {
 private:
     size_t n;
     
-    cv::Ptr<cv::detail::Blender> blender;
+    //cv::Ptr<cv::detail::Blender> blender;
     cv::Ptr<cv::detail::RotationWarper> warper;
     cv::Ptr<cv::WarperCreator> warperFactory;
     std::vector<cv::Point> corners;
@@ -50,16 +59,17 @@ private:
     cv::UMat uxmap, uymap;
     cv::Rect resultRoi;
     cv::Rect dstRoi;
-    cv::Rect dstCoreMaskRoi;
-    RingProcessor<StitchingResultP> queue;
+    cv::Rect coreRoi;
+    RingProcessor<FlowImageP> queue;
     cv::Mat warpedMask;
     cv::Mat K;
-    bool fast;
+
+    FlowBlender blender;
 
     cv::Size initialSize;
 
     //Stitcher feed function.
-    void Feed(const StitchingResultP &in) {
+    void Feed(const FlowImageP &in) {
         STimer feedTimer;
 
         if(debug) {
@@ -67,8 +77,8 @@ private:
             imwrite("dbg/feed_mask_" + ToString(in->id) + ".jpg", in->mask.data);
         }
 
-        Mat warpedImageAsShort;
-        in->image.data.convertTo(warpedImageAsShort, CV_16S);
+        //Mat warpedImageAsShort;
+        //in->image.data.convertTo(warpedImageAsShort, CV_16S);
 
         Rect imageRoi(in->corner, in->image.size());
         Rect overlap = imageRoi & resultRoi;
@@ -76,68 +86,54 @@ private:
         Rect overlapI(0, 0, overlap.width, overlap.height);
         if(overlap.width == imageRoi.width) {
             //Image fits.
-            blender->feed(warpedImageAsShort(overlapI), in->mask.data(overlapI), in->corner);
+            blender.Feed(in->image(overlapI), in->flow(overlapI), in->corner);
         } else {
             //Image overlaps on X-Axis and we have to blend two parts.
-            blender->feed(warpedImageAsShort(overlapI), 
-                    in->mask.data(overlapI), 
+            blender.Feed(in->image(overlapI), 
+                    in->flow(overlapI), 
                     overlap.tl());
 
             Rect other(resultRoi.x, overlap.y, 
                     imageRoi.width - overlap.width, overlap.height);
             Rect otherI(overlap.width, 0, other.width, other.height);
-            blender->feed(warpedImageAsShort(otherI), 
-                    in->mask.data(otherI), 
+            blender.Feed(in->image(otherI), 
+                    in->flow(otherI), 
                     other.tl());
         }
 
-        warpedImageAsShort.release();
+        //warpedImageAsShort.release();
 
         feedTimer.Tick("Image Fed");
     }
 
     //Seam finder function. 
-    void FindSeams(const StitchingResultP &a,
-            const StitchingResultP &b) {
+    void FindSeams(const FlowImageP &a,
+            const FlowImageP &b) {
 
-        // Nope, no seams.
-        if(fast) {
-            return;
-        }
+        Rect aRoi(a->corner, a->image.size());
+        Rect bRoi(b->corner, b->image.size());
 
-        Point aCorner = a->corner;
+        Rect overlap = aRoi & bRoi;
 
-        if(aCorner.x > b->corner.x) {
-            //Warp a around if b is already warped around.  
-            aCorner.x -= resultRoi.width;
-        }
+        Rect aOverlap(overlap.tl() - a.corner, overlap.size());
+        Rect bOverlap(overlap.tl() - b.corner, overlap.size());
 
-        //We can boost performance here if we omit the
-        //black regions of our masks. 
-        
-        Mat aImg = a->image.data(dstCoreMaskRoi);
-        Mat bImg = b->image.data(dstCoreMaskRoi);
-        Mat aMask = a->mask.data(dstCoreMaskRoi);
-        Mat bMask = b->mask.data(dstCoreMaskRoi);
 
-        DynamicSeamer::Find<true>(aImg, bImg, 
-                aMask, bMask, 
-                aCorner + dstCoreMaskRoi.tl(),
-                b->corner + dstCoreMaskRoi.tl(), 0, 1, a->id);
+
+        // Nope, no seams, we use flow blending. 
+        return;
     };
     public:
     Impl(
             const InputImageP img, vector<Mat> rotations,
-            float warperScale, bool fast, int roiBuffer) :
+            float warperScale, bool, int) :
         queue(1, 
             std::bind(&Impl::FindSeams, this,
                 std::placeholders::_1, std::placeholders::_2), 
-            std::bind(&Impl::Feed, this, std::placeholders::_1)),
-        fast(fast) {
-        
+            std::bind(&Impl::Feed, this, std::placeholders::_1)) {
         STimer timer; 
         timer.Tick("Async Preperation");
-
+        
         n = rotations.size();
         
         AssertGT(n, (size_t)0);
@@ -158,7 +154,7 @@ private:
         for(size_t i = 0; i < n; i++) {
             Mat R;
             From3DoubleTo3Float(rotations[i], R); 
-                  //Warping
+            //Warping
             Rect roi = warper->warpRoi(img->image.size(), K, R);
             corners[i] = Point(roi.x, roi.y);
             warpedSizes[i] = Size(roi.width, roi.height);
@@ -166,42 +162,30 @@ private:
             rotations[i] = R;
         }
 
-        //Blending
-        if(fast) {
-            blender = Blender::createDefault(cv::detail::Blender::FEATHER, false);
-        } else {
-            MultiBandBlender* mb;
-            blender = Blender::createDefault(cv::detail::Blender::MULTI_BAND, false);
-            mb = dynamic_cast<MultiBandBlender*>(blender.get());
-            mb->setNumBands(5);
-        }
-
         resultRoi = cv::detail::resultRoi(corners, warpedSizes);
-        resultRoi = Rect(resultRoi.x - roiBuffer, resultRoi.y - roiBuffer,
-                         resultRoi.width + roiBuffer * 2, 
-                         resultRoi.height + roiBuffer * 2);
-        blender->prepare(resultRoi);
+        resultRoi = Rect(resultRoi.x, resultRoi.y,
+                         resultRoi.width, 
+                         resultRoi.height);
+        blender.Prepare(resultRoi);
 
         //Prepare global masks and distortions. 
         const Mat &R = rotations[0];
-        Rect coreMaskRoi = Rect(img->image.cols / 4, 0, 
-                img->image.cols / 2, img->image.rows);
-        dstRoi = warper->buildMaps(img->image.size(), K, R, uxmap, uymap);
-        dstCoreMaskRoi = warper->warpRoi(coreMaskRoi.size(), K, R);
-        dstCoreMaskRoi = Rect((dstRoi.width - dstCoreMaskRoi.width) / 2, 
-                              0, dstCoreMaskRoi.width, dstCoreMaskRoi.height); 
-        dstRoi = Rect(dstRoi.x, dstRoi.y, dstRoi.width + 1, dstRoi.height + 1);
 
-        warpedMask = Mat(dstRoi.size(), CV_8U);
+        dstRoi = GetOuterRectangle(*warper, K, R, img->image.size());
+        coreRoi = GetInnerRectangle(*warper, K, R, img->image.size());
+        coreRoi = Rect(coreRoi.x + 1, coreRoi.y + 1, coreRoi.width - 1, coreRoi.height - 1);
+        
+        cout << dstRoi << endl;
+        cout << coreRoi << endl;
+
+        warper->buildMaps(img->image.size(), K, R, uxmap, uymap);
+        coreRoi = Rect(coreRoi.tl() - dstRoi.tl(), coreRoi.size() - Size(1, 1));
+
+        warpedMask = Mat(dstRoi.size(), CV_8U, Scalar::all(0));
         {
-            //Mask Warping - we force a tiny mask for each image.
-            Mat mask = Mat::zeros(img->image.rows, img->image.cols, CV_8U);
-            if(fast) {
-                mask.setTo(Scalar::all(255));
-            } else {
-                mask(coreMaskRoi).setTo(Scalar::all(255));
-            }
+            Mat mask = Mat(img->image.rows, img->image.cols, CV_8U, Scalar::all(255));
             remap(mask, warpedMask, uxmap, uymap, INTER_NEAREST, BORDER_CONSTANT); 
+            warpedMask = warpedMask(coreRoi);
             mask.release();
         }
     }
@@ -222,9 +206,7 @@ private:
         }
         detailTimer.Tick("Image Loaded");
         
-        StitchingResultP res(new StitchingResult()); 
-
-        res->mask = Image(warpedMask.clone());
+        FlowImageP res(new FlowImage()); 
 
         Mat R;
         From3DoubleTo3Float(img->adjustedExtrinsics, R);
@@ -233,21 +215,17 @@ private:
         Mat warpedImage(dstRoi.size(), CV_8UC3);
         remap(img->image.data, warpedImage, uxmap, uymap, 
                 INTER_LINEAR, BORDER_CONSTANT); 
-        res->image = Image(warpedImage);
+        res->image = Image(warpedImage(coreRoi));
         res->id = img->id;
       
         //Calculate Image Position (without wrapping around)
-        Point tl = warper->warpPoint(Point(0, img->image.rows), K, R);
-        
-
-        Point bl = warper->warpPoint(Point(0, 0), K, R);
-        Rect roi = warper->warpRoi(img->image.size(), K, R);
-        Size fullRoi = roi.size();
-
+        Rect roi = GetInnerRectangle(*warper, K, R, img->image.size());
+        Point bl = roi.tl() - Point(0, roi.height);
+        Point tl = roi.tl();
 
         Point cornerLeft;
 
-        if(abs(bl.x - tl.x) > fullRoi.width / 2) {
+        if(abs(bl.x - tl.x) > roi.width / 2) {
             //Corner case. Difference between left corners
             //is more than half the image. 
             if(bl.x < tl.x) {
@@ -283,16 +261,16 @@ private:
         StitchingResultP res(new StitchingResult());
         {
             Mat resImage, resMask;
-            blender->blend(resImage, resMask);
+            //blender.Blend(resImage, resMask);
 
-            if(resImage.type() != CV_8UC3) {
-                resImage.convertTo(resImage, CV_8UC3);
-            }
+            //if(resImage.type() != CV_8UC3) {
+            //    resImage.convertTo(resImage, CV_8UC3);
+            //}
 
-            res->image = Image(resImage);
-            res->mask = Image(resMask);
+            res->image = Image(blender.GetResult());
+            res->mask = Image(blender.GetResultMask());
         }
-        blender.release();
+        //blender.release();
         warper.release();
         warperFactory.release();
 

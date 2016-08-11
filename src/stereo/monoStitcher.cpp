@@ -75,7 +75,7 @@ Rect CornersToRoi(const vector<Point2f> &corners) {
 }
 
 
-const double hBufferRatio = 1.5;
+const double hBufferRatio = 1.3;
 const double vBufferRatio = -0.02;
 
 /*
@@ -157,6 +157,9 @@ void MapToTarget(const InputImageP a, const StereoTarget &target, Mat &result, M
     Mat transformation = targetK * translation * rot * aK.inv();
     Mat transformationF;
     From3DoubleTo3Float(transformation, transformationF);
+    //transformationF = Mat::eye(3, 3, CV_32F);
+    //transformationF.at<float>(0, 2) = (int)transformation.at<double>(0, 2);
+    //transformationF.at<float>(1, 2) = (int)transformation.at<double>(1, 2);
 
     //cout << rot << endl;
     //cout << aK.inv() << endl;

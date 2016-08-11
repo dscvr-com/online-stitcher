@@ -39,6 +39,48 @@ namespace optonaut {
         return scene_corners;
     }
 
+    static inline void PrepareMats(const Mat &r, const Mat &k, const Size &imageSize, Mat &fr, Mat &sfk) {
+       Mat sk;
+       From4DoubleTo3Float(r, fr);
+       ScaleIntrinsicsToImage(k, imageSize, sk);
+       From3DoubleTo3Float(sk, sfk);
+    }
+
+    static inline cv::Point WarpPointWarper(cv::detail::RotationWarper &warper, const cv::Mat &intrinsics, const cv::Mat &extrinsics,
+            const Size &imageSize, const Point &point) {
+       Mat r, k;
+       PrepareMats(extrinsics, intrinsics, imageSize, r, k);
+       return warper.warpPoint(point, k, r); 
+    }
+
+    static inline cv::Rect GetInnerRectangle(cv::detail::RotationWarper &warper, const cv::Mat &k, const cv::Mat &r, const Size &imageSize) {
+        Point tl = warper.warpPoint(Point2f(0, 0), k, r);
+        Point bl = warper.warpPoint(Point2f(0, imageSize.height), k, r);
+        Point tr = warper.warpPoint(Point2f(imageSize.width, 0), k, r);
+        Point br = warper.warpPoint(Point2f(imageSize.width, imageSize.height), k, r);
+
+        Point corePos(std::max(tl.x, bl.x), std::max(tl.y, tr.y));
+        Size coreSize(std::min(tr.x, br.x) - corePos.x, std::min(bl.y, br.y) - corePos.y);
+
+        return Rect(corePos, coreSize);
+    }
+    
+    static inline cv::Rect GetInnerRectangle(cv::detail::RotationWarper &warper, const InputImageP &img) {
+        Mat r, k;
+        PrepareMats(img->originalExtrinsics, img->intrinsics, img->image.size(), r, k);
+        return GetInnerRectangle(warper, k, r, img->image.size());
+    } 
+
+    static inline cv::Rect GetOuterRectangle(cv::detail::RotationWarper &warper, const cv::Mat &k, const cv::Mat &r, const Size &imageSize) {
+        return warper.warpRoi(imageSize, k, r);
+    }
+    
+    static inline cv::Rect GetOuterRectangle(cv::detail::RotationWarper &warper, const InputImageP& img) {
+        Mat r, k;
+        PrepareMats(img->originalExtrinsics, img->intrinsics, img->image.size(), r, k);
+        return warper.warpRoi(img->image.size(), k, r);
+    }
+
     /*
      * Returns the outer bounding box of the quad defined by the given points. 
      */
@@ -213,6 +255,7 @@ namespace optonaut {
 
         Rect roi = aroi & broi;
 
+        // Ugh, that's ugly!
         Rect aDestRoi(roi.x - aLoc.x + 10, roi.y - aLoc.y + 10, roi.width - 20, roi.height - 20);
         Rect bDestRoi(roi.x - bLoc.x + 10, roi.y - bLoc.y + 10, roi.width - 20, roi.height - 20);
 

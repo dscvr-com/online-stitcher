@@ -29,6 +29,7 @@ class SimpleSphereStitcher {
        
         // Point is relative to image center.  
         cv::Point WarpPoint(const cv::Mat &intrinsics, const cv::Mat &extrinsics, const cv::Size &imageSize, const cv::Point &point);
+        inline cv::detail::RotationWarper& GetWarper() { return warper; }
 };
 }
 

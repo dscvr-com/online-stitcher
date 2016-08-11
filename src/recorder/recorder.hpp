@@ -26,8 +26,6 @@
 
 #include <chrono>
 
-
-
 #ifndef OPTONAUT_RECORDER_HEADER
 #define OPTONAUT_RECORDER_HEADER
 

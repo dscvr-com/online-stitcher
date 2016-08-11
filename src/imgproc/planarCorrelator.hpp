@@ -19,7 +19,7 @@ namespace optonaut {
  * Correlator debug flag - switch on for pairwise debug output. 
  */ 
 static const bool debug = false;
-static const bool outputMatch = true;
+static const bool outputMatch = false;
 static const bool assertsInLoopsOn = false;
 
 /*
