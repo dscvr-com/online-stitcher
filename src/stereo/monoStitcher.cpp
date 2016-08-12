@@ -75,7 +75,7 @@ Rect CornersToRoi(const vector<Point2f> &corners) {
 }
 
 
-const double hBufferRatio = 1.3;
+const double hBufferRatio = 1.1;
 const double vBufferRatio = -0.02;
 
 /*

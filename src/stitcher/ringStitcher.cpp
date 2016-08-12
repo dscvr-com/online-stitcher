@@ -9,6 +9,7 @@
 #include "../common/image.hpp"
 #include "../common/support.hpp"
 #include "../common/ringProcessor.hpp"
+#include "../imgproc/planarCorrelator.hpp"
 #include "../common/static_timer.hpp"
 #include "ringStitcher.hpp"
 #include "dynamicSeamer.hpp"
@@ -26,6 +27,7 @@ struct FlowImage {
     Point corner;
     Mat image;
     Mat flow;
+    int id;
 };
 
 typedef shared_ptr<FlowImage> FlowImageP;
@@ -73,8 +75,8 @@ private:
         STimer feedTimer;
 
         if(debug) {
-            imwrite("dbg/feed_" + ToString(in->id) + ".jpg", in->image.data);
-            imwrite("dbg/feed_mask_" + ToString(in->id) + ".jpg", in->mask.data);
+            imwrite("dbg/feed_" + ToString(in->id) + ".jpg", in->image);
+            //imwrite("dbg/feed_mask_" + ToString(in->id) + ".jpg", in->flow);
         }
 
         //Mat warpedImageAsShort;
@@ -110,17 +112,51 @@ private:
     void FindSeams(const FlowImageP &a,
             const FlowImageP &b) {
 
+        typedef PyramidPlanarAligner<NormedCorrelator<LeastSquares<Vec3b>>> AlignerToUse;
+
         Rect aRoi(a->corner, a->image.size());
         Rect bRoi(b->corner, b->image.size());
 
         Rect overlap = aRoi & bRoi;
 
-        Rect aOverlap(overlap.tl() - a.corner, overlap.size());
-        Rect bOverlap(overlap.tl() - b.corner, overlap.size());
+        b->flow = Mat(b->image.size(), CV_32FC2, Scalar::all(0.f));
 
+        if(overlap.width == 0 || overlap.height == 0)
+            return;
 
+        Rect aOverlap(overlap.tl() - a->corner, overlap.size());
+        Rect bOverlap(overlap.tl() - b->corner, overlap.size());
 
-        // Nope, no seams, we use flow blending. 
+        Mat aOverlapImg = a->image(aOverlap);
+        Mat bOverlapImg = b->image(bOverlap);
+
+        Mat corr; //Debug image used to print the correlation result.  
+        PlanarCorrelationResult result = AlignerToUse::Align(aOverlapImg, bOverlapImg, corr, 0.25, 0.01, 0);
+
+        Rect roiA(result.offset.x / -2, result.offset.y / -2, aOverlapImg.cols, aOverlapImg.rows);
+        Rect roiB(result.offset.x / 2, result.offset.y / 2, bOverlapImg.cols, bOverlapImg.rows);
+
+        Rect overlappingArea = roiA & roiB;
+
+        Rect overlapAreaA(overlappingArea.tl() + roiA.tl(), overlappingArea.size()); 
+        Rect overlapAreaB(overlappingArea.tl() + roiB.tl(), overlappingArea.size());        
+
+        Mat ig, dg;
+
+        cvtColor(aOverlapImg(overlapAreaA), dg, COLOR_BGR2GRAY);
+        cvtColor(bOverlapImg(overlapAreaB), ig, COLOR_BGR2GRAY);
+            
+        calcOpticalFlowFarneback(dg, ig, b->flow(bOverlap)(overlapAreaB), 0.5, 3, 4, 3, 5, 1.1, OPTFLOW_FARNEBACK_GAUSSIAN);
+
+        for (int y = 0; y < b->image.rows; ++y)
+        {
+            for (int x = 0; x < b->image.cols; ++x)
+            {
+                Vec2f d = b->flow.at<Vec2f>(y, x);
+                b->flow.at<Vec2f>(y, x) = Vec2f(d(0) + result.offset.x, d(1) + result.offset.y);
+            }
+        }
+    
         return;
     };
     public:
@@ -215,7 +251,7 @@ private:
         Mat warpedImage(dstRoi.size(), CV_8UC3);
         remap(img->image.data, warpedImage, uxmap, uymap, 
                 INTER_LINEAR, BORDER_CONSTANT); 
-        res->image = Image(warpedImage(coreRoi));
+        res->image = warpedImage(coreRoi);
         res->id = img->id;
       
         //Calculate Image Position (without wrapping around)

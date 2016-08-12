@@ -18,7 +18,7 @@ namespace optonaut {
 /*
  * Correlator debug flag - switch on for pairwise debug output. 
  */ 
-static const bool debug = false;
+static const bool debugCorrelator = false;
 static const bool outputMatch = false;
 static const bool assertsInLoopsOn = false;
 
@@ -90,7 +90,7 @@ class BruteForcePlanarAligner {
         float min = std::numeric_limits<float>::max();
         OnlineVariance<double> var;
 
-        if(debug) {
+        if(debugCorrelator) {
             corr = Mat(wy * 2 + 1, wx * 2 + 1, CV_32F);
 	        corr.setTo(Scalar::all(0));
         }
@@ -112,7 +112,7 @@ class BruteForcePlanarAligner {
                 // Collect results (add them to variance and cost caluclations) 
                 var.Push(res);
                 costSum += res;
-                if(debug) {
+                if(debugCorrelator) {
                     AssertGTM(corr.rows, dy + wy, "Correlation matrix too small.");
                     AssertGTM(corr.cols, dx + wx, "Correlation matrix too small.");
                     corr.at<float>(dy + wy, dx + wx) = res; 
@@ -154,7 +154,7 @@ class PyramidPlanarAligner {
         const int minSize = 4;
 
         cv::Point res;
-        AssertFalseInProduction(debug);
+        AssertFalseInProduction(debugCorrelator);
 
         if(a.cols > minSize / wx && b.cols > minSize / wx
                 && a.rows > minSize / wy && b.rows > minSize / wy) {
@@ -168,7 +168,7 @@ class PyramidPlanarAligner {
 
             cv::Point guess = PyramidPlanarAligner<Correlator>::AlignInternal(ta, tb, corr, corrXOff, corrYOff, wx, wy, dskip - 1, depth + 1, pool);
 
-            if(debug) {
+            if(debugCorrelator) {
                 pyrUp(corr, corr);
             }
 
@@ -185,7 +185,7 @@ class PyramidPlanarAligner {
                     BruteForcePlanarAligner<Correlator>::Align(
                             a, b, corrBf, 2, 2, guess.x * 2, guess.y * 2);
 
-                if(debug) {
+                if(debugCorrelator) {
 
                     cv::Rect roi(guess.x * 2 - corrBf.cols / 2 + corr.cols / 2 + corrXOff,
                              guess.y * 2 - corrBf.rows / 2 + corr.rows / 2 + corrYOff,
@@ -246,7 +246,7 @@ class PyramidPlanarAligner {
         VariancePool<double> pool;
         int corrXOff = 0;
         int corrYOff = 0;
-        AssertFalseInProduction(debug);
+        AssertFalseInProduction(debugCorrelator);
         AssertFalseInProduction(outputMatch);
 
         // Invoke the internal alignment operation.
