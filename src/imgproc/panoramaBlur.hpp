@@ -128,14 +128,8 @@ namespace optonaut {
                 mirrorTransform = getPerspectiveTransform(src, dest);
             }
 
-            /*
-             * Performs the panorama blur. Basically it mirrors the image once to the top, 
-             * once to the bottom, and then applies a gradient blur and a gradient to black.
-             *
-             * @param input The input image. 
-             * @param output The output image. 
-             */
-            void Blur(const Mat &input, Mat &output) {
+      
+            void Black(const Mat &input, Mat &output) {
                 
                 if(ss.height <= 0) {
                     output = input;
@@ -144,100 +138,126 @@ namespace optonaut {
 
                 AssertEQ(input.size(), is);
                 output = Mat(ds, input.type());
-
-                cv::Rect top(0, 0, ss.width, ss.height);
+                output = cv::Scalar(0, 0, 0);
+                
                 const cv::Rect center(0, ss.height, is.width, is.height);
                 cv::Rect bottom(0, ss.height + is.height, ss.width, ss.height);
-                
-                const cv::Rect halfTop(0, 0, ss.width, ss.height / 3 * 2);
-                const cv::Rect halfBottom(0, ss.height + is.height + ss.height / 3,
-                        ss.width, ss.height / 3 * 2);
-
-                const cv::Rect blackTop(0, 0, ss.width, halfTop.height / 8); 
-                const cv::Rect blackBottom(0, 
-                        halfBottom.y + halfBottom.height / 8.0 * 7.0, 
-                        ss.width, halfBottom.height / 8); 
-                
-                const int weakGradient = ds.height / 64;
-                const int strongGradient = (top.height - halfTop.height) / 2;
-
-                const int weakGradientOffset = weakGradient * 2.0 / 3.0;
-
-                const int blurBorder = ss.width / 4;
-
-                // Top
-                warpPerspective(input, 
-                   output(top), 
-                   mirrorTransform, ss);     
-
-                // Center
-                input.copyTo(output(center)); 
-
-                // Bottom
-                warpPerspective(input, 
-                   output(bottom), 
-                   mirrorTransform, ss);
-
-                top = cv::Rect(top.x, top.y, top.width, top.height - weakGradientOffset);
-                bottom = cv::Rect(bottom.x, bottom.y + weakGradientOffset,
-                        bottom.width, top.height);
-
-                Mat blur6, blur8, blur;
-
-                Mat blurCanvas = 
-                    Mat::zeros(output.rows, output.cols + blurBorder * 2, CV_8UC3);
-
-                cv::Rect blurCanvasCenter = 
-                    cv::Rect(blurBorder, 0, output.cols, output.rows);
-
-                // Full output
-                output.copyTo(blurCanvas(blurCanvasCenter));
-
-                // Right border
-                output(cv::Rect(0, 0, blurBorder, output.rows)).copyTo(
-                    blurCanvas(cv::Rect(blurBorder + output.cols, 0, 
-                            blurBorder, output.rows)));
-                
-                // Left border
-                output(cv::Rect(output.cols - blurBorder, 0, 
-                        blurBorder, output.rows)).copyTo(
-                    blurCanvas(cv::Rect(0, 0, 
-                            blurBorder, output.rows))); 
-
-                PyrDownRecu(blurCanvas, blur6, 6);
-                PyrUpUntil(blur6, blur, blurCanvas.size()); 
-
-                blur = blur(blurCanvasCenter);
-
-                blur(top).copyTo(output(top));
-                blur(bottom).copyTo(output(bottom));
-                
-                VerticalBlend(output, blur, top.height, top.height + weakGradient);
-                VerticalBlend(output, blur, bottom.y + 1, bottom.y - weakGradient);
-                
-                PyrDownRecu(blur6, blur8, 1);
-                PyrUpUntil(blur8, blur, blurCanvas.size());
-                
-                blur = blur(blurCanvasCenter);
-                
-                blur(halfTop).copyTo(output(halfTop));
-                blur(halfBottom).copyTo(output(halfBottom));
-                
-                VerticalBlend(output, blur, halfTop.height, 
-                        halfTop.height + strongGradient);
-                VerticalBlend(output, blur, halfBottom.y + 1, 
-                        halfBottom.y - strongGradient);
-
-                blur.setTo(Scalar::all(0));
-                
-                blur(blackTop).copyTo(output(blackTop));
-                blur(blackBottom).copyTo(output(blackBottom));
-                
-                VerticalBlend(output, blur, blackTop.height, 
-                        top.height, false);
-                VerticalBlend(output, blur, blackBottom.y + 1, 
-                        bottom.y, false);
+                input.copyTo(output(center));
+             
             }
+                /*
+                 * Performs the panorama blur. Basically it mirrors the image once to the top,
+                 * once to the bottom, and then applies a gradient blur and a gradient to black.
+                 *
+                 * @param input The input image.
+                 * @param output The output image.
+                 */
+ 
+        
+            void Blur(const Mat &input, Mat &output) {
+            
+            if(ss.height <= 0) {
+                output = input;
+                return;
+            }
+            
+            AssertEQ(input.size(), is);
+            output = Mat(ds, input.type());
+            
+            cv::Rect top(0, 0, ss.width, ss.height);
+            const cv::Rect center(0, ss.height, is.width, is.height);
+            cv::Rect bottom(0, ss.height + is.height, ss.width, ss.height);
+            
+            const cv::Rect halfTop(0, 0, ss.width, ss.height / 3 * 2);
+            const cv::Rect halfBottom(0, ss.height + is.height + ss.height / 3,
+                                      ss.width, ss.height / 3 * 2);
+            
+            const cv::Rect blackTop(0, 0, ss.width, halfTop.height / 8);
+            const cv::Rect blackBottom(0,
+                                       halfBottom.y + halfBottom.height / 8.0 * 7.0,
+                                       ss.width, halfBottom.height / 8);
+            
+            const int weakGradient = ds.height / 64;
+            const int strongGradient = (top.height - halfTop.height) / 2;
+            
+            const int weakGradientOffset = weakGradient * 2.0 / 3.0;
+            
+            const int blurBorder = ss.width / 4;
+            
+            // Top
+            warpPerspective(input,
+                            output(top),
+                            mirrorTransform, ss);
+            
+            // Center
+            input.copyTo(output(center));
+            
+            // Bottom
+            warpPerspective(input,
+                            output(bottom),
+                            mirrorTransform, ss);
+            
+            top = cv::Rect(top.x, top.y, top.width, top.height - weakGradientOffset);
+            bottom = cv::Rect(bottom.x, bottom.y + weakGradientOffset,
+                              bottom.width, top.height);
+            
+            Mat blur6, blur8, blur;
+            
+            Mat blurCanvas =
+            Mat::zeros(output.rows, output.cols + blurBorder * 2, CV_8UC3);
+            
+            cv::Rect blurCanvasCenter =
+            cv::Rect(blurBorder, 0, output.cols, output.rows);
+            
+            // Full output
+            output.copyTo(blurCanvas(blurCanvasCenter));
+            
+            // Right border
+            output(cv::Rect(0, 0, blurBorder, output.rows)).copyTo(
+                                                                   blurCanvas(cv::Rect(blurBorder + output.cols, 0,
+                                                                                       blurBorder, output.rows)));
+            
+            // Left border
+            output(cv::Rect(output.cols - blurBorder, 0,
+                            blurBorder, output.rows)).copyTo(
+                                                             blurCanvas(cv::Rect(0, 0,
+                                                                                 blurBorder, output.rows)));
+            
+            PyrDownRecu(blurCanvas, blur6, 6);
+            PyrUpUntil(blur6, blur, blurCanvas.size());
+            
+            blur = blur(blurCanvasCenter);
+            
+            blur(top).copyTo(output(top));
+            blur(bottom).copyTo(output(bottom));
+            
+            VerticalBlend(output, blur, top.height, top.height + weakGradient);
+            VerticalBlend(output, blur, bottom.y + 1, bottom.y - weakGradient);
+            
+            PyrDownRecu(blur6, blur8, 1);
+            PyrUpUntil(blur8, blur, blurCanvas.size());
+            
+            blur = blur(blurCanvasCenter);
+            
+            blur(halfTop).copyTo(output(halfTop));
+            blur(halfBottom).copyTo(output(halfBottom));
+            
+            VerticalBlend(output, blur, halfTop.height,
+                          halfTop.height + strongGradient);
+            VerticalBlend(output, blur, halfBottom.y + 1,
+                          halfBottom.y - strongGradient);
+            
+            blur.setTo(Scalar::all(0));
+            
+            blur(blackTop).copyTo(output(blackTop));
+            blur(blackBottom).copyTo(output(blackBottom));
+            
+            VerticalBlend(output, blur, blackTop.height, 
+                          top.height, false);
+            VerticalBlend(output, blur, blackBottom.y + 1, 
+                          bottom.y, false);
+        }
+
 
     };
 }
