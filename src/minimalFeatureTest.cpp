@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
     // typedef SURF Detector;
     // typedef SURF Extractor;
 
-    Assert(argc == 3);
+    assert(argc == 3);
 
     Mat a = imread(string(argv[1]));
     Mat b = imread(string(argv[2]));
