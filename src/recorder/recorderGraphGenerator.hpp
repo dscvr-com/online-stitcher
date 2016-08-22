@@ -432,7 +432,7 @@ public:
             RingProcessor<SelectionPoint> hqueue(1, 
                     bind(CreateEdge, std::ref(res), placeholders::_1, placeholders::_2),
                     bind(AddNode, std::ref(res), placeholders::_1));
-            
+
             for(uint32_t j = 0; j < hCount; j++) {
                 if(debug) {
                     cout << "Recorder Graph Pushing " << hLeft << ", " << vCenter << endl;

@@ -10,7 +10,7 @@ using namespace std;
 #include "../common/support.hpp"
 #include "../imgproc/pairwiseCorrelator.hpp"
 
-static const bool debug = true;
+static const bool debug = false;
 
 namespace optonaut {
 
@@ -27,7 +27,6 @@ namespace optonaut {
         static int dbgCtr = 0;
         typedef PyramidPlanarAligner<NormedCorrelator<LeastSquares<Vec3b>>> AlignerToUse;
         AssertEQ(img.type(), CV_8UC3);
-        AssertEQ(flow_.type(), CV_32FC2);
 
         Mat wmDest(img.size(), CV_32F, Scalar::all(0));
         Mat wmSource(img.size(), CV_32F, Scalar::all(0));
@@ -38,9 +37,10 @@ namespace optonaut {
 
         Mat flow(img.size(), CV_32FC2, Scalar::all(0));
 
-        bool useOwnFlow = false;
+        bool useOwnFlow = true;
 
         if(!useOwnFlow) {
+            AssertEQ(flow_.type(), CV_32FC2);
             flow_.copyTo(flow);
         } else {
 
@@ -123,13 +123,15 @@ namespace optonaut {
             {
                 Vec2f d = flow.at<Vec2f>(y, x);
 
-                int sfx = x - d(0);
-                int sfy = y - d(1);
-                int dfx = x + dx + d(0);
-                int dfy = y + dy + d(1);
+                int sfx = x + d(0);
+                int sfy = y + d(1);
+                int dfx = x + dx - d(0);
+                int dfy = y + dy - d(1);
 
                 if(sfx < 0 || sfy < 0 || dfx < 0 || dfy < 0 || 
-                   sfx >= img.cols || sfy >= img.rows || dfx >= dest.cols || dfy >= dest.rows) {
+                   sfx >= img.cols || sfy >= img.rows || dfx >= dest.cols || dfy >= dest.rows ||
+                   destMask.at<uchar>(dfy, dfx) == 0) {
+
                     flow.at<Vec2f>(y, x) = Vec2f(0, 0);   
                     if(debug) {
                         flowViz.at<Vec3b>(y, x) = Vec3b(0, 0, 255);
@@ -157,7 +159,7 @@ namespace optonaut {
         {
             for (int x = 0; x < img.cols; ++x)
             {
-                float wd = wmDest.at<float>(y, x);
+                float wcd = wmDest.at<float>(y, x);
                 //float ws = wmSource.at<float>(y, x); 
                 //float norm = wd + ws;
 
@@ -168,13 +170,17 @@ namespace optonaut {
 
                 //wd = wd / norm;
                 //ws = ws / norm;
-                float ws = 1 - wd;
+                float wcs = 1 - wcd;
+              
+                float wpd = wcd;
+                float wps = 1 - wpd;
 
                 Vec2f d = flow.at<Vec2f>(y, x);
                
                 temp.at<Vec3b>(y, x) = 
-                    Sample<Vec3b>(img, x + d(0) * wd, y + d(1) * wd) * ws + 
-                    Sample<Vec3b>(dest, dx + x - d(0) * ws, dy + y - d(1) * ws) * wd;
+                    Sample<Vec3b>(img, x + d(0) * wpd, y + d(1) * wpd) * wcs + 
+                    Sample<Vec3b>(dest, dx + x - d(0) * wps, dy + y - d(1) * wps) * wcd;
+                //temp.at<Vec3b>(y, x) = Vec3b(wd * 255, wd * 255, wd * 255);
 
                 destMask.at<uchar>(dy + y, dx + x) = 255; 
             }
