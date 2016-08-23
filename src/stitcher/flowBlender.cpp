@@ -37,7 +37,7 @@ namespace optonaut {
 
         Mat flow(img.size(), CV_32FC2, Scalar::all(0));
 
-        bool useOwnFlow = true;
+        bool useOwnFlow = false;
 
         if(!useOwnFlow) {
             AssertEQ(flow_.type(), CV_32FC2);
