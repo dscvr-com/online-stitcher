@@ -22,7 +22,9 @@ namespace optonaut {
      */
     struct AlignmentDiff {
         double dphi; //Difference for rotating around the vertical axis
+        int dx;
         double dtheta; //Difference for rotating around the horizontal axis
+        int dy;
         double valid; //Is it valid?
         int overlap;
         int error; 
@@ -32,7 +34,9 @@ namespace optonaut {
 
         AlignmentDiff() : 
             dphi(0), 
+            dx(0),
             dtheta(0),
+            dy(0),
             valid(false), 
             overlap(0), 
             error(0),
@@ -163,17 +167,21 @@ namespace optonaut {
                     }
 
                     // Copy matching information to the correspondence info
-                    aToB.dphi = res.angularOffset.y;
+                    aToB.dphi = -res.angularOffset.y;
                     if(areNeighbors) {
                         aToB.dtheta = res.angularOffset.x;
                     } else {
                         aToB.dtheta = NAN; 
                         // Only work with vertical offsets for neighbors. 
                     }
+                    aToB.dx = res.offset.x;
+                    aToB.dy = res.offset.y;
                     aToB.overlap = res.correlationCoefficient * 2;
                     aToB.valid = res.valid;
                     aToB.rejectionReason = res.rejectionReason;
                 } else {
+                    aToB.dx = 0;
+                    aToB.dy = 0;
                     aToB.dphi = 0;
                     aToB.dtheta = 0;
                     aToB.overlap = 0;
@@ -182,7 +190,10 @@ namespace optonaut {
                    
                 // Copy correspondence info for b<>a from a<>b since it is guaranteed to be symmetrical.  
                 bToA = aToB;
-                aToB.dphi *= -1;
+                bToA.dphi *= -1;
+                bToA.dtheta *= -1;
+                bToA.dx *= -1;
+                bToA.dy *= -1;
 
                 // If configured so, add damping to neighors.  
                 if(dampAllNeighbors && areNeighbors) {
