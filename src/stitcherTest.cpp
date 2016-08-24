@@ -106,7 +106,7 @@ void Record(vector<string> &files, ImageSink &sink) {
             imageSize = Size(intrinsics.at<double>(0, 2), 
                     intrinsics.at<double>(1, 2));
             graph = shared_ptr<RecorderGraph>(new RecorderGraph(
-                        recorder->GetRecorderGraph()
+                        recorder->GetPreRecorderGraph()
                         ));
             preGraph = shared_ptr<RecorderGraph>(new RecorderGraph(
                         recorder->GetPreRecorderGraph()
@@ -129,7 +129,7 @@ void Record(vector<string> &files, ImageSink &sink) {
             auto now = system_clock::now(); 
             auto diff = now - lt;
             auto sleep = 10ms - diff;
-            //cout << "Sleeping for " << duration_cast<microseconds>(sleep).count() << endl;
+
             this_thread::sleep_for(sleep);
         }
     }
