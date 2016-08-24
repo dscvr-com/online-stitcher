@@ -20,10 +20,16 @@ namespace optonaut {
 
         void Prepare(const cv::Rect &dstRoi);
         void Feed(const cv::Mat &img, const cv::Mat &flow, const cv::Point &tl);
-        const cv::Mat& GetResult() { return dest; }
-        const cv::Mat& GetResultMask() { return destMask; }
+        void CalculateFlow(
+            const Mat &a, const Mat &b, 
+            const Point &aTl, const Point &bTl,
+            Mat &flow, 
+            Point &offset = dummyFlow, const bool reCalcOffset = true) const; 
+        const cv::Mat& GetResult() const { return dest; }
+        const cv::Mat& GetResultMask() const { return destMask; }
 
     private:
+        static Point dummyFlow;
         float sharpness;
         cv::Mat dest;
         cv::Mat destMask;

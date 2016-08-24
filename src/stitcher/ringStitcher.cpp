@@ -111,7 +111,13 @@ private:
     //Seam finder function. 
     void FindSeams(const FlowImageP &a,
             const FlowImageP &b) {
+        cout << "Calculating flow for " << b->id << endl;
+        cout << "In Size: " << b->image.size() << endl;
+        blender.CalculateFlow(a->image, b->image, a->corner, b->corner, b->flow);
+        cout << "Out Size: " << b->flow.size() << endl;
 
+        return;
+        /*
         typedef PyramidPlanarAligner<NormedCorrelator<LeastSquares<Vec3b>>> AlignerToUse;
 
         Rect aRoi(a->corner, a->image.size());
@@ -157,7 +163,7 @@ private:
             }
         }
     
-        return;
+        return;*/
     };
     public:
     Impl(

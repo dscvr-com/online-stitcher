@@ -20,12 +20,84 @@ namespace optonaut {
         dest.setTo(Scalar(0));;
         destMask.create(roi.size(), CV_8UC1);
         destMask.setTo(Scalar(0));;
-   }
+    }
+
+    void FlowBlender::CalculateFlow(
+            const Mat &a, const Mat &b, 
+            const Point &aTl, const Point &bTl,
+            Mat &flow, 
+            //offset = b.tl() - a.tl()
+            Point &offset, const bool reCalcOffset) const {
+
+        Rect aRoi(aTl, a.size());
+        Rect bRoi(bTl, b.size());
+
+        Rect overlap = aRoi & bRoi;
+
+        flow = Mat(b.size(), CV_32FC2, Scalar::all(0.f));
+
+        if(overlap.width == 0 || overlap.height == 0)
+            return;
+
+        Rect aOverlap(overlap.tl() - aTl, overlap.size());
+        Rect bOverlap(overlap.tl() - bTl, overlap.size());
+
+        Mat aOverlapImg = a(aOverlap);
+        Mat bOverlapImg = b(bOverlap);
+        
+        Mat _flow = flow(bOverlap);
+
+        if(reCalcOffset) { 
+            typedef PyramidPlanarAligner<
+                NormedCorrelator<LeastSquares<Vec3b>>
+            > AlignerToUse;
+
+            Mat corr; //Debug image used to print the correlation result.  
+            PlanarCorrelationResult result = AlignerToUse::Align(
+                    aOverlapImg, bOverlapImg, corr, 0.25, 0.01, 0);
+
+            offset = result.offset;
+        }
+
+        Rect roiA(offset.x / -2, offset.y / -2, 
+                aOverlapImg.cols, aOverlapImg.rows);
+
+        Rect roiB(offset.x / 2, offset.y / 2, 
+                bOverlapImg.cols, bOverlapImg.rows);
+
+        Rect overlappingArea = roiA & roiB;
+
+        Rect overlapAreaA(overlappingArea.tl() + roiA.tl(),
+                overlappingArea.size()); 
+
+        Rect overlapAreaB(overlappingArea.tl() + roiB.tl(),
+                overlappingArea.size());        
+
+        aOverlapImg = aOverlapImg(overlapAreaA);
+        bOverlapImg = bOverlapImg(overlapAreaB);
+
+        _flow = _flow(overlapAreaB);
+
+        Mat ig, dg;
+
+        cvtColor(aOverlapImg, dg, COLOR_BGR2GRAY);
+        cvtColor(bOverlapImg, ig, COLOR_BGR2GRAY);
+            
+        calcOpticalFlowFarneback(dg, ig, _flow, 0.5, 3, 4, 3, 5, 1.1, OPTFLOW_FARNEBACK_GAUSSIAN);
+
+        for (int y = 0; y < b.rows; ++y)
+        {
+            for (int x = 0; x < b.cols; ++x)
+            {
+                Vec2f d = flow.at<Vec2f>(y, x);
+                flow.at<Vec2f>(y, x) = Vec2f(d(0) + offset.x, d(1) + offset.y);
+            }
+        }
+    }
 
     void FlowBlender::Feed(const Mat &img, const Mat &flow_, const Point &tl)
     {
         static int dbgCtr = 0;
-        typedef PyramidPlanarAligner<NormedCorrelator<LeastSquares<Vec3b>>> AlignerToUse;
         AssertEQ(img.type(), CV_8UC3);
 
         Mat wmDest(img.size(), CV_32F, Scalar::all(0));
@@ -37,65 +109,9 @@ namespace optonaut {
 
         Mat flow(img.size(), CV_32FC2, Scalar::all(0));
 
-        bool useOwnFlow = false;
-
-        if(!useOwnFlow) {
-            AssertEQ(flow_.type(), CV_32FC2);
-            flow_.copyTo(flow);
-        } else {
-
-            Rect core(0, 0, 0, 0);
-
-            for(const Rect &dstCore: existingCores) 
-            {
-                Rect cand = dstCore & sourceRoi; 
-              
-                if(cand.width * cand.height > core.width * core.height)
-                   core = cand; 
-            }
-
-            
-            cout << core << endl;
-
-            if(core.width != 0 && core.height != 0) {
-                
-                Rect imgRegion(core.tl() - tl + destRoi.tl(), core.size());
-
-                Mat corr; //Debug image used to print the correlation result.  
-                PlanarCorrelationResult result = AlignerToUse::Align(dest(core), img(imgRegion), corr, 0.25, 0.01, 0);
-
-                Mat dg;
-                Mat imgGray;
-
-                Rect roiA(result.offset.x / -2, result.offset.y / -2, core.width, core.height);
-                Rect roiB(result.offset.x / 2, result.offset.y / 2, core.width, core.height);
-
-                Rect overlappingArea = roiA & roiB;
-
-                Rect overlapAreaA(overlappingArea.tl() + roiA.tl(), overlappingArea.size()); 
-                Rect overlapAreaB(overlappingArea.tl() + roiB.tl(), overlappingArea.size());        
-
-
-                cvtColor(img(imgRegion)(overlapAreaB), imgGray, COLOR_BGR2GRAY);
-                cvtColor(dest(core)(overlapAreaA), dg, COLOR_BGR2GRAY);
-                //calcOpticalFlowFarneback(grayA, grayB, cutFlow, 0.5, 3, 4, 3, 5, 1.1, OPTFLOW_FARNEBACK_GAUSSIAN);
-                calcOpticalFlowFarneback(imgGray, dg, flow(imgRegion)(overlapAreaB), 0.5, 3, 4, 3, 7, 1.2, OPTFLOW_FARNEBACK_GAUSSIAN);
-                
-                for (int y = 0; y < flow.rows; ++y)
-                {
-                    for (int x = 0; x < flow.cols; ++x)
-                    {
-                        auto d = flow.at<Vec2f>(y, x);
-                        flow.at<Vec2f>(y, x) = Vec2f(d(0) + result.offset.x, d(1) + result.offset.y);
-                   }
-                }
-
-                if(debug) {
-                    imwrite("dbg/" + ToString(dbgCtr) + "_overlapB.jpg", dg);
-                    imwrite("dbg/" + ToString(dbgCtr) + "_overlapA.jpg", imgGray);
-                }
-            }
-        }
+        AssertEQ(flow_.type(), CV_32FC2);
+        flow_.copyTo(flow);
+        
         int dx = tl.x - destRoi.x;
         int dy = tl.y - destRoi.y;
 
@@ -116,7 +132,8 @@ namespace optonaut {
             }
 
         }
-        
+       
+        // TODO - maybe we can make this loop faster? 
         for (int y = 0; y < img.rows; ++y)
         {
             for (int x = 0; x < img.cols; ++x)
@@ -195,5 +212,7 @@ namespace optonaut {
 
         existingCores.push_back(sourceRoi);
     }
+
+    Point FlowBlender::dummyFlow = Point(0, 0);
 }
 
