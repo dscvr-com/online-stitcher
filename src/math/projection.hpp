@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <string>
 #include <opencv2/opencv.hpp>
-#include <opencv2/stitching.hpp>
+#include <opencv2/stitching/warpers.hpp>
 
 #include "../io/inputImage.hpp"
 #include "../common/image.hpp"
@@ -39,30 +39,29 @@ namespace optonaut {
         return scene_corners;
     }
 
-    static inline void PrepareMats(const Mat &r, const Mat &k, const Size &imageSize, Mat &fr, Mat &sfk) {
+    static inline void PrepareMats(const Mat &r, const Mat &k, const cv::Size &imageSize, Mat &fr, Mat &sfk) {
        Mat sk;
        From4DoubleTo3Float(r, fr);
        ScaleIntrinsicsToImage(k, imageSize, sk);
        From3DoubleTo3Float(sk, sfk);
     }
 
-    static inline cv::Point WarpPointWarper(cv::detail::RotationWarper &warper, const cv::Mat &intrinsics, const cv::Mat &extrinsics,
-            const Size &imageSize, const Point &point) {
+    static inline cv::Point WarpPointWarper(cv::detail::RotationWarper &warper, const cv::Mat &intrinsics, const cv::Mat &extrinsics, const cv::Size &imageSize, const cv::Point &point) {
        Mat r, k;
        PrepareMats(extrinsics, intrinsics, imageSize, r, k);
        return warper.warpPoint(point, k, r); 
     }
 
-    static inline cv::Rect GetInnerRectangle(cv::detail::RotationWarper &warper, const cv::Mat &k, const cv::Mat &r, const Size &imageSize) {
-        Point tl = warper.warpPoint(Point2f(0, 0), k, r);
-        Point bl = warper.warpPoint(Point2f(0, imageSize.height), k, r);
-        Point tr = warper.warpPoint(Point2f(imageSize.width, 0), k, r);
-        Point br = warper.warpPoint(Point2f(imageSize.width, imageSize.height), k, r);
+    static inline cv::Rect GetInnerRectangle(cv::detail::RotationWarper &warper, const cv::Mat &k, const cv::Mat &r, const cv::Size &imageSize) {
+        cv::Point tl = warper.warpPoint(Point2f(0, 0), k, r);
+        cv::Point bl = warper.warpPoint(Point2f(0, imageSize.height), k, r);
+        cv::Point tr = warper.warpPoint(Point2f(imageSize.width, 0), k, r);
+        cv::Point br = warper.warpPoint(Point2f(imageSize.width, imageSize.height), k, r);
 
-        Point corePos(std::max(tl.x, bl.x), std::max(tl.y, tr.y));
-        Size coreSize(std::min(tr.x, br.x) - corePos.x, std::min(bl.y, br.y) - corePos.y);
+        cv::Point corePos(std::max(tl.x, bl.x), std::max(tl.y, tr.y));
+        cv::Size coreSize(std::min(tr.x, br.x) - corePos.x, std::min(bl.y, br.y) - corePos.y);
 
-        return Rect(corePos, coreSize);
+        return cv::Rect(corePos, coreSize);
     }
     
     static inline cv::Rect GetInnerRectangle(cv::detail::RotationWarper &warper, const InputImageP &img) {
@@ -71,7 +70,7 @@ namespace optonaut {
         return GetInnerRectangle(warper, k, r, img->image.size());
     } 
 
-    static inline cv::Rect GetOuterRectangle(cv::detail::RotationWarper &warper, const cv::Mat &k, const cv::Mat &r, const Size &imageSize) {
+    static inline cv::Rect GetOuterRectangle(cv::detail::RotationWarper &warper, const cv::Mat &k, const cv::Mat &r, const cv::Size &imageSize) {
         return warper.warpRoi(imageSize, k, r);
     }
     
@@ -247,22 +246,22 @@ namespace optonaut {
 
         Mat awarp, bwarp;
 
-        Rect aroi = warper->warpRoi(ai.size(), K, RA);
-        Rect broi = warper->warpRoi(bi.size(), K, RB);
+        cv::Rect aroi = warper->warpRoi(ai.size(), K, RA);
+        cv::Rect broi = warper->warpRoi(bi.size(), K, RB);
         
-        Point aLoc= warper->warp(ai.data, K, RA, INTER_NEAREST, BORDER_CONSTANT, awarp);
-        Point bLoc = warper->warp(bi.data, K, RB, INTER_NEAREST, BORDER_CONSTANT, bwarp);
+        cv::Point aLoc= warper->warp(ai.data, K, RA, INTER_NEAREST, BORDER_CONSTANT, awarp);
+        cv::Point bLoc = warper->warp(bi.data, K, RB, INTER_NEAREST, BORDER_CONSTANT, bwarp);
 
-        Rect roi = aroi & broi;
+        cv::Rect roi = aroi & broi;
 
         // Ugh, that's ugly!
-        Rect aDestRoi(roi.x - aLoc.x + 10, roi.y - aLoc.y + 10, roi.width - 20, roi.height - 20);
-        Rect bDestRoi(roi.x - bLoc.x + 10, roi.y - bLoc.y + 10, roi.width - 20, roi.height - 20);
+        cv::Rect aDestRoi(roi.x - aLoc.x + 10, roi.y - aLoc.y + 10, roi.width - 20, roi.height - 20);
+        cv::Rect bDestRoi(roi.x - bLoc.x + 10, roi.y - bLoc.y + 10, roi.width - 20, roi.height - 20);
 
         overlapA = awarp(aDestRoi);
         overlapB = bwarp(bDestRoi);
     
-        return Point(broi.x - aroi.x, broi.y - aroi.y);
+        return cv::Point(broi.x - aroi.x, broi.y - aroi.y);
     }
   
     /**

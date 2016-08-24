@@ -1,6 +1,5 @@
 #include <opencv2/stitching/detail/blenders.hpp>
-#include <opencv2/optflow.hpp>
-#include <opencv2/tracking.hpp>
+#include <opencv2/video/tracking.hpp>
 
 using namespace cv;
 using namespace std;
