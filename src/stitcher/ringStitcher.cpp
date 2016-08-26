@@ -330,15 +330,22 @@ private:
     }
 };
 
-AsyncRingStitcher::AsyncRingStitcher(const InputImageP firstImage,
-        std::vector<cv::Mat> rotations, float warperScale,
+AsyncRingStitcher::AsyncRingStitcher(std::vector<cv::Mat> rotations, 
+        float warperScale,
         bool fast, int roiBuffer) :
-    pimpl_(new Impl(firstImage, rotations, warperScale, fast, roiBuffer)),
-    warperScale(warperScale) {
+    pimpl_(NULL),
+    warperScale(warperScale),
+    fast(fast), roiBuffer(roiBuffer), rotations(rotations) {
         AssertFalseInProduction(debug);        
 }
 
-void AsyncRingStitcher::Push(const InputImageP image) { pimpl_->Push(image); }
+void AsyncRingStitcher::Push(const InputImageP image) {
+
+    if(pimpl_ == NULL) {   
+        pimpl_ = new Impl(image, rotations, warperScale, fast, roiBuffer);
+    }
+    pimpl_->Push(image); 
+}
 
 StitchingResultP AsyncRingStitcher::Finalize() { return pimpl_->Finalize(); }
 

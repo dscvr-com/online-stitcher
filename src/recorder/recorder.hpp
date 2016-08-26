@@ -12,10 +12,7 @@
 #include "../stitcher/simpleSphereStitcher.hpp"
 #include "../stitcher/ringStitcher.hpp"
 #include "../debug/debugHook.hpp"
-#include "../recorder/stereoSink.hpp"
-#include "../recorder/imageSink.hpp"
 #include "../common/logger.hpp"
-
 #include "recorderGraph.hpp"
 #include "recorderGraphGenerator.hpp"
 #include "trivialAligner.hpp"
@@ -37,24 +34,16 @@ namespace optonaut {
     };
     
     class Recorder {
-
+/*
     private: 
 
         Mat base;
         Mat baseInv;
         Mat zero;
 
-        VisualStabilizer stabilizer;
-
         ImageSink &sink;
         
-        vector<InputImageP> leftImages;
-        vector<InputImageP> rightImages;
         vector<InputImageP> postImages;
-
-        ExposureCompensator exposure;
-
-        MonoStitcher stereoConverter;
 
         bool isIdle;
         bool isFinished;
@@ -91,20 +80,17 @@ namespace optonaut {
 
         Mat refinedIntrinsics;
         
+*/
     public:
-
         static Mat androidBase;
         static Mat iosBase;
         static Mat iosZero;
         static Mat androidZero;
-        
-        int uselessVariable = 0;
 
         static string tempDirectory;
         static string version;
-
-        static bool exposureEnabled;
-        static bool alignmentEnabled;
+        /*
+        int uselessVariable = 0;
 
         // Delta tolerance: 1 for production, higher value for testing on PC. 
         // Makes the recorder select images that are further off selection points, 
@@ -118,7 +104,6 @@ namespace optonaut {
                 ) :
             base(base),
             sink(sink),
-            stereoConverter(),
             isIdle(false),
             isFinished(false),
             hasStarted(false),
@@ -443,9 +428,6 @@ namespace optonaut {
             }
         }
 
-
-
-
         void Finish() {
             Log << "[Recorder] Pipeline Finish called by " << std::this_thread::get_id();
             isFinished = true;
@@ -463,13 +445,11 @@ namespace optonaut {
             }
             
             if(HasResults()) {
-                if(exposureEnabled)
-                    exposure.FindGains();
 
                 vector<vector<InputImageP>> postRings = 
                     preRecorderGraph.SplitIntoRings(postImages);
 
-                sink.Finish(postRings, exposure.GetGains());
+                //TODO sink.Finish(postRings, exposure.GetGains());
             } else {
                 AssertWM(false, "No results in recorder.");
             }
@@ -507,6 +487,7 @@ namespace optonaut {
         uint32_t GetRecordedImagesCount() {
             return recordedImages;
         }
+        */
     };    
 }
 

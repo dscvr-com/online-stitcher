@@ -43,9 +43,11 @@ int main(int argc, char** argv) {
 
     vector<InputImageP> ring;
 
-    ImageSelector selector(graph, [&ring] (const SelectionInfo &x) {
-        ring.push_back(x.image);
-    }, Vec3d(M_PI / 8, M_PI / 8, M_PI / 8), false);
+    FunctionSink<SelectionInfo> sink([&ring] (SelectionInfo x) {
+        ring.push_back(x.image); 
+    });
+
+    ImageSelector selector(graph, sink, Vec3d(M_PI / 8, M_PI / 8, M_PI / 8), false);
 
     for(auto img : allImages) {
         selector.Push(img);

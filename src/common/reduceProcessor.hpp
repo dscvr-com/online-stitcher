@@ -10,7 +10,7 @@ namespace optonaut {
      * Provides a streaming reduce process. 
      */
     template <typename InType, typename OutType>
-	class ReduceProcessor {
+	class ReduceProcessor : Sink<InType> {
 	private:
         const function<OutType(const OutType&, const InType&)> reduce;
         OutType state;
@@ -35,10 +35,16 @@ namespace optonaut {
          *
          * @returns The updated state. 
          */
-        const OutType& Push(const InType &in) {
+        const OutType& PushAndGetState(const InType &in) {
             state = reduce(state, in);
             return state;
         }
+
+        virtual void Push(InType in) {
+            PushAndGetState(in);
+        }
+
+        virtual void Finish() { }
 
         /*
          * @returns The current state. 

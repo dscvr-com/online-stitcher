@@ -107,7 +107,7 @@ int main(int, char**) {
 
     for(int i = 0; i < 25; i++) {
         sum += i;
-        AssertEQ(reducer.Push(i), sum);
+        AssertEQ(reducer.PushAndGetState(i), sum);
     }
     AssertEQ(reducer.GetState(), sum);
 

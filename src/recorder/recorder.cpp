@@ -54,7 +54,5 @@ namespace optonaut {
     string Recorder::tempDirectory = "tmp/";
     string Recorder::version = "0.7.0";
     
-    bool Recorder::exposureEnabled = false;
-    bool Recorder::alignmentEnabled = true;
 }
 

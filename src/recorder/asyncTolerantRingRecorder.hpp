@@ -1,3 +1,5 @@
+#include <functional>
+
 #include "../io/inputImage.hpp"
 #include "../stitcher/ringStitcher.hpp"
 #include "recorderGraph.hpp"
@@ -7,47 +9,65 @@
 #define OPTONAUT_ASYNC_TOLERANT_RING_RECORDER
 
 namespace optonaut {
-class AsyncTolerantRingRecorder {
+class AsyncTolerantRingRecorder : public ImageSink {
     private:
         AsyncRingStitcher stitcher;
+        std::function<void(SelectionInfo)> PushToStitcher; 
+        FunctionSink<SelectionInfo> targetFunc;
         ImageSelector selector;
+        StitchingResultP result;
+        bool isFinished;
+
     public:
-        AsyncTolerantRingRecorder(const SelectionInfo &firstImage, 
-                RecorderGraph &graph, float warperScale = 400) :
-            // For initialization, take extrinsics from graph
-            stitcher(MonoStitcher::RectifySingle(firstImage),
-                   fun::map<SelectionPoint*, Mat>(graph.GetTargetsById(), 
-                       [](const SelectionPoint* x) {
-                            return x->extrinsics;
-                       }), 
-                   warperScale, true),
+        AsyncTolerantRingRecorder(RecorderGraph &graph, float warperScale = 400) :
+            stitcher(
+               fun::map<SelectionPoint*, Mat>(graph.GetTargetsById(), 
+                   [](const SelectionPoint* x) {
+                        return x->extrinsics;
+                   }), 
+               warperScale, true),
             // Bind selector directly to stitcher 
+            PushToStitcher([&](SelectionInfo info) {
+                AutoLoad q(info.image);
+
+                auto rectifiedImage = MonoStitcher::RectifySingle(info);
+
+                stitcher.Push(rectifiedImage);
+            }),
+            targetFunc(PushToStitcher), 
             selector(graph, 
-                    std::bind(&AsyncTolerantRingRecorder::PushToStitcher, 
-                        this, 
-                        std::placeholders::_1),
+                    targetFunc,
                     Vec3d(M_PI / 8, M_PI / 8, M_PI / 8),
                     false)
-        {
-
-        }
-
-        void PushToStitcher(SelectionInfo info) {
-            AutoLoad q(info.image);
-            stitcher.Push(MonoStitcher::RectifySingle(info));
-            //stitcher.Push(info.image);
-        }
+        { }
 
         void Push(const InputImageP img) {
+            if(isFinished) 
+                return;
+
             Assert(img != nullptr);
             selector.Push(img);
         }
 
-        StitchingResultP Finalize() {
-            selector.Flush();
-            return stitcher.Finalize();
+        StitchingResultP GetResult() {
+            return result;
         }
-};
+           
+        // Can be called from any thread, after finish has been called. 
+        StitchingResultP Finalize() {
+            Assert(result == nullptr);
+            Assert(isFinished);
+            
+            result = stitcher.Finalize();
+            return result;
+        }
+
+        // To be called from main thread that also does push.
+        virtual void Finish() {
+            isFinished = true;
+            selector.Flush();
+        }
+    };
 }
 
 #endif

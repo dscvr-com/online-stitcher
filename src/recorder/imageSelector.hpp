@@ -4,6 +4,7 @@
 #include "../common/static_counter.hpp"
 #include "../math/support.hpp"
 #include "recorderGraph.hpp"
+#include "../common/sink.hpp"
 
 using namespace cv;
 using namespace std;
@@ -26,6 +27,8 @@ namespace optonaut {
             
         }
     };
+    
+    typedef Sink<SelectionInfo> SelectionSink;
 
     /*
      * Class responsible of matching series of images with selection
@@ -36,17 +39,15 @@ namespace optonaut {
      * for a selection point if we get a new image that is not a better match than the previous one.  
      * If this case happens, the callback is invoked. 
      */
-    class ImageSelector {
-        public: 
-            typedef std::function<void(SelectionInfo)> MatchCallback;
+    class ImageSelector : public ImageSink {
         private: 
-            MatchCallback callback;
+            SelectionSink &callback;
 
             bool isFinished;
             
             Vec3d tolerance;
             bool strictOrder;
-
+            
             void MoveToNextRing() {
 
                 int ringCount = (int)graph.ringCount;
@@ -113,6 +114,7 @@ namespace optonaut {
 
         protected:
             RecorderGraph &graph;
+
             SelectionInfo current;
             int currentRing;
 
@@ -142,10 +144,10 @@ namespace optonaut {
              *
              */
             ImageSelector(RecorderGraph &graph, 
-                    MatchCallback onNewMatch,
+                    SelectionSink &matchCallback,
                     Vec3d tolerance,
                     bool strictOrder = true) :
-                callback(onNewMatch), 
+                callback(matchCallback), 
                 isFinished(false), tolerance(tolerance),
                 strictOrder(strictOrder), graph(graph) { 
                     
@@ -166,12 +168,17 @@ namespace optonaut {
             /*
              * Notifies the selector that processing is finished. 
              */
-            virtual void Flush() {
+            void Flush() {
                 if(current.isValid) {
                     // It is safe to assume that the last match, if it was valid
                     // was also the best one. 
-                    callback(current);
+                    callback.Push(current);
                 }
+                callback.Finish();
+            }
+
+            virtual void Finish() {
+                Flush();
             }
            
             /*
@@ -180,11 +187,15 @@ namespace optonaut {
             bool IsFinished() {
                 return isFinished;
             }
+
+            virtual void Push(InputImageP image) {
+                PushAndGetState(image);
+            }
         
             /*
              * Pushes an image to this selector and advances the internal state. 
              */
-            virtual bool Push(const InputImageP image) {
+            bool PushAndGetState(const InputImageP image) {
 
                 SelectionPoint next;
                 double dist = graph.FindClosestPoint(image->adjustedExtrinsics, 
@@ -228,7 +239,7 @@ namespace optonaut {
                                 // Else, ignore. 
                                 graph.MarkEdgeAsRecorded(current.closestPoint, next);
 
-                                callback(current);
+                                callback.Push(current);
 
                                 Invalidate();
 
@@ -249,7 +260,7 @@ namespace optonaut {
                                 //cout << "Reject Unordered" << endl;
                             }
                         } else {
-                            callback(current);
+                            callback.Push(current);
                             SetCurrent(next, image, dist);
                             return true;
                         }
@@ -316,7 +327,7 @@ namespace optonaut {
 
         public: 
             FeedbackImageSelector(RecorderGraph &graph, 
-                    MatchCallback onNewMatch,
+                    SelectionSink &onNewMatch,
                     Vec3d tolerance) :
                 ImageSelector(graph, onNewMatch, tolerance, true),
                 hasStarted(false), errorVec(Mat::zeros(3, 1, CV_64F)), error(0) {
@@ -325,10 +336,14 @@ namespace optonaut {
         
             using ImageSelector::Push;
 
+            virtual void Push(InputImageP image) {
+                PushAndGetState(image, false);
+            }
+
             /*
              * Pushes an input image to this instance and advances the internal state. 
              */
-            bool Push(InputImageP image, bool isIdle) {
+            bool PushAndGetState(InputImageP image, bool isIdle) {
 
                 if(!hasStarted || !current.isValid) {
                     // Make suggested initial position dependet on vertical position only for smoothness. 
@@ -364,7 +379,7 @@ namespace optonaut {
 
                 hasStarted = true;
                 
-                return ImageSelector::Push(image);
+                return ImageSelector::PushAndGetState(image);
             }
 
             /*

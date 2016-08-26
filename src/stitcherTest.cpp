@@ -8,8 +8,6 @@
 
 #include "minimal/imagePreperation.hpp"
 #include "recorder/recorder.hpp"
-#include "recorder/storageSink.hpp"
-#include "recorder/imageSink.hpp"
 #include "stitcher/stitcherSink.hpp"
 #include "stitcher/globalAlignment.hpp"
 #include "common/intrinsics.hpp"
@@ -17,6 +15,7 @@
 #include "common/drawing.hpp"
 #include "stitcher/stitcher.hpp"
 #include "io/io.hpp"
+#include "recorder/recorder2.hpp"
 
 using namespace std;
 using namespace cv;
@@ -35,7 +34,7 @@ Size imageSize;
 vector<InputImageP> allImages;
 vector<Mat> originalExtrinsics;
 
-void Record(vector<string> &files, ImageSink &sink) {
+void Record(vector<string> &files) {
 
     if(files.size() == 0) {
         cout << "No Input." << endl;
@@ -44,7 +43,7 @@ void Record(vector<string> &files, ImageSink &sink) {
 
     static const bool isAsync = true;
     static const int mode = minimal::ImagePreperation::ModeIOS;
-    shared_ptr<Recorder> recorder(NULL);
+    shared_ptr<Recorder2> recorder(NULL);
         
     Mat base, zero;
 
@@ -94,34 +93,34 @@ void Record(vector<string> &files, ImageSink &sink) {
         allImages.push_back(image);
 
         if(i == 0) {
-            recorder = shared_ptr<Recorder>(
-                    new Recorder(base, zero, 
+            recorder = shared_ptr<Recorder2>(
+                    new Recorder2(base, zero, 
                         //image->intrinsics, sink, "", RecorderGraph::ModeCenter
-                        image->intrinsics, sink, "", RecorderGraph::ModeTruncated
+                        image->intrinsics, RecorderGraph::ModeTruncated, 1
                         //isAsync));
                         ));
 
             // Needed for debug. 
-            intrinsics = image->intrinsics;
-            imageSize = Size(intrinsics.at<double>(0, 2), 
-                    intrinsics.at<double>(1, 2));
-            graph = shared_ptr<RecorderGraph>(new RecorderGraph(
-                        recorder->GetPreRecorderGraph()
-                        ));
-            preGraph = shared_ptr<RecorderGraph>(new RecorderGraph(
-                        recorder->GetPreRecorderGraph()
-                        ));
+            // intrinsics = image->intrinsics;
+            // imageSize = Size(intrinsics.at<double>(0, 2), 
+            //        intrinsics.at<double>(1, 2));
+           // graph = shared_ptr<RecorderGraph>(new RecorderGraph(
+            //            recorder->GetRecorderGraph()
+            //            ));
+            // preGraph = shared_ptr<RecorderGraph>(new RecorderGraph(
+            //            recorder->GetRecorderGraph()
+            //            ));
         }
 
-        Mat q;
-        recorder->ConvertToStitcher(image->originalExtrinsics, q);
-        originalExtrinsics.push_back(q.clone());
+        //Mat q;
+        //recorder->ConvertToStitcher(image->originalExtrinsics, q);
+        //originalExtrinsics.push_back(q.clone());
 
         recorder->Push(image);
 
         tmpMat.release();
         
-        if(recorder->IsFinished()) {
+        if(recorder->RecordingIsFinished()) {
             break;
         }
 
@@ -133,25 +132,22 @@ void Record(vector<string> &files, ImageSink &sink) {
             this_thread::sleep_for(sleep);
         }
     }
-
-    if(recorder->PreviewAvailable()) {
-        auto preview = recorder->FinishPreview();
-        imwrite("dbg/preview.jpg", preview->image.data);
-    }
-
+    
     recorder->Finish();
 
-    //hook.Draw();
-    //hook.WaitForExit();
+    auto preview = recorder->GetPreviewImage();
+    imwrite("dbg/preview.jpg", preview->image.data);
 
-    recorder->Dispose();
+    auto left = recorder->GetLeftResult();
+    imwrite("dbg/left.jpg", left->image.data);
+
+    auto right = recorder->GetLeftResult();
+    imwrite("dbg/right.jpg", left->image.data);
 }
 
 int main(int argc, char** argv) {
     cv::ocl::setUseOpenCL(false);
     RegisterCrashHandler();
-
-    static const bool useStitcherSink = false;
 
     CheckpointStore leftStore("tmp/left/", "tmp/shared/");
     CheckpointStore rightStore("tmp/right/", "tmp/shared/");
@@ -163,7 +159,6 @@ int main(int argc, char** argv) {
     //DummyCheckpointStore commonStore;
     
   //  StorageSink storeSink(leftStore, rightStore);
-    ImageSink imageSink(postProcStore);
     StitcherSink stitcherSink;
 
     cout << "Starting." << endl;
@@ -179,13 +174,13 @@ int main(int argc, char** argv) {
 
     sort(files.begin(), files.end(), CompareByFilename);
 
-    if(!postProcStore.HasUnstitchedRecording()) {
+   // if(!postProcStore.HasUnstitchedRecording()) {
         cout << "Recording." << endl;
-        Record(files, imageSink);
-    } else {
-        cout << "Skipping Recording." << endl;
-    }
-
+        Record(files);
+   // } else {
+   //     cout << "Skipping Recording." << endl;
+   // }
+/*
 
     if(!leftStore.HasUnstitchedRecording()) {
         cout << "Aligning." << endl;
@@ -229,6 +224,7 @@ int main(int argc, char** argv) {
             cout << "Start left stitcher." << endl;
             optonaut::Stitcher leftStitcher(leftStore);
             auto left = leftStitcher.Finish(callbacks.At(0), "dbg/left");
+            */
 /*
             DrawPointsOnPanorama(left->image.data, 
                     ExtractExtrinsics(fun::flat(graph->GetRings())), 
@@ -247,6 +243,7 @@ int main(int argc, char** argv) {
                     intrinsics, imageSize, 1200, left->corner + Point(0, -100),
                     Scalar(0xFF, 0x00, 0xFF));
 */
+        /*
             imwrite("dbg/left.jpg", left->image.data);
             left->image.Unload();  
             left->mask.Unload();  
@@ -268,6 +265,6 @@ int main(int argc, char** argv) {
 
     //leftStore.Clear();
     //rightStore.Clear();
-    
+    */
     return 0;
 }

@@ -1,6 +1,7 @@
 #include <thread>
 #include <condition_variable>
 #include "support.hpp"
+#include "sink.hpp"
 
 using namespace std;
 
@@ -15,7 +16,7 @@ namespace optonaut {
      * @tparam InType The type of the elements in the processor queue. 
      */
     template <typename InType>
-	class AsyncQueue {
+	class AsyncQueue : Sink<InType> {
 	private:
         function<void(InType)> core;
         deque<InType> inData;
@@ -70,7 +71,7 @@ namespace optonaut {
          * @param in The element to add.  
          * @returns The size of the queue. 
          */
-        int Push(InType in) {
+        int PushAndGetQueueSize(InType in) {
             int size = 0;
             {
                 unique_lock<mutex> lock(m);
@@ -88,7 +89,11 @@ namespace optonaut {
             
             return size;
         }
-       
+      
+        virtual void Push(InType in) {
+            PushAndGetQueueSize(in);
+        }
+
         /*
          * @returns true if this worker is running, 
          * else false. 
@@ -101,7 +106,7 @@ namespace optonaut {
          * Finishes processing of all elements that are currently 
          * in the queue, then exits. 
          */
-        void Finish() {
+        virtual void Finish() {
             if(!running)
                 return;
             

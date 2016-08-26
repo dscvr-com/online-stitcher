@@ -228,7 +228,7 @@ InputImageP MonoStitcher::RectifySingle(const SelectionInfo &a) {
     return res;
 }
 
-void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo) {
+void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo) const {
 
     const static bool debug = false;
     AssertFalseInProduction(debug);

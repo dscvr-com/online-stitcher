@@ -80,6 +80,7 @@ namespace optonaut {
              * Calculates the exposure difference of the given image pair and adds it to the exposure graph. 
              */
             virtual ExposureDiff GetCorrespondence(InputImageP imgA, InputImageP imgB, ExposureDiff &aToB, ExposureDiff &bToA) {
+                AssertM(false, "This code is disabled. Exposure info is to be given from outside");
 
                 // Extract the overlapping region of the image pair. 
                 Mat a, b;

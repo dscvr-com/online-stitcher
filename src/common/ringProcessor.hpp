@@ -2,6 +2,7 @@
 
 #include "progressCallback.hpp"
 #include "assert.hpp"
+#include "sink.hpp"
 
 using namespace std;
 
@@ -14,7 +15,7 @@ namespace optonaut {
      * Helper for processing pairs in a ring data structure. 
      */
     template <typename InType>
-	class RingProcessor {
+	class RingProcessor : Sink<InType> {
 	private:
         const size_t distance;
         const size_t prefixSize;
@@ -114,7 +115,7 @@ namespace optonaut {
          *
          * @param in The element to push. 
          */
-        void Push(const InType &in) {
+        virtual void Push(InType in) {
             start(in);
             PushInternal(in);
         }
@@ -133,6 +134,11 @@ namespace optonaut {
             }
 
             Clear();
+        }
+
+        // Alias for Flush. 
+        virtual void Finish() {
+            Flush();
         }
 
         /*

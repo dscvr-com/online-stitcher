@@ -52,6 +52,9 @@ public:
      */
     double correlationCoefficient;
 
+    double gainA;
+    double gainB;
+
     /*
      * Creates a new instance of this class. 
      */
@@ -218,6 +221,8 @@ public:
         result.offset = correctedRes;
         result.valid = true;
         result.correlationCoefficient = sqrt(res.variance) / res.n;
+        result.gainA = res.gainA;
+        result.gainB = res.gainB;
         
         cTimer.Tick("Estimating angular correlation");
 
