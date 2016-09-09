@@ -13,6 +13,7 @@ class ImageReselector : public Sink<std::vector<InputImageP>> {
             outputSink(outputSink), graph(graph) { }
 
         virtual void Push(std::vector<InputImageP> images) {
+            Log << "Received Image.";
             BiMap<size_t, uint32_t> finalImagesToTargets;
 
             vector<InputImageP> bestAlignment = 
@@ -26,6 +27,8 @@ class ImageReselector : public Sink<std::vector<InputImageP>> {
 
                 return aId < bId;
             });
+
+            Log << " Use " << bestAlignment.size() << "/" << graph.Size() << " from " << images.size() << " input images.";
             
             for(auto img : bestAlignment) {
             	SelectionInfo info;

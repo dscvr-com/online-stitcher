@@ -196,6 +196,7 @@ namespace optonaut {
              * Pushes an image to this selector and advances the internal state. 
              */
             bool PushAndGetState(const InputImageP image) {
+                Log << "Received Image.";
 
                 SelectionPoint next;
                 double dist = graph.FindClosestPoint(image->adjustedExtrinsics, 
@@ -344,6 +345,7 @@ namespace optonaut {
              * Pushes an input image to this instance and advances the internal state. 
              */
             bool PushAndGetState(InputImageP image, bool isIdle) {
+                Log << "Received Image.";
 
                 if(!hasStarted || !current.isValid) {
                     // Make suggested initial position dependet on vertical position only for smoothness. 

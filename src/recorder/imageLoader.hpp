@@ -11,10 +11,12 @@ class ImageLoader : public ImageSink {
         }
         virtual void Push(InputImageP image) {
             Assert(image != NULL);
+            Log << "Received Image.";
 
             if(!image->IsLoaded()) {
                 image->LoadFromDataRef();
             }
+            outputSink.Push(image);
         }
 
         virtual void Finish() {

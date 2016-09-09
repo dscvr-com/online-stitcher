@@ -76,7 +76,6 @@ private:
 
         if(debug) {
             imwrite("dbg/feed_" + ToString(in->id) + ".jpg", in->image);
-            //imwrite("dbg/feed_mask_" + ToString(in->id) + ".jpg", in->flow);
         }
 
         //Mat warpedImageAsShort;
@@ -111,59 +110,11 @@ private:
     //Seam finder function. 
     void FindSeams(const FlowImageP &a,
             const FlowImageP &b) {
-        cout << "Calculating flow for " << b->id << endl;
-        cout << "In Size: " << b->image.size() << endl;
+
+        Log << "Flow calculation: " << a->id << " <> " << b->id;
+
         blender.CalculateFlow(a->image, b->image, a->corner, b->corner, b->flow);
-        cout << "Out Size: " << b->flow.size() << endl;
-
         return;
-        /*
-        typedef PyramidPlanarAligner<NormedCorrelator<LeastSquares<Vec3b>>> AlignerToUse;
-
-        Rect aRoi(a->corner, a->image.size());
-        Rect bRoi(b->corner, b->image.size());
-
-        Rect overlap = aRoi & bRoi;
-
-        b->flow = Mat(b->image.size(), CV_32FC2, Scalar::all(0.f));
-
-        if(overlap.width == 0 || overlap.height == 0)
-            return;
-
-        Rect aOverlap(overlap.tl() - a->corner, overlap.size());
-        Rect bOverlap(overlap.tl() - b->corner, overlap.size());
-
-        Mat aOverlapImg = a->image(aOverlap);
-        Mat bOverlapImg = b->image(bOverlap);
-
-        Mat corr; //Debug image used to print the correlation result.  
-        PlanarCorrelationResult result = AlignerToUse::Align(aOverlapImg, bOverlapImg, corr, 0.25, 0.01, 0);
-
-        Rect roiA(result.offset.x / -2, result.offset.y / -2, aOverlapImg.cols, aOverlapImg.rows);
-        Rect roiB(result.offset.x / 2, result.offset.y / 2, bOverlapImg.cols, bOverlapImg.rows);
-
-        Rect overlappingArea = roiA & roiB;
-
-        Rect overlapAreaA(overlappingArea.tl() + roiA.tl(), overlappingArea.size()); 
-        Rect overlapAreaB(overlappingArea.tl() + roiB.tl(), overlappingArea.size());        
-
-        Mat ig, dg;
-
-        cvtColor(aOverlapImg(overlapAreaA), dg, COLOR_BGR2GRAY);
-        cvtColor(bOverlapImg(overlapAreaB), ig, COLOR_BGR2GRAY);
-            
-        calcOpticalFlowFarneback(dg, ig, b->flow(bOverlap)(overlapAreaB), 0.5, 3, 4, 3, 5, 1.1, OPTFLOW_FARNEBACK_GAUSSIAN);
-
-        for (int y = 0; y < b->image.rows; ++y)
-        {
-            for (int x = 0; x < b->image.cols; ++x)
-            {
-                Vec2f d = b->flow.at<Vec2f>(y, x);
-                b->flow.at<Vec2f>(y, x) = Vec2f(d(0) + result.offset.x, d(1) + result.offset.y);
-            }
-        }
-    
-        return;*/
     };
     public:
     Impl(
@@ -217,8 +168,11 @@ private:
         coreRoi = GetInnerRectangle(*warper, K, R, img->image.size());
         coreRoi = Rect(coreRoi.x + 1, coreRoi.y + 1, coreRoi.width - 1, coreRoi.height - 1);
         
-        cout << dstRoi << endl;
-        cout << coreRoi << endl;
+        Log << "Destinatin ROI: " << dstRoi;
+        Log << "Core ROI: " << coreRoi;
+
+        Log << "Warping K: " << K;
+        Log << "Warping R: " << R;
 
         warper->buildMaps(img->image.size(), K, R, uxmap, uymap);
         coreRoi = Rect(coreRoi.tl() - dstRoi.tl(), coreRoi.size() - Size(1, 1));
@@ -233,7 +187,7 @@ private:
     }
 
     void Push(const InputImageP img) {
-        
+        Log << "Received Image."; 
         Assert(img != nullptr);
 
         // We assume equal dimensions and intrinsics for a performance gain. 

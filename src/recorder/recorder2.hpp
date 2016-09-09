@@ -68,6 +68,7 @@ class Recorder2 {
             previewGraph(generator.Generate(
                     intrinsics, RecorderGraph::ModeCenter,
                     RecorderGraph::DensityHalf, 0, 8)),
+            // TODO - Seperate mapping for all rings with seperate ring stitchers. 
             allRotations(fun::map<SelectionPoint*, Mat>(
                halfGraph.GetTargetsById(), 
                [](const SelectionPoint* x) {
@@ -76,8 +77,8 @@ class Recorder2 {
             leftStitcher(allRotations, 1200, false),
             rightStitcher(allRotations, 1200, false),
             stereoGenerator(leftStitcher, rightStitcher, halfGraph), 
-            reselector(stereoGenerator, graph),
-            adjuster(reselector),
+            reselector(stereoGenerator, halfGraph),
+            adjuster(reselector, graph),
             previewStitcher(previewGraph),
             selectionToImageConverter(previewStitcher),
             previewTee(selectionToImageConverter, adjuster),
@@ -88,11 +89,15 @@ class Recorder2 {
                     M_PI / 16 * tolerance)),
             loader(selector), 
             converter(base, zeroWithoutBase, loader)
-        { } 
+        { 
+            size_t imagesCount = graph.Size();
+
+            AssertEQM(UseSomeMemory(1280, 720, imagesCount), imagesCount, 
+                    "Successfully pre-allocate memory");
+        } 
 
         virtual void Push(InputImageP image) {
-            Log << "[Recorder] Got image by thread " << 
-                std::this_thread::get_id();
+            Log << "Received Image. ";
             AssertM(!selector.IsFinished(), "Warning: Push after finish - this is probably a racing condition");
             
             converter.Push(image);

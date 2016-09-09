@@ -169,6 +169,8 @@ namespace optonaut {
      * Calculates the gradient (first derivation) of a black and white image. 
      */
     void GetGradient(const cv::Mat &src_gray, cv::Mat &grad, double wx = 0.5, double wy = 0.5);
+
+    size_t UseSomeMemory(size_t imageWidth, size_t imageHeight, size_t imageCount);
 }
 
 #endif

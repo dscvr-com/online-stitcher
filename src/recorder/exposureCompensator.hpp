@@ -206,7 +206,7 @@ namespace optonaut {
 
                 for (int i = 0; i < n; ++i) {
                     this->gains[invmap[i]] = gains.at<double>(i, 0);
-                    //cout << invmap[i] << " gain: " << gains.at<double>(i, 0) << endl;
+                    Log << invmap[i] << " gain: " << gains.at<double>(i, 0);
                 }
 
             }
@@ -215,7 +215,7 @@ namespace optonaut {
              * Applies the calculated exposure gain to the given image. 
              * The ev parameter allows for manual exposure adjustment. 
              */
-            void Apply(Mat &image, size_t id, double ev = 0) const {
+            void Apply(Mat &image, size_t id, double ev = 1) const {
                 if(gains.find(id) != gains.end()) {
                     multiply(image, gains.at(id) + ev, image);
                 }

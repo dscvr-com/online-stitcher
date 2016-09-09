@@ -42,7 +42,7 @@ void Record(vector<string> &files) {
     }
 
     static const bool isAsync = true;
-    static const int mode = minimal::ImagePreperation::ModeIOS;
+    static const int mode = minimal::ImagePreperation::ModeNone;
     shared_ptr<Recorder2> recorder(NULL);
         
     Mat base, zero;
@@ -64,7 +64,7 @@ void Record(vector<string> &files) {
     for(size_t i = 0; i < files.size(); i++) {
         auto lt = system_clock::now();
         auto image = InputImageFromFile(files[i], false);
-        cout << "[Record] InputImageFromFile :" << files[i] << endl;
+        cout << "[Record] Loading input: " << files[i] << endl;
         
         if(mode == minimal::ImagePreperation::ModeNone) {
             // If we deactivate base adjustment, apply a transposition to 
@@ -96,7 +96,7 @@ void Record(vector<string> &files) {
             recorder = shared_ptr<Recorder2>(
                     new Recorder2(base, zero, 
                         //image->intrinsics, sink, "", RecorderGraph::ModeCenter
-                        image->intrinsics, RecorderGraph::ModeTruncated, 1
+                        image->intrinsics, RecorderGraph::ModeCenter, 1
                         //isAsync));
                         ));
 

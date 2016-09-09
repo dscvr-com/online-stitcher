@@ -19,6 +19,7 @@ class CoordinateConverter : public ImageSink {
 
         virtual void Push(InputImageP image) {
             Assert(image != NULL);
+            Log << "Received Image.";
 
             // Explicitiely copy extrinsics to newly allocated mat 
             // to avoid mem leaks

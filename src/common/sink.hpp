@@ -1,3 +1,5 @@
+#include "logger.hpp"
+
 #ifndef OPTONAUT_IMAGE_SINK_HEADER
 #define OPTONAUT_IMAGE_SINK_HEADER
 
@@ -50,6 +52,7 @@ namespace optonaut {
                 Sink<DataType> &b
                 ) : a(a), b(b) { }
         virtual void Push(DataType in) {
+            Log << "Received Image.";
             a.Push(in);
             b.Push(in);
         }

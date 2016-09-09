@@ -41,7 +41,9 @@ class AsyncTolerantRingRecorder : public ImageSink {
                     false)
         { }
 
-        void Push(const InputImageP img) {
+        virtual void Push(InputImageP img) {
+            Log << "Received Image.";
+
             if(isFinished) 
                 return;
 

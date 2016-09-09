@@ -333,4 +333,26 @@ namespace optonaut {
         return a * exp( -(x - b) * (x - b) / (2 * c * c));
     }
 
+    size_t UseSomeMemory(size_t imageWidth, size_t imageHeight, size_t imageCount) {
+        std::vector<void*> uselessMem;
+        volatile int uselessVariable = 0;
+        
+        for(size_t i = 0; i < imageCount; i++) {
+            size_t size = 4 * imageWidth * imageHeight;
+            void *memory = malloc(size);
+            if(memory != NULL) {
+                memset(memory, 'o', size);
+                uselessVariable += ((int*)memory)[2];
+                uselessMem.push_back(memory);
+            }
+        }
+
+        size_t size = uselessMem.size();
+        
+        for(size_t i = 0; i < uselessMem.size(); i++) {
+            free(uselessMem[i]);
+        }
+
+        return size;
+    }
 }
