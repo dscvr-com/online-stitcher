@@ -1,5 +1,6 @@
 #include <thread>
 
+#include "../common/assert.hpp"
 #include "progressCallback.hpp"
 #include "assert.hpp"
 #include "sink.hpp"

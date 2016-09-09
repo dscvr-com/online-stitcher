@@ -1,4 +1,6 @@
 #include "../math/stat.hpp"
+#include "../recorder/alignmentGraph.hpp"
+#include "../imgproc/pairwiseCorrelator.hpp"
 
 #ifndef OPTONAUT_IMAGE_CORRESPONDENCE_FINDER_HEADER
 #define OPTONAUT_IMAGE_CORRESPONDENCE_FINDER_HEADER

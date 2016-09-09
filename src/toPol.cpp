@@ -6,8 +6,8 @@
 
 #include <opencv2/opencv.hpp>
 
-using namespace std;
 using namespace cv;
+using namespace std;
 
 void printUsage() {
    cout << "Simple optograph to little-world converter." << endl;

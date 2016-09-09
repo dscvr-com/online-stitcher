@@ -43,6 +43,8 @@ namespace optonaut {
         private: 
             SelectionSink &callback;
 
+            size_t imagesToRecord;
+            size_t recordedImages;
             bool isFinished;
             
             Vec3d tolerance;
@@ -147,7 +149,7 @@ namespace optonaut {
                     SelectionSink &matchCallback,
                     Vec3d tolerance,
                     bool strictOrder = true) :
-                callback(matchCallback), 
+                callback(matchCallback), imagesToRecord(graph.Size()), recordedImages(0),
                 isFinished(false), tolerance(tolerance),
                 strictOrder(strictOrder), graph(graph) { 
                     
@@ -240,6 +242,7 @@ namespace optonaut {
                                 // Else, ignore. 
                                 graph.MarkEdgeAsRecorded(current.closestPoint, next);
 
+                                recordedImages++;
                                 callback.Push(current);
 
                                 Invalidate();
@@ -261,6 +264,7 @@ namespace optonaut {
                                 //cout << "Reject Unordered" << endl;
                             }
                         } else {
+                            recordedImages++;
                             callback.Push(current);
                             SetCurrent(next, image, dist);
                             return true;
@@ -268,6 +272,15 @@ namespace optonaut {
                     } 
                 }
                 return false;
+            }
+        
+        
+            size_t GetImagesToRecordCount() {
+                return imagesToRecord;
+            }
+            
+            size_t GetRecordedImagesCount() {
+                return recordedImages;
             }
     };
 
@@ -279,6 +292,7 @@ namespace optonaut {
             SelectionPoint ballTarget;
             Mat ballPosition;
             bool hasStarted;
+            bool isIdle;
             const int ballLead = 2;
 
             Mat errorVec;
@@ -331,20 +345,20 @@ namespace optonaut {
                     SelectionSink &onNewMatch,
                     Vec3d tolerance) :
                 ImageSelector(graph, onNewMatch, tolerance, true),
-                hasStarted(false), errorVec(Mat::zeros(3, 1, CV_64F)), error(0) {
+                hasStarted(false), isIdle(true), errorVec(Mat::zeros(3, 1, CV_64F)), error(0) {
             
             }
         
             using ImageSelector::Push;
-
+        
             virtual void Push(InputImageP image) {
-                PushAndGetState(image, false);
+                PushAndGetState(image);
             }
-
+        
             /*
-             * Pushes an input image to this instance and advances the internal state. 
+             * Pushes an input image to this instance and advances the internal state.
              */
-            bool PushAndGetState(InputImageP image, bool isIdle) {
+            bool PushAndGetState(InputImageP image) {
                 Log << "Received Image.";
 
                 if(!hasStarted || !current.isValid) {
@@ -404,6 +418,18 @@ namespace optonaut {
              */
             const Mat &GetErrorVector() const {
                 return errorVec;
+            }
+        
+            bool IsIdle() {
+                return isIdle;
+            }
+        
+            bool HasStarted() {
+                return hasStarted;
+            }
+        
+            void SetIdle(const bool isIdle) {
+                this->isIdle = isIdle;
             }
     };
 }

@@ -1,3 +1,8 @@
+#include "../common/sink.hpp"
+#include "../common/ringProcessor.hpp"
+#include "../recorder/imageSelector.hpp"
+#include "../stereo/monoStitcher.hpp"
+
 #ifndef OPTONAUT_STEREO_GENERATOR_HEADER
 #define OPTONAUT_STEREO_GENERATOR_HEADER
 

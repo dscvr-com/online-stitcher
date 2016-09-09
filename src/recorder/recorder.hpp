@@ -417,17 +417,8 @@ namespace optonaut {
         
         void Cancel() {
             Log << "[Recorder] Pipeline cancel called by " << std::this_thread::get_id();
-            isFinished = true;
 
-            debugQueue.Finish();
-            postProcessImageQueue.Finish();
-            previewImageQueue.Finish();
-            
-            if(debugPath != "") {
-                std::abort();
-            }
-        }
-
+         }
         void Finish() {
             Log << "[Recorder] Pipeline Finish called by " << std::this_thread::get_id();
             isFinished = true;

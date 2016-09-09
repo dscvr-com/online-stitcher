@@ -1,4 +1,5 @@
 #include "../common/sink.hpp"
+#include "recorderGraphGenerator.hpp"
 #include "stereoGenerator.hpp"
 #include "imageReselector.hpp"
 #include "imageCorrespondenceFinder.hpp"
@@ -21,7 +22,7 @@ class SelectionInfoToImageSink : public MapSink<SelectionInfo, InputImageP> {
 
 class Recorder2 {
 
-    private: 
+    private:
         const RecorderGraphGenerator generator;
         RecorderGraph graph;
         RecorderGraph halfGraph;
@@ -57,7 +58,7 @@ class Recorder2 {
         Recorder2(const Mat &base, const Mat &zeroWithoutBase, 
                   const Mat &intrinsics,
                   const int graphConfig = RecorderGraph::ModeAll, 
-                  const double tolerance = 1.0) : 
+                  const double tolerance = 1.0) :
             generator(),
             graph(generator.Generate(
                     intrinsics, 
@@ -101,8 +102,6 @@ class Recorder2 {
             AssertM(!selector.IsFinished(), "Warning: Push after finish - this is probably a racing condition");
             
             converter.Push(image);
-
-
         }
 
         virtual void Finish() {
@@ -110,6 +109,7 @@ class Recorder2 {
         }
 
         StitchingResultP GetPreviewImage() {
+            previewStitcher.Finish();
             return previewStitcher.Finalize();
         }
 
@@ -128,11 +128,12 @@ class Recorder2 {
         const RecorderGraph& GetRecorderGraph() {
             return graph;
         }
-        
+    
+        // TODO - rather expose selector
         Mat GetBallPosition() const {
             return converter.ConvertFromStitcher(selector.GetBallPosition());
         }
-        
+    
         SelectionInfo GetCurrentKeyframe() const {
             return selector.GetCurrent();
         }
@@ -143,6 +144,53 @@ class Recorder2 {
         
         const Mat &GetAngularDistanceToBall() const {
             return selector.GetErrorVector();
+        }
+    
+        bool IsIdle() {
+            return selector.IsIdle();
+        }
+        
+        bool HasStarted() {
+            return selector.HasStarted();
+        }
+        
+        bool IsFinished() {
+            return selector.IsFinished();
+        }
+    
+        void SetIdle(bool isIdle) {
+            selector.SetIdle(isIdle);
+        }
+    
+        uint32_t GetImagesToRecordCount() {
+            return (uint32_t)selector.GetImagesToRecordCount();
+        }
+        
+        uint32_t GetRecordedImagesCount() {
+            return (uint32_t)selector.GetRecordedImagesCount();
+        }
+    
+        // TODO - refactor out
+        bool AreAdjacent(SelectionPoint a, SelectionPoint b) {
+            SelectionEdge dummy;
+            return halfGraph.GetEdge(a, b, dummy);
+        }
+        vector<SelectionPoint> GetSelectionPoints() const {
+            vector<SelectionPoint> converted;
+            for(auto ring : halfGraph.GetRings()) {
+                ring.push_back(ring.front());
+                for(auto point : ring) {
+                    SelectionPoint n;
+                    n.globalId = point.globalId;
+                    n.ringId = point.ringId;
+                    n.localId = point.localId;
+                    n.extrinsics = converter.ConvertFromStitcher(point.extrinsics);
+                    
+                    converted.push_back(n);
+                }
+                
+            }
+            return converted;
         }
 };
 }
