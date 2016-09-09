@@ -100,6 +100,8 @@ void Record(vector<string> &files) {
                         //isAsync));
                         ));
 
+            recorder->SetIdle(false);
+
             // Needed for debug. 
             // intrinsics = image->intrinsics;
             // imageSize = Size(intrinsics.at<double>(0, 2), 
@@ -142,7 +144,7 @@ void Record(vector<string> &files) {
     imwrite("dbg/left.jpg", left->image.data);
 
     auto right = recorder->GetLeftResult();
-    imwrite("dbg/right.jpg", left->image.data);
+    imwrite("dbg/right.jpg", right->image.data);
 }
 
 int main(int argc, char** argv) {
