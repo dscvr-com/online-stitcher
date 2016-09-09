@@ -179,7 +179,8 @@ class ImageCorrespondenceFinder : public SelectionSink {
             for(auto info : largeImages) {
                 alignment.Apply(info.image);
                 info.image->adjustedExtrinsics.copyTo(info.image->originalExtrinsics);
-                exposure.Apply(info.image->image.data, info.image->id);
+                // Exposure disabled for now. 
+                // exposure.Apply(info.image->image.data, info.image->id);
             }
 
             outSink.Push(GetAdjustedImages());

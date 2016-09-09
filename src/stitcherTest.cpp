@@ -143,7 +143,7 @@ void Record(vector<string> &files) {
     auto left = recorder->GetLeftResult();
     imwrite("dbg/left.jpg", left->image.data);
 
-    auto right = recorder->GetLeftResult();
+    auto right = recorder->GetRightResult();
     imwrite("dbg/right.jpg", right->image.data);
 }
 
