@@ -299,7 +299,9 @@ private:
         queue.Flush();
 
         STimer timer;
-
+        
+        const int correction = 8;
+        
         StitchingResultP res(new StitchingResult());
         {
             Mat resImage, resMask;
@@ -308,16 +310,20 @@ private:
             //if(resImage.type() != CV_8UC3) {
             //    resImage.convertTo(resImage, CV_8UC3);
             //}
+            
+            Mat imResult = blender.GetResult();
+            
+            Rect resultRoi(0, correction, imResult.cols, imResult.rows + correction * -2);
 
-            res->image = Image(blender.GetResult());
-            res->mask = Image(blender.GetResultMask());
+            res->image = Image(imResult(resultRoi));
+            res->mask = Image(blender.GetResultMask()(resultRoi));
         }
         //blender.release();
         warper.release();
         warperFactory.release();
 
         res->corner.x = corners[0].x;
-        res->corner.y = corners[0].y;
+        res->corner.y = corners[0].y + correction;
         res->seamed = false;
 
         for(size_t i = 1; i < n; i++) {
