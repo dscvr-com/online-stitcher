@@ -25,7 +25,6 @@ namespace optonaut {
             const Mat &a, const Mat &b, 
             const Point &aTl, const Point &bTl,
             Mat &flow, 
-            //offset = b.tl() - a.tl()
             Point &offset, const bool reCalcOffset) const {
 
         Rect aRoi(aTl, a.size());
@@ -83,6 +82,15 @@ namespace optonaut {
         cvtColor(bOverlapImg, ig, COLOR_BGR2GRAY);
             
         calcOpticalFlowFarneback(dg, ig, _flow, 0.5, 3, 4, 3, 5, 1.1, OPTFLOW_FARNEBACK_GAUSSIAN);
+
+        if(debug) {
+            static int dbgCtr2 = 0;
+            imwrite("dbg/" + ToString(dbgCtr2) + "_b.jpg", b);
+            imwrite("dbg/" + ToString(dbgCtr2) + "_a.jpg", a);
+            imwrite("dbg/" + ToString(dbgCtr2) + "_ob.jpg", bOverlapImg);
+            imwrite("dbg/" + ToString(dbgCtr2) + "_oa.jpg", aOverlapImg);
+            dbgCtr2++;
+        }
 
         for (int y = 0; y < b.rows; ++y)
         {

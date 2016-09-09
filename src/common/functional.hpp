@@ -30,6 +30,7 @@ namespace fun {
         return out;
     }
 
+
     /*
      * Flattens a vector of vectors to a single vector. 
      *

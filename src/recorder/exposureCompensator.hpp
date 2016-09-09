@@ -80,6 +80,7 @@ namespace optonaut {
              * Calculates the exposure difference of the given image pair and adds it to the exposure graph. 
              */
             virtual ExposureDiff GetCorrespondence(InputImageP imgA, InputImageP imgB, ExposureDiff &aToB, ExposureDiff &bToA) {
+                AssertM(false, "This code is disabled. Exposure info is to be given from outside");
 
                 // Extract the overlapping region of the image pair. 
                 Mat a, b;
@@ -205,7 +206,7 @@ namespace optonaut {
 
                 for (int i = 0; i < n; ++i) {
                     this->gains[invmap[i]] = gains.at<double>(i, 0);
-                    //cout << invmap[i] << " gain: " << gains.at<double>(i, 0) << endl;
+                    Log << invmap[i] << " gain: " << gains.at<double>(i, 0);
                 }
 
             }
@@ -214,7 +215,7 @@ namespace optonaut {
              * Applies the calculated exposure gain to the given image. 
              * The ev parameter allows for manual exposure adjustment. 
              */
-            void Apply(Mat &image, size_t id, double ev = 0) const {
+            void Apply(Mat &image, size_t id, double ev = 1) const {
                 if(gains.find(id) != gains.end()) {
                     multiply(image, gains.at(id) + ev, image);
                 }

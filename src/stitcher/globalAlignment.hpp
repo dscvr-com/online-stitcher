@@ -8,8 +8,6 @@
 #include "../stereo/monoStitcher.hpp"
 #include "../common/ringProcessor.hpp"
 #include "../common/functional.hpp"
-#include "../recorder/stereoSink.hpp"
-#include "../recorder/imageSink.hpp"
 #include "../recorder/recorderGraph.hpp"
 
 
@@ -54,11 +52,12 @@ namespace optonaut {
                 AssertFalseInProduction(debug);
 
                 // If you want to fill missing images, please configure a dynamic path
-                // suitable for production in the AddDummyImages method. Then remove this assert. 
+                // suitable for production in the AddDummyImages method. 
+                // Then remove this assert. 
                 AssertFalseInProduction(fillMissingImages);
         }
  
-        void minifyImages (vector<InputImageP> &images, int downsample = 2) {
+        void minifyImages(vector<InputImageP> &images, int downsample = 2) {
            AssertGT(downsample, 0);
 
            int  counter = 0;

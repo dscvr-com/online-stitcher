@@ -8,7 +8,7 @@
 #ifndef OPTONAUT_LOGGER_HEADER
 #define OPTONAUT_LOGGER_HEADER
 
-#define Log Logger(__func__, true)
+#define Log Logger(__PRETTY_FUNCTION__, true)
 #define LogR Logger("RESULT ", false)
 
 namespace optonaut {
@@ -16,10 +16,18 @@ class Logger
 {
     private:
         std::ostringstream line;
+        inline std::string MethodName(const std::string& prettyFunction)
+        {
+            size_t end = prettyFunction.rfind("(");
+            size_t begin = prettyFunction.substr(0,end).rfind("optonaut::") + 10;
+            end = end - begin;
+
+            return prettyFunction.substr(begin,end);
+        }
     public:
         Logger(std::string function, bool isFunctionName) {
             if(isFunctionName) {
-                line << "[" << function << "] ";   
+                line << "[" << MethodName(function) << "] ";   
             } else {
                 line << function;
             }

@@ -4,6 +4,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "../common/image.hpp"
+#include "../common/sink.hpp"
 
 #ifndef OPTONAUT_INPUT_IMAGE_HEADER
 #define OPTONAUT_INPUT_IMAGE_HEADER
@@ -129,10 +130,10 @@ namespace optonaut {
      */
     class AutoLoad {
         private:
-            InputImageP image;
+            const InputImageP image;
             bool didLoad;
         public: 
-            AutoLoad(InputImageP &image) : image(image), didLoad(false) {
+            AutoLoad(const InputImageP &image) : image(image), didLoad(false) {
                 if(!image->image.IsLoaded()) {
                     didLoad = true;
                     image->image.Load();
@@ -145,6 +146,9 @@ namespace optonaut {
                 }
             }
     };
+    
+    typedef Sink<InputImageP> ImageSink;
+
 }
 
 

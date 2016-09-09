@@ -8,7 +8,7 @@ namespace optonaut {
     /*
      * Stereo sink that directly stitches results in memory, instead of writing them to disk. 
      */
-    class StitcherSink : public StereoSink {
+    class StitcherSink {
 
     private:
         StitchingResultP leftResult;

@@ -62,8 +62,6 @@ namespace optonaut {
     class AlignmentGraph: public ImageCorrespondenceGraph<AlignmentDiff> {
         private: 
             PairwiseCorrelator aligner;
-            const RecorderGraph &graph; 
-            const BiMap<size_t, uint32_t> &imagesToTargets;
             static const bool debug = false;
             map<size_t, Point2d> alignmentCorrections;
         public:
@@ -71,10 +69,7 @@ namespace optonaut {
             /*
              * Creates a new alignment graph based on the given recorder graph. 
              */
-            AlignmentGraph(const RecorderGraph &graph, 
-                    const BiMap<size_t, uint32_t> &imagesToTargets) : 
-                graph(graph), 
-                imagesToTargets(imagesToTargets)
+            AlignmentGraph()
             {
                 AssertFalseInProduction(debug);
             }
@@ -82,10 +77,7 @@ namespace optonaut {
             /*
              * Copy constructor. 
              */
-            AlignmentGraph(AlignmentGraph &ref) : 
-                graph(ref.graph), 
-                imagesToTargets(ref.imagesToTargets)
-            {
+            AlignmentGraph(AlignmentGraph &ref) {
                 AssertFalseInProduction(debug);
                 SetAlignment(ref.GetAlignment());
             }
@@ -108,17 +100,15 @@ namespace optonaut {
             /*
              * Calculates the alignment difference for two given images. 
              */ 
-            virtual AlignmentDiff GetCorrespondence(InputImageP imgA, InputImageP imgB, AlignmentDiff &aToB, AlignmentDiff &bToA) {
-                STimer tFindCorrespondence(false);
+            virtual AlignmentDiff GetCorrespondence(InputImageP, InputImageP, AlignmentDiff &aToB, AlignmentDiff &) {
 
-                const bool dampUncorrelatedNeighbors = false;
-                const bool dampAllNeighbors = false;
-                const bool dampSuccessors = false;
+                AssertM(false, "Alignment correspondences are to be added from outside.");
+                /*
+                STimer tFindCorrespondence(false);
 
                 uint32_t pidA = 0, pidB = 0;
                 SelectionPoint tA, tB;
 
-                Assert(imagesToTargets.GetValue(imgA->id, pidA));
                 Assert(imagesToTargets.GetValue(imgB->id, pidB));
 
                 Assert(graph.GetPointById(pidA, tA));
@@ -194,41 +184,7 @@ namespace optonaut {
                 bToA.dtheta *= -1;
                 bToA.dx *= -1;
                 bToA.dy *= -1;
-
-                // If configured so, add damping to neighors.  
-                if(dampAllNeighbors && areNeighbors) {
-                    AssertM(false, "All neighbor damping implementation possibly incorrect - dphi is relative, also we should only damp successively recorded images");
-
-                    AlignmentDiff aToBDamp, bToADamp; 
-                    aToBDamp.dphi = -angularDiff / 8; 
-                    aToBDamp.dtheta = 0;
-                    aToBDamp.overlap = imgA->image.cols * imgA->image.rows * 0.01 *
-                            (1 + abs(angularDiff)) * (1 + abs(angularDiff));
-                    aToBDamp.forced = true;
-                    aToBDamp.valid = true;
-                    bToADamp = aToBDamp;
-                    bToADamp.dphi *= -1;
-                       
-                    // Insert this extra correspondence.  
-                    InsertCorrespondence(imgA->id, imgB->id, aToBDamp, bToADamp);
-                }
-
-                if(dampSuccessors && areSuccessors) {
-                    AlignmentDiff aToBDamp, bToADamp; 
-                    aToBDamp.dphi = 0; 
-                    aToBDamp.dtheta = 0;
-                    aToBDamp.overlap = imgA->image.cols * imgA->image.rows * 0.5;
-                    aToBDamp.forced = true;
-                    aToBDamp.valid = true;
-                    bToADamp = aToBDamp;
-                    bToADamp.dphi *= -1;
-                       
-                    // Insert this extra correspondence.  
-                    InsertCorrespondence(imgA->id, imgB->id, aToBDamp, bToADamp);
-                } 
-
-                tFindCorrespondence.Tick("Find Correspondence");
-               
+*/
                 return aToB;
             };
 

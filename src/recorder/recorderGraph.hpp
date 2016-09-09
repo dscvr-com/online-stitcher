@@ -320,7 +320,7 @@ namespace optonaut {
         /*
          * Returns the count of all selection points in this recorder graph. 
          */ 
-        uint32_t Size() {
+        uint32_t Size() const {
             uint32_t size = 0;
             
             for(auto &ring : targets)

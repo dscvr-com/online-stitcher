@@ -1,5 +1,6 @@
 #include <functional>
 #include <deque>
+#include "sink.hpp"
 
 using namespace std;
 
@@ -12,7 +13,7 @@ namespace optonaut {
      * enter or leave the queue. 
      */
     template <typename InType>
-	class QueueProcessor {
+	class QueueProcessor : public Sink<InType> {
 	private:
         const size_t length;
 
@@ -56,8 +57,7 @@ namespace optonaut {
          * 
          * @param in The element to push to the queue. 
          */ 
-        void Push(const InType &in) {
-
+        virtual void Push(InType in) {
             start(in);
 
             buffer.push_back(in);
@@ -76,6 +76,11 @@ namespace optonaut {
         void Flush() {
             Clear();
         }
+
+        // Alias for flush.
+        virtual void Finish() {
+            Flush();
+        }   
 
         /*
          * Clears the queue, calls 

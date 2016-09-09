@@ -41,7 +41,7 @@ namespace optonaut {
              * @param b The second selection point. 
              * @param stereo Stereo image to place the results in. 
              */
-            void CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo);
+            void CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo) const;
 
             /*
              * Transforms a single image to match it's given selection point.

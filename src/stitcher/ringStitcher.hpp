@@ -19,13 +19,16 @@ namespace optonaut {
 /*
  * Class capable of efficiently stitching a single ring.  
  */
-class AsyncRingStitcher {
+class AsyncRingStitcher : public ImageSink {
     private:
     class Impl;
     // Implementation pointer pattern. 
     Impl* pimpl_;
 
     float warperScale;
+    bool fast;
+    int roiBuffer;
+    std::vector<cv::Mat> rotations;
     public:
 
     /*
@@ -36,14 +39,13 @@ class AsyncRingStitcher {
      * @param rotations All expected rotations. The rotations have not to be exactly the same as the rotations that
      *                  are going to be pushed, but they need to cover the same area on the panorama. 
      */
-    AsyncRingStitcher(const InputImageP firstImage, 
-                std::vector<cv::Mat> rotations, float warperScale = 300, 
+    AsyncRingStitcher(std::vector<cv::Mat> rotations, float warperScale = 300, 
                 bool fast = true, int roiBuffer = 0);
 
     /*
      * Pushes an image and adds it to the result. 
      */
-    void Push(const InputImageP image);
+    virtual void Push(const InputImageP image);
 
     /*
      * Gets the warper scale, which relates to the size
@@ -60,6 +62,8 @@ class AsyncRingStitcher {
      * Finalizes and returns the result.
      */
     StitchingResultP Finalize();
+
+    virtual void Finish() { }
     
     /*
      * Frees all allocated resources. 
@@ -78,7 +82,7 @@ class RingStitcher {
         std::vector<Mat> rotations = fun::map<InputImageP, Mat>(images, 
                 [](const InputImageP &i) { return i->adjustedExtrinsics; }); 
 
-        AsyncRingStitcher core(images[0], rotations, GetWarperScale(), false, 0);
+        AsyncRingStitcher core(rotations, GetWarperScale(), false, 0);
 
         //TODO: Place all IO, exposure compensation and so on here. 
 
