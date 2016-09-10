@@ -10,7 +10,7 @@ class ImageCorrespondenceFinder : public SelectionSink {
     private: 
         std::deque<SelectionInfo> largeImages;
         std::vector<SelectionInfo> miniImages;
-    
+
         cv::Ptr<cv::WarperCreator> warperFactory;
         cv::Ptr<cv::detail::RotationWarper> warper;
 
@@ -116,7 +116,14 @@ class ImageCorrespondenceFinder : public SelectionSink {
 
                 int overlapArea = (roiCand & inCand).area();
 
-                if(overlapArea > inCand.area() / 2) {
+                bool sameRing = cand.closestPoint.ringId == infoCopy.closestPoint.ringId;
+                bool neighbors = sameRing && (
+                        (cand.closestPoint.localId - 
+                         infoCopy.closestPoint.localId - 1) % 
+                        graph.GetRings()[infoCopy.closestPoint.ringId].size() == 0);
+
+                if(neighbors) {
+                //if(overlapArea > inCand.area() / 5.0f * 4.0f) {
                     ComputeMatch(infoCopy, cand, overlapArea);
                 }
             } 
