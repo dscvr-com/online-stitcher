@@ -474,6 +474,38 @@ namespace optonaut {
                 AssertWM(false, "No results in recorder.");
             }
         }
+        ExposureInfo GetExposureHint() {
+            Assert(false); //Wrong semantics.
+            const Mat current; //= aligner->GetCurrentBias();
+            
+            vector<KeyframeInfo> frames; // = aligner->GetClosestKeyframes(current, 2);
+            
+            if(frames.size() < 2) {
+                return ExposureInfo();
+            } else {
+                ExposureInfo info;
+                auto af = frames[0].keyframe;
+                auto bf = frames[1].keyframe;
+                auto a = af->exposureInfo;
+                auto b = bf->exposureInfo;
+                
+                auto atos = abs(GetDistanceX(current, af->adjustedExtrinsics));
+                auto btos = abs(GetDistanceX(current, bf->adjustedExtrinsics));
+                
+                auto fa = atos / (atos + btos);
+                auto fb = btos / (atos + btos);
+                
+                info.exposureTime = (a.exposureTime * fa + b.exposureTime * fb);
+                info.iso = (a.iso * fa + b.iso * fb);
+                info.gains.red = (a.gains.red * fa  + b.gains.red * fb);
+                info.gains.blue  = (a.gains.blue * fa + b.gains.blue * fb);
+                info.gains.green  = (a.gains.green * fa + b.gains.green * fb);
+                
+                cout << "ios: " << info.iso << endl;
+                
+                return info;
+            }
+        }
         
         bool HasResults() {
             return postImages.size() > 0;

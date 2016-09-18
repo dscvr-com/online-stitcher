@@ -238,6 +238,26 @@ namespace optonaut {
                 VerticalBlend(output, blur, blackBottom.y + 1, 
                         bottom.y, false);
             }
+        
+        void Black(const Mat &input, Mat &output) {
+            
+            
+            if(ss.height <= 0) {
+                output = input;
+                return;
+            }
+            
+            AssertEQ(input.size(), is);
+            output = Mat(ds, input.type());
+            
+            //cv::Rect top(0, 0, ss.width, ss.height);
+            output = cv::Scalar(0, 0, 0);
+            const cv::Rect center(0, ss.height, is.width, is.height);
+            cv::Rect bottom(0, ss.height + is.height, ss.width, ss.height);
+            
+            
+            input.copyTo(output(center));
+        }
 
     };
 }
