@@ -62,10 +62,8 @@ namespace optonaut {
 
            int  counter = 0;
            for(auto img : images) {            
-                bool loaded = false;        
                 std::string source = img->image.source;
                 if(!img->image.IsLoaded()) {
-                    loaded = true;              
                     img->image.Load();
                     AssertM(img->image.data.cols != 0, "Image loaded successfully");
                 }
@@ -103,7 +101,6 @@ namespace optonaut {
             map<size_t, double> gains;
             MonoStitcher stereoConverter;
             vector<vector<StereoImage>> stereoRings;
-            imageStore.LoadStitcherInput(loadedRings, gains);
 
             vector<InputImageP> inputImages = fun::flat(loadedRings);
             cv::Size originalSize = inputImages[0]->image.size();

@@ -21,7 +21,7 @@ class ImageReselector : public Sink<std::vector<InputImageP>> {
             
             sort(bestAlignment.begin(), bestAlignment.end(), 
             [&] (const InputImageP &a, const InputImageP &b) {
-                uint32_t aId, bId;
+                uint32_t aId = 0, bId = 0;
                 Assert(finalImagesToTargets.GetValue(a->id, aId));
                 Assert(finalImagesToTargets.GetValue(b->id, bId));
 

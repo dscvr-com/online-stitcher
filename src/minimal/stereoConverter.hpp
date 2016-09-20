@@ -107,9 +107,9 @@ class StereoConverter {
         vector<vector<InputImageP>> rightRings;
 
         for(vector<StereoImage> ring : stereoRings) {
-            leftRings.push_back(fun::map<StereoImage, InputImageP>(ring, [](auto x) 
+            leftRings.push_back(fun::map<StereoImage, InputImageP>(ring, [](const StereoImage &x) 
                         {return x.A;}));
-            rightRings.push_back(fun::map<StereoImage, InputImageP>(ring, [](auto x) 
+            rightRings.push_back(fun::map<StereoImage, InputImageP>(ring, [](const StereoImage &x) 
                         {return x.B;}));
         }
 

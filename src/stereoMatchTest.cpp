@@ -19,7 +19,6 @@ using namespace cv::xfeatures2d;
 #include "stitcher/simpleSphereStitcher.hpp"
 #include "stitcher/simplePlaneStitcher.hpp"
 #include "imgproc/pairwiseVisualAligner.hpp"
-#include "debug/visualDebugHook.hpp"
 #include "minimal/imagePreperation.hpp"
 
 using namespace std;

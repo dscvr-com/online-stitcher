@@ -129,9 +129,13 @@ void Record(vector<string> &files) {
         if(isAsync) {
             auto now = system_clock::now(); 
             auto diff = now - lt;
-            auto sleep = 10ms - diff;
+            auto sleep = chrono::milliseconds(10) - diff;
 
-            this_thread::sleep_for(sleep);
+	    if(sleep.count() > 0) {
+            	cout << "Sleeping for " << sleep.count() << endl;
+
+            	this_thread::sleep_for(sleep);
+	    }
         }
     }
     
