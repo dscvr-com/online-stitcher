@@ -86,6 +86,18 @@ namespace optonaut {
             } 
             return false;
         }
+
+        vector<Edge*> GetEdges(const size_t from, const size_t to) {
+            vector<Edge*> edges;
+            for(auto &e : GetEdges()[from]) {
+                if(e.to == to) {
+                    edges.push_back(&e);
+                }
+            } 
+
+            return edges;
+
+        }
     };
 }
 #endif

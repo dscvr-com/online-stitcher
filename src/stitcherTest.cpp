@@ -9,7 +9,6 @@
 #include "minimal/imagePreperation.hpp"
 #include "recorder/recorder.hpp"
 #include "stitcher/stitcherSink.hpp"
-#include "stitcher/globalAlignment.hpp"
 #include "common/intrinsics.hpp"
 #include "common/backtrace.hpp"
 #include "common/drawing.hpp"
@@ -141,8 +140,9 @@ void Record(vector<string> &files) {
     
     recorder->Finish();
 
-    auto preview = recorder->GetPreviewImage();
-    imwrite("dbg/preview.jpg", preview->image.data);
+    // TODO: Re-Enable and test preview. 
+    //auto preview = recorder->GetPreviewImage();
+    //imwrite("dbg/preview.jpg", preview->image.data);
 
     auto left = recorder->GetLeftResult();
     imwrite("dbg/left.jpg", left->image.data);

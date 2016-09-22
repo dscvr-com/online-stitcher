@@ -30,6 +30,13 @@ class SimpleSphereStitcher {
         // Point is relative to image center.  
         cv::Point WarpPoint(const cv::Mat &intrinsics, const cv::Mat &extrinsics, const cv::Size &imageSize, const cv::Point &point);
         inline cv::detail::RotationWarper& GetWarper() { return warper; }
+
+        static inline StitchingResultP StitchAndWrite(const std::string &path, const std::vector<InputImageP> &images) {
+            SimpleSphereStitcher s;
+            auto res = s.Stitch(images);
+            cv::imwrite(path, res->image.data);
+            return res;
+        }
 };
 }
 

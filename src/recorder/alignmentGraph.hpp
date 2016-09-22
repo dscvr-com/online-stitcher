@@ -206,6 +206,7 @@ namespace optonaut {
                 // Remember the alignment corrections. 
                 for (size_t i = 0; i < invmap.size(); ++i) {
                     this->alignmentCorrections[invmap[i]].y = res.at<double>(i, 0);
+                    //Log << invmap[i] << " alignment y: " << res.at<double>(i, 0);
                 }
                 
                 return edges;
@@ -229,7 +230,7 @@ namespace optonaut {
                 // Remember the alignment corrections. 
                 for (size_t i = 0; i < invmap.size(); ++i) {
                     this->alignmentCorrections[invmap[i]].x = res.at<double>(i, 0);
-                    //cout << invmap[i] << " alignment: " << x.at<double>(i, 0) << endl;
+                    //Log << invmap[i] << " alignment x: " << res.at<double>(i, 0);
                 }
                 
                 return edges;
@@ -313,6 +314,7 @@ namespace optonaut {
                             return !a.value.forced && a.value.overlap > 0
                             && a.value.valid; 
                         }); 
+                    //Log << "Adding " << correlatorEdges.size() << " of " << adj.second.size();
 
                     // Find all adges manually created.  
                     Edges forcedEdges = fun::filter<Edge>(adj.second, 
@@ -341,6 +343,8 @@ namespace optonaut {
                     
                     // For all edges we decide to work with...
                     for(auto &edge : forcedEdges) {
+
+                        //Log << "Adding edge: " << edge.to << " <> " << edge.from << ": " << extractor(edge.value);
 
                         Assert(!edge.value.quartil);
 
@@ -371,7 +375,7 @@ namespace optonaut {
                 }
 
                 outError = error / relations.GetEdges().size();
-          
+
                 // Solve the equation system for minimal error.  
                 solve(O, R, x, DECOMP_SVD);
 
@@ -407,6 +411,7 @@ namespace optonaut {
                 if(alignmentCorrections.find(in->id) != alignmentCorrections.end()) {
                     CreateRotationY(alignmentCorrections.at(in->id).y, ybias);
                     CreateRotationX(alignmentCorrections.at(in->id).x, xbias);
+                    Log << "Adjusting " << in->id << " by y: " << alignmentCorrections.at(in->id).y << ", x: " << alignmentCorrections.at(in->id).x;
                     in->adjustedExtrinsics = in->adjustedExtrinsics * ybias * xbias; 
                 }
             }

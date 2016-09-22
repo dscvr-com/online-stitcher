@@ -22,14 +22,19 @@ class ImageCorrespondenceFinder : public SelectionSink {
 
         const RecorderGraph &graph;
 
-        const int downsample = 2;
+        const int downsample = 1;
 
         void ComputeMatch(const SelectionInfo &a, const SelectionInfo &b, 
                           int overlapArea) {
-           int minSize = min(a.image->image.cols, b.image->image.rows) / 1.8;
+           int minSize = min(a.image->image.cols, b.image->image.rows) / 3;
            auto res = matcher.Match(a.image, b.image, minSize, minSize, false, 0.5);
 
-           Log << "Computing match between " << a.image->id << " and " << b.image->id;
+        Log << "B adj intrinsics: " << b.image->adjustedExtrinsics;
+        Log << "A adj intrinsics: " << a.image->adjustedExtrinsics;
+        Log << "B orig intrinsics: " << b.image->originalExtrinsics;
+        Log << "A orig intrinsics: " << a.image->originalExtrinsics;
+
+           Log << "Computing match between " << a.image->id << " and " << b.image->id << ": " << res.valid;
 
            if(res.valid) {
                 {
@@ -88,7 +93,7 @@ class ImageCorrespondenceFinder : public SelectionSink {
         }
 
         virtual void Push(SelectionInfo info) {
-            Log << "Received Image.";
+            Log << "Received Image: " << info.image->id;
 
             // Downsample the iamge - create a minified copy. 
             auto miniCopy = std::make_shared<InputImage>(*(info.image));
@@ -117,13 +122,15 @@ class ImageCorrespondenceFinder : public SelectionSink {
                 int overlapArea = (roiCand & inCand).area();
 
                 bool sameRing = cand.closestPoint.ringId == infoCopy.closestPoint.ringId;
+
                 bool neighbors = sameRing && (
-                        (cand.closestPoint.localId - 
-                         infoCopy.closestPoint.localId - 1) % 
-                        graph.GetRings()[infoCopy.closestPoint.ringId].size() == 0);
+                        std::abs((int)cand.closestPoint.localId - (int)infoCopy.closestPoint.localId) == 1 ||
+                        (size_t)std::abs((int)cand.closestPoint.localId - (int)infoCopy.closestPoint.localId) == graph.GetRings()[cand.closestPoint.ringId].size() - 1);
+
 
                 if(neighbors) {
                 //if(overlapArea > inCand.area() / 5.0f * 4.0f) {
+                    //Log << "Points " << cand.closestPoint.localId << " and " << infoCopy.closestPoint.localId;
                     ComputeMatch(infoCopy, cand, overlapArea);
                 }
             } 
@@ -134,8 +141,6 @@ class ImageCorrespondenceFinder : public SelectionSink {
 
         virtual void Finish() {
             double error = 0; 
-            alignment.FindAlignment(error); 
-            exposure.FindGains();
 
             miniImages.clear();
             vector<InputImageP> images;
@@ -143,9 +148,67 @@ class ImageCorrespondenceFinder : public SelectionSink {
                 images.push_back(info.image);
             }
             auto rings = graph.SplitIntoRings(images); 
-
             deque<double> adjustments; 
 
+            int currentRing = rings.size() / 2;
+
+            // What's missing: Matching between rings. Proper adjustment of whole graph. 
+            AssertEQM(rings.size(), (size_t)1, "Only single ring supported at the moment");
+
+            // First, close all rings.
+            // Do so in recording order
+            while(currentRing >= 0 && currentRing < (int)rings.size()) {
+                const vector<InputImageP> &ring = rings[currentRing];
+                
+                //1) Get first/last
+                //is this true? 
+                auto first = ring.front();
+                auto last = ring.back();
+
+                //2) Use alignment data  
+                auto edges = alignment.GetEdges(first->id, last->id);
+                AssertEQ(edges.size(), (size_t)1);
+                double angleAdjustment = edges[0]->value.dphi;
+
+                size_t n = ring.size();
+
+                //3) ALign all images accordingly
+                //4) Don't forget to adjust the graph too!
+                for(size_t i = 0; i < n; i++) {
+                    double ydiff = angleAdjustment * ((double)i / (double)n);
+                    Mat correction;
+                    CreateRotationY(ydiff, correction);
+                    ring[i]->adjustedExtrinsics = correction * ring[i]->adjustedExtrinsics;
+
+                    Log << "Adjusting " << ring[i]->id << " by " << ydiff;
+                    vector<AlignmentGraph::Edge*> bwEdges;
+
+                    for(auto &fwdEdge : alignment.GetEdges()[ring[i]->id]) {
+                        fwdEdge.value.dphi -= ydiff;
+                        auto _bwEdges = alignment.GetEdges(fwdEdge.from, fwdEdge.to);
+                        bwEdges.insert(bwEdges.begin(), _bwEdges.begin(), _bwEdges.end());
+
+                    }
+
+                    std::sort(bwEdges.begin(), bwEdges.end() );
+                    bwEdges.erase(unique(bwEdges.begin(), bwEdges.end()), bwEdges.end());
+                    for(auto bwEdge : bwEdges) {
+                        bwEdge->value.dphi += ydiff;
+                    }
+                }
+
+                //4) TODO: correct graph for other rings. Alignment is probably sane, but
+                //it's way more efficient to "pre-turn" the rings. 
+                //DO NOT correct focal len
+
+                currentRing = graph.GetNextRing(currentRing);
+            }
+
+            // Second, perform global optimization. 
+            alignment.FindAlignment(error); 
+            exposure.FindGains();
+
+            // Third, apply corrections.  
             for(size_t i = 0; i < rings.size(); i++) {
                 auto ring = rings[i];
                 double dist; 
@@ -184,6 +247,7 @@ class ImageCorrespondenceFinder : public SelectionSink {
 
             // Todo - not sure if apply is good here. 
             for(auto info : largeImages) {
+                // TODO - Apply has no effect!
                 alignment.Apply(info.image);
                 info.image->adjustedExtrinsics.copyTo(info.image->originalExtrinsics);
                 // Exposure disabled for now. 

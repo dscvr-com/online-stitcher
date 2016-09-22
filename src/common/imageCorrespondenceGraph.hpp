@@ -86,12 +86,20 @@ namespace optonaut {
             /*
              * @returns All the correspondences in this graph. 
              */
-            const AdjList &GetEdges() const {
+            AdjList &GetEdges() {
                 return relations.GetEdges();
             }
 
             bool GetEdge(const int aId, const int bId, Edge &edge) {
                 return relations.GetEdge(aId, bId, edge);
+            }
+
+            vector<Edge*> GetEdges(const int aId, const int bId) {
+                return relations.GetEdges(aId, bId);
+            }
+            
+            bool SetEdge(const int aId, const int bId, Edge &edge) {
+                return relations.SetEdge(aId, bId, edge);
             }
             
             /*

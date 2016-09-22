@@ -203,6 +203,24 @@ namespace optonaut {
             }
         }
        
+       int GetNextRing(const int currentRing) const {
+            // Moves from center outward, toggling between top and bottom, 
+            // top ring comes before bottom ring.
+            int ringCount = (int)this->ringCount;
+            int centerRing = (ringCount - 1) / 2;
+            
+            int newRing = currentRing - centerRing;
+            // If we are on a bottom or the center ring, move outward.
+            if(newRing <= 0) {
+                newRing--;
+            }
+            // Switch bottom and top, or vice versa.
+            newRing *= -1;
+            newRing = newRing + centerRing;
+
+            return newRing;
+        }
+       
         /*
          * Gets the next selection point that has not been recorded so far. That is 
          * the selection point that is connected by an edge that was not traversed during recording.  

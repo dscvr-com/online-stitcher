@@ -61,24 +61,11 @@ namespace optonaut {
 
                 current.isValid = false;
             }
-        
-            int GetNextRing() {
-                // Moves from center outward, toggling between top and bottom, 
-                // top ring comes before bottom ring.
-                int ringCount = (int)graph.ringCount;
-                int centerRing = (ringCount - 1) / 2;
-                
-                int newRing = currentRing - centerRing;
-                // If we are on a bottom or the center ring, move outward.
-                if(newRing <= 0) {
-                    newRing--;
-                }
-                // Switch bottom and top, or vice versa.
-                newRing *= -1;
-                newRing = newRing + centerRing;
 
-                return newRing;
+            int GetNextRing() {
+                return graph.GetNextRing(currentRing);
             }
+        
         
             bool CheckIfWithinTolerance(const Mat &a, const Mat &b) {
                 Mat rvec;
