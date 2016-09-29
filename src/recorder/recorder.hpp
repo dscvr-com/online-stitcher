@@ -432,6 +432,9 @@ namespace optonaut {
         
         void Cancel() {
             Log << "[Recorder] Pipeline cancel called by " << std::this_thread::get_id();
+
+//        void Cancel() {
+//            cout << "Pipeline Cancel called by " << std::this_thread::get_id() << endl;
             isFinished = true;
 
             debugQueue.Finish();
@@ -442,10 +445,7 @@ namespace optonaut {
                 std::abort();
             }
         }
-
-
-
-
+        
         void Finish() {
             Log << "[Recorder] Pipeline Finish called by " << std::this_thread::get_id();
             isFinished = true;
