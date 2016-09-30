@@ -109,6 +109,8 @@ class Recorder2 {
         }
 
         StitchingResultP GetPreviewImage() {
+            // Calling finish here circumvents the chaining.
+            // It's only safe because we know exactly what we are doing. 
             previewStitcher.Finish();
             return previewStitcher.Finalize();
         }

@@ -49,6 +49,11 @@ void AreaToCorners(const Size targetDimensions, const Mat &targetCenter,
     for(int i = 0; i < 4; i++) { 
         Mat rot = targetCenter.inv() * targetCorners[i];
         
+        Log << "k: " << targetK;
+        Log << "hfov: " << hFov;
+        Log << "vfov: " << vFov;
+        Log << "distance by dimension: " << GetDistanceByDimension(I, rot, 0);
+        
 	    corners[i].x = -tan(GetDistanceByDimension(I, rot, 0)) / tan(hFov / 2) + 0.5;
 	    corners[i].y = -tan(GetDistanceByDimension(I, rot, 1)) / tan(vFov / 2) + 0.5;
        
@@ -106,6 +111,11 @@ void GetTargetArea(const SelectionPoint &a, const SelectionPoint &b, Mat &center
     double vBot = vCenter + a.vFov / 2.0;
     double hBuffer = a.hFov * hBufferRatio;
     double vBuffer = a.vFov * vBufferRatio;
+    
+    
+    Log << "Given hfov " << a.hFov;
+    Log << "Given hpos " << a.hPos;
+    Log << "Given hBuffer " << hBufferRatio;
     
     // TODO - this is a hard coded corner case for mono-rectify
     // which is only used for preview images. Still it is very ugly. Remove it.
@@ -173,6 +183,8 @@ void MapToTarget(const InputImageP a, const StereoTarget &target, Mat &result, M
         border = Scalar(0, 0, 255);
     }
     
+    Log << "Creating target surface: " << target.size;
+    
     result = Mat(target.size, a->image.data.type(), border); 
     warpPerspective(a->image.data, result, transformationF, target.size, 
         INTER_LINEAR, BORDER_CONSTANT, border); 
@@ -233,6 +245,9 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
     const static bool debug = false;
     AssertFalseInProduction(debug);
 
+    Log << "Creating stereo between " << a.image->id << " and " << b.image->id;
+    Log << "In K " << a.image->intrinsics;
+    
     Mat k;
     stereo.valid = false;
 
@@ -247,10 +262,18 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
 
     // Get the target area which lies between the two given selection points. 
     GetTargetArea(a.closestPoint, b.closestPoint, target.R, targetArea);
-
+    
+    for(auto c : targetArea) {
+        Log << "Target corner mat: " << c;
+    }
+    
     // Calculate target size on projection plane. 
     AreaToCorners(a.image->image.size(), target.R, a.image->intrinsics, 
             targetArea, corners);
+    
+    for(auto c : corners) {
+        Log << "Target corner: " << c;
+    }
 
     Rect roi = CornersToRoi(corners);
     target.size = roi.size();

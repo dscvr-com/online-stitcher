@@ -29,10 +29,10 @@ class ImageCorrespondenceFinder : public SelectionSink {
            int minSize = min(a.image->image.cols, b.image->image.rows) / 3;
            auto res = matcher.Match(a.image, b.image, minSize, minSize, false, 0.5);
 
-        Log << "B adj intrinsics: " << b.image->adjustedExtrinsics;
-        Log << "A adj intrinsics: " << a.image->adjustedExtrinsics;
-        Log << "B orig intrinsics: " << b.image->originalExtrinsics;
-        Log << "A orig intrinsics: " << a.image->originalExtrinsics;
+        Log << "B adj extrinsics: " << b.image->adjustedExtrinsics;
+        Log << "A adj extrinsics: " << a.image->adjustedExtrinsics;
+        Log << "B orig extrinsics: " << b.image->originalExtrinsics;
+        Log << "A orig extrinsics: " << a.image->originalExtrinsics;
 
            Log << "Computing match between " << a.image->id << " and " << b.image->id << ": " << res.valid;
 
@@ -94,6 +94,7 @@ class ImageCorrespondenceFinder : public SelectionSink {
 
         virtual void Push(SelectionInfo info) {
             Log << "Received Image: " << info.image->id;
+            Log << "K: " << info.image->intrinsics;
 
             // Downsample the iamge - create a minified copy. 
             auto miniCopy = std::make_shared<InputImage>(*(info.image));
@@ -164,43 +165,47 @@ class ImageCorrespondenceFinder : public SelectionSink {
                 //is this true? 
                 auto first = ring.front();
                 auto last = ring.back();
+                
+                Log << "Closing ring between: " << first->id << " and " << last->id;
 
                 //2) Use alignment data  
                 auto edges = alignment.GetEdges(first->id, last->id);
-                AssertEQ(edges.size(), (size_t)1);
-                double angleAdjustment = edges[0]->value.dphi;
+                
+                // Only do ring alignment if ring closing data is available. 
+                if(edges.size() == (size_t)1) {
+                    double angleAdjustment = edges[0]->value.dphi;
 
-                size_t n = ring.size();
+                    size_t n = ring.size();
 
-                //3) ALign all images accordingly
-                //4) Don't forget to adjust the graph too!
-                for(size_t i = 0; i < n; i++) {
-                    double ydiff = angleAdjustment * ((double)i / (double)n);
-                    Mat correction;
-                    CreateRotationY(ydiff, correction);
-                    ring[i]->adjustedExtrinsics = correction * ring[i]->adjustedExtrinsics;
+                    //3) Align all images accordingly
+                    //4) Don't forget to adjust the graph too!
+                    for(size_t i = 0; i < n; i++) {
+                        double ydiff = angleAdjustment * ((double)i / (double)n);
+                        Mat correction;
+                        CreateRotationY(ydiff, correction);
+                        ring[i]->adjustedExtrinsics = correction * ring[i]->adjustedExtrinsics;
 
-                    Log << "Adjusting " << ring[i]->id << " by " << ydiff;
-                    vector<AlignmentGraph::Edge*> bwEdges;
+                        Log << "Adjusting " << ring[i]->id << " by " << ydiff;
+                        vector<AlignmentGraph::Edge*> bwEdges;
 
-                    for(auto &fwdEdge : alignment.GetEdges()[ring[i]->id]) {
-                        fwdEdge.value.dphi -= ydiff;
-                        auto _bwEdges = alignment.GetEdges(fwdEdge.from, fwdEdge.to);
-                        bwEdges.insert(bwEdges.begin(), _bwEdges.begin(), _bwEdges.end());
+                        for(auto &fwdEdge : alignment.GetEdges()[ring[i]->id]) {
+                            fwdEdge.value.dphi -= ydiff;
+                            auto _bwEdges = alignment.GetEdges(fwdEdge.from, fwdEdge.to);
+                            bwEdges.insert(bwEdges.begin(), _bwEdges.begin(), _bwEdges.end());
 
+                        }
+
+                        std::sort(bwEdges.begin(), bwEdges.end() );
+                        bwEdges.erase(unique(bwEdges.begin(), bwEdges.end()), bwEdges.end());
+                        for(auto bwEdge : bwEdges) {
+                            bwEdge->value.dphi += ydiff;
+                        }
                     }
 
-                    std::sort(bwEdges.begin(), bwEdges.end() );
-                    bwEdges.erase(unique(bwEdges.begin(), bwEdges.end()), bwEdges.end());
-                    for(auto bwEdge : bwEdges) {
-                        bwEdge->value.dphi += ydiff;
-                    }
+                    //4) TODO: correct graph for other rings. Alignment is probably sane, but
+                    //it's way more efficient to "pre-turn" the rings. 
+                    //DO NOT correct focal len
                 }
-
-                //4) TODO: correct graph for other rings. Alignment is probably sane, but
-                //it's way more efficient to "pre-turn" the rings. 
-                //DO NOT correct focal len
-
                 currentRing = graph.GetNextRing(currentRing);
             }
 
@@ -241,8 +246,11 @@ class ImageCorrespondenceFinder : public SelectionSink {
                 << focalLenAdjustment;
 
             for(auto info: largeImages) {
-               info.image->intrinsics.at<double>(0, 0) *= focalLenAdjustment; 
-               info.image->intrinsics.at<double>(1, 1) *= focalLenAdjustment; 
+                Log << "Adjusting focal len for image " << info.image->id;
+                Log << "old k" << info.image->intrinsics;
+                info.image->intrinsics.at<double>(0, 0) *= focalLenAdjustment;
+                info.image->intrinsics.at<double>(1, 1) *= focalLenAdjustment;
+                Log << "New k" << info.image->intrinsics;
             }
 
             // Todo - not sure if apply is good here. 

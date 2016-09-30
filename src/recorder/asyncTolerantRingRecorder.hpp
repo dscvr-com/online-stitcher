@@ -28,6 +28,8 @@ class AsyncTolerantRingRecorder : public ImageSink {
                warperScale, true),
             // Bind selector directly to stitcher 
             PushToStitcher([&](SelectionInfo info) {
+                Assert(!isFinished);
+
                 AutoLoad q(info.image);
 
                 auto rectifiedImage = MonoStitcher::RectifySingle(info);
@@ -38,7 +40,9 @@ class AsyncTolerantRingRecorder : public ImageSink {
             selector(graph, 
                     targetFunc,
                     Vec3d(M_PI / 8, M_PI / 8, M_PI / 8),
-                    false)
+                    false),
+            result(nullptr),
+            isFinished(false)
         { }
 
         virtual void Push(InputImageP img) {
@@ -66,8 +70,16 @@ class AsyncTolerantRingRecorder : public ImageSink {
 
         // To be called from main thread that also does push.
         virtual void Finish() {
-            isFinished = true;
+            
+            // This is a dirty hack to ignore duplicate calls to finish. 
+            if(isFinished)
+                return;
+            
+            Assert(result == nullptr);
+            Assert(!isFinished);
+            
             selector.Flush();
+            isFinished = true;
         }
     };
 }
