@@ -327,6 +327,9 @@ namespace optonaut {
     }
     
     void StitchingResultToFile(StitchingResultP image, const string &path, const string &extension, bool maskOnly) {
+        
+        Log << "Writing stitching result to " << path;
+        
         string infoFilePath = path + ".data.json";
         string imagePath = path + ".image" + extension;
         string maskPath = path + ".mask" + extension;
@@ -343,6 +346,9 @@ namespace optonaut {
     }
     
     StitchingResultP StitchingResultFromFile(const string &path, const string &extension) {
+        
+        Log << "Loading stitching result from " << path;
+        
         string infoFilePath = path + ".data.json";
         string imagePath = path + ".image" + extension;
         string maskPath = path + ".mask" + extension;

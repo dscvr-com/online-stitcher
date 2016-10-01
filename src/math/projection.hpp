@@ -379,6 +379,8 @@ namespace optonaut {
                                   const float subX = 0, const float subY = 0,
                                   const float subW = 1, const float subH = 1) {
         
+        Log << "In: " << optograph.size() << ", face: " << faceId << ", width: " << width << ", height: " << height;
+        
         static float faceTransform[6][2] =
         {
             {0, 0},

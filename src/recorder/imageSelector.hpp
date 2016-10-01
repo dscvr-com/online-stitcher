@@ -190,16 +190,18 @@ namespace optonaut {
                 SelectionPoint next;
                 double dist = graph.FindClosestPoint(image->adjustedExtrinsics, 
                         next, currentRing);
-                
-                if(!CheckIfWithinTolerance(image->adjustedExtrinsics, next.extrinsics)) {
-                    return false;
-                }
-
+               
                 if(!current.isValid) {
                     // Init case - remember this point. 
                     SetCurrent(next, image, dist);
                     return true;
                 } else {
+                    
+                    // Tolearance check, not for init. 
+                    if(!CheckIfWithinTolerance(image->adjustedExtrinsics, next.extrinsics)) {
+                        return false;
+                    }
+                    
                     if(next.globalId == current.closestPoint.globalId) {
                         if(dist < current.dist) {
                             // Better match.
