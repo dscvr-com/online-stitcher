@@ -179,7 +179,7 @@ class Recorder2 {
         }
         vector<SelectionPoint> GetSelectionPoints() const {
             vector<SelectionPoint> converted;
-            for(auto ring : halfGraph.GetRings()) {
+            for(auto ring : graph.GetRings()) {
                 ring.push_back(ring.front());
                 for(auto point : ring) {
                     SelectionPoint n;
