@@ -109,6 +109,8 @@ class Recorder2 {
         }
 
         StitchingResultP GetPreviewImage() {
+            // Calling finish here circumvents the chaining.
+            // It's only safe because we know exactly what we are doing. 
             previewStitcher.Finish();
             return previewStitcher.Finalize();
         }
@@ -177,7 +179,7 @@ class Recorder2 {
         }
         vector<SelectionPoint> GetSelectionPoints() const {
             vector<SelectionPoint> converted;
-            for(auto ring : halfGraph.GetRings()) {
+            for(auto ring : graph.GetRings()) {
                 ring.push_back(ring.front());
                 for(auto point : ring) {
                     SelectionPoint n;

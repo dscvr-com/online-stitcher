@@ -111,6 +111,8 @@ namespace optonaut {
         Mat wmSource(img.size(), CV_32F, Scalar::all(0));
 
         const Rect sourceRoi(tl - destRoi.tl(), img.size());
+        
+        Log << "Sourc roi: " << sourceRoi << "from " << destMask.size();
 
         cv::detail::createWeightMap(destMask(sourceRoi), sharpness, wmDest);
 

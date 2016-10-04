@@ -31,6 +31,8 @@ class CoordinateConverter : public ImageSink {
 
             extrinsics.copyTo(image->originalExtrinsics);
             extrinsics.copyTo(image->adjustedExtrinsics);
+            
+            image->intrinsics = image->intrinsics.clone();
 
             outputSink.Push(image); 
         }

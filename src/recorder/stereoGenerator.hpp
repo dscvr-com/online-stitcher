@@ -49,6 +49,7 @@ class StereoGenerator : public SelectionSink {
         }
         virtual void Push(SelectionInfo image) {
             Log << "Received Image.";
+            Log << "K: " << image.image->intrinsics;
             stereoRingBuffer.Push(image);
              
             if(lastRingId != -1 && lastRingId != (int)image.closestPoint.ringId) {
