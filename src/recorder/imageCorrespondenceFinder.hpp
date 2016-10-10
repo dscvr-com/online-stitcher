@@ -20,23 +20,29 @@ class ImageCorrespondenceFinder : public SelectionSink {
 
         Sink<std::vector<InputImageP>> &outSink;
 
+        typedef std::map<std::pair<size_t, size_t>, Point> PlanarOffsetList;
+        PlanarOffsetList planarCorrelations;
+
         const RecorderGraph &graph;
 
         const int downsample = 1;
 
         void ComputeMatch(const SelectionInfo &a, const SelectionInfo &b, 
                           int overlapArea) {
-           int minSize = min(a.image->image.cols, b.image->image.rows) / 3;
-           auto res = matcher.Match(a.image, b.image, minSize, minSize, false, 0.5);
+            int minSize = min(a.image->image.cols, b.image->image.rows) / 3;
+            auto res = matcher.Match(a.image, b.image, minSize, minSize, false, 0.5);
 
-        Log << "B adj extrinsics: " << b.image->adjustedExtrinsics;
-        Log << "A adj extrinsics: " << a.image->adjustedExtrinsics;
-        Log << "B orig extrinsics: " << b.image->originalExtrinsics;
-        Log << "A orig extrinsics: " << a.image->originalExtrinsics;
+            Log << "B adj extrinsics: " << b.image->adjustedExtrinsics;
+            Log << "A adj extrinsics: " << a.image->adjustedExtrinsics;
+            Log << "B orig extrinsics: " << b.image->originalExtrinsics;
+            Log << "A orig extrinsics: " << a.image->originalExtrinsics;
 
-           Log << "Computing match between " << a.image->id << " and " << b.image->id << ": " << res.valid;
+            Log << "Computing match between " << a.image->id << " and " << b.image->id << ": " << res.valid;
 
-           if(res.valid) {
+            if(res.valid) {
+                Log << "Absolute offset: " << res.absoluteOffset * std::pow(2, downsample);
+                planarCorrelations.emplace(std::make_pair(a.image->id, b.image->id), res.absoluteOffset * std::pow(2, downsample));
+                planarCorrelations.emplace(std::make_pair(b.image->id, a.image->id), -res.absoluteOffset * std::pow(2, downsample));
                 {
                     AlignmentDiff aToB, bToA;
 
@@ -81,8 +87,18 @@ class ImageCorrespondenceFinder : public SelectionSink {
                     exposure.InsertCorrespondence(
                             a.image->id, b.image->id, aToB, bToA);
                 }
+            }
+        }
 
-           }
+        PlanarOffsetList CorrespondenceCrossProduct(PlanarOffsetList correspondences) {
+            PlanarOffsetList res;
+            for(auto a : correspondences) {
+                res.emplace(a);
+                for(auto b : correspondences) {
+                    res.emplace(std::make_pair(a.first.first, b.first.second), a.second + b.second);
+                }
+            }
+            return res;
         }
     public:
         ImageCorrespondenceFinder(
@@ -138,6 +154,10 @@ class ImageCorrespondenceFinder : public SelectionSink {
             
             miniImages.push_back(infoCopy);
             largeImages.push_back(info);
+        }
+
+        const std::map<std::pair<size_t, size_t>, cv::Point>& GetPlanarOffsets() const {
+            return planarCorrelations;
         }
 
         virtual void Finish() {
@@ -261,6 +281,8 @@ class ImageCorrespondenceFinder : public SelectionSink {
                 // Exposure disabled for now. 
                 // exposure.Apply(info.image->image.data, info.image->id);
             }
+
+            planarCorrelations = CorrespondenceCrossProduct(planarCorrelations);
 
             outSink.Push(GetAdjustedImages());
             outSink.Finish();

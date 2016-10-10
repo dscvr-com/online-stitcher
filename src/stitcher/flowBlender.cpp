@@ -27,6 +27,9 @@ namespace optonaut {
             Mat &flow, 
             Point &offset, const bool reCalcOffset) const {
 
+
+        STimer t;
+
         Rect aRoi(aTl, a.size());
         Rect bRoi(bTl, b.size());
 
@@ -52,10 +55,14 @@ namespace optonaut {
 
             Mat corr; //Debug image used to print the correlation result.  
             PlanarCorrelationResult result = AlignerToUse::Align(
-                    aOverlapImg, bOverlapImg, corr, 0.25, 0.01, 0);
+                    aOverlapImg, bOverlapImg, corr, 0.1, 0.01, 1);
 
             offset = result.offset;
+
+            Log << "New offset: " << offset;
         }
+
+        t.Tick("New Offset Calculation");
 
         Rect roiA(offset.x / -2, offset.y / -2, 
                 aOverlapImg.cols, aOverlapImg.rows);
@@ -100,10 +107,13 @@ namespace optonaut {
                 flow.at<Vec2f>(y, x) = Vec2f(d(0) + offset.x, d(1) + offset.y);
             }
         }
+        
+        t.Tick("Flow Calculation");
     }
 
     void FlowBlender::Feed(const Mat &img, const Mat &flow_, const Point &tl)
     {
+        STimer t;
         static int dbgCtr = 0;
         AssertEQ(img.type(), CV_8UC3);
 
@@ -166,6 +176,8 @@ namespace optonaut {
             }
         }
 
+        t.Tick("Blending Preperation");
+
         if(debug) {
 
             imwrite("dbg/" + ToString(dbgCtr) + "_flow.jpg", flowViz);
@@ -216,10 +228,13 @@ namespace optonaut {
             imwrite("dbg/" + ToString(dbgCtr) + "_blended.jpg", temp);
             dbgCtr++;
         }
+        
+        t.Tick("Blending Loop");
 
         temp.copyTo(dest(Rect(dx, dy, temp.cols, temp.rows)));
 
         existingCores.push_back(sourceRoi);
+        t.Tick("Blending Commit");
     }
 
     Point FlowBlender::dummyFlow = Point(0, 0);

@@ -84,7 +84,7 @@ class Recorder2 {
                })), 
             leftStitcher(allRotations, 1200, false),
             rightStitcher(allRotations, 1200, false),
-            stereoGenerator(leftStitcher, rightStitcher, halfGraph), 
+            stereoGenerator(leftStitcher, rightStitcher, halfGraph, adjuster), 
             reselector(stereoGenerator, halfGraph),
             adjuster(reselector, graph),
             previewStitcher(previewGraph),

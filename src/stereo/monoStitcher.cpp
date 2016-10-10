@@ -143,8 +143,9 @@ void GetTargetArea(const SelectionPoint &a, const SelectionPoint &b, Mat &center
  * @param result The resulting image. 
  * @param targetK The resulting intrinsics of the projected image. 
  * @param debug Debugger flag, usually set by calling method. 
+ * @returns Offset of the center pixel of the input image in the output. 
  */
-void MapToTarget(const InputImageP a, const StereoTarget &target, Mat &result, Mat &targetK, bool debug = false) {
+Point2f MapToTarget(const InputImageP a, const StereoTarget &target, Mat &result, Mat &targetK, bool debug = false) {
     Mat rot, rot4 = target.R.inv() * a->adjustedExtrinsics;
     From4DoubleTo3Double(rot4, rot);
     double t = -0.02; //"Arm length" in homogenic space, 
@@ -187,7 +188,7 @@ void MapToTarget(const InputImageP a, const StereoTarget &target, Mat &result, M
     
     result = Mat(target.size, a->image.data.type(), border); 
     warpPerspective(a->image.data, result, transformationF, target.size, 
-        INTER_LINEAR, BORDER_CONSTANT, border); 
+        INTER_LINEAR, BORDER_CONSTANT, border);
 
     if(debug) { 
         vector<Point2f> corners = {
@@ -205,6 +206,13 @@ void MapToTarget(const InputImageP a, const StereoTarget &target, Mat &result, M
                     Scalar(255, 0, 0), 3);
         }
     }
+
+    const vector<Point2f> center { Point(a->image.cols / 2, a->image.rows / 2) };
+    vector<Point2f> transformed;
+
+    perspectiveTransform(center, transformed, transformationF);
+
+    return transformed[0] - center[0]; 
 }
 
 InputImageP MonoStitcher::RectifySingle(const SelectionInfo &a) {
@@ -240,7 +248,7 @@ InputImageP MonoStitcher::RectifySingle(const SelectionInfo &a) {
     return res;
 }
 
-void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo) const {
+void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo, Point &alignmentHint) const {
 
     const static bool debug = false;
     AssertFalseInProduction(debug);
@@ -281,8 +289,12 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
     Mat resA, resB;
 
     // Map both images to the same projection target. 
-    MapToTarget(a.image, target, resA, newKA, debug);
-    MapToTarget(b.image, target, resB, newKB, debug);
+    Point tA = MapToTarget(a.image, target, resA, newKA, debug);
+    Point tB = MapToTarget(b.image, target, resB, newKB, debug);
+
+    Log << "Alignment hint: " << alignmentHint << ", tA: " << tA << ", tB: " << tB; 
+
+    alignmentHint = alignmentHint + tA - tB;
 
     // If debug is on, draw all important regions and save the images. 
     if(debug) {

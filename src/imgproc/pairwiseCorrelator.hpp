@@ -34,9 +34,14 @@ public:
      */
     int overlap;
     /*
-     * The offset between the correlated images, in pixels. 
+     * The corrected offset between the correlated images, in pixels, not including any
+     * difference reflected in the image's intrinsics.
      */
     Point2f offset;
+    /*
+     * The absolute offset between the correlated images. 
+     */
+    Point2f absoluteOffset;
     /*
      * The offset between the correlated images, in radians, 
      * based on a rotational projection model. 
@@ -140,7 +145,7 @@ public:
 
         cv::Point appliedBorder;
 
-        cv::Point2d locationDiff = GetOverlappingRegion(a, b, a->image, b->image, wa, wb, a->image.cols * 0.2, appliedBorder);
+        cv::Point locationDiff = GetOverlappingRegion(a, b, a->image, b->image, wa, wb, a->image.cols * 0.2, appliedBorder);
 
         cTimer.Tick("Getting overlapping region");
 
@@ -219,6 +224,7 @@ public:
         result.angularOffset.y = asin(relativeOffset.x * sin(hFov));
         result.angularOffset.x = asin(relativeOffset.y * sin(vFov));
         result.offset = correctedRes;
+        result.absoluteOffset = correctedRes + locationDiff;
         result.valid = true;
         result.correlationCoefficient = sqrt(res.variance) / res.n;
         result.gainA = res.gainA;

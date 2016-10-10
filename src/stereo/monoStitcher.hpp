@@ -40,8 +40,18 @@ namespace optonaut {
              * @param a The first selection point.
              * @param b The second selection point. 
              * @param stereo Stereo image to place the results in. 
+             * @param alignmentHint Alignment hint to be transformed according to rectification. 
              */
-            void CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo) const;
+            void CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo, Point &alignmentHint) const;
+            
+            /*
+             * Convenience overload. 
+             */
+            void CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo) const {
+                Point dummy(0, 0);
+                CreateStereo(a, b, stereo, dummy);
+            }
+            
 
             /*
              * Transforms a single image to match it's given selection point.
