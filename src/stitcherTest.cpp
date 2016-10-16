@@ -141,8 +141,8 @@ void Record(vector<string> &files) {
     recorder->Finish();
 
     // TODO: Re-Enable and test preview. 
-    //auto preview = recorder->GetPreviewImage();
-    //imwrite("dbg/preview.jpg", preview->image.data);
+    auto preview = recorder->GetPreviewImage();
+    imwrite("dbg/preview.jpg", preview->image.data);
 
     auto left = recorder->GetLeftResult();
     imwrite("dbg/left.jpg", left->image.data);

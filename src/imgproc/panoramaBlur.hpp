@@ -1,5 +1,6 @@
 #include <opencv2/opencv.hpp>
 #include "../common/assert.hpp"
+#include "../common/logger.hpp"
 
 using namespace cv;
 using namespace std;

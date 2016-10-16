@@ -24,6 +24,10 @@ class SelectionInfoToImageSink : public MapSink<SelectionInfo, InputImageP> {
 class Recorder2 {
 
     private:
+        const Mat zeroWithoutBase;
+        const Mat base;
+        const Mat intrinsics;
+
         const RecorderGraphGenerator generator;
         RecorderGraph graph;
         RecorderGraph halfGraph;
@@ -58,10 +62,13 @@ class Recorder2 {
         CoordinateConverter converter;
 
     public:
-        Recorder2(const Mat &base, const Mat &zeroWithoutBase, 
-                  const Mat &intrinsics,
+        Recorder2(const Mat &_base, const Mat &_zeroWithoutBase, 
+                  const Mat &_intrinsics,
                   const int graphConfig = RecorderGraph::ModeAll, 
                   const double tolerance = 1.0) :
+            zeroWithoutBase(_zeroWithoutBase),
+            base(_base),
+            intrinsics(_intrinsics),
             generator(),
             graph(generator.Generate(
                     intrinsics, 
