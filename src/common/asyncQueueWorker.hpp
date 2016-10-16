@@ -127,5 +127,28 @@ namespace optonaut {
             Finish();
         }
     };
+    
+    template <typename DataType> class AsyncSink : public Sink<DataType> {
+    private:
+        Sink<DataType> &out;
+        AsyncQueue<DataType> queue;
+        bool interceptFinish;
+    public:
+        AsyncSink(Sink<DataType> &out, bool interceptFinish = false) :
+        out(out),
+        queue([&out](const DataType& item){ out.Push(item); }),
+        interceptFinish(interceptFinish) { }
+          
+        virtual void Push(DataType in) {
+            queue.Push(in);
+        }
+
+        virtual void Finish() {
+            queue.Finish();
+            if(!interceptFinish) {
+                out.Finish();
+            }
+        }
+    };
 }
 #endif
