@@ -1,4 +1,5 @@
 #include "../common/sink.hpp"
+#include "../common/asyncQueueWorker.hpp"
 #include "recorderGraphGenerator.hpp"
 #include "stereoGenerator.hpp"
 #include "imageReselector.hpp"
@@ -44,13 +45,15 @@ class Recorder2 {
         ImageReselector reselector;
         // Finds image correspondence and performs exposure adjusting and alignment
         ImageCorrespondenceFinder adjuster;
-        // Collects given input images for the center ring and computes a 
-        // low-resolution preview image. 
+        // Collects given input images for the center ring and computes a
+        // low-resolution preview image.
         AsyncTolerantRingRecorder previewStitcher;
         // Converts SelectionInfo struct to InputImageP
         SelectionInfoToImageSink selectionToImageConverter;
         // Forwards the given image to previewStitcher AND correspondenceFinder
         TeeSink<SelectionInfo> previewTee;
+        // Decouples slow correspondence finiding process from UI
+        AsyncSink<SelectionInfo> decoupler;
         // Selects good images
         FeedbackImageSelector selector;
         // Loads the image from the data ref
@@ -90,7 +93,8 @@ class Recorder2 {
             previewStitcher(previewGraph),
             selectionToImageConverter(previewStitcher),
             previewTee(selectionToImageConverter, adjuster),
-            selector(graph, previewTee, 
+            decoupler(previewTee, true),
+            selector(graph, decoupler,
                 Vec3d(
                     M_PI / 64 * tolerance, 
                     M_PI / 128 * tolerance, 
@@ -111,13 +115,16 @@ class Recorder2 {
             converter.Push(image);
         }
 
+        // This has to be called after GetPreviewImage.
         virtual void Finish() {
-            converter.Finish();
+            AssertM(previewStitcher.GetResult() != nullptr, "GetPreviewImage must be called before calling Finish");
+            adjuster.Finish();
         }
 
         StitchingResultP GetPreviewImage() {
             // Calling finish here circumvents the chaining.
-            // It's only safe because we know exactly what we are doing. 
+            // It is safe because our AsyncSink decoupler intercepts finish.
+            converter.Finish();
             previewStitcher.Finish();
             return previewStitcher.Finalize();
         }
