@@ -80,7 +80,7 @@ namespace optonaut {
      * No mat checking for speed. 
      */
     template <typename T>
-    inline T Sample(const cv::Mat& img, const float inx, const float iny)
+    inline T SampleLinear(const cv::Mat& img, const float inx, const float iny)
     {
         int x = (int)inx;
         int y = (int)iny;
@@ -107,7 +107,17 @@ namespace optonaut {
 
         return 
             (img.at<T>(y0, x0) * (1.f - a) + img.at<T>(y0, x1) * a) * (1.f - c) +
-            (img.at<T>(y1, x0) * (1.f - a) + img.at<cv::Vec3b>(y1, x1) * a) * c;
+            (img.at<T>(y1, x0) * (1.f - a) + img.at<T>(y1, x1) * a) * c;
+    }
+    
+    /*
+     * Samples a subpixel from an image. 
+     * No mat checking for speed. 
+     */
+    template <typename T>
+    inline T SampleNearest(const cv::Mat& img, const float inx, const float iny)
+    {
+        return img.at<T>((int)(iny + 0.5f), (int)(inx + 0.5f));
     }
 }
 

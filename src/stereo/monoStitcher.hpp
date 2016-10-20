@@ -42,13 +42,13 @@ namespace optonaut {
              * @param stereo Stereo image to place the results in. 
              * @param alignmentHint Alignment hint to be transformed according to rectification. 
              */
-            void CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo, Point &alignmentHint) const;
+            void CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo, cv::Point2d &alignmentHint) const;
             
             /*
              * Convenience overload. 
              */
             void CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo) const {
-                Point dummy(0, 0);
+                Point2d dummy(0, 0);
                 CreateStereo(a, b, stereo, dummy);
             }
             

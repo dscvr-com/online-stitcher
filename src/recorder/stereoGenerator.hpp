@@ -17,7 +17,7 @@ class StereoGenerator : public SelectionSink {
         int lastRingId;
 
         RingProcessor<SelectionInfo> stereoRingBuffer;
-        std::map<std::pair<size_t, size_t>, cv::Point> correctedOffsets;
+        std::map<std::pair<size_t, size_t>, cv::Point2d> correctedOffsets;
         const RecorderGraph &graph;
         const ImageCorrespondenceFinder &correspondences;
 
@@ -34,7 +34,7 @@ class StereoGenerator : public SelectionSink {
                 return;
             
             bool hasOffset = false;
-            Point offset;
+            Point2d offset;
             Log << "Looking for offset between " << a.image->id << " and " << b.image->id;
             auto offsets = correspondences.GetPlanarOffsets();
             auto it = offsets.find(std::make_pair(a.image->id, b.image->id));
@@ -51,8 +51,8 @@ class StereoGenerator : public SelectionSink {
             stereoConverter.CreateStereo(a, b, stereo, offset);
 
             if(hasOffset) {
-                correctedOffsets.emplace(std::make_pair(a.image->id, b.image->id), offset);
-                Log << "Corrected offset: " << offset;
+               // correctedOffsets.emplace(std::make_pair(a.image->id, b.image->id), offset);
+               // Log << "Corrected offset: " << offset;
             }
 
             leftOutputSink.Push(stereo.A);

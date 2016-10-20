@@ -20,7 +20,7 @@ class ImageCorrespondenceFinder : public SelectionSink {
 
         Sink<std::vector<InputImageP>> &outSink;
 
-        typedef std::map<std::pair<size_t, size_t>, Point> PlanarOffsetList;
+        typedef std::map<std::pair<size_t, size_t>, Point2d> PlanarOffsetList;
         PlanarOffsetList planarCorrelations;
 
         const RecorderGraph &graph;
@@ -40,9 +40,8 @@ class ImageCorrespondenceFinder : public SelectionSink {
             Log << "Computing match between " << a.image->id << " and " << b.image->id << ": " << res.valid;
 
             if(res.valid) {
-                Log << "Absolute offset: " << res.absoluteOffset * std::pow(2, downsample);
-                planarCorrelations.emplace(std::make_pair(a.image->id, b.image->id), res.absoluteOffset * std::pow(2, downsample));
-                planarCorrelations.emplace(std::make_pair(b.image->id, a.image->id), -res.absoluteOffset * std::pow(2, downsample));
+                planarCorrelations.emplace(std::make_pair(a.image->id, b.image->id), res.angularOffset);
+                planarCorrelations.emplace(std::make_pair(b.image->id, a.image->id), -res.angularOffset);
                 {
                     AlignmentDiff aToB, bToA;
 
@@ -156,7 +155,7 @@ class ImageCorrespondenceFinder : public SelectionSink {
             largeImages.push_back(info);
         }
 
-        const std::map<std::pair<size_t, size_t>, cv::Point>& GetPlanarOffsets() const {
+        const std::map<std::pair<size_t, size_t>, cv::Point2d>& GetPlanarOffsets() const {
             return planarCorrelations;
         }
 

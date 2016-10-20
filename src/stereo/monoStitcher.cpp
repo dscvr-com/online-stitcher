@@ -49,10 +49,10 @@ void AreaToCorners(const Size targetDimensions, const Mat &targetCenter,
     for(int i = 0; i < 4; i++) { 
         Mat rot = targetCenter.inv() * targetCorners[i];
         
-        Log << "k: " << targetK;
-        Log << "hfov: " << hFov;
-        Log << "vfov: " << vFov;
-        Log << "distance by dimension: " << GetDistanceByDimension(I, rot, 0);
+        //Log << "k: " << targetK;
+        //Log << "hfov: " << hFov;
+        //Log << "vfov: " << vFov;
+        //Log << "distance by dimension: " << GetDistanceByDimension(I, rot, 0);
         
 	    corners[i].x = -tan(GetDistanceByDimension(I, rot, 0)) / tan(hFov / 2) + 0.5;
 	    corners[i].y = -tan(GetDistanceByDimension(I, rot, 1)) / tan(vFov / 2) + 0.5;
@@ -248,13 +248,13 @@ InputImageP MonoStitcher::RectifySingle(const SelectionInfo &a) {
     return res;
 }
 
-void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo, Point &alignmentHint) const {
+void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo, Point2d &alignmentHint) const {
 
     const static bool debug = false;
     AssertFalseInProduction(debug);
 
     Log << "Creating stereo between " << a.image->id << " and " << b.image->id;
-    Log << "In K " << a.image->intrinsics;
+    //Log << "In K " << a.image->intrinsics;
     
     Mat k;
     stereo.valid = false;
@@ -272,7 +272,7 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
     GetTargetArea(a.closestPoint, b.closestPoint, target.R, targetArea);
     
     for(auto c : targetArea) {
-        Log << "Target corner mat: " << c;
+        //Log << "Target corner mat: " << c;
     }
     
     // Calculate target size on projection plane. 
@@ -280,7 +280,7 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
             targetArea, corners);
     
     for(auto c : corners) {
-        Log << "Target corner: " << c;
+        //Log << "Target corner: " << c;
     }
 
     Rect roi = CornersToRoi(corners);
@@ -289,10 +289,10 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
     Mat resA, resB;
 
     // Map both images to the same projection target. 
-    Point tA = MapToTarget(a.image, target, resA, newKA, debug);
-    Point tB = MapToTarget(b.image, target, resB, newKB, debug);
+    Point2d tA = MapToTarget(a.image, target, resA, newKA, debug);
+    Point2d tB = MapToTarget(b.image, target, resB, newKB, debug);
 
-    Log << "Alignment hint: " << alignmentHint << ", tA: " << tA << ", tB: " << tB; 
+    //Log << "Alignment hint: " << alignmentHint << ", tA: " << tA << ", tB: " << tB; 
 
     alignmentHint = alignmentHint + tA - tB;
 

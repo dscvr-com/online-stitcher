@@ -205,24 +205,12 @@ public:
 
         cv::Point correctedRes = res.offset + appliedBorder;
 
-        // Get hFov and vFov in radians. 
-        // Calculate pixel per radian (linar vs. asin/atan)
-        // We're working on the projectional tangent plane of B.
-        
-        double hFov = GetHorizontalFov(a->intrinsics);
-        double vFov = GetVerticalFov(a->intrinsics);
-
-        //cout << "hfov: " << hFov << ", vfov: " << vFov << endl;
-        Point2d relativeOffset = 
-            Point2d((double)correctedRes.x / a->image.cols, 
-                    (double)correctedRes.y / a->image.rows); 
 
         //cout << "RelativeOffset: " << relativeOffset << endl;
         result.overlap = wa.cols * wa.rows; 
 
         // Careful! Rotational axis are swapped (movement along x axis corresponds to a rotation AROUND y axis) 
-        result.angularOffset.y = asin(relativeOffset.x * sin(hFov));
-        result.angularOffset.x = asin(relativeOffset.y * sin(vFov));
+        result.angularOffset = GetAngularOffset(a, correctedRes);
         result.offset = correctedRes;
         result.absoluteOffset = correctedRes + locationDiff;
         result.valid = true;
@@ -233,6 +221,26 @@ public:
         cTimer.Tick("Estimating angular correlation");
 
         return result;
+    }
+
+    static inline cv::Point2d GetAngularOffset(const InputImageP &a, const Point2d &pixelOffset) {
+        // Get hFov and vFov in radians. 
+        // Calculate pixel per radian (linar vs. asin/atan)
+        // We're working on the projectional tangent plane of B.
+        
+        double hFov = GetHorizontalFov(a->intrinsics);
+        double vFov = GetVerticalFov(a->intrinsics);
+
+        //cout << "hfov: " << hFov << ", vfov: " << vFov << endl;
+        Point2d relativeOffset = 
+            Point2d((double)pixelOffset.x / a->image.cols, 
+                    (double)pixelOffset.y / a->image.rows); 
+        
+        // Careful! Rotational axis are swapped (movement along x axis corresponds to a rotation AROUND y axis) 
+        double y = asin(relativeOffset.x * sin(hFov));
+        double x = asin(relativeOffset.y * sin(vFov));
+
+        return Point2d(x, y);
     }
 };
 }

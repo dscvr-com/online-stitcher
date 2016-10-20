@@ -138,11 +138,10 @@ void Record(vector<string> &files) {
         }
     }
     
-    recorder->Finish();
-
-    // TODO: Re-Enable and test preview. 
     auto preview = recorder->GetPreviewImage();
     imwrite("dbg/preview.jpg", preview->image.data);
+    
+    recorder->Finish();
 
     auto left = recorder->GetLeftResult();
     imwrite("dbg/left.jpg", left->image.data);
@@ -152,7 +151,7 @@ void Record(vector<string> &files) {
 }
 
 int main(int argc, char** argv) {
-    cv::ocl::setUseOpenCL(false);
+    //cv::ocl::setUseOpenCL(false);
     RegisterCrashHandler();
 
     CheckpointStore leftStore("tmp/left/", "tmp/shared/");

@@ -83,13 +83,28 @@ namespace optonaut {
 
         _flow = _flow(overlapAreaB);
 
-        Mat ig, dg;
+        UMat ig, dg;
 
         cvtColor(aOverlapImg, dg, COLOR_BGR2GRAY);
         cvtColor(bOverlapImg, ig, COLOR_BGR2GRAY);
-            
-        calcOpticalFlowFarneback(dg, ig, _flow, 0.5, 3, 4, 3, 5, 1.1, OPTFLOW_FARNEBACK_GAUSSIAN);
 
+        //pyrDown(dg, dg);
+        //pyrDown(ig, ig);
+       
+        UMat tmp(dg.size(), CV_32FC2);    
+
+        calcOpticalFlowFarneback(dg, ig, tmp, 
+                0.5, // Pyr Scale
+                3, // Levels
+                7, // Winsize
+                3, // Iterations
+                7, // Poly N 
+                1.5, // Poly Sigma
+                0); // Flags
+
+        //pyrUp(tmp, tmp);
+        tmp.copyTo(_flow);
+            
         if(debug) {
             static int dbgCtr2 = 0;
             imwrite("dbg/" + ToString(dbgCtr2) + "_b.jpg", b);
@@ -98,7 +113,9 @@ namespace optonaut {
             imwrite("dbg/" + ToString(dbgCtr2) + "_oa.jpg", aOverlapImg);
             dbgCtr2++;
         }
-
+        
+        cv::add(flow, Scalar(offset.x, offset.y), flow);
+/*
         for (int y = 0; y < b.rows; ++y)
         {
             for (int x = 0; x < b.cols; ++x)
@@ -107,36 +124,31 @@ namespace optonaut {
                 flow.at<Vec2f>(y, x) = Vec2f(d(0) + offset.x, d(1) + offset.y);
             }
         }
-        
+  */      
         t.Tick("Flow Calculation");
     }
 
-    void FlowBlender::Feed(const Mat &img, const Mat &flow_, const Point &tl)
+    void FlowBlender::Feed(const Mat &img, const Mat &flow, const Point &tl)
     {
+        AssertEQ(img.type(), CV_8UC3);
+        AssertEQ(flow.type(), CV_32FC2);
+
         STimer t;
         static int dbgCtr = 0;
-        AssertEQ(img.type(), CV_8UC3);
 
         Mat wmDest(img.size(), CV_32F, Scalar::all(0));
-        Mat wmSource(img.size(), CV_32F, Scalar::all(0));
 
         const Rect sourceRoi(tl - destRoi.tl(), img.size());
         
-        Log << "Sourc roi: " << sourceRoi << "from " << destMask.size();
-
         cv::detail::createWeightMap(destMask(sourceRoi), sharpness, wmDest);
-
-        Mat flow(img.size(), CV_32FC2, Scalar::all(0));
-
-        AssertEQ(flow_.type(), CV_32FC2);
-        flow_.copyTo(flow);
         
-        int dx = tl.x - destRoi.x;
-        int dy = tl.y - destRoi.y;
-
-        Mat flowViz;
+        int dx = sourceRoi.x;
+        int dy = sourceRoi.y;
+        
+        t.Tick("Blending Preperation");
 
         if(debug) {
+            Mat flowViz;
             flowViz = Mat(flow.size(), CV_8UC3, Scalar::all(0));
 
             for(int k = 0; k < flow.cols; k++) {
@@ -149,42 +161,15 @@ namespace optonaut {
                                 0);
                 }
             }
+            imwrite("dbg/" + ToString(dbgCtr) + "_flow.jpg", flowViz);
 
         }
-       
-        // TODO - maybe we can make this loop faster? 
-        for (int y = 0; y < img.rows; ++y)
-        {
-            for (int x = 0; x < img.cols; ++x)
-            {
-                Vec2f d = flow.at<Vec2f>(y, x);
-
-                int sfx = x + d(0);
-                int sfy = y + d(1);
-                int dfx = x + dx - d(0);
-                int dfy = y + dy - d(1);
-
-                if(sfx < 0 || sfy < 0 || dfx < 0 || dfy < 0 || 
-                   sfx >= img.cols || sfy >= img.rows || dfx >= dest.cols || dfy >= dest.rows ||
-                   destMask.at<uchar>(dfy, dfx) == 0) {
-
-                    flow.at<Vec2f>(y, x) = Vec2f(0, 0);   
-                    if(debug) {
-                        flowViz.at<Vec3b>(y, x) = Vec3b(0, 0, 255);
-                    }
-                }
-            }
-        }
-
-        t.Tick("Blending Preperation");
 
         if(debug) {
 
-            imwrite("dbg/" + ToString(dbgCtr) + "_flow.jpg", flowViz);
             imwrite("dbg/" + ToString(dbgCtr) + "_in.jpg", img);
             imwrite("dbg/" + ToString(dbgCtr) + "_dest.jpg", dest(sourceRoi));
             imwrite("dbg/" + ToString(dbgCtr) + "_dest_mask.jpg", destMask(sourceRoi));
-            imwrite("dbg/" + ToString(dbgCtr) + "_in_weight_map.jpg", (Mat)(wmSource * 255));
             imwrite("dbg/" + ToString(dbgCtr) + "_dest_weight_map.jpg", (Mat)(wmDest * 255));
             
             imwrite("dbg/" + ToString(dbgCtr) + "_dest_full.jpg", dest);
@@ -193,34 +178,87 @@ namespace optonaut {
 
         Mat temp(img.size(), CV_8UC3);
 
-        for (int y = 0; y < img.rows; ++y)
+
+        int w = img.cols;
+        int h = img.rows;
+        int dw = dest.cols;
+        int dh = dest.rows;
+
+        Mat imgMapX(w, h, CV_32F);
+        Mat imgMapY(w, h, CV_32F);
+        Mat zero(w, h, CV_32F, Scalar(0.f));
+        
+        Mat destMapX(w, h, CV_32F);
+        Mat destMapY(w, h, CV_32F);
+
+        // The following code block converts
+        // the flow image to a map for remapping 
+        // using raw pointers. 
+        float* pImgMapX = (float*)imgMapX.ptr();
+        float* pImgMapY = (float*)imgMapY.ptr();
+        float* pDestMapX = (float*)destMapX.ptr();
+        float* pDestMapY = (float*)destMapY.ptr();
+        float* pFlow = (float*)flow.ptr();
+        float* pwmDest = (float*)wmDest.ptr();
+        
+        for (int y = 0; y < h; ++y)
         {
-            for (int x = 0; x < img.cols; ++x)
+            for (int x = 0; x < w; ++x)
             {
-                float wcd = wmDest.at<float>(y, x);
-                //float ws = wmSource.at<float>(y, x); 
-                //float norm = wd + ws;
-
-                //if(norm == 0) { // no input. 
-                //    dest.at<Vec3b>(y, x) = Vec3b(0, 255, 0);
-                //    continue;
-                //}
-
-                //wd = wd / norm;
-                //ws = ws / norm;
-                float wcs = 1 - wcd;
-              
-                float wpd = wcd;
-                float wps = 1 - wpd;
-
-                Vec2f d = flow.at<Vec2f>(y, x);
                
-                temp.at<Vec3b>(y, x) = 
-                    Sample<Vec3b>(img, x + d(0) * wpd, y + d(1) * wpd) * wcs + 
-                    Sample<Vec3b>(dest, dx + x - d(0) * wps, dy + y - d(1) * wps) * wcd;
-                //temp.at<Vec3b>(y, x) = Vec3b(wd * 255, wd * 255, wd * 255);
+                float wcd = *pwmDest++;
+                float wcs = 1.f - wcd;
 
-                destMask.at<uchar>(dy + y, dx + x) = 255; 
+                // Convert flow to remap representation.
+                // Also add weights in one go. 
+                // Translation of source position is proportional
+                // to dest weight and vice-versa. 
+                float imgDx = x + *pFlow * wcd;
+                float destDx = dx + x - *pFlow++ * wcs;
+                float imgDy = y + *pFlow * wcd;
+                float destDy = dy + y - *pFlow++ * wcs;
+
+                // Check mapping - if out-of-bounds we use Identity mapping
+                // Todo: Might want to check mask
+                if(imgDx < 0 || imgDy < 0 || destDx < 0 || destDy < 0 || 
+                   imgDx >= w || imgDy >= h || destDx >= dw || destDy >= dh) {
+                    imgDx = x;
+                    destDx = dx + x;
+                    imgDy = y;
+                    destDy = dy + y;
+                }
+
+                *pImgMapX++ = imgDx;
+                *pImgMapY++ = imgDy;
+                *pDestMapX++ = destDx;
+                *pDestMapY++ = destDy;
+            }
+        }
+
+        // Remap the images as calculated above.
+        // That is 4 times faster than direct sampling. 
+        Mat remappedImg(w, h, CV_8UC3);
+        Mat remappedDest(w, h, CV_8UC3);
+        
+        cv::remap(img, remappedImg, imgMapX, imgMapY, INTER_LINEAR);
+        cv::remap(dest, remappedDest, destMapX, destMapY, INTER_LINEAR);
+
+        /// Now blend the remapped images. 
+        pwmDest = (float*)wmDest.ptr();
+        uchar* pRemappedImg = remappedImg.ptr();
+        uchar* pRemappedDest = remappedDest.ptr();
+        uchar* pTemp = temp.ptr();
+        
+        for (int y = 0; y < h; ++y)
+        {
+            for (int x = 0; x < w; ++x)
+            {
+                float wcd = *pwmDest++;
+                float wcs = 1.f - wcd;
+
+                for(int c = 0; c < 3; c++) {
+                    *pTemp++ = wcd * (*pRemappedDest++) + wcs * (*pRemappedImg++);
+                }
             }
         }
 
@@ -231,7 +269,9 @@ namespace optonaut {
         
         t.Tick("Blending Loop");
 
-        temp.copyTo(dest(Rect(dx, dy, temp.cols, temp.rows)));
+        // Commit the results to the destination image. 
+        temp.copyTo(dest(sourceRoi));
+        destMask(sourceRoi).setTo(Scalar(255));
 
         existingCores.push_back(sourceRoi);
         t.Tick("Blending Commit");

@@ -110,6 +110,16 @@ if(BUILD_FLOW_BLENDING_TEST)
     target_link_libraries(flow-blending-test optonaut-lib)
 endif(BUILD_FLOW_BLENDING_TEST)
 
+if(BUILD_SPEED_TEST)
+    add_executable(speed-test speedTest.cpp)
+    target_link_libraries(speed-test optonaut-lib)
+endif(BUILD_SPEED_TEST)
+
+if(BUILD_DENSE_FLOW_TEST)
+    add_executable(flow-test flowTest.cpp)
+    target_link_libraries(flow-test optonaut-lib)
+endif(BUILD_DENSE_FLOW_TEST)
+
 #add_executable(stereo-match-test stereoMatchTest.cpp)
 #target_link_libraries(stereo-match-test optonaut-lib)
 #target_link_libraries(stereo-match-test visual-debug-hook)
