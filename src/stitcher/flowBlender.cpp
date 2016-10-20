@@ -220,11 +220,12 @@ namespace optonaut {
 
                 // Check mapping - if out-of-bounds we use Identity mapping
                 // Todo: Might want to check mask
-                if(imgDx < 0 || imgDy < 0 || destDx < 0 || destDy < 0 || 
-                   imgDx >= w || imgDy >= h || destDx >= dw || destDy >= dh) {
+                if(imgDx < 0 || imgDy < 0 || imgDx >= w || imgDy >= h) {
                     imgDx = x;
-                    destDx = dx + x;
                     imgDy = y;
+                }
+                if(destDx < 0 || destDy < 0 || destDx >= dw || destDy >= dh || destMask.at<uchar>(destDy, destDx) == 0) {
+                    destDx = dx + x;
                     destDy = dy + y;
                 }
 
