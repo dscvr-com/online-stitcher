@@ -235,7 +235,7 @@ class ImageCorrespondenceFinder : public SelectionSink {
             // Third, apply corrections.  
             for(size_t i = 0; i < rings.size(); i++) {
                 auto ring = rings[i];
-                double dist; 
+                double dist = 0;
 
                 auto addDist = [&] 
                     (const InputImageP a, const InputImageP b) {
@@ -249,6 +249,8 @@ class ImageCorrespondenceFinder : public SelectionSink {
 
                 RingProcessor<InputImageP> 
                     sum(1, addDist, [](const InputImageP&) {});
+
+                Log << "Ring alignment dist: " << dist;
 
                 sum.Process(ring);
 

@@ -94,8 +94,8 @@ static inline void handler(int sig) {
 }
 
 static inline void RegisterCrashHandler() {
-    //signal(SIGSEGV, handler); 
-    //signal(SIGABRT, handler); 
+    signal(SIGSEGV, handler);
+    signal(SIGABRT, handler);
 }
 
 #endif

@@ -25,7 +25,7 @@ class Logger
             return prettyFunction.substr(begin,end);
         }
     public:
-        Logger(std::string function, bool isFunctionName) {
+        Logger(std::string function, bool isFunctionName) : line() {
             if(isFunctionName) {
                 line << "[" << MethodName(function) << "] ";   
             } else {

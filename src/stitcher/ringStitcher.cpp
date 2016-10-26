@@ -170,6 +170,7 @@ private:
         
         Log << "Destinatin ROI: " << dstRoi;
         Log << "Core ROI: " << coreRoi;
+        Log << "Dest ROI: " << dstRoi;
 
         Log << "Warping K: " << K;
         Log << "Warping R: " << R;
@@ -179,6 +180,7 @@ private:
 
         warpedMask = Mat(dstRoi.size(), CV_8U, Scalar::all(0));
         {
+            Log << "Warped mask size: " << warpedMask.size();
             Mat mask = Mat(img->image.rows, img->image.cols, CV_8U, Scalar::all(255));
             remap(mask, warpedMask, uxmap, uymap, INTER_NEAREST, BORDER_CONSTANT); 
             warpedMask = warpedMask(coreRoi);

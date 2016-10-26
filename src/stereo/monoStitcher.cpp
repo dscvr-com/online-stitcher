@@ -279,9 +279,9 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
     AreaToCorners(a.image->image.size(), target.R, a.image->intrinsics, 
             targetArea, corners);
     
-    for(auto c : corners) {
-        //Log << "Target corner: " << c;
-    }
+    //for(auto c : corners) {
+    //    //Log << "Target corner: " << c;
+    //}
 
     Rect roi = CornersToRoi(corners);
     target.size = roi.size();
