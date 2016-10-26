@@ -95,7 +95,7 @@ void Record(vector<string> &files) {
             recorder = shared_ptr<Recorder2>(
                     new Recorder2(base, zero, 
                         //image->intrinsics, sink, "", RecorderGraph::ModeCenter
-                        image->intrinsics, RecorderGraph::ModeCenter, 1
+                        image->intrinsics, RecorderGraph::ModeCenter, 1, "dbg/debug_out/"
                         //isAsync));
                         ));
 

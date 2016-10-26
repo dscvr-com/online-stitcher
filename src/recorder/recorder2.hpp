@@ -8,6 +8,7 @@
 #include "imageSelector.hpp"
 #include "imageLoader.hpp"
 #include "coordinateConverter.hpp"
+#include "debugSink.hpp"
 
 #ifndef OPTONAUT_RECORDER_2_HEADER
 #define OPTONAUT_RECORDER_2_HEADER
@@ -52,6 +53,8 @@ class Recorder2 {
         SelectionInfoToImageSink selectionToImageConverter;
         // Forwards the given image to previewStitcher AND correspondenceFinder
         TeeSink<SelectionInfo> previewTee;
+        // Writes debug images, if necassary.
+        DebugSink debugger;
         // Decouples slow correspondence finiding process from UI
         AsyncSink<SelectionInfo> decoupler;
         // Selects good images
@@ -65,7 +68,8 @@ class Recorder2 {
         Recorder2(const Mat &_base, const Mat &_zeroWithoutBase, 
                   const Mat &_intrinsics,
                   const int graphConfig = RecorderGraph::ModeAll, 
-                  const double tolerance = 1.0) :
+                  const double tolerance = 1.0,
+                  const std::string debugPath = "") :
             zeroWithoutBase(_zeroWithoutBase),
             base(_base),
             intrinsics(_intrinsics),
@@ -93,7 +97,8 @@ class Recorder2 {
             previewStitcher(previewGraph),
             selectionToImageConverter(previewStitcher),
             previewTee(selectionToImageConverter, adjuster),
-            decoupler(previewTee, true),
+            debugger(debugPath, debugPath.size() == 0, previewTee), 
+            decoupler(debugger, true),
             selector(graph, decoupler,
                 Vec3d(
                     M_PI / 64 * tolerance, 
