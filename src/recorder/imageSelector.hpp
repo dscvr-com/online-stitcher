@@ -167,6 +167,7 @@ namespace optonaut {
             }
 
             virtual void Finish() {
+                Log << "Finish.";
                 Flush();
             }
            

@@ -20,6 +20,7 @@ class ImageLoader : public ImageSink {
         }
 
         virtual void Finish() {
+            Log << "Finish";
             outputSink.Finish();
         }
     };
