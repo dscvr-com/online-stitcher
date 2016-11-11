@@ -112,7 +112,7 @@ class ImageForPostProcess : public SelectionSink {
         virtual void Push(SelectionInfo info) {
             Log << "Received Image: " << info.image->id;
             Log << "do nothing: ";
-            outSink->Push(info);
+            outSink.Push(info);
             return ;
 
         }

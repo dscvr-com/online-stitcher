@@ -96,7 +96,7 @@ class MotorControlRecorder {
            //    })), 
            // leftStitcher(allRotations, 1200, false),
            // rightStitcher(allRotations, 1200, false),
-            postProcess(&sink, graph),
+            postProcess(sink, graph),
             previewStitcher(previewGraph),
             selectionToImageConverter(previewStitcher),
             previewTee(selectionToImageConverter, postProcess),
