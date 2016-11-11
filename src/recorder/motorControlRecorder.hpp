@@ -10,6 +10,7 @@
 //#include "recorder2.hpp"
 #include "coordinateConverter.hpp"
 #include "debugSink.hpp"
+#include "imageSink.hpp"
 #include "imageForPostProcess.hpp"
 
 #ifndef OPTONAUT_MOTOR_CONTROL_RECORDER_HEADER
@@ -35,18 +36,18 @@ class MotorControlRecorder {
 
         const RecorderGraphGenerator generator;
         RecorderGraph graph;
-        RecorderGraph halfGraph;
+        //RecorderGraph halfGraph;
         RecorderGraph previewGraph;
         
         std::vector<Mat> allRotations;
 
         // order of operations, read from bottom to top. 
         // Stitchers for left and right result.
-        AsyncRingStitcher leftStitcher;
-        AsyncRingStitcher rightStitcher;
+        //AsyncRingStitcher leftStitcher;
+       // AsyncRingStitcher rightStitcher;
 
+        ImageSink &sink;
         ImageForPostProcess postProcess;
-        ImageCorrespondenceFinder adjuster;
         // Collects given input images for the center ring and computes a
         // low-resolution preview image.
         AsyncTolerantRingRecorder previewStitcher;
@@ -68,35 +69,37 @@ class MotorControlRecorder {
     public:
         MotorControlRecorder(const Mat &_base, const Mat &_zeroWithoutBase, 
                   const Mat &_intrinsics,
+                  ImageSink &sink,
                   const int graphConfig = RecorderGraph::ModeAll, 
                   const double tolerance = 1.0,
                   const std::string debugPath = "") :
             zeroWithoutBase(_zeroWithoutBase),
             base(_base),
+            sink(sink),
             intrinsics(_intrinsics),
             generator(),
             graph(generator.Generate(
                     intrinsics, 
                     graphConfig, 
-                    RecorderGraph::DensityNormal, 
+                    //RecorderGraph::DensityNormal, 
+                    RecorderGraph::DensityHalf, 
                     0, 8)),
-            halfGraph(RecorderGraphGenerator::Sparse(graph, 2)),
+           // halfGraph(RecorderGraphGenerator::Sparse(graph, 2)),
             previewGraph(generator.Generate(
                     intrinsics, RecorderGraph::ModeCenter,
                     RecorderGraph::DensityHalf, 0, 8)),
             // TODO - Seperate mapping for all rings with seperate ring stitchers. 
-            allRotations(fun::map<SelectionPoint*, Mat>(
-               halfGraph.GetTargetsById(), 
-               [](const SelectionPoint* x) {
-                    return x->extrinsics;
-               })), 
-            leftStitcher(allRotations, 1200, false),
-            rightStitcher(allRotations, 1200, false),
-            postProcess(graph),
-            adjuster(postProcess, graph),
+           // allRotations(fun::map<SelectionPoint*, Mat>(
+           //    halfGraph.GetTargetsById(), 
+           //    [](const SelectionPoint* x) {
+           //         return x->extrinsics;
+           //    })), 
+           // leftStitcher(allRotations, 1200, false),
+           // rightStitcher(allRotations, 1200, false),
+            postProcess(&sink, graph),
             previewStitcher(previewGraph),
             selectionToImageConverter(previewStitcher),
-            previewTee(selectionToImageConverter, adjuster),
+            previewTee(selectionToImageConverter, postProcess),
             debugger(debugPath, debugPath.size() == 0, previewTee), 
             decoupler(debugger, true),
             selector(graph, decoupler,
@@ -137,6 +140,7 @@ class MotorControlRecorder {
             return previewStitcher.Finalize();
         }
 
+/*
         StitchingResultP GetLeftResult() {
             Log << "GetLeftResult" ;
             return leftStitcher.Finalize();
@@ -147,6 +151,7 @@ class MotorControlRecorder {
             return rightStitcher.Finalize();
         }
 
+*/
         bool RecordingIsFinished() {
             return selector.IsFinished();
         }
@@ -199,7 +204,8 @@ class MotorControlRecorder {
         // TODO - refactor out
         bool AreAdjacent(SelectionPoint a, SelectionPoint b) {
             SelectionEdge dummy;
-            return halfGraph.GetEdge(a, b, dummy);
+            //return halfGraph.GetEdge(a, b, dummy);
+            return graph.GetEdge(a, b, dummy);
         }
         vector<SelectionPoint> GetSelectionPoints() const {
             vector<SelectionPoint> converted;
