@@ -1,4 +1,5 @@
 #include "../common/sink.hpp"
+#include "../common/imageQueueProcessor.hpp"
 #include "../common/asyncQueueWorker.hpp"
 #include "recorderGraphGenerator.hpp"
 #include "stereoGenerator.hpp"
@@ -7,24 +8,16 @@
 #include "asyncTolerantRingRecorder.hpp"
 #include "imageSelector.hpp"
 #include "imageLoader.hpp"
-//#include "recorder2.hpp"
+#include "recorder2.hpp"
 #include "coordinateConverter.hpp"
 #include "debugSink.hpp"
-#include "imageSink.hpp"
-#include "imageForPostProcess.hpp"
+#include "storageImageSink.hpp"
 
 #ifndef OPTONAUT_MOTOR_CONTROL_RECORDER_HEADER
 #define OPTONAUT_MOTOR_CONTROL_RECORDER_HEADER
 
 namespace optonaut {
 
-    class SelectionInfoToImageSink2 : public MapSink<SelectionInfo, InputImageP> {
-    public:
-        SelectionInfoToImageSink2(Sink<InputImageP> &outSink) :
-        MapSink<SelectionInfo, InputImageP>([](SelectionInfo in) {
-            return in.image;
-        }, outSink) { }
-    };
 
     
 class MotorControlRecorder {
@@ -45,14 +38,17 @@ class MotorControlRecorder {
         // Stitchers for left and right result.
         //AsyncRingStitcher leftStitcher;
        // AsyncRingStitcher rightStitcher;
+        ExposureCompensator exposure;
 
-        ImageSink &sink;
-        ImageForPostProcess postProcess;
+        StorageImageSink &sink;
+        //ImageForPostProcess postProcess;
+        ImageQueueProcessor<SelectionInfo> imageSave;
+        AsyncSink<SelectionInfo> postProcessImage;
         // Collects given input images for the center ring and computes a
         // low-resolution preview image.
         AsyncTolerantRingRecorder previewStitcher;
         // Converts SelectionInfo struct to InputImageP
-        SelectionInfoToImageSink2 selectionToImageConverter;
+        SelectionInfoToImageSink selectionToImageConverter;
         // Forwards the given image to previewStitcher AND correspondenceFinder
         TeeSink<SelectionInfo> previewTee;
         // Writes debug images, if necassary.
@@ -69,7 +65,7 @@ class MotorControlRecorder {
     public:
         MotorControlRecorder(const Mat &_base, const Mat &_zeroWithoutBase, 
                   const Mat &_intrinsics,
-                  ImageSink &sink,
+                  StorageImageSink &sink,
                   const int graphConfig = RecorderGraph::ModeAll, 
                   const double tolerance = 1.0,
                   const std::string debugPath = "") :
@@ -96,10 +92,11 @@ class MotorControlRecorder {
            //    })), 
            // leftStitcher(allRotations, 1200, false),
            // rightStitcher(allRotations, 1200, false),
-            postProcess(sink, graph),
+            imageSave(sink),
+            postProcessImage(imageSave, false),
             previewStitcher(previewGraph),
             selectionToImageConverter(previewStitcher),
-            previewTee(selectionToImageConverter, postProcess),
+            previewTee(selectionToImageConverter, postProcessImage),
             debugger(debugPath, debugPath.size() == 0, previewTee), 
             decoupler(debugger, true),
             selector(graph, decoupler,
@@ -127,6 +124,16 @@ class MotorControlRecorder {
         virtual void Finish() {
             AssertM(previewStitcher.GetResult() != nullptr, "GetPreviewImage must be called before calling Finish");
             //adjuster.Finish();
+            if (imageSave.HasResults()) {
+               Log << "Image Save has results";
+        
+                vector<vector<InputImageP>> postRings =       
+                    graph.SplitIntoRings(imageSave.postImages);
+                                                              
+                sink.Finish(postRings,  exposure.GetGains());  
+
+            }
+           postProcessImage.Finish();
         }
 
         StitchingResultP GetPreviewImage() {

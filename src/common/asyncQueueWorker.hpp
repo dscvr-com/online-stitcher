@@ -3,6 +3,7 @@
 #include "support.hpp"
 #include "sink.hpp"
 
+
 using namespace std;
 
 #ifndef OPTONAUT_ASYNC_QUEUE_HEADER
@@ -150,5 +151,7 @@ namespace optonaut {
             }
         }
     };
+
+
 }
 #endif

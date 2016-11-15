@@ -49,12 +49,15 @@ namespace optonaut {
         GlobalAlignment(CheckpointStore &imageStore, CheckpointStore &leftStore,
                         CheckpointStore &rightStore ) :
             imageStore(imageStore), leftStore(leftStore), rightStore(rightStore), generator() {
+                Log << "Global Alignment init";
                 AssertFalseInProduction(debug);
+                Log << "Global Alignment init2";
 
                 // If you want to fill missing images, please configure a dynamic path
                 // suitable for production in the AddDummyImages method. 
                 // Then remove this assert. 
                 AssertFalseInProduction(fillMissingImages);
+                Log << "Global Alignment init3";
         }
  
         void minifyImages(vector<InputImageP> &images, int downsample = 2) {
@@ -95,6 +98,7 @@ namespace optonaut {
 
             STimer timer;
             
+            Log << "Finish";
             vector<std::vector<InputImageP>> loadedRings;
             //vector<std::vector<InputImageP>> fullImages;
             BiMap<size_t, uint32_t> imagesToTargets, d;
@@ -102,7 +106,9 @@ namespace optonaut {
             MonoStitcher stereoConverter;
             vector<vector<StereoImage>> stereoRings;
 
+            Log << "before loaded rings";
             vector<InputImageP> inputImages = fun::flat(loadedRings);
+            Log << "after loaded rings";
             cv::Size originalSize = inputImages[0]->image.size();
 
             Mat intrinsics;
