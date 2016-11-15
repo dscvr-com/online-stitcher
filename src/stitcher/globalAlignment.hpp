@@ -29,13 +29,13 @@ using namespace cv;
 using namespace std;
 
 namespace optonaut {
-   
+
     /*
-     * Wrapper for the optonaut stitching part. 
-     */  
+     * Wrapper for the optonaut stitching part.
+     */
     class GlobalAlignment {
 
-    private:    
+    private:
         static const bool debug = false;
         //static const bool fillMissingImages = true;
         static const bool fillMissingImages = false;
@@ -54,50 +54,50 @@ namespace optonaut {
                 Log << "Global Alignment init2";
 
                 // If you want to fill missing images, please configure a dynamic path
-                // suitable for production in the AddDummyImages method. 
-                // Then remove this assert. 
+                // suitable for production in the AddDummyImages method.
+                // Then remove this assert.
                 AssertFalseInProduction(fillMissingImages);
                 Log << "Global Alignment init3";
         }
- 
+
         void minifyImages(vector<InputImageP> &images, int downsample = 2) {
            AssertGT(downsample, 0);
 
            int  counter = 0;
-           for(auto img : images) {            
+           for(auto img : images) {
                 std::string source = img->image.source;
                 if(!img->image.IsLoaded()) {
                     img->image.Load();
                     AssertM(img->image.data.cols != 0, "Image loaded successfully");
                 }
-    
-                cv::Mat small; 
-    
+
+                cv::Mat small;
+
                 pyrDown(img->image.data, small);
 
                 for(int i = 1; i < downsample; i++) {
                     pyrDown(small, small);
-                }              
-  
+                }
+
                 counter++;
-                img->image = Image(small); 
-                img->image.source = source; 
+                img->image = Image(small);
+                img->image.source = source;
 
             }
         }
 
-        // this is a copy of getVerticalFov 
+        // this is a copy of getVerticalFov
         double GetVerticalFov ( const Mat &intrinsics ) {
              double h = intrinsics.at<double>(1,2);
              double f = intrinsics.at<double>(0,0);
              return 2 * atan2(h,f);
         }
-        
+
 
         void Finish() {
 
             STimer timer;
-            
+
             Log << "Finish";
             vector<std::vector<InputImageP>> loadedRings;
             //vector<std::vector<InputImageP>> fullImages;
@@ -105,15 +105,18 @@ namespace optonaut {
             map<size_t, double> gains;
             MonoStitcher stereoConverter;
             vector<vector<StereoImage>> stereoRings;
+            imageStore.LoadStitcherInput(loadedRings, gains);
 
-            Log << "before loaded rings";
+            Log << "before loaded rings " << loadedRings.size();
             vector<InputImageP> inputImages = fun::flat(loadedRings);
-            Log << "after loaded rings";
+            Log << "after loaded rings" << sizeof(inputImages);
             cv::Size originalSize = inputImages[0]->image.size();
+            Log << "after originalSize";
 
             Mat intrinsics;
             intrinsics = inputImages[0]->intrinsics;
             int graphConfiguration = 0;
+            Log << "after graphConfiguration";
 
             // Quick hack to align all images relative to the first image recorded.
             /*
@@ -143,7 +146,7 @@ namespace optonaut {
             Log << "Using Intrinsics " << intrinsics;
 
             RecorderGraph recorderGraph = generator.Generate(intrinsics, graphConfiguration, RecorderGraph::DensityNormal, 0, 8);
-            
+
             vector<InputImageP> best = recorderGraph.SelectBestMatches(inputImages, imagesToTargets, false);
             Log << "Pre-Alignment, found " << best.size() << "/" << recorderGraph.Size() << "/" << inputImages.size();
 
@@ -154,29 +157,29 @@ namespace optonaut {
             }
 
             timer.Tick("Init'ed recorder graph and found best matches");
-            
+
             int downsample = 3;
             // minify the images
             minifyImages(best, downsample);
-            
+
             timer.Tick("Loaded mini images");
-            
+
             vector<vector<InputImageP>> rings = recorderGraph.SplitIntoRings(best);
             size_t k = rings.size() / 2;
-            
+
             minimal::ImagePreperation::SortById(rings[k]);
             RingCloser::CloseRing(rings[k]);
-            
-            timer.Tick("Closed Ring");
 
+            timer.Tick("Closed Ring");
+/*
             IterativeBundleAligner aligner;
     	    aligner.Align(best, recorderGraph, imagesToTargets, 5, 0.5);
-            
+
             timer.Tick("Bundle Adjustment");
-            
+*/
             // preLoad
             static int count = 0;
-            auto loadFullImage = 
+            auto loadFullImage =
             	[] (const SelectionInfo &img) {
                    // unload the last minified image
                     // this is a cheat. need to find the bug
@@ -188,11 +191,11 @@ namespace optonaut {
                         img.image->image.source.replace(found,5,str3);
                         cout << "image source replace " << img.image->image.source << endl;
                     }
-                    
-                    
-                    
+
+
+
                    if (img.image->image.IsLoaded())
-                   		img.image->image.Unload();          
+                   		img.image->image.Unload();
                 };
 
 
@@ -202,6 +205,7 @@ namespace optonaut {
             vector<InputImageP> bestAlignment = halfGraph.SelectBestMatches(best, finalImagesToTargets, false);
 
             Log << "Post-Alignment, found " << bestAlignment.size() << "/" << halfGraph.Size() << "/" << best.size();
+
 
             timer.Tick("Found best matches for post alignment");
 
@@ -217,16 +221,16 @@ namespace optonaut {
                 return aId < bId;
             });
 
-            auto ForwardToStereoProcess = 
+            auto ForwardToStereoProcess =
                 [&] (const SelectionInfo &a, const SelectionInfo &b) {
-    
+
          	    StereoImage stereo;
                 SelectionEdge dummy;
-                    
+
                 bool hasEdge = halfGraph.GetEdge(a.closestPoint, b.closestPoint, dummy);
-                    
+
            	    AssertWM(hasEdge, "Pair is correctly ordered");
-                    
+
                 if(!hasEdge)
                     return;
 
@@ -234,9 +238,9 @@ namespace optonaut {
                  *  Load the original image ( not the minified one )
                  */
                 if (!a.image->image.IsLoaded())
-                    a.image->image.Load();          
+                    a.image->image.Load();
                 if (!b.image->image.IsLoaded())
-                    b.image->image.Load();          
+                    b.image->image.Load();
 
                 stereoConverter.CreateStereo(a, b, stereo);
                 //stereo.A = stereoConverter.RectifySingle(a);
@@ -252,9 +256,9 @@ namespace optonaut {
                  * Unload image to save memory
                  */
                 if (a.image->image.IsLoaded())
-                    a.image->image.Unload();          
+                    a.image->image.Unload();
                 if (b.image->image.IsLoaded())
-                    b.image->image.Unload();          
+                    b.image->image.Unload();
 
                 leftStore.SaveRectifiedImage(stereo.A);
             	rightStore.SaveRectifiedImage(stereo.B);
@@ -278,8 +282,8 @@ namespace optonaut {
             auto FinishImage = [] (const SelectionInfo) { };
 
             RingProcessor<SelectionInfo> stereoRingBuffer(1, 1, loadFullImage, ForwardToStereoProcess, FinishImage);
-           
-            
+
+
        	    int lastRingId = -1;
             for(auto img : bestAlignment) {
             	SelectionPoint target;
@@ -297,12 +301,12 @@ namespace optonaut {
             	if(lastRingId != -1 && lastRingId != (int)target.ringId) {
                     stereoRingBuffer.Flush();
             	}
-                    
+
             	stereoRingBuffer.Push(info);
             	lastRingId = target.ringId;
             }
             stereoRingBuffer.Flush();
-            
+
             timer.Tick("Stereo Process");
 
         	/*
@@ -317,9 +321,9 @@ namespace optonaut {
                     rightImages.push_back(stereo.B);
                 }
 
-                vector<vector<InputImageP>> rightRings = 
+                vector<vector<InputImageP>> rightRings =
                     halfGraph.SplitIntoRings(rightImages);
-                vector<vector<InputImageP>> leftRings = 
+                vector<vector<InputImageP>> leftRings =
                     halfGraph.SplitIntoRings(leftImages);
 
                 leftStore.SaveStitcherInput(leftRings, gains );
@@ -329,7 +333,7 @@ namespace optonaut {
             timer.Tick("Save stitcher input");
 
         }
-   };    
+   };
 }
 
 #endif

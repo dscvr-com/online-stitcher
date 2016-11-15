@@ -19,7 +19,7 @@
 namespace optonaut {
 
 
-    
+
 class MotorControlRecorder {
 
     private:
@@ -31,10 +31,10 @@ class MotorControlRecorder {
         RecorderGraph graph;
         //RecorderGraph halfGraph;
         RecorderGraph previewGraph;
-        
+
         std::vector<Mat> allRotations;
 
-        // order of operations, read from bottom to top. 
+        // order of operations, read from bottom to top.
         // Stitchers for left and right result.
         //AsyncRingStitcher leftStitcher;
        // AsyncRingStitcher rightStitcher;
@@ -63,10 +63,10 @@ class MotorControlRecorder {
         CoordinateConverter converter;
 
     public:
-        MotorControlRecorder(const Mat &_base, const Mat &_zeroWithoutBase, 
+        MotorControlRecorder(const Mat &_base, const Mat &_zeroWithoutBase,
                   const Mat &_intrinsics,
                   StorageImageSink &sink,
-                  const int graphConfig = RecorderGraph::ModeAll, 
+                  const int graphConfig = RecorderGraph::ModeAll,
                   const double tolerance = 1.0,
                   const std::string debugPath = "") :
             zeroWithoutBase(_zeroWithoutBase),
@@ -75,21 +75,21 @@ class MotorControlRecorder {
             intrinsics(_intrinsics),
             generator(),
             graph(generator.Generate(
-                    intrinsics, 
-                    graphConfig, 
-                    //RecorderGraph::DensityNormal, 
-                    RecorderGraph::DensityHalf, 
+                    intrinsics,
+                    graphConfig,
+                    //RecorderGraph::DensityNormal,
+                    RecorderGraph::DensityHalf,
                     0, 8)),
            // halfGraph(RecorderGraphGenerator::Sparse(graph, 2)),
             previewGraph(generator.Generate(
                     intrinsics, RecorderGraph::ModeCenter,
                     RecorderGraph::DensityHalf, 0, 8)),
-            // TODO - Seperate mapping for all rings with seperate ring stitchers. 
+            // TODO - Seperate mapping for all rings with seperate ring stitchers.
            // allRotations(fun::map<SelectionPoint*, Mat>(
-           //    halfGraph.GetTargetsById(), 
+           //    halfGraph.GetTargetsById(),
            //    [](const SelectionPoint* x) {
            //         return x->extrinsics;
-           //    })), 
+           //    })),
            // leftStitcher(allRotations, 1200, false),
            // rightStitcher(allRotations, 1200, false),
             imageSave(sink),
@@ -97,26 +97,26 @@ class MotorControlRecorder {
             previewStitcher(previewGraph),
             selectionToImageConverter(previewStitcher),
             previewTee(selectionToImageConverter, postProcessImage),
-            debugger(debugPath, debugPath.size() == 0, previewTee), 
+            debugger(debugPath, debugPath.size() == 0, previewTee),
             decoupler(debugger, true),
             selector(graph, decoupler,
                 Vec3d(
-                    M_PI / 64 * tolerance, 
-                    M_PI / 128 * tolerance, 
+                    M_PI / 64 * tolerance,
+                    M_PI / 128 * tolerance,
                     M_PI / 16 * tolerance)),
-            loader(selector), 
+            loader(selector),
             converter(base, zeroWithoutBase, loader)
-        { 
+        {
             size_t imagesCount = graph.Size();
 
-            AssertEQM(UseSomeMemory(1280, 720, imagesCount), imagesCount, 
+            AssertEQM(UseSomeMemory(1280, 720, imagesCount), imagesCount,
                     "Successfully pre-allocate memory");
-        } 
+        }
 
         virtual void Push(InputImageP image) {
             Log << "Received Image. ";
             AssertM(!selector.IsFinished(), "Warning: Push after finish - this is probably a racing condition");
-            
+
             converter.Push(image);
         }
 
@@ -126,11 +126,14 @@ class MotorControlRecorder {
             //adjuster.Finish();
             if (imageSave.HasResults()) {
                Log << "Image Save has results";
-        
-                vector<vector<InputImageP>> postRings =       
+
+               Log << "imageSave.postImages size" << sizeof(imageSave.postImages);
+                vector<vector<InputImageP>> postRings =
                     graph.SplitIntoRings(imageSave.postImages);
-                                                              
-                sink.Finish(postRings,  exposure.GetGains());  
+
+                Log << "postRings " << postRings.size();
+                Log << "postRings "  << sizeof(postRings);       
+                sink.Finish(postRings,  exposure.GetGains());
 
             }
            postProcessImage.Finish();
@@ -166,48 +169,48 @@ class MotorControlRecorder {
         const RecorderGraph& GetRecorderGraph() {
             return graph;
         }
-    
+
         // TODO - rather expose selector
         Mat GetBallPosition() const {
             return converter.ConvertFromStitcher(selector.GetBallPosition());
         }
-    
+
         SelectionInfo GetCurrentKeyframe() const {
             return selector.GetCurrent();
         }
-        
+
         double GetDistanceToBall() const {
             return selector.GetError();
         }
-        
+
         const Mat &GetAngularDistanceToBall() const {
             return selector.GetErrorVector();
         }
-    
+
         bool IsIdle() {
             return selector.IsIdle();
         }
-        
+
         bool HasStarted() {
             return selector.HasStarted();
         }
-        
+
         bool IsFinished() {
             return selector.IsFinished();
         }
-    
+
         void SetIdle(bool isIdle) {
             selector.SetIdle(isIdle);
         }
-    
+
         uint32_t GetImagesToRecordCount() {
             return (uint32_t)selector.GetImagesToRecordCount();
         }
-        
+
         uint32_t GetRecordedImagesCount() {
             return (uint32_t)selector.GetRecordedImagesCount();
         }
-    
+
         // TODO - refactor out
         bool AreAdjacent(SelectionPoint a, SelectionPoint b) {
             SelectionEdge dummy;
@@ -224,10 +227,10 @@ class MotorControlRecorder {
                     n.ringId = point.ringId;
                     n.localId = point.localId;
                     n.extrinsics = converter.ConvertFromStitcher(point.extrinsics);
-                    
+
                     converted.push_back(n);
                 }
-                
+
             }
             return converted;
         }
