@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
 
         SimpleSphereStitcher stitcher;
         auto scene = stitcher.Stitch({imgA, imgB});
-        imwrite("dbg/" + ToString(i) + "_scene.jpg", scene->image.data);
+        imwrite("dbg/" + ToString(i) + "_scene_1_unaligned.jpg", scene->image.data);
         
         STimer timer;
 
@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
         imgA->originalExtrinsics = imgA->adjustedExtrinsics;
         
         scene = stitcher.Stitch({imgA, imgB});
-        imwrite("dbg/" + ToString(i) + "_scene_aligned.jpg", scene->image.data);
+        imwrite("dbg/" + ToString(i) + "_scene_2_aligned.jpg", scene->image.data);
     }
     return 0;
 }
