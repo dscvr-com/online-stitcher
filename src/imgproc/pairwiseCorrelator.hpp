@@ -128,7 +128,7 @@ public:
      *          is 0.5, which lets the correlator try all positions up to 0.5 * width or 0.5 * heigth 
      *          away from the center. 
      *
-     * @param wTolerance Additional tolerance to apply when checing for out-of-window correlations. 
+     * @param wTolerance Additional tolerance to apply when checking for out-of-window correlations. 
      */ 
     CorrelationDiff Match(const InputImageP a, const InputImageP b, int minWidth = 0, int minHeight = 0, bool forceWholeImage = false, float w = 0.5, float wTolerance = 1) {
 

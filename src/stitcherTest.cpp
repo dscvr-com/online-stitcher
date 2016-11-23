@@ -92,10 +92,13 @@ void Record(vector<string> &files) {
         allImages.push_back(image);
 
         if(i == 0) {
+
+            //std::string debugPath = "dbg/debug_out/";
+            std::string debugPath = "";
             recorder = shared_ptr<Recorder2>(
                     new Recorder2(base, zero, 
                         //image->intrinsics, sink, "", RecorderGraph::ModeCenter
-                        image->intrinsics, RecorderGraph::ModeCenter, 1, "dbg/debug_out/"
+                        image->intrinsics, RecorderGraph::ModeCenter, 1, ""
                         //isAsync));
                         ));
 

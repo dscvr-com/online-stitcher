@@ -254,7 +254,7 @@ class ImageCorrespondenceFinder : public SelectionSink {
 
                 sum.Process(ring);
 
-                double focalLenAdjustment = (1 - dist / (M_PI * 2));
+                double focalLenAdjustment = 1 / (1 - dist / (M_PI * 2));
                 Log << "Estimated focal length adjustment factor for ring "
                     << i << ": " 
                     << focalLenAdjustment;
