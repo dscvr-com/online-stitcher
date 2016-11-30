@@ -68,6 +68,9 @@ int main(int argc, char** argv) {
 
         Mat grayA, grayB;
 
+        imwrite("dbg/a.jpg", overlapA(overlapAreaA));
+        imwrite("dbg/b.jpg", overlapB(overlapAreaB));        
+
         cvtColor(overlapA(overlapAreaA), grayA, COLOR_BGR2GRAY);
         cvtColor(overlapB(overlapAreaB), grayB, COLOR_BGR2GRAY);
 
@@ -78,22 +81,23 @@ int main(int argc, char** argv) {
         t.Reset();
         calcOpticalFlowFarneback(grayA, grayB, flow, 
                 0.5, // Pyr Scale
-                3, // Levels
-                7, // Winsize
-                3, // Iterations
-                7, // Poly N 
-                1.5, // Poly Sigma
+                5, // Levels
+                2, // Winsize
+                5, // Iterations
+                5, // Poly N 
+                1.1, // Poly Sigma
                 0); // Flags
         t.Tick("Farneback flow");
         
         VisualizeFlow(flow, "dbg/farnebeck.jpg");
-        
+       /* 
         Ptr<DenseOpticalFlow> tvl1 = optflow::createOptFlow_DeepFlow();
         t.Reset();
         tvl1->calc(grayA, grayB, flow);
-        t.Tick("Simple flow");
+        t.Tick("Deep flow");
         
         VisualizeFlow(flow, "dbg/simple.jpg");
+        */
 
     }
     return 0;
