@@ -27,7 +27,6 @@ namespace optonaut {
             Mat &flow, 
             Point &offset, const bool reCalcOffset) const {
 
-
         STimer t;
 
         Rect aRoi(aTl, a.size());
@@ -39,79 +38,81 @@ namespace optonaut {
 
         if(overlap.width == 0 || overlap.height == 0)
             return;
-
-        Rect aOverlap(overlap.tl() - aTl, overlap.size());
-        Rect bOverlap(overlap.tl() - bTl, overlap.size());
-
-        Mat aOverlapImg = a(aOverlap);
-        Mat bOverlapImg = b(bOverlap);
         
-        Mat _flow = flow(bOverlap);
+        if(useFlow) {
+            Rect aOverlap(overlap.tl() - aTl, overlap.size());
+            Rect bOverlap(overlap.tl() - bTl, overlap.size());
 
-        if(reCalcOffset) { 
-            typedef PyramidPlanarAligner<
-                NormedCorrelator<LeastSquares<Vec3b>>
-            > AlignerToUse;
-
-            Mat corr; //Debug image used to print the correlation result.  
-            PlanarCorrelationResult result = AlignerToUse::Align(
-                    aOverlapImg, bOverlapImg, corr, 0.1, 0.01, 1);
-
-            offset = result.offset;
-
-            Log << "New offset: " << offset;
-        }
-
-        t.Tick("New Offset Calculation");
-
-        Rect roiA(offset.x / -2, offset.y / -2, 
-                aOverlapImg.cols, aOverlapImg.rows);
-
-        Rect roiB(offset.x / 2, offset.y / 2, 
-                bOverlapImg.cols, bOverlapImg.rows);
-
-        Rect overlappingArea = roiA & roiB;
-
-        Rect overlapAreaA(overlappingArea.tl() + roiA.tl(),
-                overlappingArea.size()); 
-
-        Rect overlapAreaB(overlappingArea.tl() + roiB.tl(),
-                overlappingArea.size());        
-
-        aOverlapImg = aOverlapImg(overlapAreaA);
-        bOverlapImg = bOverlapImg(overlapAreaB);
-
-        _flow = _flow(overlapAreaB);
-
-        UMat ig, dg;
-
-        cvtColor(aOverlapImg, dg, COLOR_BGR2GRAY);
-        cvtColor(bOverlapImg, ig, COLOR_BGR2GRAY);
-
-        //pyrDown(dg, dg);
-        //pyrDown(ig, ig);
-       
-        UMat tmp(dg.size(), CV_32FC2);    
-
-        calcOpticalFlowFarneback(dg, ig, tmp, 
-                0.5, // Pyr Scale
-                5, // Levels
-                5, // Winsize
-                5, // Iterations
-                7, // Poly N 
-                1.5, // Poly Sigma
-                0); // Flags
-
-        //pyrUp(tmp, tmp);
-        tmp.copyTo(_flow);
+            Mat aOverlapImg = a(aOverlap);
+            Mat bOverlapImg = b(bOverlap);
             
-        if(debug) {
-            static int dbgCtr2 = 0;
-            imwrite("dbg/" + ToString(dbgCtr2) + "_b.jpg", b);
-            imwrite("dbg/" + ToString(dbgCtr2) + "_a.jpg", a);
-            imwrite("dbg/" + ToString(dbgCtr2) + "_ob.jpg", bOverlapImg);
-            imwrite("dbg/" + ToString(dbgCtr2) + "_oa.jpg", aOverlapImg);
-            dbgCtr2++;
+            Mat _flow = flow(bOverlap);
+
+            if(reCalcOffset) { 
+                typedef PyramidPlanarAligner<
+                    NormedCorrelator<LeastSquares<Vec3b>>
+                > AlignerToUse;
+
+                Mat corr; //Debug image used to print the correlation result.  
+                PlanarCorrelationResult result = AlignerToUse::Align(
+                        aOverlapImg, bOverlapImg, corr, 0.1, 0.01, 1);
+
+                offset = result.offset;
+
+                Log << "New offset: " << offset;
+            }
+
+            t.Tick("New Offset Calculation");
+
+            Rect roiA(offset.x / -2, offset.y / -2, 
+                    aOverlapImg.cols, aOverlapImg.rows);
+
+            Rect roiB(offset.x / 2, offset.y / 2, 
+                    bOverlapImg.cols, bOverlapImg.rows);
+
+            Rect overlappingArea = roiA & roiB;
+
+            Rect overlapAreaA(overlappingArea.tl() + roiA.tl(),
+                    overlappingArea.size()); 
+
+            Rect overlapAreaB(overlappingArea.tl() + roiB.tl(),
+                    overlappingArea.size());        
+
+            aOverlapImg = aOverlapImg(overlapAreaA);
+            bOverlapImg = bOverlapImg(overlapAreaB);
+
+            _flow = _flow(overlapAreaB);
+
+            UMat ig, dg;
+
+            cvtColor(aOverlapImg, dg, COLOR_BGR2GRAY);
+            cvtColor(bOverlapImg, ig, COLOR_BGR2GRAY);
+
+            //pyrDown(dg, dg);
+            //pyrDown(ig, ig);
+           
+            UMat tmp(dg.size(), CV_32FC2);    
+
+            calcOpticalFlowFarneback(dg, ig, tmp, 
+                    0.5, // Pyr Scale
+                    5, // Levels
+                    5, // Winsize
+                    5, // Iterations
+                    7, // Poly N 
+                    1.5, // Poly Sigma
+                    0); // Flags
+
+            //pyrUp(tmp, tmp);
+            tmp.copyTo(_flow);
+                
+            if(debug) {
+                static int dbgCtr2 = 0;
+                imwrite("dbg/" + ToString(dbgCtr2) + "_b.jpg", b);
+                imwrite("dbg/" + ToString(dbgCtr2) + "_a.jpg", a);
+                imwrite("dbg/" + ToString(dbgCtr2) + "_ob.jpg", bOverlapImg);
+                imwrite("dbg/" + ToString(dbgCtr2) + "_oa.jpg", aOverlapImg);
+                dbgCtr2++;
+            }
         }
         
         cv::add(flow, Scalar(offset.x, offset.y), flow);

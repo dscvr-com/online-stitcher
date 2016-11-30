@@ -119,11 +119,12 @@ private:
     public:
     Impl(
             const InputImageP img, vector<Mat> rotations,
-            float warperScale, bool, int) :
+            float warperScale, bool useFlow) :
         queue(1, 
             std::bind(&Impl::FindSeams, this,
                 std::placeholders::_1, std::placeholders::_2), 
-            std::bind(&Impl::Feed, this, std::placeholders::_1)) {
+            std::bind(&Impl::Feed, this, std::placeholders::_1)),
+        blender(0.005, useFlow) {
         STimer timer; 
         timer.Tick("Async Preperation");
         
@@ -293,18 +294,17 @@ private:
 };
 
 AsyncRingStitcher::AsyncRingStitcher(std::vector<cv::Mat> rotations, 
-        float warperScale,
-        bool fast, int roiBuffer) :
+        float warperScale, bool useFlow) :
     pimpl_(NULL),
     warperScale(warperScale),
-    fast(fast), roiBuffer(roiBuffer), rotations(rotations) {
+    rotations(rotations), useFlow(useFlow) {
         AssertFalseInProduction(debug);        
 }
 
 void AsyncRingStitcher::Push(const InputImageP image) {
 
     if(pimpl_ == NULL) {   
-        pimpl_ = new Impl(image, rotations, warperScale, fast, roiBuffer);
+        pimpl_ = new Impl(image, rotations, warperScale, useFlow);
     }
     pimpl_->Push(image); 
 }
