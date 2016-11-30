@@ -82,10 +82,10 @@ int main(int argc, char** argv) {
         calcOpticalFlowFarneback(grayA, grayB, flow, 
                 0.5, // Pyr Scale
                 5, // Levels
-                2, // Winsize
+                5, // Winsize
                 5, // Iterations
-                5, // Poly N 
-                1.1, // Poly Sigma
+                7, // Poly N 
+                1.5, // Poly Sigma
                 0); // Flags
         t.Tick("Farneback flow");
         
