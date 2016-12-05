@@ -89,12 +89,12 @@ class Recorder2 {
                [](const SelectionPoint* x) {
                     return x->extrinsics;
                })), 
-            leftStitcher(allRotations, 1200, false),
-            rightStitcher(allRotations, 1200, false),
+            leftStitcher(allRotations, 1200, true),
+            rightStitcher(allRotations, 1200, true),
             stereoGenerator(leftStitcher, rightStitcher, halfGraph, adjuster), 
             reselector(stereoGenerator, halfGraph),
             adjuster(reselector, graph),
-            previewStitcher(previewGraph),
+            previewStitcher(previewGraph, 400, false),
             selectionToImageConverter(previewStitcher),
             previewTee(selectionToImageConverter, adjuster),
             debugger(debugPath, debugPath.size() == 0, previewTee), 

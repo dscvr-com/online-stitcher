@@ -13,7 +13,9 @@ namespace optonaut {
     */
     class FlowBlender {
     public:
-        FlowBlender(float sharpness = 0.005f);
+        // Todo: Sharpness param is stupid, should replace 
+        // by auto selection from image size. 
+        FlowBlender(float sharpness = 0.005f, const bool useFlow = true);
 
         float GetSharpness() const { return sharpness; }
         void SetSharpness(float val) { sharpness = val; }
@@ -34,10 +36,13 @@ namespace optonaut {
         cv::Mat dest;
         cv::Mat destMask;
         cv::Rect destRoi;
+        bool useFlow;
         std::vector<cv::Rect> existingCores;
     };
 
-    inline FlowBlender::FlowBlender(float sharpness) { SetSharpness(sharpness); }
+    inline FlowBlender::FlowBlender(float sharpness, bool useFlow) : useFlow(useFlow) { 
+        SetSharpness(sharpness); 
+    }
 }
 
 #endif

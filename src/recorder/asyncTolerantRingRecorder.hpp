@@ -19,13 +19,13 @@ class AsyncTolerantRingRecorder : public ImageSink {
         bool isFinished;
 
     public:
-        AsyncTolerantRingRecorder(RecorderGraph &graph, float warperScale = 400) :
+        AsyncTolerantRingRecorder(RecorderGraph &graph, float warperScale = 400, bool useFlow = true) :
             stitcher(
                fun::map<SelectionPoint*, Mat>(graph.GetTargetsById(), 
                    [](const SelectionPoint* x) {
                         return x->extrinsics;
                    }), 
-               warperScale, true),
+               warperScale, useFlow),
             // Bind selector directly to stitcher 
             PushToStitcher([&](SelectionInfo info) {
                 Assert(!isFinished);
@@ -43,7 +43,7 @@ class AsyncTolerantRingRecorder : public ImageSink {
                     false),
             result(nullptr),
             isFinished(false)
-        { }
+        { } 
 
         virtual void Push(InputImageP img) {
             Log << "Received Image.";

@@ -26,9 +26,9 @@ class AsyncRingStitcher : public ImageSink {
     Impl* pimpl_;
 
     float warperScale;
-    bool fast;
-    int roiBuffer;
     std::vector<cv::Mat> rotations;
+    bool useFlow;
+
     public:
 
     /*
@@ -38,9 +38,11 @@ class AsyncRingStitcher : public ImageSink {
      *                   will be pushed to this class.
      * @param rotations All expected rotations. The rotations have not to be exactly the same as the rotations that
      *                  are going to be pushed, but they need to cover the same area on the panorama. 
+     * @param warperScale Scale of the warper. See openCV docs for explaination. 
+     * @param useFlow Indicates wether to use flow or linear blending. 
      */
     AsyncRingStitcher(std::vector<cv::Mat> rotations, float warperScale = 300, 
-                bool fast = true, int roiBuffer = 0);
+                bool useFlow = true);
 
     /*
      * Pushes an image and adds it to the result. 
@@ -77,12 +79,12 @@ class AsyncRingStitcher : public ImageSink {
  */
 class RingStitcher {
 	public:
-    StitchingResultP Stitch(const std::vector<InputImageP> &images, ProgressCallback &progress) {
+    StitchingResultP Stitch(const std::vector<InputImageP> &images, ProgressCallback &progress, bool useFlow = true) {
 
         std::vector<Mat> rotations = fun::map<InputImageP, Mat>(images, 
                 [](const InputImageP &i) { return i->adjustedExtrinsics; }); 
 
-        AsyncRingStitcher core(rotations, GetWarperScale(), false, 0);
+        AsyncRingStitcher core(rotations, GetWarperScale(), useFlow);
 
         //TODO: Place all IO, exposure compensation and so on here. 
 
