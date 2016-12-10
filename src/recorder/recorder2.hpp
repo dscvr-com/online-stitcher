@@ -109,6 +109,10 @@ class Recorder2 {
         { 
             size_t imagesCount = graph.Size();
 
+            if(debugPath.size() != 0) {
+                Log << "Warning, debug mode activated.";
+            }
+
             AssertEQM(UseSomeMemory(1280, 720, imagesCount), imagesCount, 
                     "Successfully pre-allocate memory");
         } 
@@ -123,6 +127,15 @@ class Recorder2 {
         // This has to be called after GetPreviewImage.
         virtual void Finish() {
             AssertM(previewStitcher.GetResult() != nullptr, "GetPreviewImage must be called before calling Finish");
+            adjuster.Finish();
+        }
+
+        void Cancel() {
+            Log << "Cancel, calling converter finish.";
+            converter.Finish();
+            Log << "Cancel, calling preview finish.";
+            previewStitcher.Finish();
+            Log << "Cancel, calling adjuster finish.";
             adjuster.Finish();
         }
 

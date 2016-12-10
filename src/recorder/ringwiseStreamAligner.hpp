@@ -99,7 +99,7 @@ namespace optonaut {
             if(target == ring)
                 return { };
             
-            assert(target != -1);
+            Assert(target != -1);
                 
             InputImageP closest = NULL;
             

@@ -394,7 +394,7 @@ namespace optonaut {
                    } 
                 }
                 
-                assert((int)invmap.size() == n);
+                AssertEQ((int)invmap.size(), n);
 
                 tFindAlignment.Tick("Find Alignment");
 

@@ -160,6 +160,12 @@ class ImageCorrespondenceFinder : public SelectionSink {
         }
 
         virtual void Finish() {
+
+            if(largeImages.size() == 0)  {
+                outSink.Finish();
+                return;
+            }
+
             double error = 0; 
 
             miniImages.clear();

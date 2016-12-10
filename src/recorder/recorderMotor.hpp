@@ -304,8 +304,8 @@ namespace optonaut {
             monoTimer.Tick("Load Input");
             
             
-            assert(pair.a.image->IsLoaded());
-            assert(pair.b.image->IsLoaded());
+            Assert(pair.a.image->IsLoaded());
+            Assert(pair.b.image->IsLoaded());
 
             
             if(exposureEnabled)
@@ -316,7 +316,7 @@ namespace optonaut {
             StereoImage stereo;
             stereoConverter.CreateStereo(pair.a, pair.b, stereo);
 
-            assert(stereo.valid);
+            Assert(stereo.valid);
             monoTimer.Tick("Stereo Conv");
             
             int size = saveQueue.Push(stereo);

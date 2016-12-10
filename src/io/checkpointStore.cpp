@@ -78,6 +78,7 @@ namespace optonaut {
     }
     
     void CheckpointStore::SaveOptograph(StitchingResultP image) {
+        Log << "Writing optograph of size " << image->image.size() << " to " << optographPath << "result";
         StitchingResultToFile(image, optographPath + "result", defaultExtension);
     }
     

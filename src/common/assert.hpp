@@ -8,6 +8,7 @@
 
 //#include "backtrace.hpp"
 #include "support.hpp"
+#include "jniHelper.hpp"
 
 #ifndef OPTONAUT_ASSERT_HEADER
 #define OPTONAUT_ASSERT_HEADER
@@ -80,8 +81,14 @@ namespace optonaut {
 #endif
 
         if(!isWarning) {
-            //PrintBacktrace();
-            std::abort();
+            #ifdef __ANDROID__
+                __android_log_print(ANDROID_LOG_ERROR, "OPTONAUT_ONLINE_STITCHER", "Critical error. Using JNI hack to get stack trace.");
+                // Use JNI to raise an error (with a nice stack trace)
+                JniHelper::jni_context->FindClass(NULL);
+                std::abort();
+            #else
+                std::abort();
+            #endif
         }
     }
 

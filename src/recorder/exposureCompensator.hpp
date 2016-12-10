@@ -94,8 +94,8 @@ namespace optonaut {
                     return zero;
                 }
 
-                assert(a.cols == b.cols && a.rows == b.rows);
-                assert(a.type() == b.type());
+                Assert(a.cols == b.cols && a.rows == b.rows);
+                Assert(a.type() == b.type());
 
                 // Now just sum up all pixels and then substract the results. 
                 double sumB = 0;
@@ -127,7 +127,7 @@ namespace optonaut {
                     }
                 } else {
                     cout << "Unsupported mat type" << endl;
-                    assert(false);
+                    Assert(false);
                 } 
                 
                 // Add the correspondence to the graph. 
@@ -202,7 +202,7 @@ namespace optonaut {
                 // Solve for optimum error. 
                 solve(A, b, gains);
                 
-                assert((int)invmap.size() == n);
+                Assert((int)invmap.size() == n);
 
                 for (int i = 0; i < n; ++i) {
                     this->gains[invmap[i]] = gains.at<double>(i, 0);

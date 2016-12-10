@@ -62,9 +62,12 @@ class AsyncTolerantRingRecorder : public ImageSink {
         // Can be called from any thread, after finish has been called. 
         StitchingResultP Finalize() {
             Assert(result == nullptr);
-            Assert(isFinished);
-            
-            result = stitcher.Finalize();
+
+            if(isFinished) {
+                result = stitcher.Finalize();
+            } else {
+                result = std::make_shared<StitchingResult>();
+            }
             return result;
         }
 

@@ -139,6 +139,15 @@ class MotorControlRecorder {
            postProcessImage.Finish();
         }
 
+        void Cancel() {
+            Log << "Cancel, calling converter finish.";
+            converter.Finish();
+            Log << "Cancel, calling preview finish.";
+            previewStitcher.Finish();
+            Log << "Cancel, calling adjuster finish.";
+            postProcessImage.Finish();
+        }
+
         StitchingResultP GetPreviewImage() {
             // Calling finish here circumvents the chaining.
             // It is safe because our AsyncSink decoupler intercepts finish.

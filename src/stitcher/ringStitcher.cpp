@@ -316,7 +316,8 @@ StitchingResultP AsyncRingStitcher::Finalize() {
 }
 
 AsyncRingStitcher::~AsyncRingStitcher() {
-    if(pimpl_ != NULL)
+    if(pimpl_ != NULL) {
         delete pimpl_;
+    }
 }
 }
