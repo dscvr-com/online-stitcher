@@ -132,12 +132,34 @@ class MotorControlRecorder {
                     graph.SplitIntoRings(imageSave.postImages);
 
                 Log << "postRings " << postRings.size();
-                Log << "postRings "  << sizeof(postRings);       
+                Log << "postRings "  << sizeof(postRings);
                 sink.Finish(postRings,  exposure.GetGains());
 
             }
            postProcessImage.Finish();
         }
+
+        double getTopThetaValue () {
+          if (graph.vCenterList.size() == 3 ) {
+            return graph.vCenterList[2];
+          }
+          return 0;
+        }
+        double getCenterThetaValue () {
+          if (graph.vCenterList.size() == 3) {
+            return graph.vCenterList[1];
+          }
+          return 0;
+        }
+        double getBotThetaValue () {
+          if (graph.vCenterList.size() == 3) {
+            return graph.vCenterList[0];
+          }
+          return 0;
+        }
+
+
+
 
         void Cancel() {
             Log << "Cancel, calling converter finish.";
