@@ -5,6 +5,7 @@ common/image.cpp
 common/progressCallback.cpp
 common/static_timer.cpp
 common/static_counter.cpp
+common/jniHelper.cpp
 io/checkpointStore.cpp
 io/inputImage.cpp
 io/io.cpp
