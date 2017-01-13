@@ -71,14 +71,13 @@ class MotorControlRecorder {
                   const std::string debugPath = "") :
             zeroWithoutBase(_zeroWithoutBase),
             base(_base),
-            sink(sink),
             intrinsics(_intrinsics),
             generator(),
             graph(generator.Generate(
                     intrinsics,
                     graphConfig,
-                    //RecorderGraph::DensityNormal,
-                    RecorderGraph::DensityHalf,
+                    RecorderGraph::DensityNormal,
+                    //RecorderGraph::DensityHalf,
                     0, 8)),
            // halfGraph(RecorderGraphGenerator::Sparse(graph, 2)),
             previewGraph(generator.Generate(
@@ -92,6 +91,7 @@ class MotorControlRecorder {
            //    })),
            // leftStitcher(allRotations, 1200, false),
            // rightStitcher(allRotations, 1200, false),
+            sink(sink),
             imageSave(sink),
             postProcessImage(imageSave, false),
             previewStitcher(previewGraph),

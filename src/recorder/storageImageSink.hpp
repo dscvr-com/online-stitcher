@@ -18,6 +18,7 @@ namespace optonaut {
         
     public:
         void Push(SelectionInfo in) {
+            Log << "Saving image " << in.image->id;
             imageStore.SaveRectifiedImage(in.image);
         }
 

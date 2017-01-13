@@ -146,7 +146,7 @@ void GetTargetArea(const SelectionPoint &a, const SelectionPoint &b, Mat &center
  * @returns Offset of the center pixel of the input image in the output. 
  */
 Point2f MapToTarget(const InputImageP a, const StereoTarget &target, Mat &result, Mat &targetK, bool debug = false) {
-    Mat rot, rot4 = target.R.inv() * a->adjustedExtrinsics;
+    Mat rot, rot4 = a->adjustedExtrinsics * target.R.inv();
     From4DoubleTo3Double(rot4, rot);
     double t = -0.02; //"Arm length" in homogenic space, 
     //which means 1 =  width of sensor.

@@ -143,6 +143,8 @@ class ImageCorrespondenceFinder : public SelectionSink {
                         std::abs((int)cand.closestPoint.localId - (int)infoCopy.closestPoint.localId) == 1 ||
                         (size_t)std::abs((int)cand.closestPoint.localId - (int)infoCopy.closestPoint.localId) == graph.GetRings()[cand.closestPoint.ringId].size() - 1);
 
+                Log << "NEIGH, Area: " << overlapArea << ", " << neighbors;
+
 
                 if(neighbors) {
                 //if(overlapArea > inCand.area() / 5.0f * 4.0f) {

@@ -34,7 +34,6 @@ option(BUILD_SPEED_TEST "Build implementation detail speed tests" ON)
 #    CARBON_LIB 
 #    IOKIT_LIB)
 #SET(OSX_LIBS ${COCOA_LIB} ${CARBON_LIB} ${IOKIT_LIB})
-
 find_package( OpenCV REQUIRED )
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall -Wunreachable-code -std=c++1y -O3 -g -Werror -fverbose-asm")
 add_subdirectory(src)
