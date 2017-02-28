@@ -308,7 +308,6 @@ void AsyncRingStitcher::Push(const InputImageP image) {
     }
     pimpl_->Push(image); 
 }
-
 StitchingResultP AsyncRingStitcher::Finalize() { 
     // If this assert fires, no images were pushed. 
     AssertM(pimpl_ != NULL, "Stitching implementation was initialized.");
