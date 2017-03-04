@@ -20,14 +20,14 @@ class IterativeBundleAligner {
     private:
         static const bool drawDebug = false;
 
-        SimpleSphereStitcher debugger;
-
-        void DrawDebugGraph(const vector<InputImageP> &images,
+    public:
+        static void DrawDebugGraph(const vector<InputImageP> &images,
                 const RecorderGraph &graph, 
                 const BiMap<size_t, uint32_t> &imagesToTargets,
                 const AlignmentGraph::Edges &edges,
-                int k) {
+                std::string filename) {
 
+            SimpleSphereStitcher debugger(200);
             auto res = debugger.Stitch(images);
             cv::Point imgCenter = res->corner;
             std::map<size_t, InputImageP> imageById;
@@ -35,8 +35,6 @@ class IterativeBundleAligner {
             for(auto img : images) {
                 imageById[img->id] = img;
             }
-
-            imwrite("dbg/aligned_" + ToString(k) + ".jpg", res->image.data);
 
             for(auto edge : edges) {
                if(edge.value.valid) {
@@ -65,15 +63,15 @@ class IterativeBundleAligner {
                         swap(aCenter, bCenter);
                    }
 
-                   //double dPhi = edge.value.dphi * 10;
-                   double dTheta = edge.value.dtheta * 10;
+                   double dPhi = edge.value.dphi * 10;
+                   //double dTheta = edge.value.dtheta * 10;
 
-                   if(dTheta != dTheta)
+                   if(dPhi != dPhi)
                        continue;
 
-                   Scalar color(255 * min(1.0, max(0.0, -dTheta)), 
+                   Scalar color(255 * min(1.0, max(0.0, -dPhi)), 
                                0, 
-                               255 * min(1.0, max(0.0, dTheta)));
+                               255 * min(1.0, max(0.0, dPhi)));
                    
                    int thickness = 6;
 
@@ -100,11 +98,10 @@ class IterativeBundleAligner {
                     ExtractExtrinsics(images), images[0]->intrinsics, 
                     images[0]->image.size(), 800, res->corner);
 
-            imwrite("dbg/aligned_" + ToString(k) + "_weights.jpg", res->image.data);
+            imwrite(filename, res->image.data);
         }
 
-    public: 
-        IterativeBundleAligner() : debugger(200) { }
+        IterativeBundleAligner() { }
         double focalLenAdjustment;
 
 
@@ -116,6 +113,8 @@ class IterativeBundleAligner {
                 const RecorderGraph &graph, 
                 const BiMap<size_t, uint32_t> &imagesToTargets,
                 const int roundTresh = 15, const double errorTresh = 10) {
+
+            SimpleSphereStitcher debugger(200);
 
             AssertFalseInProduction(drawDebug);
             
@@ -205,7 +204,7 @@ class IterativeBundleAligner {
                 }
                 
                 if(drawDebug) { 
-                    DrawDebugGraph(images, graph, imagesToTargets, edges, k);
+                    DrawDebugGraph(images, graph, imagesToTargets, edges, "dbg/aligned_iteration_" + ToString(k) + ".jpg");
                 }
 
                 if(outError < errorTresh) {

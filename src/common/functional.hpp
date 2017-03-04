@@ -30,6 +30,17 @@ namespace fun {
         return out;
     }
 
+    template <typename In, typename Out> 
+    std::vector<Out> map(const std::deque<In> &input, std::function<Out(const In&)> conv) {
+        std::vector<Out> out(input.size());
+
+        for(size_t i = 0; i < input.size(); i++) {
+            out[i] = conv(input[i]);
+        }
+
+        return out;
+    }
+
 
     /*
      * Flattens a vector of vectors to a single vector. 

@@ -25,12 +25,13 @@ class ImageCorrespondenceFinder : public SelectionSink {
 
         const RecorderGraph &graph;
 
-        const int downsample = 1;
+        const int downsample = 0;
+        const bool debug = true;
 
         void ComputeMatch(const SelectionInfo &a, const SelectionInfo &b, 
                           int overlapArea) {
-            int minSize = min(a.image->image.cols, b.image->image.rows) / 3;
-            auto res = matcher.Match(a.image, b.image, minSize, minSize, false, 0.5);
+            //int minSize = min(a.image->image.cols, b.image->image.rows) / 3;
+            auto res = matcher.Match(a.image, b.image, 4, 4, false, 0.5, 1.8);
 
             Log << "B adj extrinsics: " << b.image->adjustedExtrinsics;
             Log << "A adj extrinsics: " << a.image->adjustedExtrinsics;
@@ -38,6 +39,8 @@ class ImageCorrespondenceFinder : public SelectionSink {
             Log << "A orig extrinsics: " << a.image->originalExtrinsics;
 
             Log << "Computing match between " << a.image->id << " and " << b.image->id << ": " << res.valid;
+
+            // TODO - Something is broken when correlating the images!
 
             if(res.valid) {
                 planarCorrelations.emplace(std::make_pair(a.image->id, b.image->id), res.angularOffset);
@@ -54,13 +57,14 @@ class ImageCorrespondenceFinder : public SelectionSink {
                     }
                     aToB.dx = res.offset.x * std::pow(2, downsample);
                     aToB.dy = res.offset.y * std::pow(2, downsample);
-                    aToB.overlap = res.correlationCoefficient * 2;
+                    aToB.overlap = 1; // res.correlationCoefficient * 2;
                     aToB.valid = res.valid;
                     aToB.rejectionReason = res.rejectionReason;
 
                     Log << "Offset " << a.image->id << 
                         " <> " << b.image->id << 
-                        " : " << res.offset * std::pow(2, downsample);
+                        " : " << res.offset * std::pow(2, downsample) << 
+                        ", angular: " << res.angularOffset;
                     
                     bToA = aToB;
                     bToA.dphi *= -1;
@@ -86,6 +90,9 @@ class ImageCorrespondenceFinder : public SelectionSink {
                     exposure.InsertCorrespondence(
                             a.image->id, b.image->id, aToB, bToA);
                 }
+            } else {
+                Log << "Skipping" << a.image->id << 
+                    " <> " << b.image->id;
             }
         }
 
@@ -105,6 +112,7 @@ class ImageCorrespondenceFinder : public SelectionSink {
             outSink(outSink), graph(fullGraph) { 
             warperFactory = new cv::SphericalWarper();
             warper = warperFactory->create(static_cast<float>(1600));
+            AssertFalseInProduction(debug);
         }
 
         virtual void Push(SelectionInfo info) {
@@ -114,18 +122,16 @@ class ImageCorrespondenceFinder : public SelectionSink {
             // Downsample the iamge - create a minified copy. 
             auto miniCopy = std::make_shared<InputImage>(*(info.image));
 
-            pyrDown(miniCopy->image.data, miniCopy->image.data);
-            pyrDown(miniCopy->image.data, miniCopy->image.data);
-                
             cv::Mat small; 
-    
-            pyrDown(miniCopy->image.data, small);
+   
+            if(downsample >= 1) {
+                pyrDown(miniCopy->image.data, small);
+                for(int i = 1; i < downsample; i++) {
+                    pyrDown(small, small);
+                }              
+                miniCopy->image = Image(small); 
+            }
 
-            for(int i = 1; i < downsample; i++) {
-                pyrDown(small, small);
-            }              
-
-            miniCopy->image = Image(small); 
             
             SelectionInfo infoCopy = info;
             infoCopy.image = miniCopy;
@@ -139,11 +145,14 @@ class ImageCorrespondenceFinder : public SelectionSink {
 
                 bool sameRing = cand.closestPoint.ringId == infoCopy.closestPoint.ringId;
 
+
+            // TODO - check if the last step 
+            // calcs the correspondence in the correc direction!
                 bool neighbors = sameRing && (
                         std::abs((int)cand.closestPoint.localId - (int)infoCopy.closestPoint.localId) == 1 ||
                         (size_t)std::abs((int)cand.closestPoint.localId - (int)infoCopy.closestPoint.localId) == graph.GetRings()[cand.closestPoint.ringId].size() - 1);
 
-                Log << "NEIGH, Area: " << overlapArea << ", " << neighbors;
+                //Log << "NEIGH, Area: " << overlapArea << ", " << neighbors;
 
 
                 if(neighbors) {
@@ -183,6 +192,23 @@ class ImageCorrespondenceFinder : public SelectionSink {
             // What's missing: Matching between rings. Proper adjustment of whole graph. 
             AssertEQM(rings.size(), (size_t)1, "Only single ring supported at the moment");
 
+            if(debug) {
+                auto images = fun::map<SelectionInfo, InputImageP>(largeImages, [](auto x) { return x.image; });
+                SimpleSphereStitcher::StitchAndWrite("dbg/alignment_1_before.jpg", images);
+                BiMap<size_t, uint32_t> imagesToTargets;
+                std::vector<AlignmentGraph::Edge> edges;
+
+                for(auto pair : alignment.GetEdges()) {
+                    edges.insert(edges.end(), pair.second.begin(), pair.second.end());
+                }
+
+                for(auto info : largeImages) {
+                    imagesToTargets.Insert(info.image->id, info.closestPoint.globalId);
+                }
+
+                IterativeBundleAligner::DrawDebugGraph(images, graph, imagesToTargets, edges, "dbg/alignment_0_weights.jpg");
+            }
+
             // First, close all rings.
             // Do so in recording order
             while(currentRing >= 0 && currentRing < (int)rings.size()) {
@@ -197,7 +223,7 @@ class ImageCorrespondenceFinder : public SelectionSink {
 
                 //2) Use alignment data  
                 auto edges = alignment.GetEdges(first->id, last->id);
-                
+
                 // Only do ring alignment if ring closing data is available. 
                 if(edges.size() == (size_t)1) {
                     double angleAdjustment = edges[0]->value.dphi;
@@ -213,27 +239,34 @@ class ImageCorrespondenceFinder : public SelectionSink {
                         ring[i]->adjustedExtrinsics = correction * ring[i]->adjustedExtrinsics;
 
                         Log << "Adjusting " << ring[i]->id << " by " << ydiff;
-                        vector<AlignmentGraph::Edge*> bwEdges;
 
+                        vector<AlignmentGraph::Edge*> bwEdges;
+/*
                         for(auto &fwdEdge : alignment.GetEdges()[ring[i]->id]) {
                             fwdEdge.value.dphi -= ydiff;
-                            auto _bwEdges = alignment.GetEdges(fwdEdge.from, fwdEdge.to);
+                            auto _bwEdges = alignment.GetEdges(fwdEdge.to, fwdEdge.from);
                             bwEdges.insert(bwEdges.begin(), _bwEdges.begin(), _bwEdges.end());
-
                         }
 
-                        std::sort(bwEdges.begin(), bwEdges.end() );
+                        std::sort(bwEdges.begin(), bwEdges.end());
                         bwEdges.erase(unique(bwEdges.begin(), bwEdges.end()), bwEdges.end());
                         for(auto bwEdge : bwEdges) {
                             bwEdge->value.dphi += ydiff;
                         }
+                        */
                     }
 
                     //4) TODO: correct graph for other rings. Alignment is probably sane, but
                     //it's way more efficient to "pre-turn" the rings. 
                     //DO NOT correct focal len
                 }
+
                 currentRing = graph.GetNextRing(currentRing);
+            }
+            
+            if(debug) {
+                //SimpleSphereStitcher::StitchAndWrite("dbg/alignment_ring_closed.jpg", largeImages);
+                SimpleSphereStitcher::StitchAndWrite("dbg/alignment_2_ring_closed.jpg", fun::map<SelectionInfo, InputImageP>(largeImages, [](auto x) { return x.image; }));
             }
 
             // Second, perform global optimization. 
@@ -281,14 +314,25 @@ class ImageCorrespondenceFinder : public SelectionSink {
                 info.image->intrinsics.at<double>(1, 1) *= focalLenAdjustment;
                 Log << "New k" << info.image->intrinsics;
             }
+            
+            if(debug) {
+                SimpleSphereStitcher::StitchAndWrite("dbg/alignment_3_focal_len.jpg", fun::map<SelectionInfo, InputImageP>(largeImages, [](auto x) { return x.image; }));
+            }
 
             // Todo - not sure if apply is good here. 
             for(auto info : largeImages) {
-                // TODO - Apply has no effect!
+                Mat tmp(4, 4, CV_64F);
+                info.image->adjustedExtrinsics.copyTo(tmp);
                 alignment.Apply(info.image);
                 info.image->adjustedExtrinsics.copyTo(info.image->originalExtrinsics);
+                Log << "Extrinsic change: " << (tmp - info.image->adjustedExtrinsics);
                 // Exposure disabled for now. 
                 // exposure.Apply(info.image->image.data, info.image->id);
+            }
+            
+            if(debug) {
+                //SimpleSphereStitcher::StitchAndWrite("dbg/alignment_adjusted.jpg", largeImages);
+                SimpleSphereStitcher::StitchAndWrite("dbg/alignment_4_aligned.jpg", fun::map<SelectionInfo, InputImageP>(largeImages, [](auto x) { return x.image; }));
             }
 
             planarCorrelations = CorrespondenceCrossProduct(planarCorrelations);
