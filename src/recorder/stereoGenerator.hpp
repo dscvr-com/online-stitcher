@@ -30,8 +30,8 @@ class StereoGenerator : public SelectionSink {
                 
             AssertWM(hasEdge, "Pair is correctly ordered");
                 
-            if(!hasEdge)
-                return;
+           // if(!hasEdge)
+           //     return;
             
             bool hasOffset = false;
             Point2d offset;
@@ -66,7 +66,7 @@ class StereoGenerator : public SelectionSink {
             const ImageCorrespondenceFinder &correspondences) : 
             leftOutputSink(leftOutputSink), rightOutputSink(rightOutputSink), 
             lastRingId(-1),
-            stereoRingBuffer(1, std::bind(&StereoGenerator::ConvertToStereo, this, placeholders::_1, placeholders::_2), [](const SelectionInfo&) {}),
+            stereoRingBuffer(3, std::bind(&StereoGenerator::ConvertToStereo, this, placeholders::_1, placeholders::_2), [](const SelectionInfo&) {}),
             graph(graph),
             correspondences(correspondences) {
         }

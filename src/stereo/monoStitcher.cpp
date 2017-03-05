@@ -250,7 +250,7 @@ InputImageP MonoStitcher::RectifySingle(const SelectionInfo &a) {
 
 void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo, Point2d &alignmentHint) const {
 
-    const static bool debug = false;
+    const static bool debug = true;
     AssertFalseInProduction(debug);
 
     Log << "Creating stereo between " << a.image->id << " and " << b.image->id;
