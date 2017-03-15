@@ -39,16 +39,19 @@ void TestQuatProduct(const Mat &inA, const Mat &inB) {
 }
 
 int main(int, char**) {
-    Mat a, b, test = Mat::eye(4, 4, CV_64F);
+    Mat a = Mat::eye(4, 4, CV_64F);
+    Mat b = Mat::eye(4, 4, CV_64F); 
+    Mat test = Mat::eye(4, 4, CV_64F);
     TestQuatConversion(test);
 
     double angles[] = {0, M_PI, M_PI / 2, M_PI / 8, 0.12, 0.99, 0.1};
+    size_t n = sizeof(angles) / sizeof(*angles);
 
-    for(size_t i = 0; i < sizeof(angles); i++) {
+    for(size_t i = 0; i < n; i++) {
         CreateRotationY(angles[i], a);
-        for(size_t j = 0; j < sizeof(angles); j++) {
+        for(size_t j = 0; j < n; j++) {
             CreateRotationZ(angles[j], b);
-            for(size_t k = 0; k < sizeof(angles); k++) {
+            for(size_t k = 0; k < n; k++) {
                 CreateRotationX(angles[k], test);
 
                 test = test * a * b;
@@ -59,9 +62,9 @@ int main(int, char**) {
 
     cout << "[\u2713] Quat conversion module." << endl;
     
-    for(size_t i = 0; i < sizeof(angles); i++) {
+    for(size_t i = 0; i < n; i++) {
         CreateRotationY(angles[i], a);
-        for(size_t j = 0; j < sizeof(angles); j++) {
+        for(size_t j = 0; j < n; j++) {
             CreateRotationZ(angles[j], b);
 
             TestQuatProduct(a, b);

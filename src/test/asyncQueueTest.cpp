@@ -8,7 +8,6 @@
 #include "../common/asyncQueueWorker.hpp"
 
 using namespace std;
-using namespace cv;
 using namespace optonaut;
 
 void SleepRandom() {

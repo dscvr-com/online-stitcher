@@ -193,7 +193,7 @@ class ImageCorrespondenceFinder : public SelectionSink {
             AssertEQM(rings.size(), (size_t)1, "Only single ring supported at the moment");
 
             if(debug) {
-                auto images = fun::map<SelectionInfo, InputImageP>(largeImages, [](auto x) { return x.image; });
+                auto images = fun::map<SelectionInfo, InputImageP>(largeImages, [](const SelectionInfo& x) -> InputImageP { return x.image; });
                 SimpleSphereStitcher::StitchAndWrite("dbg/alignment_1_before.jpg", images);
                 BiMap<size_t, uint32_t> imagesToTargets;
                 std::vector<AlignmentGraph::Edge> edges;
@@ -266,7 +266,7 @@ class ImageCorrespondenceFinder : public SelectionSink {
             
             if(debug) {
                 //SimpleSphereStitcher::StitchAndWrite("dbg/alignment_ring_closed.jpg", largeImages);
-                SimpleSphereStitcher::StitchAndWrite("dbg/alignment_2_ring_closed.jpg", fun::map<SelectionInfo, InputImageP>(largeImages, [](auto x) { return x.image; }));
+                SimpleSphereStitcher::StitchAndWrite("dbg/alignment_2_ring_closed.jpg", fun::map<SelectionInfo, InputImageP>(largeImages, [](const SelectionInfo& x) -> InputImageP { return x.image; }));
             }
 
             // Second, perform global optimization. 
@@ -316,7 +316,7 @@ class ImageCorrespondenceFinder : public SelectionSink {
             }
             
             if(debug) {
-                SimpleSphereStitcher::StitchAndWrite("dbg/alignment_3_focal_len.jpg", fun::map<SelectionInfo, InputImageP>(largeImages, [](auto x) { return x.image; }));
+                SimpleSphereStitcher::StitchAndWrite("dbg/alignment_3_focal_len.jpg", fun::map<SelectionInfo, InputImageP>(largeImages, [](const SelectionInfo& x) -> InputImageP { return x.image; }));
             }
 
             // Todo - not sure if apply is good here. 
@@ -332,7 +332,7 @@ class ImageCorrespondenceFinder : public SelectionSink {
             
             if(debug) {
                 //SimpleSphereStitcher::StitchAndWrite("dbg/alignment_adjusted.jpg", largeImages);
-                SimpleSphereStitcher::StitchAndWrite("dbg/alignment_4_aligned.jpg", fun::map<SelectionInfo, InputImageP>(largeImages, [](auto x) { return x.image; }));
+                SimpleSphereStitcher::StitchAndWrite("dbg/alignment_4_aligned.jpg", fun::map<SelectionInfo, InputImageP>(largeImages, [](const SelectionInfo& x) -> InputImageP { return x.image; }));
             }
 
             planarCorrelations = CorrespondenceCrossProduct(planarCorrelations);
