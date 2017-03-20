@@ -33,7 +33,7 @@ class SimpleSphereStitcher {
 
         static inline StitchingResultP StitchAndWrite(const std::string &path, const std::vector<InputImageP> &images) {
             SimpleSphereStitcher s;
-            auto res = s.Stitch(images);
+            auto res = s.Stitch(images, false, true);
             cv::imwrite(path, res->image.data);
             return res;
         }

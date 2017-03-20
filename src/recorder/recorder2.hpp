@@ -77,7 +77,7 @@ class Recorder2 {
             graph(generator.Generate(
                     intrinsics, 
                     graphConfig, 
-                    RecorderGraph::DensityNormal, 
+                    RecorderGraph::DensityHalf, 
                     0, 8)),
             halfGraph(RecorderGraphGenerator::Sparse(graph, 2)),
             previewGraph(generator.Generate(

@@ -81,16 +81,15 @@ namespace optonaut {
             copy = false;
         }
         
-        if(image.data.cols != WorkingWidth && image.data.rows != WorkingHeight) {
-            AssertFalseInProduction(false); //Resize should be unnecassary
-            // TODO: implement cropping
-            AssertM(false, "expected correct size: " + ToString(image.data.cols) + ", " + ToString(image.data.rows));
-            Mat res;
-            cv::resize(image.data, res, cv::Size(WorkingWidth, WorkingHeight));
-            image = Image(res);
-            
-            copy = false;
-        }
+        //if(image.data.cols != WorkingWidth && image.data.rows != WorkingHeight) {
+        //    AssertFalseInProduction(false); //Resize should be unnecassary
+        //    // TODO: implement cropping
+        //    Mat res;
+        //    cv::resize(image.data, res, cv::Size(WorkingWidth, WorkingHeight));
+        //    image = Image(res);
+        //    
+        //    copy = false;
+        //}
         
         if(copy) {
             AssertFalseInProduction(false);

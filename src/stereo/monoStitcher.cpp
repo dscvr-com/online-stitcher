@@ -79,8 +79,8 @@ Rect CornersToRoi(const vector<Point2f> &corners) {
     return roi;
 }
 
-
-const double hBufferRatio = 1.1;
+// Buffer: How much do we decrease/increase h/v size of target area?
+const double hBufferRatio = 0.8;
 const double vBufferRatio = -0.02;
 
 /*
@@ -250,7 +250,7 @@ InputImageP MonoStitcher::RectifySingle(const SelectionInfo &a) {
 
 void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo, Point2d &alignmentHint) const {
 
-    const static bool debug = true;
+    const static bool debug = false;
     AssertFalseInProduction(debug);
 
     Log << "Creating stereo between " << a.image->id << " and " << b.image->id;

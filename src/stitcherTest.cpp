@@ -120,8 +120,9 @@ void Record(vector<string> &files) {
                         image->intrinsics, recorderOut, RecorderMode, 8, "");
 #else
             // Recorder2 
+            // TODO: Change tolerance back!
             recorder = std::make_shared<RecorderToUse>(base, zero, 
-                        image->intrinsics, RecorderMode, 8, "");
+                        image->intrinsics, RecorderMode, 16, "");
 #endif
 
             recorder->SetIdle(false);

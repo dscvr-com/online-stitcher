@@ -109,3 +109,12 @@ Please keep track of all the dependencies when compiling OpenCV. Ceres solver an
 The visual debug hook and the SFM preview depends on the 3D library irrlicht. 
 
 The code can be compiled by running ```./compile.sh``` in the root directory. 
+
+## Hardware Accellerated debugging
+
+Hardware accellerated computation uses GLSL with SFML. 
+This is natively supported on almost all OS. 
+
+If you need to run it on Bash for Windows, install an XServer on windows (VcXsrv), invoke it with the command line (so the window is not hidden), then in Bash export the disaply (export DISPLAY=:0). 
+
+This will create a fine rendering context. 

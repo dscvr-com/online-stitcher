@@ -44,8 +44,12 @@ namespace optonaut {
 	inline T ParseFromCharArray(const char* data) {
 		T val;
         std::istringstream text(data);
-		text >> val;
-		return val;
+		if(text >> val) {
+            return val;
+        } else {
+            std::cout << "Error while parsing, crashing." << std::endl;
+            assert(false);
+        }
 	}
    
     /*

@@ -1,4 +1,3 @@
-include_directories( ${OpenCV_INCLUDE_DIRS} )
 
 add_library(optonaut-lib
 common/image.cpp
@@ -120,6 +119,12 @@ if(BUILD_DENSE_FLOW_TEST)
     add_executable(flow-test flowTest.cpp)
     target_link_libraries(flow-test optonaut-lib)
 endif(BUILD_DENSE_FLOW_TEST)
+
+if(BUILD_SFML_TEST)
+    add_executable(sfml-test sfmlTest.cpp)
+    target_link_libraries(sfml-test ${SFML_LIBRARIES})
+    target_link_libraries(sfml-test optonaut-lib)
+endif(BUILD_SFML_TEST)
 
 #add_executable(stereo-match-test stereoMatchTest.cpp)
 #target_link_libraries(stereo-match-test optonaut-lib)

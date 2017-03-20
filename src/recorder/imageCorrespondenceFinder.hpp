@@ -27,6 +27,7 @@ class ImageCorrespondenceFinder : public SelectionSink {
 
         const int downsample = 0;
         const bool debug = true;
+        const bool ringClosingOn = true;
 
         void ComputeMatch(const SelectionInfo &a, const SelectionInfo &b, 
                           int overlapArea) {
@@ -211,7 +212,7 @@ class ImageCorrespondenceFinder : public SelectionSink {
 
             // First, close all rings.
             // Do so in recording order
-            while(currentRing >= 0 && currentRing < (int)rings.size()) {
+            while(currentRing >= 0 && currentRing < (int)rings.size() && ringClosingOn) {
                 const vector<InputImageP> &ring = rings[currentRing];
                 
                 //1) Get first/last
@@ -273,7 +274,7 @@ class ImageCorrespondenceFinder : public SelectionSink {
             alignment.FindAlignment(error); 
             exposure.FindGains();
 
-            // Third, apply corrections.  
+            // Third, apply focal length corrections.  
             for(size_t i = 0; i < rings.size(); i++) {
                 auto ring = rings[i];
                 double dist = 0;
