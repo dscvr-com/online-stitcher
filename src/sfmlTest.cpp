@@ -5,6 +5,25 @@
 
 using namespace std;
 
+void MatToTexture(const cv::Mat& a, sf::Texture& t) {
+    cv::Mat c;
+    assert(a.type() == CV_8UC3);
+    cv::cvtColor(a, c, CV_BGR2BGRA);
+    t.create(a.cols, a.rows);
+    t.update(c.data);
+    assert(t.generateMipmap());
+}  
+
+void InitializeSubstractionShader(sf::Shader& sub) {
+    sub.loadFromFile("src/shader/base.vert", "src/shader/subtract.frag");
+}
+
+void SetShaderTextures(sf::Shader& sub, sf::Texture& a, sf::Texture& b) {
+    sub.setUniform("texture1", a);
+    sub.setUniform("texture2", b);
+}
+
+
 int main(int argc, char** argv)
 {
     if(argc < 3) {
@@ -18,53 +37,80 @@ int main(int argc, char** argv)
     cout << "Loading image" << pa << endl;
     cout << "Loading image" << pb << endl;
 
-    cv::Mat a3 = cv::imread(pa);
-    cv::Mat b3 = cv::imread(pb);
-    cv::Mat a, b;
+    cv::Mat a = cv::imread(pa);
+    cv::Mat b = cv::imread(pb);
 
-    cv::cvtColor(a3, a, CV_BGR2BGRA);
-    cv::cvtColor(b3, b, CV_BGR2BGRA);
+    sf::Texture ta, tb;
 
-    sf::Texture ta;
-    ta.create(a.cols, a.rows);
-    sf::Texture tb;
-    tb.create(b.cols, b.rows);
+    MatToTexture(a, ta);
+    MatToTexture(b, tb);
 
-    ta.update(a.data);
-    tb.update(b.data);
+    //sf::RenderTexture texture;
+    //if(!texture.create(a.cols, a.rows)) {
+    //    cout << "Texture creation failed" << endl;
+    //    return -1;
+    //}
 
-    sf::RenderTexture texture;
-    if(!texture.create(a.cols, a.rows)) {
-        cout << "Texture creation failed" << endl;
-        return -1;
-    }
+    sf::Vector2f size(a.cols / 10, a.rows / 10);
 
-
-    sf::Vector2f size(a.cols, a.rows);
     sf::RectangleShape quad(size);
+
     sf::Shader sub;
-    sub.loadFromFile("src/shader/base.vert", "src/shader/subtract.frag");
-    sub.setParameter("texture1", ta);
-    sub.setParameter("texture2", tb);
+    InitializeSubstractionShader(sub);
+    SetShaderTextures(sub, ta, tb);
 
 
     quad.setTexture(&ta); // Hack! This sets our texture. 
-    //quad.setTexture(&tb);
-    texture.clear(sf::Color::Black);
+    //texture.clear(sf::Color::Black);
     sf::RenderStates state(&sub); // TODO: Add shader
 
+    sf::RenderWindow window(sf::VideoMode(size.x, size.y), "SFML OpenGL");
+
+    window.setFramerateLimit(10);
+    window.setVisible(true);
+
+    float cw = 1.0f / a.rows * 100.0f;
+    float cs = cw / 8;
+    float i = -cw;
+    float j = -cw;
+
+    while (window.isOpen())
+    {
+        sub.setParameter("offX", i);
+        sub.setParameter("offY", j);
+
+        i += cs;
+
+        if(i > cw) {
+            j += cs;
+            i = -cw;
+            if(j > cw) {
+                j = -cw;
+            }
+        }
+
+        sf::Event event;
+        while (window.pollEvent(event));
+
+        window.clear();
+        window.pushGLStates();
+        window.draw(quad, state);
+        window.popGLStates();
+
+        // Finally, display the rendered frame on screen
+        window.display();
+    }
+
+/*
     int s = 32;
     sf::RenderTexture down;
     down.create(s, s);
     sf::Vector2f unit(s, s);
     sf::RectangleShape miniQuad(unit);
 
-    float cw = 1.0f / a.rows * 2.0f;
-    float cs = cw / 4;
 
     sf::Image img;
     int mind = 9999999;
-
 
     for(float i = -cw; i <= cw; i += cs) {
     for(float j = -cw; j <= cw; j += cs) {
@@ -101,4 +147,5 @@ int main(int argc, char** argv)
     }
 
     return 0;
+    */
 }

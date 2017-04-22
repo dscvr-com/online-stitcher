@@ -41,10 +41,11 @@ int main(int argc, char** argv) {
         auto scene = stitcher.Stitch({imgA, imgB});
         imwrite("dbg/" + ToString(i) + "_scene_1_unaligned.jpg", scene->image.data);
         
-        STimer timer;
 
         PairwiseCorrelator corr;
+        STimer timer;
         auto result = corr.Match(imgA, imgB, 4, 4, false, 0.5, 1.8); 
+        timer.Tick("Match");
 
         if(!result.valid) {
             cout << "Correlation: Rejected " << result.rejectionReason << "." << endl;
