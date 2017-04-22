@@ -18,6 +18,8 @@ using namespace cv;
 namespace optonaut {
 
     void InputImage::LoadFromDataRef(bool copy) {
+        
+        Log << dataRef.width << "x" << dataRef.height;
 
         // This method should be tuned. A lot. 
         // Some parts are protected by asserts on purpose, since they should
@@ -62,11 +64,8 @@ namespace optonaut {
             //loadTimer.Tick("## mkImage");
 
         } else if (dataRef.colorSpace == colorspace::RGB) {
-            
             image = Image(
                     cv::Mat(dataRef.height, dataRef.width, CV_8UC3, dataRef.data));
-            
-
         } else {
             Assert(false); //Unsupported input color space.
         }
@@ -82,9 +81,10 @@ namespace optonaut {
         }
         
         if(image.data.cols != WorkingWidth && image.data.rows != WorkingHeight) {
-            AssertFalseInProduction(false); //Resize should be unnecassary
+            //AssertFalseInProduction(false); //Resize should be unnecassary
             // TODO: implement cropping
-            AssertM(false, "expected correct size: " + ToString(image.data.cols) + ", " + ToString(image.data.rows));
+            //AssertM(false, "expected correct size: " + ToString(image.data.cols) + ", " + ToString(image.data.rows));
+            AssertM(abs((float)image.cols / image.rows - (float)WorkingWidth / (float)WorkingHeight) < 0.01, "Aspect ratio does match for resize.");
             Mat res;
             cv::resize(image.data, res, cv::Size(WorkingWidth, WorkingHeight));
             image = Image(res);

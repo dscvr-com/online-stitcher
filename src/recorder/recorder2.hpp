@@ -119,6 +119,9 @@ class Recorder2 {
 
         virtual void Push(InputImageP image) {
             Log << "Received Image. ";
+            //Log << image->originalExtrinsics;
+            Log << image->image.cols << "x" << image->image.rows;
+            //Log << image->intrinsics;
             AssertM(!selector.IsFinished(), "Warning: Push after finish - this is probably a racing condition");
             
             converter.Push(image);

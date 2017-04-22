@@ -12,7 +12,7 @@
 namespace optonaut {
 namespace minimal {
 
-    bool CompareByFilename (const std::string &a, const std::string &b) {
+    inline bool CompareByFilename (const std::string &a, const std::string &b) {
         return IdFromFileName(a) < IdFromFileName(b);
     }
 

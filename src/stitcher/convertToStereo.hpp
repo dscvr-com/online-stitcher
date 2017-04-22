@@ -172,14 +172,15 @@ namespace optonaut {
                 [&] (const SelectionInfo &a, const SelectionInfo &b) {
 
          	    StereoImage stereo;
-                SelectionEdge dummy;
-
-                bool hasEdge = recorderGraph.GetEdge(a.closestPoint, b.closestPoint, dummy);
-
-           	    AssertWM(hasEdge, "Pair is correctly ordered");
-
-                if(!hasEdge)
-                    return;
+                // TODO: Only enable this if we don't do stereo amplify.
+                //SelectionEdge dummy;
+                //
+                //bool hasEdge = recorderGraph.GetEdge(a.closestPoint, b.closestPoint, dummy);
+                //
+           	    //AssertWM(hasEdge, "Pair is correctly ordered");
+                //
+                //if(!hasEdge)
+                //    return;
 
                 /*
                  *  Load the original image ( not the minified one )
