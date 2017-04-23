@@ -2,7 +2,7 @@
 // Created by Emi on 10/12/2016.
 //
 
-#include "JniHelper.hpp"
+#include "jniHelper.hpp"
 
 #ifdef __ANDROID__
 namespace optonaut {

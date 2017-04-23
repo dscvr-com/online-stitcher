@@ -5,8 +5,6 @@
 #include <thread>
 #include <opencv2/stitching/detail/blenders.hpp>
 #include <opencv2/core/ocl.hpp>
-#include <opencv2/optflow.hpp>
-#include <opencv2/tracking.hpp>
 
 #include "minimal/imagePreperation.hpp"
 #include "common/intrinsics.hpp"

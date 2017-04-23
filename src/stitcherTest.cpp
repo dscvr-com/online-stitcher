@@ -57,7 +57,6 @@ void Record(vector<string> &files) {
         zero = Recorder::androidZero;
     }
 
-
     //DebugHook::Instance = &hook;
 
     for(size_t i = 0; i < files.size(); i++) {
