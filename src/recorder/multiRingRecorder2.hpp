@@ -19,7 +19,7 @@ namespace optonaut {
 
 
 
-class MotorControlRecorder {
+class MultiRingRecorder {
 
     private:
         const Mat zeroWithoutBase;
@@ -54,7 +54,7 @@ class MotorControlRecorder {
         CoordinateConverter converter;
 
     public:
-        MotorControlRecorder(const Mat &_base, const Mat &_zeroWithoutBase,
+        MultiRingRecorder(const Mat &_base, const Mat &_zeroWithoutBase,
                   const Mat &_intrinsics,
                   StorageImageSink &_sink,
                   const int graphConfig = RecorderGraph::ModeAll,
@@ -106,7 +106,7 @@ class MotorControlRecorder {
         virtual void Finish() {
             AssertM(previewStitcher.GetResult() != nullptr, "GetPreviewImage must be called before calling Finish");
 
-            decoupler.Finish();
+            asyncQueue.Finish();
             sink.SaveInputSummary(graph);
         }
 

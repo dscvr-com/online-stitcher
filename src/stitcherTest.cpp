@@ -13,13 +13,13 @@
 #include "common/backtrace.hpp"
 #include "common/drawing.hpp"
 #include "stitcher/stitcher.hpp"
-#include "stitcher/convertToStereo.hpp"
+#include "stitcher/globalAlignment.hpp"
 #include "io/io.hpp"
 #include "recorder/recorder2.hpp"
 #include "recorder/multiRingRecorder2.hpp"
 
 // Comment in this define to use the motor pipeline for testing. 
-// #define USE_MOTOR
+#define USE_MOTOR
 
 using namespace std;
 using namespace cv;
@@ -32,7 +32,7 @@ bool CompareByFilename (const string &a, const string &b) {
 }
 
 #ifdef USE_MOTOR
-typedef MotorControlRecorder RecorderToUse;
+typedef MultiRingRecorder RecorderToUse;
 const int RecorderMode = RecorderGraph::ModeTruncated; 
 #else
 typedef Recorder2 RecorderToUse;
@@ -169,10 +169,10 @@ void Record(vector<string> &files) {
     recorder->Finish();
 #ifdef USE_MOTOR
     // Motor
-    ConvertToStereo convertToStereo(outStore, leftStore, rightStore);
-    Stitcher leftStitcher(leftStore);
-    Stitcher rightStitcher(rightStore);
-    convertToStereo.Finish();
+    GlobalAlignment globalAlignment(outStore, leftStore, rightStore);
+    optonaut::Stitcher leftStitcher(leftStore);
+    optonaut::Stitcher rightStitcher(rightStore);
+    globalAlignment.Finish();
 
     auto left = leftStitcher.Finish(ProgressCallback::Empty);
     auto right = rightStitcher.Finish(ProgressCallback::Empty);
@@ -218,7 +218,6 @@ int main(int argc, char** argv) {
    //     cout << "Skipping Recording." << endl;
    // }
 /*
-
     if(!leftStore.HasUnstitchedRecording()) {
         cout << "Aligning." << endl;
         GlobalAlignment globalAlignment = GlobalAlignment(postProcStore, leftStore, rightStore);

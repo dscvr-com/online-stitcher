@@ -57,7 +57,7 @@ namespace optonaut {
         }
 
         // Loads mini images from the source, then unloads the original. 
-        void mMinifyImages(vector<InputImageP> &images, int downsample = 2) {
+        void MinifyImages(vector<InputImageP> &images, int downsample = 2) {
            AssertGT(downsample, 0);
 
            int  counter = 0;
@@ -140,7 +140,7 @@ namespace optonaut {
             // #### Step 2: Load mini images and run bundle adjustment
 
             int downsample = 3;
-            minifyImages(best, downsample);
+            MinifyImages(best, downsample);
 
             timer.Tick("Loaded mini images");
 
@@ -152,8 +152,9 @@ namespace optonaut {
 
             timer.Tick("Closed Center Ring");
             
-            IterativeBundleAligner aligner;
-    	    aligner.Align(best, recorderGraph, imagesToTargets, 5, 0.5);
+            // TODO: Disabled for debugging. 
+            //IterativeBundleAligner aligner;
+    	    //aligner.Align(best, recorderGraph, imagesToTargets, 5, 0.5);
 
             timer.Tick("Bundle Adjustment Finished");
 
