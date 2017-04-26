@@ -122,7 +122,7 @@ if(BUILD_DENSE_FLOW_TEST)
 endif(BUILD_DENSE_FLOW_TEST)
 
 if(BUILD_GF_FACTOR_TOOL)
-    add_executable(gf-factor-tool glFactors.cpp)
+    add_executable(gf-factor-tool gfFactors.cpp)
     target_link_libraries(gf-factor-tool optonaut-lib)
 endif(BUILD_GF_FACTOR_TOOL)
 
