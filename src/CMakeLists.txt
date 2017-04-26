@@ -121,6 +121,11 @@ if(BUILD_DENSE_FLOW_TEST)
     target_link_libraries(flow-test optonaut-lib)
 endif(BUILD_DENSE_FLOW_TEST)
 
+if(BUILD_GF_FACTOR_TOOL)
+    add_executable(gf-factor-tool glFactors.cpp)
+    target_link_libraries(gf-factor-tool optonaut-lib)
+endif(BUILD_GF_FACTOR_TOOL)
+
 #add_executable(stereo-match-test stereoMatchTest.cpp)
 #target_link_libraries(stereo-match-test optonaut-lib)
 #target_link_libraries(stereo-match-test visual-debug-hook)

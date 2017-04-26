@@ -18,6 +18,7 @@ option(BUILD_FLOW_FIELD_TEST "Build flow field test program" OFF)
 option(BUILD_FLOW_BLENDING_TEST "Build flow field blending test program" ON) 
 option(BUILD_DENSE_FLOW_TEST "Build flow algorithm tests" OFF) 
 option(BUILD_SPEED_TEST "Build implementation detail speed tests" OFF) 
+option(BUILD_GF_FACTOR_TOOL "Build the gunnar farnebäck factor calculation" ON) 
 
 #find_package(OpenGL REQUIRED)
 #include_directories(${OPENGL_INCLUDE_DIR})
