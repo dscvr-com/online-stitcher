@@ -67,7 +67,7 @@ class Recorder2 {
     public:
         Recorder2(const Mat &_base, const Mat &_zeroWithoutBase, 
                   const Mat &_intrinsics,
-                  const int graphConfig = RecorderGraph::ModeAll, 
+                  const int graphConfig = RecorderGraph::ModeCenter, 
                   const double tolerance = 1.0,
                   const std::string debugPath = "") :
             zeroWithoutBase(_zeroWithoutBase),
@@ -83,7 +83,6 @@ class Recorder2 {
             previewGraph(generator.Generate(
                     intrinsics, RecorderGraph::ModeCenter,
                     RecorderGraph::DensityHalf, 0, 8)),
-            // TODO - Seperate mapping for all rings with seperate ring stitchers. 
             allRotations(fun::map<SelectionPoint*, Mat>(
                halfGraph.GetTargetsById(), 
                [](const SelectionPoint* x) {
@@ -112,6 +111,8 @@ class Recorder2 {
             if(debugPath.size() != 0) {
                 Log << "Warning, debug mode activated.";
             }
+
+            AssertEQM(graphConfig, RecorderGraph::ModeCenter, "This recorder instance only supports center ring recording")
 
             AssertEQM(UseSomeMemory(1280, 720, imagesCount), imagesCount, 
                     "Successfully pre-allocate memory");

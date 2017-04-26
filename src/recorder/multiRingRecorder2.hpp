@@ -29,21 +29,13 @@ class MotorControlRecorder {
 
         const RecorderGraphGenerator generator;
         RecorderGraph graph;
-        //RecorderGraph halfGraph;
         RecorderGraph previewGraph;
 
-        std::vector<Mat> allRotations;
-
         // order of operations, read from bottom to top.
-        // Stitchers for left and right result.
-        //AsyncRingStitcher leftStitcher;
-       // AsyncRingStitcher rightStitcher;
-        ExposureCompensator exposure;
-
+        // Storage of final results
         StorageImageSink &sink;
-        //ImageForPostProcess postProcess;
-        ImageQueueProcessor<SelectionInfo> imageSave;
-        AsyncSink<SelectionInfo> postProcessImage;
+        // Decoupling 
+        AsyncSink<SelectionInfo> asyncQueue;
         // Collects given input images for the center ring and computes a
         // low-resolution preview image.
         AsyncTolerantRingRecorder previewStitcher;
@@ -65,7 +57,7 @@ class MotorControlRecorder {
     public:
         MotorControlRecorder(const Mat &_base, const Mat &_zeroWithoutBase,
                   const Mat &_intrinsics,
-                  StorageImageSink &sink,
+                  StorageImageSink &_sink,
                   const int graphConfig = RecorderGraph::ModeAll,
                   const double tolerance = 1.0,
                   const std::string debugPath = "") :
@@ -76,24 +68,13 @@ class MotorControlRecorder {
             graph(generator.Generate(
                     intrinsics,
                     graphConfig,
-                    //RecorderGraph::DensityNormal,
                     RecorderGraph::DensityHalf,
                     0, 8)),
-           // halfGraph(RecorderGraphGenerator::Sparse(graph, 2)),
             previewGraph(generator.Generate(
                     intrinsics, RecorderGraph::ModeCenter,
                     RecorderGraph::DensityHalf, 0, 8)),
-            // TODO - Seperate mapping for all rings with seperate ring stitchers.
-           // allRotations(fun::map<SelectionPoint*, Mat>(
-           //    halfGraph.GetTargetsById(),
-           //    [](const SelectionPoint* x) {
-           //         return x->extrinsics;
-           //    })),
-           // leftStitcher(allRotations, 1200, false),
-           // rightStitcher(allRotations, 1200, false),
-            sink(sink),
-            imageSave(sink),
-            postProcessImage(imageSave, false),
+            sink(_sink),
+            decoupler(sink, false),
             previewStitcher(previewGraph),
             selectionToImageConverter(previewStitcher),
             previewTee(selectionToImageConverter, postProcessImage),
@@ -109,6 +90,8 @@ class MotorControlRecorder {
         {
             size_t imagesCount = graph.Size();
 
+            AssertNEQM(graphConfig, RecorderGraph::ModeCenter, "Using multi-ring recorder for center ring only. Thats not efficient.")
+
             AssertEQM(UseSomeMemory(1280, 720, imagesCount), imagesCount,
                     "Successfully pre-allocate memory");
         }
@@ -123,43 +106,10 @@ class MotorControlRecorder {
         // This has to be called after GetPreviewImage.
         virtual void Finish() {
             AssertM(previewStitcher.GetResult() != nullptr, "GetPreviewImage must be called before calling Finish");
-            //adjuster.Finish();
-            if (imageSave.HasResults()) {
-               Log << "Image Save has results";
 
-               Log << "imageSave.postImages size" << sizeof(imageSave.postImages);
-                vector<vector<InputImageP>> postRings =
-                    graph.SplitIntoRings(imageSave.postImages);
-
-                Log << "postRings " << postRings.size();
-                Log << "postRings "  << sizeof(postRings);
-                sink.Finish(postRings,  exposure.GetGains());
-
-            }
-           postProcessImage.Finish();
+            decoupler.Finish()
+            sink.SaveInputSummary(graph)
         }
-
-        double getTopThetaValue () {
-          if (graph.vCenterList.size() == 3 ) {
-            return graph.vCenterList[2];
-          }
-          return 0;
-        }
-        double getCenterThetaValue () {
-          if (graph.vCenterList.size() == 3) {
-            return graph.vCenterList[1];
-          }
-          return 0;
-        }
-        double getBotThetaValue () {
-          if (graph.vCenterList.size() == 3) {
-            return graph.vCenterList[0];
-          }
-          return 0;
-        }
-
-
-
 
         void Cancel() {
             Log << "Cancel, calling converter finish.";
@@ -175,24 +125,12 @@ class MotorControlRecorder {
             // It is safe because our AsyncSink decoupler intercepts finish.
             Log << "Get Preview Image. ";
             converter.Finish();
-            Log << "converter finish. ";
+            Log << "Converter finish. ";
             previewStitcher.Finish();
-            Log << "preview stitcher finish. ";
+            Log << "Preview stitcher finish. ";
             return previewStitcher.Finalize();
         }
 
-/*
-        StitchingResultP GetLeftResult() {
-            Log << "GetLeftResult" ;
-            return leftStitcher.Finalize();
-        }
-
-        StitchingResultP GetRightResult() {
-            Log << "GetRightResult";
-            return rightStitcher.Finalize();
-        }
-
-*/
         bool RecordingIsFinished() {
             return selector.IsFinished();
         }

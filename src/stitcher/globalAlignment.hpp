@@ -37,7 +37,6 @@ namespace optonaut {
 
     private:
         static const bool debug = false;
-        //static const bool fillMissingImages = true;
         static const bool fillMissingImages = false;
 
         CheckpointStore &imageStore;
@@ -49,18 +48,16 @@ namespace optonaut {
         GlobalAlignment(CheckpointStore &imageStore, CheckpointStore &leftStore,
                         CheckpointStore &rightStore ) :
             imageStore(imageStore), leftStore(leftStore), rightStore(rightStore), generator() {
-                Log << "Global Alignment init";
                 AssertFalseInProduction(debug);
-                Log << "Global Alignment init2";
 
                 // If you want to fill missing images, please configure a dynamic path
                 // suitable for production in the AddDummyImages method.
                 // Then remove this assert.
                 AssertFalseInProduction(fillMissingImages);
-                Log << "Global Alignment init3";
         }
 
-        void minifyImages(vector<InputImageP> &images, int downsample = 2) {
+        // Loads mini images from the source, then unloads the original. 
+        void mMinifyImages(vector<InputImageP> &images, int downsample = 2) {
            AssertGT(downsample, 0);
 
            int  counter = 0;
@@ -86,61 +83,43 @@ namespace optonaut {
             }
         }
 
-        // this is a copy of getVerticalFov
+        // This is a copy of getVerticalFov
         double GetVerticalFov ( const Mat &intrinsics ) {
              double h = intrinsics.at<double>(1,2);
              double f = intrinsics.at<double>(0,0);
              return 2 * atan2(h,f);
         }
 
-
+        // Runs the Actual Operation. 
+        // Beautiful Spagetthi Code. 
         void Finish() {
 
+            // #### Step 1: Load everything and prepare graphs and stuff. 
             STimer timer;
 
             Log << "Finish";
+
             vector<std::vector<InputImageP>> loadedRings;
-            //vector<std::vector<InputImageP>> fullImages;
             BiMap<size_t, uint32_t> imagesToTargets, d;
             map<size_t, double> gains;
-            MonoStitcher stereoConverter;
-            vector<vector<StereoImage>> stereoRings;
+            
             imageStore.LoadStitcherInput(loadedRings, gains);
 
-            Log << "before loaded rings " << loadedRings.size();
             vector<InputImageP> inputImages = fun::flat(loadedRings);
-            Log << "after loaded rings" << sizeof(inputImages);
             cv::Size originalSize = inputImages[0]->image.size();
-            Log << "after originalSize";
+
+            Log << "Images Loaded.";
 
             Mat intrinsics;
             intrinsics = inputImages[0]->intrinsics;
             int graphConfiguration = 0;
-            Log << "after graphConfiguration";
 
-            // Quick hack to align all images relative to the first image recorded.
-            /*
-            Mat baseOrientation = loadedRings[loadedRings.size() / 2][0]->adjustedExtrinsics.inv();
-
-            for(auto ring : loadedRings) {
-                for(auto image : ring) {
-                    image->adjustedExtrinsics *= baseOrientation;
-                    image->originalExtrinsics *= baseOrientation;
-                }
-            }
-            */
-
-            /*
-             * check the number of rings and based use the correct graph configuration
-             */
             if (loadedRings.size() == 1) {
-                Log << "Find center mode";
                 graphConfiguration =  RecorderGraph::ModeCenter;
-                Log << "Creating centered reorder graph";
+                Log << "Creating centered recorder graph";
             } else if (loadedRings.size() == 3)  {
-                Log << "Find truncated mode";
                 graphConfiguration =  RecorderGraph::ModeTruncated;
-                Log << "Creating truncated reorder graph";
+                Log << "Creating three ring recorder graph";
             }
 
             Log << "Using Intrinsics " << intrinsics;
@@ -158,8 +137,9 @@ namespace optonaut {
 
             timer.Tick("Init'ed recorder graph and found best matches");
 
+            // #### Step 2: Load mini images and run bundle adjustment
+
             int downsample = 3;
-            // minify the images
             minifyImages(best, downsample);
 
             timer.Tick("Loaded mini images");
@@ -170,34 +150,12 @@ namespace optonaut {
             minimal::ImagePreperation::SortById(rings[k]);
             RingCloser::CloseRing(rings[k]);
 
-            timer.Tick("Closed Ring");
-/*
+            timer.Tick("Closed Center Ring");
+            
             IterativeBundleAligner aligner;
     	    aligner.Align(best, recorderGraph, imagesToTargets, 5, 0.5);
 
-            timer.Tick("Bundle Adjustment");
-*/
-            // preLoad
-            static int count = 0;
-            auto loadFullImage =
-            	[] (const SelectionInfo &img) {
-                   // unload the last minified image
-                    // this is a cheat. need to find the bug
-                    std::string str2 ("debug");
-                    std::string str3 ("post");
-                    std::size_t found = img.image->image.source.find(str2);
-                    if (found!=std::string::npos) {
-                        std::cout << "found 'debug' at: " << found << '\n';
-                        img.image->image.source.replace(found,5,str3);
-                        cout << "image source replace " << img.image->image.source << endl;
-                    }
-
-
-
-                   if (img.image->image.IsLoaded())
-                   		img.image->image.Unload();
-                };
-
+            timer.Tick("Bundle Adjustment Finished");
 
             BiMap<size_t, uint32_t> finalImagesToTargets;
             RecorderGraph halfGraph = RecorderGraphGenerator::Sparse(recorderGraph, 2);
@@ -206,22 +164,26 @@ namespace optonaut {
 
             Log << "Post-Alignment, found " << bestAlignment.size() << "/" << halfGraph.Size() << "/" << best.size();
 
-
             timer.Tick("Found best matches for post alignment");
 
             if(fillMissingImages) {
                 halfGraph.AddDummyImages(bestAlignment, finalImagesToTargets, Scalar(255, 0, 0), originalSize);
             }
+           
+            // #### Step 3: Convert to stereo, save results. 
 
-            sort(bestAlignment.begin(), bestAlignment.end(), [&] (const InputImageP &a, const InputImageP &b) {
-                uint32_t aId, bId;
-                Assert(finalImagesToTargets.GetValue(a->id, aId));
-                Assert(finalImagesToTargets.GetValue(b->id, bId));
+            MonoStitcher stereoConverter;
+            vector<vector<StereoImage>> stereoRings;
 
-                return aId < bId;
-            });
+            minimal::ImagePreperation::SortById(bestAlignment);
+            
+            auto UnloadImage =
+            	[] (const SelectionInfo &img) {
+                   if (img.image->image.IsLoaded())
+                   		img.image->image.Unload();
+                };
 
-            auto ForwardToStereoProcess =
+            auto CreateStereo =
                 [&] (const SelectionInfo &a, const SelectionInfo &b) {
 
          	    StereoImage stereo;
@@ -243,15 +205,12 @@ namespace optonaut {
                     b.image->image.Load();
 
                 stereoConverter.CreateStereo(a, b, stereo);
-                //stereo.A = stereoConverter.RectifySingle(a);
-                //stereo.B = stereoConverter.RectifySingle(b);
-                //stereo.extrinsics = a.image->originalExtrinsics.clone();
-                //stereo.valid = true;
 
                 while(stereoRings.size() <= a.closestPoint.ringId) {
                     stereoRings.push_back(vector<StereoImage>());
                 }
                 stereoRings[a.closestPoint.ringId].push_back(stereo);
+
                 /*
                  * Unload image to save memory
                  */
@@ -268,29 +227,21 @@ namespace optonaut {
                  */
                 stereo.A->image.Unload();
                 stereo.B->image.Unload();
-
-                count++;
-                if(count % 100 == 0) {
-                    cout << "Warning: Input Queue overflow: " <<  count << endl;
-                    /*
-                     *  Pause for 1 second every 100 images to minimize memory outage
-                     */
-                    this_thread::sleep_for(chrono::seconds(1));
-                }
             };
 
             auto FinishImage = [] (const SelectionInfo) { };
 
-            RingProcessor<SelectionInfo> stereoRingBuffer(1, 1, loadFullImage, ForwardToStereoProcess, FinishImage);
-
+            RingProcessor<SelectionInfo> stereoRingBuffer(1, 1, UnloadImage, CreateStereo, FinishImage);
 
        	    int lastRingId = -1;
             for(auto img : bestAlignment) {
             	SelectionPoint target;
-            	//Reassign points
             	uint32_t pointId = 0;
+
             	Assert(finalImagesToTargets.GetValue(img->id, pointId));
             	Assert(halfGraph.GetPointById(pointId, target));
+
+                // TODO: This is quite a hack. 
                 double maxVFov = GetVerticalFov(img->intrinsics);
                 target.vFov = maxVFov;
             	SelectionInfo info;
