@@ -112,7 +112,7 @@ class Recorder2 {
                 Log << "Warning, debug mode activated.";
             }
 
-            AssertEQM(graphConfig, RecorderGraph::ModeCenter, "This recorder instance only supports center ring recording")
+            AssertEQM(graphConfig, RecorderGraph::ModeCenter, "This recorder instance only supports center ring recording");
 
             AssertEQM(UseSomeMemory(1280, 720, imagesCount), imagesCount, 
                     "Successfully pre-allocate memory");

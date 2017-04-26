@@ -1,5 +1,4 @@
 #include "../common/sink.hpp"
-#include "../common/imageQueueProcessor.hpp"
 #include "../common/asyncQueueWorker.hpp"
 #include "recorderGraphGenerator.hpp"
 #include "stereoGenerator.hpp"
@@ -74,10 +73,10 @@ class MotorControlRecorder {
                     intrinsics, RecorderGraph::ModeCenter,
                     RecorderGraph::DensityHalf, 0, 8)),
             sink(_sink),
-            decoupler(sink, false),
+            asyncQueue(sink, false),
             previewStitcher(previewGraph),
             selectionToImageConverter(previewStitcher),
-            previewTee(selectionToImageConverter, postProcessImage),
+            previewTee(selectionToImageConverter, asyncQueue),
             debugger(debugPath, debugPath.size() == 0, previewTee),
             decoupler(debugger, true),
             selector(graph, decoupler,
@@ -90,7 +89,7 @@ class MotorControlRecorder {
         {
             size_t imagesCount = graph.Size();
 
-            AssertNEQM(graphConfig, RecorderGraph::ModeCenter, "Using multi-ring recorder for center ring only. Thats not efficient.")
+            AssertNEQM(graphConfig, RecorderGraph::ModeCenter, "Using multi-ring recorder for center ring only. Thats not efficient.");
 
             AssertEQM(UseSomeMemory(1280, 720, imagesCount), imagesCount,
                     "Successfully pre-allocate memory");
@@ -107,8 +106,8 @@ class MotorControlRecorder {
         virtual void Finish() {
             AssertM(previewStitcher.GetResult() != nullptr, "GetPreviewImage must be called before calling Finish");
 
-            decoupler.Finish()
-            sink.SaveInputSummary(graph)
+            decoupler.Finish();
+            sink.SaveInputSummary(graph);
         }
 
         void Cancel() {
@@ -116,8 +115,6 @@ class MotorControlRecorder {
             converter.Finish();
             Log << "Cancel, calling preview finish.";
             previewStitcher.Finish();
-            Log << "Cancel, calling adjuster finish.";
-            postProcessImage.Finish();
         }
 
         StitchingResultP GetPreviewImage() {

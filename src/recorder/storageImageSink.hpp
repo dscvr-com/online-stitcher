@@ -11,7 +11,7 @@ namespace optonaut {
      * Implementation of StereoSink that saves recorder output to 
      * a checkpoint store (and thus usually to disk). 
      */
-    class StorageImageSink : StereoSink {
+    class StorageImageSink : public Sink<SelectionInfo> {
 
     private:
         CheckpointStore imageStore;
@@ -21,10 +21,10 @@ namespace optonaut {
             Log << "Saving image " << in.image->id;
             imageStore.SaveRectifiedImage(in.image);
             in.image->image.Unload();
-            images.push(in.image);
+            images.push_back(in.image);
         }
 
-        void Finish() {
+        void Finish() {
             Log << "Finished";
         }
 
@@ -32,7 +32,7 @@ namespace optonaut {
             Log << "Saving input summary";
             const vector<vector<InputImageP>> rings = graph.SplitIntoRings(images);
             const map<size_t, double> dummy; 
-            imageStore.SaveStitcherInput(images, dummy) 
+            imageStore.SaveStitcherInput(rings, dummy) ;
         }
 
         StorageImageSink(CheckpointStore &imageStore ) : 
