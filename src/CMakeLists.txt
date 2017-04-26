@@ -1,4 +1,3 @@
-include_directories( ${OpenCV_INCLUDE_DIRS} )
 
 add_library(optonaut-lib
 common/image.cpp
@@ -125,6 +124,12 @@ if(BUILD_GF_FACTOR_TOOL)
     add_executable(gf-factor-tool gfFactors.cpp)
     target_link_libraries(gf-factor-tool optonaut-lib)
 endif(BUILD_GF_FACTOR_TOOL)
+
+#if(BUILD_SFML_TEST)
+#    add_executable(sfml-test sfmlTest.cpp)
+#    target_link_libraries(sfml-test ${SFML_LIBRARIES})
+#    target_link_libraries(sfml-test optonaut-lib)
+#endif(BUILD_SFML_TEST)
 
 #add_executable(stereo-match-test stereoMatchTest.cpp)
 #target_link_libraries(stereo-match-test optonaut-lib)

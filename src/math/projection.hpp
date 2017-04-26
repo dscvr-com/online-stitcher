@@ -234,6 +234,8 @@ namespace optonaut {
         AssertM(ai.IsLoaded(), "Input a exists");
         AssertM(bi.IsLoaded(), "Input b exists");
 
+        AssertM(false, "Don't use this, it might not be working as expected.");
+
         auto warperFactory = new cv::SphericalWarper();
         auto warper = warperFactory->create(800.0f);
 
@@ -293,6 +295,8 @@ namespace optonaut {
 
         Point2d locationDiff(hom.at<double>(0, 2), hom.at<double>(1, 2));
 
+        // Buffer function is buggy and disabled for now. 
+        buffer = 0;
         //Modify homography, so it includes buffer. 
         if(hom.at<double>(1, 2) < 0) {
             offset.at<double>(1, 2) += buffer; 

@@ -19,9 +19,8 @@ option(BUILD_FLOW_BLENDING_TEST "Build flow field blending test program" ON)
 option(BUILD_DENSE_FLOW_TEST "Build flow algorithm tests" OFF) 
 option(BUILD_SPEED_TEST "Build implementation detail speed tests" OFF) 
 option(BUILD_GF_FACTOR_TOOL "Build the gunnar farnebäck factor calculation" ON) 
+#option(BUILD_SFML_TEST "Build sfml GLSL processing test" ON) 
 
-#find_package(OpenGL REQUIRED)
-#include_directories(${OPENGL_INCLUDE_DIR})
 #include_directories(SYSTEM src/lib/irrlicht)
 #include_directories("/usr/local/include/Eigen3")
 
@@ -36,6 +35,16 @@ option(BUILD_GF_FACTOR_TOOL "Build the gunnar farnebäck factor calculation" ON)
 #    IOKIT_LIB)
 #SET(OSX_LIBS ${COCOA_LIB} ${CARBON_LIB} ${IOKIT_LIB})
 
+# Add support for custon cmake include scripts
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake_modules" ${CMAKE_MODULE_PATH})
+
+# Add modules
 find_package( OpenCV REQUIRED )
+find_package( OpenGL REQUIRED )
+#find_package(SFML 2 REQUIRED system graphics )
+include_directories( ${OpenCV_INCLUDE_DIRS} )
+include_directories( ${OPENGL_INCLUDE_DIR} )
+include_directories( ${SFML_INCLUDE_DIR} )
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall -Wunreachable-code -std=c++1y -O3 -g -Werror -fverbose-asm")
 add_subdirectory(src)

@@ -110,8 +110,9 @@ namespace optonaut {
             Log << "before loaded rings " << loadedRings.size();
             vector<InputImageP> inputImages = fun::flat(loadedRings);
             Log << "after loaded rings" << sizeof(inputImages);
-//            cv::Size originalSize = inputImages[0]->image.size();
-//            Log << "after originalSize";
+            
+            cv::Size originalSize = inputImages[0]->image.size();
+            Log << "after originalSize" << originalSize;
 
             Mat intrinsics;
             intrinsics = inputImages[0]->intrinsics;

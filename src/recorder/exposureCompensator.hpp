@@ -159,11 +159,12 @@ namespace optonaut {
                     maxId = max(maxId, adj.first);
                 }
                 
-                vector<int> remap(maxId);
+                vector<int> remap(maxId + 1);
                 vector<int> invmap;
-                
+
                 // Build lookup table
                 for(auto &adj : relations.GetEdges()) {
+                    AssertGT(remap.size(), adj.first);
                     remap[adj.first] = (int)invmap.size();
                     invmap.push_back((int)adj.first);
                 }
@@ -180,6 +181,8 @@ namespace optonaut {
 
                 for(auto &adj : relations.GetEdges()) {
                     for(auto &edge : adj.second) {
+                        AssertGT(remap.size(), edge.from);
+                        AssertGT(remap.size(), edge.to);
                         I.at<double>(remap[edge.from], remap[edge.to]) = edge.value.iFrom;
                         N.at<double>(remap[edge.from], remap[edge.to]) = edge.value.n;
                     }

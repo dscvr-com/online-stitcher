@@ -73,6 +73,8 @@ namespace optonaut {
                 
                 int ringCount = (int)graph.ringCount;
                 
+                Log << "Tolerance Check: " << rvec.t();
+               
                 if(currentRing == (ringCount) / 2){
                     // Currently working on center ring - normal tolerance. 
                     for(int i = 0; i < 3; i++) {
@@ -98,6 +100,7 @@ namespace optonaut {
                     
                 }
                 
+                Log << "Accepting.";
                 return true;
            }
 
@@ -186,7 +189,7 @@ namespace optonaut {
              * Pushes an image to this selector and advances the internal state. 
              */
             bool PushAndGetState(const InputImageP image) {
-                Log << "Received Image.";
+                Log << "Received Image: " << image->id;
 
                 SelectionPoint next;
                 double dist = graph.FindClosestPoint(image->adjustedExtrinsics, 
@@ -197,15 +200,20 @@ namespace optonaut {
                     SetCurrent(next, image, dist);
                     return true;
                 } else {
+                
+                    Log << "Image extrinsics: " << image->adjustedExtrinsics;
+                    Log << "Next extrinsics: " << next.extrinsics;
                     
                     // Tolearance check, not for init. 
                     if(!CheckIfWithinTolerance(image->adjustedExtrinsics, next.extrinsics)) {
+                        Log << "Rejecting - out of tolerance"; 
                         return false;
                     }
                     
                     if(next.globalId == current.closestPoint.globalId) {
                         if(dist < current.dist) {
                             // Better match.
+                            Log << "Accepting"; 
                             SetCurrent(next, image, dist);
                             return true;
                         }
@@ -216,6 +224,7 @@ namespace optonaut {
                                     current.closestPoint, 
                                     realNext)) {
                             // We're already finished. There is no next. 
+                            Log << "Rejecting - finished"; 
                             return false;
                         }
 
@@ -239,6 +248,7 @@ namespace optonaut {
 
                                 if(graph.GetNextForRecording(next, realNext)) {
                                     SetCurrent(next, image, dist);
+                                    Log << "Accepting"; 
                                     return true;
                                 } else {
                                     int nextRing = GetNextRing();
@@ -257,10 +267,12 @@ namespace optonaut {
                             recordedImages++;
                             callback.Push(current);
                             SetCurrent(next, image, dist);
+                            Log << "Accepting"; 
                             return true;
                         }
                     } 
                 }
+                Log << "Rejecting - out of order."; 
                 return false;
             }
         

@@ -81,9 +81,6 @@ namespace optonaut {
         }
         
         if(image.data.cols != WorkingWidth && image.data.rows != WorkingHeight) {
-            //AssertFalseInProduction(false); //Resize should be unnecassary
-            // TODO: implement cropping
-            //AssertM(false, "expected correct size: " + ToString(image.data.cols) + ", " + ToString(image.data.rows));
             AssertM(abs((float)image.cols / image.rows - (float)WorkingWidth / (float)WorkingHeight) < 0.01, "Aspect ratio does match for resize.");
             Mat res;
             cv::resize(image.data, res, cv::Size(WorkingWidth, WorkingHeight));

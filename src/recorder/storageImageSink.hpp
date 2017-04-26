@@ -18,6 +18,7 @@ namespace optonaut {
         std::vector<InputImageP> images;
     public:
         void Push(SelectionInfo in) {
+            Log << "Saving image " << in.image->id;
             imageStore.SaveRectifiedImage(in.image);
             in.image->image.Unload();
             images.push(in.image);

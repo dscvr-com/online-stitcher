@@ -13,8 +13,13 @@
 #include "common/backtrace.hpp"
 #include "common/drawing.hpp"
 #include "stitcher/stitcher.hpp"
+#include "stitcher/convertToStereo.hpp"
 #include "io/io.hpp"
 #include "recorder/recorder2.hpp"
+#include "recorder/motorControlRecorder.hpp"
+
+// Comment in this define to use the motor pipeline for testing. 
+// #define USE_MOTOR
 
 using namespace std;
 using namespace cv;
@@ -25,6 +30,20 @@ using namespace std::chrono;
 bool CompareByFilename (const string &a, const string &b) {
     return IdFromFileName(a) < IdFromFileName(b);
 }
+
+#ifdef USE_MOTOR
+typedef MotorControlRecorder RecorderToUse;
+const int RecorderMode = RecorderGraph::ModeTruncated; 
+#else
+typedef Recorder2 RecorderToUse;
+const int RecorderMode = RecorderGraph::ModeCenter; 
+#endif
+CheckpointStore outStore("tmp/out/", "tmp/shared");
+CheckpointStore leftStore("tmp/left/", "tmp/shared/");
+CheckpointStore rightStore("tmp/right/", "tmp/shared/");
+    
+StorageImageSink recorderOut(outStore);
+//const int RecorderMode = RecorderGraph::ModeCenter; 
 
 shared_ptr<RecorderGraph> graph;
 shared_ptr<RecorderGraph> preGraph;
@@ -42,7 +61,7 @@ void Record(vector<string> &files) {
 
     static const bool isAsync = true;
     static const int mode = minimal::ImagePreperation::ModeNone;
-    shared_ptr<Recorder2> recorder(NULL);
+    shared_ptr<RecorderToUse> recorder(NULL);
         
     Mat base, zero;
 
@@ -94,12 +113,16 @@ void Record(vector<string> &files) {
 
             //std::string debugPath = "dbg/debug_out/";
             std::string debugPath = "";
-            recorder = shared_ptr<Recorder2>(
-                    new Recorder2(base, zero, 
-                        //image->intrinsics, sink, "", RecorderGraph::ModeCenter
-                        image->intrinsics, RecorderGraph::ModeCenter, 1, ""
-                        //isAsync));
-                        ));
+#ifdef USE_MOTOR
+            // MotorControlRecorder
+            recorder = std::make_shared<RecorderToUse>(base, zero, 
+                        image->intrinsics, recorderOut, RecorderMode, 8, "");
+#else
+            // Recorder2 
+            // TODO: Change tolerance back!
+            recorder = std::make_shared<RecorderToUse>(base, zero, 
+                        image->intrinsics, RecorderMode, 16, "");
+#endif
 
             recorder->SetIdle(false);
 
@@ -144,23 +167,30 @@ void Record(vector<string> &files) {
     imwrite("dbg/preview.jpg", preview->image.data);
     
     recorder->Finish();
+#ifdef USE_MOTOR
+    // Motor
+    ConvertToStereo convertToStereo(outStore, leftStore, rightStore);
+    Stitcher leftStitcher(leftStore);
+    Stitcher rightStitcher(rightStore);
+    convertToStereo.Finish();
 
+    auto left = leftStitcher.Finish(ProgressCallback::Empty);
+    auto right = rightStitcher.Finish(ProgressCallback::Empty);
+#else
+
+    // 1 ring
     auto left = recorder->GetLeftResult();
-    imwrite("dbg/left.jpg", left->image.data);
-
     auto right = recorder->GetRightResult();
+#endif
+    
     imwrite("dbg/right.jpg", right->image.data);
+    imwrite("dbg/left.jpg", left->image.data);
 }
 
 int main(int argc, char** argv) {
     //cv::ocl::setUseOpenCL(false);
     RegisterCrashHandler();
 
-    CheckpointStore leftStore("tmp/left/", "tmp/shared/");
-    CheckpointStore rightStore("tmp/right/", "tmp/shared/");
-    CheckpointStore commonStore("tmp/common/", "tmp/shared/");
-    CheckpointStore postProcStore("tmp/post/", "tmp/shared/");
-    
     //DummyCheckpointStore leftStore;
     //DummyCheckpointStore rightStore;
     //DummyCheckpointStore commonStore;
