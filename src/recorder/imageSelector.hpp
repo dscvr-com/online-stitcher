@@ -52,6 +52,7 @@ namespace optonaut {
             
             void MoveToNextRing() {
 
+                Log << "Moving to next ring";
                 int ringCount = (int)graph.ringCount;
                 int newRing = GetNextRing(); 
                 
@@ -87,7 +88,7 @@ namespace optonaut {
                     // Working on outer rings - extended tolerance. 
                     for(int i = 0; i < 3; i++) {
                         if (i == 2){
-                            if(abs(rvec.at<double>(i)) > (tolerance(i)* 1.5)) {
+                            if(abs(rvec.at<double>(i)) > (tolerance(i) * 1.5)) {
                                 return false;
                             }
                         }
@@ -202,15 +203,15 @@ namespace optonaut {
                 } else {
                 
                     Log << "Image extrinsics: " << image->adjustedExtrinsics;
-                    Log << "Next extrinsics: " << next.extrinsics;
-                    
-                    // Tolearance check, not for init. 
-                    if(!CheckIfWithinTolerance(image->adjustedExtrinsics, next.extrinsics)) {
-                        Log << "Rejecting - out of tolerance"; 
-                        return false;
-                    }
+                    Log << "Closest point extrinsics: " << next.extrinsics;
                     
                     if(next.globalId == current.closestPoint.globalId) {
+
+                        if(!CheckIfWithinTolerance(image->adjustedExtrinsics, next.extrinsics)) {
+                            Log << "Rejecting - out of tolerance"; 
+                            return false;
+                        }
+
                         if(dist < current.dist) {
                             // Better match.
                             Log << "Accepting"; 
@@ -247,6 +248,10 @@ namespace optonaut {
                                 Invalidate();
 
                                 if(graph.GetNextForRecording(next, realNext)) {
+                                    if(!CheckIfWithinTolerance(image->adjustedExtrinsics, next.extrinsics)) {
+                                        Log << "Rejecting - out of tolerance"; 
+                                        return false;
+                                    }
                                     SetCurrent(next, image, dist);
                                     Log << "Accepting"; 
                                     return true;
@@ -264,6 +269,10 @@ namespace optonaut {
                                 //cout << "Reject Unordered" << endl;
                             }
                         } else {
+                            if(!CheckIfWithinTolerance(image->adjustedExtrinsics, next.extrinsics)) {
+                                Log << "Rejecting - out of tolerance"; 
+                                return false;
+                            }
                             recordedImages++;
                             callback.Push(current);
                             SetCurrent(next, image, dist);
