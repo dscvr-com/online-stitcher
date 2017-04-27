@@ -28,7 +28,7 @@ private:
 	// adj[n] contains m if m is right of n
 	// Horizontal and Vertical overlap in percent.
 	static constexpr double hOverlap_ = 0.9;
-	static constexpr double vOverlap_ = 0.25;
+	static constexpr double vOverlap_ = 0.10;
 
     static const bool debug = false;
 
