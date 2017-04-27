@@ -26,7 +26,7 @@ class ImageCorrespondenceFinder : public SelectionSink {
         const RecorderGraph &graph;
 
         const int downsample = 0;
-        const bool debug = true;
+        const bool debug = false;
         bool focalLenAdjustmentOn;
         bool fullAlignmentOn;
         bool ringClosingOn;
