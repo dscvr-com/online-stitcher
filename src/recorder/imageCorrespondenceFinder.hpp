@@ -27,7 +27,9 @@ class ImageCorrespondenceFinder : public SelectionSink {
 
         const int downsample = 0;
         const bool debug = true;
-        const bool ringClosingOn = true;
+        bool focalLenAdjustmentOn;
+        bool fullAlignmentOn;
+        bool ringClosingOn;
 
         void ComputeMatch(const SelectionInfo &a, const SelectionInfo &b, 
                           int overlapArea) {
@@ -109,11 +111,18 @@ class ImageCorrespondenceFinder : public SelectionSink {
         }
     public:
         ImageCorrespondenceFinder(
-            Sink<std::vector<InputImageP>> &outSink, const RecorderGraph &fullGraph) :
-            outSink(outSink), graph(fullGraph) { 
-            warperFactory = new cv::SphericalWarper();
-            warper = warperFactory->create(static_cast<float>(1600));
-            AssertFalseInProduction(debug);
+            Sink<std::vector<InputImageP>> &outSink, 
+            const RecorderGraph &fullGraph, 
+            bool focalLenAdjOn = true, 
+            bool fullAlignmentOn = true,
+            bool ringClosingOn = true) :
+        outSink(outSink), graph(fullGraph),
+        focalLenAdjustmentOn(focalLenAdjOn), 
+        fullAlignmentOn(fullAlignmentOn),
+        ringClosingOn(ringClosingOn) { 
+                warperFactory = new cv::SphericalWarper();
+                warper = warperFactory->create(static_cast<float>(1600));
+                AssertFalseInProduction(debug);
         }
 
         virtual void Push(SelectionInfo info) {
@@ -275,60 +284,64 @@ class ImageCorrespondenceFinder : public SelectionSink {
             exposure.FindGains();
 
             // Third, apply focal length corrections.  
-            for(size_t i = 0; i < rings.size(); i++) {
-                auto ring = rings[i];
-                double dist = 0;
+            if(focalLenAdjustmentOn) {
+                for(size_t i = 0; i < rings.size(); i++) {
+                    auto ring = rings[i];
+                    double dist = 0;
 
-                auto addDist = [&] 
-                    (const InputImageP a, const InputImageP b) {
-                    AlignmentDiff diff;
-                    AlignmentGraph::Edge edge(0, 0, diff);
+                    auto addDist = [&] 
+                        (const InputImageP a, const InputImageP b) {
+                        AlignmentDiff diff;
+                        AlignmentGraph::Edge edge(0, 0, diff);
 
-                    if(alignment.GetEdge(a->id, b->id, edge)) {
-                        dist += edge.value.dphi;
-                    }
-                };
+                        if(alignment.GetEdge(a->id, b->id, edge)) {
+                            dist += edge.value.dphi;
+                        }
+                    };
 
-                RingProcessor<InputImageP> 
-                    sum(1, addDist, [](const InputImageP&) {});
+                    RingProcessor<InputImageP> 
+                        sum(1, addDist, [](const InputImageP&) {});
 
-                Log << "Ring alignment dist: " << dist;
+                    Log << "Ring alignment dist: " << dist;
 
-                sum.Process(ring);
+                    sum.Process(ring);
 
-                double focalLenAdjustment = 1 / (1 - dist / (M_PI * 2));
-                Log << "Estimated focal length adjustment factor for ring "
-                    << i << ": " 
+                    double focalLenAdjustment = 1 / (1 - dist / (M_PI * 2));
+                    Log << "Estimated focal length adjustment factor for ring "
+                        << i << ": " 
+                        << focalLenAdjustment;
+
+                    adjustments.push_back(focalLenAdjustment);
+                }
+
+                double focalLenAdjustment = Mean(adjustments);
+                Log << "Global focal length adjustment: "
                     << focalLenAdjustment;
 
-                adjustments.push_back(focalLenAdjustment);
-            }
-
-            double focalLenAdjustment = Mean(adjustments);
-            Log << "Global focal length adjustment: "
-                << focalLenAdjustment;
-
-            for(auto info: largeImages) {
-                Log << "Adjusting focal len for image " << info.image->id;
-                Log << "old k" << info.image->intrinsics;
-                info.image->intrinsics.at<double>(0, 0) *= focalLenAdjustment;
-                info.image->intrinsics.at<double>(1, 1) *= focalLenAdjustment;
-                Log << "New k" << info.image->intrinsics;
+                for(auto info: largeImages) {
+                    Log << "Adjusting focal len for image " << info.image->id;
+                    Log << "old k" << info.image->intrinsics;
+                    info.image->intrinsics.at<double>(0, 0) *= focalLenAdjustment;
+                    info.image->intrinsics.at<double>(1, 1) *= focalLenAdjustment;
+                    Log << "New k" << info.image->intrinsics;
+                }
             }
             
             if(debug) {
                 SimpleSphereStitcher::StitchAndWrite("dbg/alignment_3_focal_len.jpg", fun::map<SelectionInfo, InputImageP>(largeImages, [](const SelectionInfo& x) -> InputImageP { return x.image; }));
             }
 
-            // Todo - not sure if apply is good here. 
-            for(auto info : largeImages) {
-                Mat tmp(4, 4, CV_64F);
-                info.image->adjustedExtrinsics.copyTo(tmp);
-                alignment.Apply(info.image);
-                info.image->adjustedExtrinsics.copyTo(info.image->originalExtrinsics);
-                Log << "Extrinsic change: " << (tmp - info.image->adjustedExtrinsics);
-                // Exposure disabled for now. 
-                // exposure.Apply(info.image->image.data, info.image->id);
+            if(fullAlignmentOn) {
+                // Todo - not sure if apply is good here. 
+                for(auto info : largeImages) {
+                    Mat tmp(4, 4, CV_64F);
+                    info.image->adjustedExtrinsics.copyTo(tmp);
+                    alignment.Apply(info.image);
+                    info.image->adjustedExtrinsics.copyTo(info.image->originalExtrinsics);
+                    Log << "Extrinsic change: " << (tmp - info.image->adjustedExtrinsics);
+                    // Exposure disabled for now. 
+                    // exposure.Apply(info.image->image.data, info.image->id);
+                }
             }
             
             if(debug) {
