@@ -216,7 +216,8 @@ class ImageCorrespondenceFinder : public SelectionSink {
                     imagesToTargets.Insert(info.image->id, info.closestPoint.globalId);
                 }
 
-                IterativeBundleAligner::DrawDebugGraph(images, graph, imagesToTargets, edges, "dbg/alignment_0_weights.jpg");
+                // TODO - for debugging anyawy
+                //IterativeBundleAligner::DrawDebugGraph(images, graph, imagesToTargets, edges, "dbg/alignment_0_weights.jpg");
             }
 
             // First, close all rings.
