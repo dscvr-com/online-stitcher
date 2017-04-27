@@ -248,7 +248,7 @@ InputImageP MonoStitcher::RectifySingle(const SelectionInfo &a) {
     return res;
 }
 
-void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo, Point2d &alignmentHint) const {
+void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo) const {
 
     const static bool debug = false;
     AssertFalseInProduction(debug);
@@ -289,12 +289,8 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
     Mat resA, resB;
 
     // Map both images to the same projection target. 
-    Point2d tA = MapToTarget(a.image, target, resA, newKA, debug);
-    Point2d tB = MapToTarget(b.image, target, resB, newKB, debug);
-
-    //Log << "Alignment hint: " << alignmentHint << ", tA: " << tA << ", tB: " << tB; 
-
-    alignmentHint = alignmentHint + tA - tB;
+    MapToTarget(a.image, target, resA, newKA, debug);
+    MapToTarget(b.image, target, resB, newKB, debug);
 
     // If debug is on, draw all important regions and save the images. 
     if(debug) {
@@ -334,3 +330,4 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
 	stereo.valid = true;
 }
 }
+

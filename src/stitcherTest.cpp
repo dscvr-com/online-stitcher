@@ -38,11 +38,11 @@ const int RecorderMode = RecorderGraph::ModeTruncated;
 typedef Recorder2 RecorderToUse;
 const int RecorderMode = RecorderGraph::ModeCenter; 
 #endif
-CheckpointStore outStore("tmp/out/", "tmp/shared");
 CheckpointStore leftStore("tmp/left/", "tmp/shared/");
 CheckpointStore rightStore("tmp/right/", "tmp/shared/");
     
-StorageImageSink recorderOut(outStore);
+StorageImageSink leftSink(leftStore);
+StorageImageSink rightSink(rightStore);
 //const int RecorderMode = RecorderGraph::ModeCenter; 
 
 shared_ptr<RecorderGraph> graph;
@@ -116,7 +116,7 @@ void Record(vector<string> &files) {
 #ifdef USE_MOTOR
             // MotorControlRecorder
             recorder = std::make_shared<RecorderToUse>(base, zero, 
-                        image->intrinsics, recorderOut, RecorderMode, 8, "");
+                        image->intrinsics, leftSink, rightSink, RecorderMode, 8, "");
 #else
             // Recorder2 
             // TODO: Change tolerance back!
@@ -169,10 +169,8 @@ void Record(vector<string> &files) {
     recorder->Finish();
 #ifdef USE_MOTOR
     // Motor
-    GlobalAlignment globalAlignment(outStore, leftStore, rightStore);
     optonaut::Stitcher leftStitcher(leftStore);
     optonaut::Stitcher rightStitcher(rightStore);
-    globalAlignment.Finish();
 
     auto left = leftStitcher.Finish(ProgressCallback::Empty);
     auto right = rightStitcher.Finish(ProgressCallback::Empty);

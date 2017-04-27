@@ -199,9 +199,6 @@ class ImageCorrespondenceFinder : public SelectionSink {
 
             int currentRing = rings.size() / 2;
 
-            // What's missing: Matching between rings. Proper adjustment of whole graph. 
-            AssertEQM(rings.size(), (size_t)1, "Only single ring supported at the moment");
-
             if(debug) {
                 auto images = fun::map<SelectionInfo, InputImageP>(largeImages, [](const SelectionInfo& x) -> InputImageP { return x.image; });
                 SimpleSphereStitcher::StitchAndWrite("dbg/alignment_1_before.jpg", images);
@@ -223,6 +220,10 @@ class ImageCorrespondenceFinder : public SelectionSink {
             // First, close all rings.
             // Do so in recording order
             while(currentRing >= 0 && currentRing < (int)rings.size() && ringClosingOn) {
+
+                // What's missing: Matching between rings. Proper adjustment of whole graph. 
+                AssertEQM(rings.size(), (size_t)1, "Only single ring supported at the moment");
+
                 const vector<InputImageP> &ring = rings[currentRing];
                 
                 //1) Get first/last
@@ -288,6 +289,10 @@ class ImageCorrespondenceFinder : public SelectionSink {
             if(focalLenAdjustmentOn) {
                 for(size_t i = 0; i < rings.size(); i++) {
                     auto ring = rings[i];
+
+                    if(ring.size() == 0)
+                        continue;
+
                     double dist = 0;
 
                     auto addDist = [&] 

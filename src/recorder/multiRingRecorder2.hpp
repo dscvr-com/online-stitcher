@@ -3,7 +3,7 @@
 #include "recorderGraphGenerator.hpp"
 #include "stereoGenerator.hpp"
 #include "imageReselector.hpp"
-#include "imageCorrespondenceFinder.hpp"
+#include "imageCorrespondenceFinderMultiWrapper.hpp"
 #include "asyncTolerantRingRecorder.hpp"
 #include "imageSelector.hpp"
 #include "imageLoader.hpp"
@@ -32,9 +32,16 @@ class MultiRingRecorder {
 
         // order of operations, read from bottom to top.
         // Storage of final results
-        StorageImageSink &sink;
+        StorageImageSink &leftSink;
+        StorageImageSink &rightSink;
+        // Creates stereo images
+        StereoGenerator stereoGenerator;
         // Decoupling 
         AsyncSink<SelectionInfo> asyncQueue;
+        // Re-Selection
+        TrivialSelector reselector;
+        // Adjust intrinsics by measuring center ring
+        ImageCorrespondenceFinderWrapper adjuster;
         // Collects given input images for the center ring and computes a
         // low-resolution preview image.
         AsyncTolerantRingRecorder previewStitcher;
@@ -56,7 +63,8 @@ class MultiRingRecorder {
     public:
         MultiRingRecorder(const Mat &_base, const Mat &_zeroWithoutBase,
                   const Mat &_intrinsics,
-                  StorageImageSink &_sink,
+                  StorageImageSink &_leftSink,
+                  StorageImageSink &_rightSink,
                   const int graphConfig = RecorderGraph::ModeAll,
                   const double tolerance = 1.0,
                   const std::string debugPath = "") :
@@ -72,11 +80,15 @@ class MultiRingRecorder {
             previewGraph(generator.Generate(
                     intrinsics, RecorderGraph::ModeCenter,
                     RecorderGraph::DensityHalf, 0, 8)),
-            sink(_sink),
-            asyncQueue(sink, false),
+            leftSink(_leftSink),
+            rightSink(_rightSink),
+            stereoGenerator(leftSink, rightSink, graph), 
+            asyncQueue(stereoGenerator, false),
+            reselector(asyncQueue, graph),
+            adjuster(reselector, graph),
             previewStitcher(previewGraph),
             selectionToImageConverter(previewStitcher),
-            previewTee(selectionToImageConverter, asyncQueue),
+            previewTee(selectionToImageConverter, adjuster),
             debugger(debugPath, debugPath.size() == 0, previewTee),
             decoupler(debugger, true),
             selector(graph, decoupler,
@@ -106,8 +118,9 @@ class MultiRingRecorder {
         virtual void Finish() {
             AssertM(previewStitcher.GetResult() != nullptr, "GetPreviewImage must be called before calling Finish");
 
-            asyncQueue.Finish();
-            sink.SaveInputSummary(graph);
+            adjuster.Finish();
+            leftSink.SaveInputSummary(graph);
+            rightSink.SaveInputSummary(graph);
         }
 
         void Cancel() {

@@ -11,17 +11,17 @@ namespace optonaut {
      * Implementation of StereoSink that saves recorder output to 
      * a checkpoint store (and thus usually to disk). 
      */
-    class StorageImageSink : public Sink<SelectionInfo> {
+    class StorageImageSink : public ImageSink {
 
     private:
         CheckpointStore imageStore;
         std::vector<InputImageP> images;
     public:
-        void Push(SelectionInfo in) {
-            Log << "Saving image " << in.image->id;
-            imageStore.SaveRectifiedImage(in.image);
-            in.image->image.Unload();
-            images.push_back(in.image);
+        void Push(InputImageP image) {
+            Log << "Saving image " << image->id;
+            imageStore.SaveRectifiedImage(image);
+            image->image.Unload();
+            images.push_back(image);
         }
 
         void Finish() {
