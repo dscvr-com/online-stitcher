@@ -316,7 +316,7 @@ namespace optonaut {
                     return current;
 
                 SelectionPoint next;
-
+                
                 if(graph.GetNextForRecording(current, next)) {
                     if(current.ringId != next.ringId) {
                         if(allowRingSwitch) {
@@ -357,6 +357,8 @@ namespace optonaut {
                     Vec3d tolerance) :
                 ImageSelector(graph, onNewMatch, tolerance, true),
                 hasStarted(false), isIdle(true), errorVec(Mat::zeros(3, 1, CV_64F)), error(0) {
+                    
+                ballPosition = Mat::eye(4, 4, CV_64F);
             
             }
         

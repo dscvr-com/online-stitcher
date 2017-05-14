@@ -53,12 +53,12 @@ class Recorder2 {
         SelectionInfoToImageSink selectionToImageConverter;
         // Forwards the given image to previewStitcher AND correspondenceFinder
         TeeSink<SelectionInfo> previewTee;
-        // Writes debug images, if necassary.
-        DebugSink debugger;
         // Decouples slow correspondence finiding process from UI
         AsyncSink<SelectionInfo> decoupler;
         // Selects good images
         FeedbackImageSelector selector;
+        // Writes debug images, if necassary.
+        DebugSink debugger;
         // Loads the image from the data ref
         ImageLoader loader;
         // Converts input data to stitcher coord frame
@@ -96,14 +96,14 @@ class Recorder2 {
             previewStitcher(previewGraph, 400, false),
             selectionToImageConverter(previewStitcher),
             previewTee(selectionToImageConverter, adjuster),
-            debugger(debugPath, debugPath.size() == 0, previewTee), 
-            decoupler(debugger, true),
+            decoupler(previewTee, true),
             selector(graph, decoupler,
                 Vec3d(
                     M_PI / 64 * tolerance, 
                     M_PI / 128 * tolerance, 
-                    M_PI / 16 * tolerance)),
-            loader(selector), 
+                      M_PI / 16 * tolerance)),
+            debugger(debugPath, debugPath.size() == 0, selector),
+            loader(debugger),
             converter(base, zeroWithoutBase, loader)
         { 
             size_t imagesCount = graph.Size();

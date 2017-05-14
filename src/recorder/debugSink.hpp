@@ -4,30 +4,26 @@
 #define OPTONAUT_DEBUG_SINK_HEADER
 
 namespace optonaut {
-class DebugSink : public Sink<SelectionInfo> {
+class DebugSink : public Sink<InputImageP> {
     private:
         const std::string debugPath;
         const bool forwardToOutput;
-        Sink<SelectionInfo> &outputSink;
+        Sink<InputImageP> &outputSink;
         
         void SaveOutput(const InputImageP image) {
             InputImageToFile(image, debugPath + ToString(image->id) + ".jpg");
-        }
-        
-        void SaveOutput(const SelectionInfo image) {
-            SaveOutput(image.image);
         }
 
     public:
         DebugSink(
             const std::string debugPath, 
             const bool forwardToOutput,
-            Sink<SelectionInfo> &outputSink) :
+            Sink<InputImageP> &outputSink) :
             debugPath(debugPath), forwardToOutput(forwardToOutput),
             outputSink(outputSink) {
         }
 
-        virtual void Push(SelectionInfo image) {
+        virtual void Push(InputImageP image) {
             
             if(debugPath.size() > 0) {
                 SaveOutput(image);
