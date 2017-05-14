@@ -81,7 +81,7 @@ Rect CornersToRoi(const vector<Point2f> &corners) {
 
 // Buffer: How much do we decrease/increase h/v size of target area?
 const double hBufferRatio = 1;
-const double vBufferRatio = 0.1;
+const double vBufferRatio = -0.1;
 
 /*
  * For two given images, extracts the target area, as points on a sphere surface, 
