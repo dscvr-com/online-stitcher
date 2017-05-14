@@ -19,7 +19,7 @@
 #include "recorder/multiRingRecorder2.hpp"
 
 // Comment in this define to use the motor pipeline for testing. 
-#define USE_MOTOR
+// #define USE_MOTOR
 
 using namespace std;
 using namespace cv;

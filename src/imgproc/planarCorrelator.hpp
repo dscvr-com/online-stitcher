@@ -429,6 +429,8 @@ class PyramidPlanarAligner {
         cv::Point res;
         AssertFalseInProduction(debugCorrelator);
 
+        Log << "width: " << a.cols * wx << " height: " << a.rows * wy; 
+
         if(a.cols > minSize / wx && b.cols > minSize / wx
                 && a.rows > minSize / wy && b.rows > minSize / wy) {
             // If the image is large enough, perform a further pyramid alignment step. 
@@ -449,7 +451,7 @@ class PyramidPlanarAligner {
                 // If we skip, just upsample the guess. 
                 res = guess * 2;
             } else {
-                STimer cTimer(false);
+                STimer cTimer(true);
                 Mat corrBf;
 
                 // Perform a brute force correlation, but just for a very small area. 
@@ -489,7 +491,7 @@ class PyramidPlanarAligner {
         } else {
             // If we are at the bottom of our pyramid and the image is already very small, 
             // perform a brute-force correlation. 
-            STimer cTimer(false);
+            STimer cTimer(true);
             PlanarCorrelationResult detailedRes = 
                 BruteForcePlanarAligner<Correlator>::Align(a, b, corr, wx, wy);
 

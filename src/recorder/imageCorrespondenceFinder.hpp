@@ -1,6 +1,7 @@
 #include "../math/stat.hpp"
 #include "../recorder/alignmentGraph.hpp"
 #include "../imgproc/pairwiseCorrelator.hpp"
+#include "../common/static_timer.hpp"
 
 #ifndef OPTONAUT_IMAGE_CORRESPONDENCE_FINDER_HEADER
 #define OPTONAUT_IMAGE_CORRESPONDENCE_FINDER_HEADER
@@ -33,8 +34,11 @@ class ImageCorrespondenceFinder : public SelectionSink {
 
         void ComputeMatch(const SelectionInfo &a, const SelectionInfo &b, 
                           int overlapArea) {
+            STimer timer;
             //int minSize = min(a.image->image.cols, b.image->image.rows) / 3;
             auto res = matcher.Match(a.image, b.image, 4, 4, false, 0.5, 1.8);
+
+            timer.Tick("Compute match");
 
             Log << "B adj extrinsics: " << b.image->adjustedExtrinsics;
             Log << "A adj extrinsics: " << a.image->adjustedExtrinsics;
@@ -97,6 +101,7 @@ class ImageCorrespondenceFinder : public SelectionSink {
                 Log << "Skipping" << a.image->id << 
                     " <> " << b.image->id;
             }
+            timer.Tick("Added to alignment graph");
         }
 
         PlanarOffsetList CorrespondenceCrossProduct(PlanarOffsetList correspondences) {
