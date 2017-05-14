@@ -457,7 +457,7 @@ class PyramidPlanarAligner {
                 // Perform a brute force correlation, but just for a very small area. 
                 PlanarCorrelationResult detailedRes = 
                     BruteForcePlanarAligner<Correlator>::Align(
-                            a, b, corrBf, 2, 2, guess.x * 2, guess.y * 2);
+                            a, b, corrBf, 1, 1, guess.x * 2, guess.y * 2);
 
                 if(debugCorrelator) {
 
