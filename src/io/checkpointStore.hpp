@@ -67,6 +67,7 @@ namespace optonaut {
         virtual void Clear();
         
         virtual bool HasUnstitchedRecording();
+        virtual bool HasData();
 
         virtual bool SupportsPaging() { return true; }
     };
@@ -90,6 +91,8 @@ namespace optonaut {
         virtual void LoadRingAdjustment(std::vector<int> &) { }
         virtual void Clear() { }
         virtual bool HasUnstitchedRecording() { return false; }
+        virtual bool HasData() { return false; }
+
         virtual bool SupportsPaging() { return false; }
     };
 }

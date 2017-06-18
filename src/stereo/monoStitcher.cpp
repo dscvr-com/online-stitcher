@@ -80,7 +80,7 @@ Rect CornersToRoi(const vector<Point2f> &corners) {
 }
 
 // Buffer: How much do we decrease/increase h/v size of target area?
-const double hBufferRatio = 0.7;
+const double hBufferRatio = 1;
 const double vBufferRatio = -0.05;
 
 /*

@@ -90,7 +90,11 @@ namespace optonaut {
         DeleteDirectories(basePath);
     }
     
-    bool CheckpointStore::HasUnstitchedRecording() {
+    bool CheckpointStore::HasData() {
         return IsDirectory(rawImagesPath);
+    }
+    
+    bool CheckpointStore::HasUnstitchedRecording() {
+        return FileExists(ringMapPath);
     }
 }

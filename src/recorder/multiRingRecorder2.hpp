@@ -67,7 +67,7 @@ class MultiRingRecorder {
             graph(generator.Generate(
                     intrinsics,
                     graphConfig,
-                    RecorderGraph::DensityHalf,
+                    RecorderGraph::DensityNormal,
                     0, 8)),
             leftSink(_leftSink),
             rightSink(_rightSink),
