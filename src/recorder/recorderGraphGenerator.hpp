@@ -378,7 +378,7 @@ public:
 
            vCount = 3;
            //vFov stays the same.
-           vStart = (M_PI - (vFov * 3)) / 2;
+           vStart = (M_PI - (vFov * 3)) * (1.f / 2.f);
 
         }
         else if(mode == RecorderGraph::ModeNoBot) {
