@@ -32,7 +32,6 @@ class Recorder2 {
         const RecorderGraphGenerator generator;
         RecorderGraph graph;
         RecorderGraph halfGraph;
-        RecorderGraph previewGraph;
         
         std::vector<Mat> allRotations;
 
@@ -46,13 +45,6 @@ class Recorder2 {
         ImageReselector reselector;
         // Finds image correspondence and performs exposure adjusting and alignment
         ImageCorrespondenceFinder adjuster;
-        // Collects given input images for the center ring and computes a
-        // low-resolution preview image.
-        AsyncTolerantRingRecorder previewStitcher;
-        // Converts SelectionInfo struct to InputImageP
-        SelectionInfoToImageSink selectionToImageConverter;
-        // Forwards the given image to previewStitcher AND correspondenceFinder
-        TeeSink<SelectionInfo> previewTee;
         // Decouples slow correspondence finiding process from UI
         AsyncSink<SelectionInfo> decoupler;
         // Selects good images
@@ -63,7 +55,7 @@ class Recorder2 {
         ImageLoader loader;
         // Converts input data to stitcher coord frame
         CoordinateConverter converter;
-
+    
     public:
         Recorder2(const Mat &_base, const Mat &_zeroWithoutBase, 
                   const Mat &_intrinsics,
@@ -80,9 +72,6 @@ class Recorder2 {
                     RecorderGraph::DensityNormal, 
                     0, 8)),
             halfGraph(RecorderGraphGenerator::Sparse(graph, 2)),
-            previewGraph(generator.Generate(
-                    intrinsics, RecorderGraph::ModeCenter,
-                    RecorderGraph::DensityHalf, 0, 8)),
             allRotations(fun::map<SelectionPoint*, Mat>(
                halfGraph.GetTargetsById(), 
                [](const SelectionPoint* x) {
@@ -93,10 +82,7 @@ class Recorder2 {
             stereoGenerator(leftStitcher, rightStitcher, halfGraph), 
             reselector(stereoGenerator, halfGraph),
             adjuster(reselector, graph),
-            previewStitcher(previewGraph, 400, false),
-            selectionToImageConverter(previewStitcher),
-            previewTee(selectionToImageConverter, adjuster),
-            decoupler(previewTee, true),
+            decoupler(adjuster, true),
             selector(graph, decoupler,
                 Vec3d(
                     M_PI / 64 * tolerance, 
@@ -128,27 +114,16 @@ class Recorder2 {
             converter.Push(image);
         }
 
-        // This has to be called after GetPreviewImage.
         virtual void Finish() {
-            AssertM(previewStitcher.GetResult() != nullptr, "GetPreviewImage must be called before calling Finish");
+            converter.Finish(); // Two finish calls, because the decoupler intercepts finish. 
             adjuster.Finish();
         }
 
         void Cancel() {
             Log << "Cancel, calling converter finish.";
             converter.Finish();
-            Log << "Cancel, calling preview finish.";
-            previewStitcher.Finish();
             Log << "Cancel, calling adjuster finish.";
             adjuster.Finish();
-        }
-
-        StitchingResultP GetPreviewImage() {
-            // Calling finish here circumvents the chaining.
-            // It is safe because our AsyncSink decoupler intercepts finish.
-            converter.Finish();
-            previewStitcher.Finish();
-            return previewStitcher.Finalize();
         }
 
         StitchingResultP GetLeftResult() {

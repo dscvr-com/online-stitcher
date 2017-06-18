@@ -28,8 +28,7 @@ class MultiRingRecorder {
 
         const RecorderGraphGenerator generator;
         RecorderGraph graph;
-        RecorderGraph previewGraph;
-
+    
         // order of operations, read from bottom to top.
         // Storage of final results
         StorageImageSink &leftSink;
@@ -42,13 +41,6 @@ class MultiRingRecorder {
         TrivialSelector reselector;
         // Adjust intrinsics by measuring center ring
         ImageCorrespondenceFinderWrapper adjuster;
-        // Collects given input images for the center ring and computes a
-        // low-resolution preview image.
-        AsyncTolerantRingRecorder previewStitcher;
-        // Converts SelectionInfo struct to InputImageP
-        SelectionInfoToImageSink selectionToImageConverter;
-        // Forwards the given image to previewStitcher AND correspondenceFinder
-        TeeSink<SelectionInfo> previewTee;
         // Decouples slow correspondence finiding process from UI
         AsyncSink<SelectionInfo> decoupler;
         // Selects good images
@@ -77,19 +69,13 @@ class MultiRingRecorder {
                     graphConfig,
                     RecorderGraph::DensityHalf,
                     0, 8)),
-            previewGraph(generator.Generate(
-                    intrinsics, RecorderGraph::ModeCenter,
-                    RecorderGraph::DensityHalf, 0, 8)),
             leftSink(_leftSink),
             rightSink(_rightSink),
             stereoGenerator(leftSink, rightSink, graph), 
             asyncQueue(stereoGenerator, false),
             reselector(asyncQueue, graph),
             adjuster(reselector, graph),
-            previewStitcher(previewGraph),
-            selectionToImageConverter(previewStitcher),
-            previewTee(selectionToImageConverter, adjuster),
-            decoupler(previewTee, true),
+            decoupler(adjuster, true),
             selector(graph, decoupler,
                 Vec3d(
                     M_PI / 64 * tolerance,
@@ -114,10 +100,8 @@ class MultiRingRecorder {
             converter.Push(image);
         }
 
-        // This has to be called after GetPreviewImage.
         virtual void Finish() {
-            AssertM(previewStitcher.GetResult() != nullptr, "GetPreviewImage must be called before calling Finish");
-
+            converter.Finish(); // Two calls to finish, because decoupler intercepts finish.
             adjuster.Finish();
             leftSink.SaveInputSummary(graph);
             rightSink.SaveInputSummary(graph);
@@ -126,19 +110,6 @@ class MultiRingRecorder {
         void Cancel() {
             Log << "Cancel, calling converter finish.";
             converter.Finish();
-            Log << "Cancel, calling preview finish.";
-            previewStitcher.Finish();
-        }
-
-        StitchingResultP GetPreviewImage() {
-            // Calling finish here circumvents the chaining.
-            // It is safe because our AsyncSink decoupler intercepts finish.
-            Log << "Get Preview Image. ";
-            converter.Finish();
-            Log << "Converter finish. ";
-            previewStitcher.Finish();
-            Log << "Preview stitcher finish. ";
-            return previewStitcher.Finalize();
         }
 
         bool RecordingIsFinished() {

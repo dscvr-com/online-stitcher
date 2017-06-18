@@ -174,7 +174,7 @@ private:
         Log << "Dest ROI: " << dstRoi;
 
         Log << "Warping K: " << K;
-        Log << "Warping R: " << R;
+        Log << "Warping R: " << R; 
 
         warper->buildMaps(img->image.size(), K, R, uxmap, uymap);
         coreRoi = Rect(coreRoi.tl() - dstRoi.tl(), coreRoi.size() - Size(1, 1));
