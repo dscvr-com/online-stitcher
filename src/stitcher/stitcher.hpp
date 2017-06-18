@@ -34,13 +34,23 @@ namespace optonaut {
             vector<vector<InputImageP>> rings;
             ExposureCompensator exposure;
             map<size_t, double> gains;
+            
+            // Try to load the result. If we can load it, we don't have to stitch it.
+            StitchingResultP res = store.LoadOptograph();
+            if(res != NULL) {
+                //Caller expects a loaded image.
+                cout << "No need to stitch, we already have a result." << endl;
+                
+                res->image.Load();
+                progress(1);
+                return res;
+            }
            
 
             store.LoadStitcherInput(rings, gains);
             
             exposure.SetGains(gains);
             
-            StitchingResultP res;
             cout << "Stitching " << endl;
             
             core.InitializeForStitching(rings, exposure, 0.4);
