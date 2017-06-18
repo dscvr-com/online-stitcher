@@ -156,25 +156,31 @@ private:
             rotations[i] = R;
         }
 
-        resultRoi = cv::detail::resultRoi(corners, warpedSizes);
-        resultRoi = Rect(resultRoi.x, resultRoi.y,
-                         resultRoi.width, 
-                         resultRoi.height);
-        blender.Prepare(resultRoi);
-
         //Prepare global masks and distortions. 
         const Mat &R = rotations[0];
-
+        
         dstRoi = GetOuterRectangle(*warper, K, R, img->image.size());
         coreRoi = GetInnerRectangle(*warper, K, R, img->image.size());
+
+        // Update result ROI
+        resultRoi = cv::detail::resultRoi(corners, warpedSizes);
+        resultRoi = Rect(resultRoi.x, resultRoi.y + (coreRoi.y - dstRoi.y),
+                         resultRoi.width, 
+                         coreRoi.height);
+        
         coreRoi = Rect(coreRoi.x + 1, coreRoi.y + 1, coreRoi.width - 1, coreRoi.height - 1);
         
         Log << "Destinatin ROI: " << dstRoi;
+        Log << "Result ROI: " << resultRoi;
         Log << "Core ROI: " << coreRoi;
         Log << "Dest ROI: " << dstRoi;
 
         Log << "Warping K: " << K;
         Log << "Warping R: " << R; 
+
+
+        blender.Prepare(resultRoi);
+
 
         warper->buildMaps(img->image.size(), K, R, uxmap, uymap);
         coreRoi = Rect(coreRoi.tl() - dstRoi.tl(), coreRoi.size() - Size(1, 1));

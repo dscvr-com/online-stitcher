@@ -358,8 +358,8 @@ namespace optonaut {
         }
         
         
-        // Final Step, trim away a few pixels to avoid masking issues.
-        static const int trim = 2;
+        // Final Step, trim away one dirty pixel.
+        static const int trim = 1;
         
         res->image = Image(res->image.data(cv::Rect(0, trim, res->image.cols, res->image.rows - trim * 2)));
         
