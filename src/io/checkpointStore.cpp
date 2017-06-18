@@ -95,6 +95,6 @@ namespace optonaut {
     }
     
     bool CheckpointStore::HasUnstitchedRecording() {
-        return FileExists(ringMapPath);
+        return FileExists(ringMapPath) || IsDirectory(optographPath);
     }
 }
