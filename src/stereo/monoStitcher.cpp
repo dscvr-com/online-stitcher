@@ -79,10 +79,6 @@ Rect CornersToRoi(const vector<Point2f> &corners) {
     return roi;
 }
 
-// Buffer: How much do we decrease/increase h/v size of target area?
-const double hBufferRatio = 1;
-const double vBufferRatio = -0.05;
-
 /*
  * For two given images, extracts the target area, as points on a sphere surface, 
  * encoded as rotation matrices. 
@@ -92,7 +88,7 @@ const double vBufferRatio = -0.05;
  * @param center The location of the image plane, as rotational matrix. 
  * @param corners Vector for storing the result. 
  */
-void GetTargetArea(const SelectionPoint &a, const SelectionPoint &b, Mat &center, vector<Mat> &corners) {
+void GetTargetArea(const SelectionPoint &a, const SelectionPoint &b, Mat &center, vector<Mat> &corners, double hBufferRatio, double vBufferRatio) {
     double hLeft = a.hPos;
     double hRight = b.hPos;
 
@@ -215,7 +211,7 @@ Point2f MapToTarget(const InputImageP a, const StereoTarget &target, Mat &result
     return transformed[0] - center[0]; 
 }
 
-InputImageP MonoStitcher::RectifySingle(const SelectionInfo &a) {
+InputImageP MonoStitcher::RectifySingle(const SelectionInfo &a, double hBufferRatio, double vBufferRatio) {
     StereoTarget target;
     vector<Mat> targetArea;
     vector<Point2f> corners;
@@ -224,7 +220,7 @@ InputImageP MonoStitcher::RectifySingle(const SelectionInfo &a) {
     target.R = a.closestPoint.extrinsics;
 
     // Calculate target area. 
-    GetTargetArea(a.closestPoint, a.closestPoint, target.R, targetArea);
+    GetTargetArea(a.closestPoint, a.closestPoint, target.R, targetArea, hBufferRatio, vBufferRatio);
     AreaToCorners(a.image->image.size(), target.R, a.image->intrinsics, 
             targetArea, corners);
 
@@ -248,7 +244,7 @@ InputImageP MonoStitcher::RectifySingle(const SelectionInfo &a) {
     return res;
 }
 
-void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo) const {
+void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo, double hBufferRatio, double vBufferRatio) const {
 
     const static bool debug = false;
     AssertFalseInProduction(debug);
@@ -269,7 +265,7 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
     Mat newKA, newKB;
 
     // Get the target area which lies between the two given selection points. 
-    GetTargetArea(a.closestPoint, b.closestPoint, target.R, targetArea);
+    GetTargetArea(a.closestPoint, b.closestPoint, target.R, targetArea, hBufferRatio, vBufferRatio);
     
     for(auto c : targetArea) {
         //Log << "Target corner mat: " << c;

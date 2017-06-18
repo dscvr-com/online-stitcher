@@ -6,15 +6,111 @@
 using namespace std;
 using namespace cv;
 
-void saveDest(const Mat &dest, const char* name) {
-
-    Mat planes[5];
+void saveDest(const Mat &dest, const char* name, float scale = 30) {
+    int n = dest.channels();
+    Mat planes[n];
     split(dest, planes);  
 
-    for(int i = 0; i < 5; i++) {
+    for(int i = 0; i < n; i++) {
         Mat out;
-        planes[i].convertTo(out, CV_8UC1, 255*30, 0);
+        Mat a = abs(planes[i]);
+        a.convertTo(out, CV_8UC1, 255*scale, 0);
         imwrite("dbg/" + std::string(name) + optonaut::ToString(i) +  ".jpg", out);
+    }
+}
+
+static void
+FarnebackUpdateMatrices( const Mat& _R0, const Mat& _R1, const Mat& _flow, Mat& matM, int _y0, int _y1 )
+{
+    const int BORDER = 5;
+    static const float border[BORDER] = {0.14f, 0.14f, 0.4472f, 0.4472f, 0.4472f};
+
+    int x, y, width = _flow.cols, height = _flow.rows;
+    const float* R1 = _R1.ptr<float>();
+    size_t step1 = _R1.step/sizeof(R1[0]);
+
+    matM.create(height, width, CV_32FC(5));
+
+    for( y = _y0; y < _y1; y++ )
+    {
+        const float* flow = _flow.ptr<float>(y);
+        const float* R0 = _R0.ptr<float>(y);
+        float* M = matM.ptr<float>(y);
+
+        for( x = 0; x < width; x++ )
+        {
+            float dx = flow[x*2], dy = flow[x*2+1];
+            float fx = x + dx, fy = y + dy;
+
+#if 1
+            int x1 = cvFloor(fx), y1 = cvFloor(fy);
+            const float* ptr = R1 + y1*step1 + x1*5;
+            float r2, r3, r4, r5, r6;
+
+            fx -= x1; fy -= y1;
+
+            if( (unsigned)x1 < (unsigned)(width-1) &&
+                (unsigned)y1 < (unsigned)(height-1) )
+            {
+                float a00 = (1.f-fx)*(1.f-fy), a01 = fx*(1.f-fy),
+                      a10 = (1.f-fx)*fy, a11 = fx*fy;
+
+                r2 = a00*ptr[0] + a01*ptr[5] + a10*ptr[step1] + a11*ptr[step1+5];
+                r3 = a00*ptr[1] + a01*ptr[6] + a10*ptr[step1+1] + a11*ptr[step1+6];
+                r4 = a00*ptr[2] + a01*ptr[7] + a10*ptr[step1+2] + a11*ptr[step1+7];
+                r5 = a00*ptr[3] + a01*ptr[8] + a10*ptr[step1+3] + a11*ptr[step1+8];
+                r6 = a00*ptr[4] + a01*ptr[9] + a10*ptr[step1+4] + a11*ptr[step1+9];
+            
+                r4 = (R0[x*5+2] + r4)*0.5f;
+                r5 = (R0[x*5+3] + r5)*0.5f;
+                r6 = (R0[x*5+4] + r6)*0.25f;
+            }
+#else
+            int x1 = cvRound(fx), y1 = cvRound(fy);
+            const float* ptr = R1 + y1*step1 + x1*5;
+            float r2, r3, r4, r5, r6;
+            if( (unsigned)x1 < (unsigned)width &&
+                (unsigned)y1 < (unsigned)height )
+            {
+                r2 = ptr[0];
+                r3 = ptr[1];
+                r4 = (R0[x*5+2] + ptr[2])*0.5f;
+                r5 = (R0[x*5+3] + ptr[3])*0.5f;
+                r6 = (R0[x*5+4] + ptr[4])*0.25f;
+            }
+#endif
+            else
+            {
+                r2 = r3 = 0.f;
+                r4 = R0[x*5+2];
+                r5 = R0[x*5+3];
+                r6 = R0[x*5+4]*0.5f;
+            }
+
+            r2 = (R0[x*5] - r2)*0.5f;
+            r3 = (R0[x*5+1] - r3)*0.5f;
+
+            r2 += r4*dy + r6*dx;
+            r3 += r6*dy + r5*dx;
+
+            if( (unsigned)(x - BORDER) >= (unsigned)(width - BORDER*2) ||
+                (unsigned)(y - BORDER) >= (unsigned)(height - BORDER*2))
+            {
+                float scale = (x < BORDER ? border[x] : 1.f)*
+                    (x >= width - BORDER ? border[width - x - 1] : 1.f)*
+                    (y < BORDER ? border[y] : 1.f)*
+                    (y >= height - BORDER ? border[height - y - 1] : 1.f);
+
+                r2 *= scale; r3 *= scale; r4 *= scale;
+                r5 *= scale; r6 *= scale;
+            }
+
+            M[x*5]   = r4*r4 + r6*r6; // G(1,1)
+            M[x*5+1] = (r4 + r5)*r6;  // G(1,2)=G(2,1)
+            M[x*5+2] = r5*r5 + r6*r6; // G(2,2)
+            M[x*5+3] = r4*r2 + r6*r3; // h(1)
+            M[x*5+4] = r6*r2 + r5*r3; // h(2)
+        }
     }
 }
 
@@ -208,8 +304,7 @@ static void FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
     }
 
 }
-void polyExp(const Mat &in) {
-    Mat dest;
+void polyExp(const Mat &in, Mat &dest) {
     FarnebackPolyExp(in, dest, 7, 1.5);
     saveDest(dest, "final_result");
 }
@@ -218,12 +313,28 @@ int main() {
 
     fbCalcAndPrint(7, 1.5);
 
-    Mat src= imread("murmeln.jpg");
+    Mat src = imread("Murmeln_LEFT.jpg");
+    Mat src2 = imread("Murmeln_RIGHT.jpg");
+
     Mat planes[3];
     split(src,planes);  
-    Mat fimg; 
+    Mat fimg, fimg2; 
     planes[2].convertTo(fimg, CV_32F, 1.0/255.0, 0); 
+    split(src2,planes);  
+    planes[2].convertTo(fimg2, CV_32F, 1.0/255.0, 0); 
 
-    polyExp(fimg);
+    Mat poly1, poly2;
+
+    polyExp(fimg, poly1);
+    polyExp(fimg2, poly2);
+
+    Mat flow = Mat::zeros(poly1.rows, poly1.cols, CV_32FC2);
+    Mat M;
+    
+    FarnebackUpdateMatrices( poly1, poly2, flow, M, 0, poly1.rows);
+
+    saveDest(flow, "flow", 100000);
+    saveDest(M, "M", 100000);
+
 }
 

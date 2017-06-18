@@ -59,7 +59,8 @@ class MultiRingRecorder {
                   StorageImageSink &_rightSink,
                   const int graphConfig = RecorderGraph::ModeAll,
                   const double tolerance = 1.0,
-                  const std::string debugPath = "") :
+                  const std::string debugPath = "",
+                  const bool highAccuracy = false) :
             zeroWithoutBase(_zeroWithoutBase),
             base(_base),
             intrinsics(_intrinsics),
@@ -71,7 +72,7 @@ class MultiRingRecorder {
                     0, 8)),
             leftSink(_leftSink),
             rightSink(_rightSink),
-            stereoGenerator(leftSink, rightSink, graph), 
+            stereoGenerator(leftSink, rightSink, graph, highAccuracy ? 2 : 1, highAccuracy ? 0.05 : -0.05), 
             asyncQueue(stereoGenerator, false),
             reselector(asyncQueue, graph),
             adjuster(reselector, graph),

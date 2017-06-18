@@ -41,7 +41,7 @@ namespace optonaut {
              * @param b The second selection point. 
              * @param stereo Stereo image to place the results in. 
              */
-            void CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo) const;
+            void CreateStereo(const SelectionInfo &a, const SelectionInfo &b, StereoImage &stereo, double hBufferRatio = 1, double vBufferRatio = -0.05) const;
             
             /*
              * Transforms a single image to match it's given selection point.
@@ -49,7 +49,7 @@ namespace optonaut {
              * @param a The image to rectify. 
              * @returns The rectified image. 
              */
-            static InputImageP RectifySingle(const SelectionInfo &a);
+            static InputImageP RectifySingle(const SelectionInfo &a, double hBufferRatio = 1, double vBufferRatio = -0.05);
     };
 }
 

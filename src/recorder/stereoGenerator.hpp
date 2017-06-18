@@ -20,6 +20,9 @@ class StereoGenerator : public SelectionSink {
         std::map<std::pair<size_t, size_t>, cv::Point2d> correctedOffsets;
         const RecorderGraph &graph;
 
+        double hBufferRatio;
+        double vBufferRatio;
+        
         void ConvertToStereo(const SelectionInfo &a, const SelectionInfo &b) {
             StereoImage stereo;
             SelectionEdge dummy;
@@ -29,13 +32,10 @@ class StereoGenerator : public SelectionSink {
                 
             AssertWM(hasEdge, "Pair is correctly ordered");
                 
-           // if(!hasEdge)
-           //     return;
-            
             // TODO - this is slow! 
             AutoLoad alA(a.image), alB(b.image);
                 
-            stereoConverter.CreateStereo(a, b, stereo);
+            stereoConverter.CreateStereo(a, b, stereo, hBufferRatio, vBufferRatio);
 
             leftOutputSink.Push(stereo.A);
             rightOutputSink.Push(stereo.B);
@@ -44,11 +44,15 @@ class StereoGenerator : public SelectionSink {
         StereoGenerator(
             ImageSink &leftOutputSink,
             ImageSink &rightOutputSink,
-            const RecorderGraph &graph) :
+            const RecorderGraph &graph, 
+            double hBufferRatio = 1, 
+            double vBufferRatio = -0.05) :
             leftOutputSink(leftOutputSink), rightOutputSink(rightOutputSink), 
             lastRingId(-1),
             stereoRingBuffer(1, std::bind(&StereoGenerator::ConvertToStereo, this, placeholders::_1, placeholders::_2), [](const SelectionInfo&) {}),
-            graph(graph) {
+            graph(graph),
+            hBufferRatio(hBufferRatio),
+            vBufferRatio(vBufferRatio) {
         }
         virtual void Push(SelectionInfo image) {
             Log << "Received Image.";

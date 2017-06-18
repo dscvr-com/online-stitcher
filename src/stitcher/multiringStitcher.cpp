@@ -259,8 +259,10 @@ namespace optonaut {
         if(stitchedRings.size() > 1) {
             Assert(margin != -1);
                
-            //Log << "Attempting ring adjustment.";
+            Log << "Attempting ring adjustment.";
             ringAdjustmentProgress(1);
+
+            AdjustCorners(stitchedRings, ringAdjustmentProgress);
             
             //AdjustCorners(stitchedRings, ringAdjustmentProgress);
             FindSeams(stitchedRings, store);

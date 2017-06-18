@@ -61,7 +61,8 @@ class Recorder2 {
                   const Mat &_intrinsics,
                   const int graphConfig = RecorderGraph::ModeCenter, 
                   const double tolerance = 1.0,
-                  const std::string debugPath = "") :
+                  const std::string debugPath = "",
+                  const bool highAccuracy = false) :
             zeroWithoutBase(_zeroWithoutBase),
             base(_base),
             intrinsics(_intrinsics),
@@ -79,7 +80,7 @@ class Recorder2 {
                })), 
             leftStitcher(allRotations, 1200, true),
             rightStitcher(allRotations, 1200, true),
-            stereoGenerator(leftStitcher, rightStitcher, halfGraph), 
+            stereoGenerator(leftStitcher, rightStitcher, halfGraph, highAccuracy ? 2 : 1, highAccuracy ? 0.05 : -0.05), 
             reselector(stereoGenerator, halfGraph),
             adjuster(reselector, graph),
             decoupler(adjuster, true),

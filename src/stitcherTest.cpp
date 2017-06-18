@@ -19,7 +19,7 @@
 #include "recorder/multiRingRecorder2.hpp"
 
 // Comment in this define to use the motor pipeline for testing. 
-// #define USE_MOTOR
+#define USE_MOTOR
 
 using namespace std;
 using namespace cv;
@@ -116,12 +116,12 @@ void Record(vector<string> &files) {
 #ifdef USE_MOTOR
             // MotorControlRecorder
             recorder = std::make_shared<RecorderToUse>(base, zero, 
-                        image->intrinsics, leftSink, rightSink, RecorderMode, 8, "");
+                        image->intrinsics, leftSink, rightSink, RecorderMode, 8, "", true);
 #else
             // Recorder2 
             // TODO: Change tolerance back!
             recorder = std::make_shared<RecorderToUse>(base, zero, 
-                        image->intrinsics, RecorderMode, 16, "");
+                        image->intrinsics, RecorderMode, 16, "", false);
 #endif
 
             recorder->SetIdle(false);
@@ -162,9 +162,6 @@ void Record(vector<string> &files) {
 	    }
         }
     }
-    
-    auto preview = recorder->GetPreviewImage();
-    imwrite("dbg/preview.jpg", preview->image.data);
     
     recorder->Finish();
 #ifdef USE_MOTOR
