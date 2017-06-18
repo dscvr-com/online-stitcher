@@ -19,7 +19,7 @@
 #include "recorder/multiRingRecorder2.hpp"
 
 // Comment in this define to use the motor pipeline for testing. 
-#define USE_MOTOR
+// #define USE_THREE_RING
 
 using namespace std;
 using namespace cv;
@@ -31,7 +31,7 @@ bool CompareByFilename (const string &a, const string &b) {
     return IdFromFileName(a) < IdFromFileName(b);
 }
 
-#ifdef USE_MOTOR
+#ifdef USE_THREE_RING
 typedef MultiRingRecorder RecorderToUse;
 const int RecorderMode = RecorderGraph::ModeTruncated; 
 #else
@@ -113,7 +113,7 @@ void Record(vector<string> &files) {
 
             //std::string debugPath = "dbg/debug_out/";
             std::string debugPath = "";
-#ifdef USE_MOTOR
+#ifdef USE_THREE_RING 
             // MotorControlRecorder
             recorder = std::make_shared<RecorderToUse>(base, zero, 
                         image->intrinsics, leftSink, rightSink, RecorderMode, 8, "", true);
@@ -164,7 +164,7 @@ void Record(vector<string> &files) {
     }
     
     recorder->Finish();
-#ifdef USE_MOTOR
+#ifdef USE_THREE_RING
     // Motor
     optonaut::Stitcher leftStitcher(leftStore);
     optonaut::Stitcher rightStitcher(rightStore);
