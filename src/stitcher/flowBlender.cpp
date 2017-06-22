@@ -95,9 +95,9 @@ namespace optonaut {
 
             calcOpticalFlowFarneback(dg, ig, tmp, 
                     0.5, // Pyr Scale
-                    2, // Levels
+                    4, // Levels
                     3, // Winsize
-                    2, // Iterations
+                    4, // Iterations
                     5, // Poly N 
                     1.1, // Poly Sigma
                     0); // Flags

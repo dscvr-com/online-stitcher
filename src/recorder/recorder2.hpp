@@ -72,7 +72,7 @@ class Recorder2 {
                     graphConfig, 
                     highAccuracy
                     ? RecorderGraph::DensityHalf
-                    : RecorderGraph::DensityDouble,
+                    : RecorderGraph::DensityNormal,
                     0, 8)),
             halfGraph(RecorderGraphGenerator::Sparse(graph, 2)),
             allRotations(fun::map<SelectionPoint*, Mat>(
@@ -82,7 +82,7 @@ class Recorder2 {
                })), 
             leftStitcher(allRotations, 1200, true),
             rightStitcher(allRotations, 1200, true),
-            stereoGenerator(leftStitcher, rightStitcher, halfGraph, highAccuracy ? 2 : 1, highAccuracy ? 0.05 : -0.05), 
+            stereoGenerator(leftStitcher, rightStitcher, halfGraph, highAccuracy ? 2 : 1, highAccuracy ? 0.00 : -0.05),
             reselector(stereoGenerator, halfGraph),
             adjuster(reselector, graph),
             decoupler(adjuster, true),

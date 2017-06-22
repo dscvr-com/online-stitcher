@@ -258,7 +258,7 @@ class ImageCorrespondenceFinder : public SelectionSink {
                         Log << "Adjusting " << ring[i]->id << " by " << ydiff;
 
                         vector<AlignmentGraph::Edge*> bwEdges;
-/*
+
                         for(auto &fwdEdge : alignment.GetEdges()[ring[i]->id]) {
                             fwdEdge.value.dphi -= ydiff;
                             auto _bwEdges = alignment.GetEdges(fwdEdge.to, fwdEdge.from);
@@ -270,7 +270,7 @@ class ImageCorrespondenceFinder : public SelectionSink {
                         for(auto bwEdge : bwEdges) {
                             bwEdge->value.dphi += ydiff;
                         }
-                        */
+ 
                     }
 
                     //4) TODO: correct graph for other rings. Alignment is probably sane, but
