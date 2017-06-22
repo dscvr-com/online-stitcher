@@ -258,9 +258,9 @@ class ImageCorrespondenceFinder : public SelectionSink {
                         Log << "Adjusting " << ring[i]->id << " by " << ydiff;
 
                         vector<AlignmentGraph::Edge*> bwEdges;
-
+/*
                         for(auto &fwdEdge : alignment.GetEdges()[ring[i]->id]) {
-                            fwdEdge.value.dphi -= ydiff;
+                            fwdEdge.value.dphi += ydiff;
                             auto _bwEdges = alignment.GetEdges(fwdEdge.to, fwdEdge.from);
                             bwEdges.insert(bwEdges.begin(), _bwEdges.begin(), _bwEdges.end());
                         }
@@ -268,9 +268,9 @@ class ImageCorrespondenceFinder : public SelectionSink {
                         std::sort(bwEdges.begin(), bwEdges.end());
                         bwEdges.erase(unique(bwEdges.begin(), bwEdges.end()), bwEdges.end());
                         for(auto bwEdge : bwEdges) {
-                            bwEdge->value.dphi += ydiff;
+                            bwEdge->value.dphi -= ydiff;
                         }
- 
+                        */
                     }
 
                     //4) TODO: correct graph for other rings. Alignment is probably sane, but

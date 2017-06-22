@@ -55,7 +55,7 @@ namespace optonaut {
 
                 Mat corr; //Debug image used to print the correlation result.  
                 PlanarCorrelationResult result = AlignerToUse::Align(
-                        aOverlapImg, bOverlapImg, corr, 0.2, 0.01, 1);
+                        aOverlapImg, bOverlapImg, corr, 0.2, 0.01, 0);
 
                 offset = result.offset;
 
@@ -95,8 +95,8 @@ namespace optonaut {
 
             calcOpticalFlowFarneback(dg, ig, tmp, 
                     0.5, // Pyr Scale
-                    4, // Levels
-                    3, // Winsize
+                    2, // Levels
+                    5, // Winsize
                     4, // Iterations
                     5, // Poly N 
                     1.1, // Poly Sigma

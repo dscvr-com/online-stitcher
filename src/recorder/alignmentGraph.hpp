@@ -298,7 +298,7 @@ namespace optonaut {
                 x = Mat::zeros(n, 1, CV_64F);
 
                 // Alpha - damping for our regression. 
-                double alpha = 2;
+                double alpha = 3;
                 double beta = 1 / alpha;
                 double error = 0;
                 double weightSum = 0;
