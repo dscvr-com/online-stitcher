@@ -298,7 +298,7 @@ namespace optonaut {
                 x = Mat::zeros(n, 1, CV_64F);
 
                 // Alpha - damping for our regression. 
-                double alpha = 3;
+                double alpha = 2;
                 double beta = 1 / alpha;
                 double error = 0;
                 double weightSum = 0;
@@ -406,13 +406,13 @@ namespace optonaut {
              */
             void Apply(InputImageP in) const {
                 Mat ybias(4, 4, CV_64F);
-               // Mat xbias(4, 4, CV_64F);
+                Mat xbias(4, 4, CV_64F);
 
                 if(alignmentCorrections.find(in->id) != alignmentCorrections.end()) {
                     CreateRotationY(-alignmentCorrections.at(in->id).y, ybias);
-                //    CreateRotationX(alignmentCorrections.at(in->id).x, xbias);
+                    CreateRotationX(alignmentCorrections.at(in->id).x, xbias);
                     Log << "Adjusting " << in->id << " by y: " << alignmentCorrections.at(in->id).y << ", x: " << alignmentCorrections.at(in->id).x;
-                    in->adjustedExtrinsics = in->adjustedExtrinsics * ybias;// * xbias; 
+                    in->adjustedExtrinsics = in->adjustedExtrinsics * ybias * xbias; 
                 }
             }
     };
