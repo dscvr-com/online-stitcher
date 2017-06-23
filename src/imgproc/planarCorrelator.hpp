@@ -281,8 +281,8 @@ class CrossCorrelation<Vec3b, alpha> {
 /*
  * Correlator debug flag - switch on for pairwise debug output. 
  */ 
-static const bool debugCorrelator = true;
-static const bool outputMatch = true;
+static const bool debugCorrelator = false;
+static const bool outputMatch = false;
 static const bool assertsInLoopsOn = false;
 
 /*

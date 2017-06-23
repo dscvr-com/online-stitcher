@@ -78,7 +78,7 @@ public:
 class PairwiseCorrelator {
 
 private:
-    static const bool debug = true;
+    static const bool debug = false;
     /*
      * Definition of the underlying planar aligner to use. 
      */

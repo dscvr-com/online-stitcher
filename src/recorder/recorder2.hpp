@@ -71,8 +71,8 @@ class Recorder2 {
                     intrinsics, 
                     graphConfig, 
                     highAccuracy
-                    ? RecorderGraph::DensityHalf
-                    : RecorderGraph::DensityNormal,
+                    ? RecorderGraph::DensityNormal
+                    : RecorderGraph::DensityDouble,
                     0, 8)),
             halfGraph(RecorderGraphGenerator::Sparse(graph, 2)),
             allRotations(fun::map<SelectionPoint*, Mat>(
