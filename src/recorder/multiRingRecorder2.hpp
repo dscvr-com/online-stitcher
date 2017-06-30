@@ -72,7 +72,7 @@ class MultiRingRecorder {
                     0, 8)),
             leftSink(_leftSink),
             rightSink(_rightSink),
-            stereoGenerator(leftSink, rightSink, graph, highAccuracy ? 2 : 1, highAccuracy ? 0.05 : -0.05), 
+            stereoGenerator(leftSink, rightSink, graph, highAccuracy ? 0.6 : 0.6, highAccuracy ? 0.05 : -0.05), 
             asyncQueue(stereoGenerator, false),
             reselector(asyncQueue, graph),
             adjuster(reselector, graph),
@@ -86,7 +86,8 @@ class MultiRingRecorder {
             loader(debugger),
             converter(base, zeroWithoutBase, loader)
         {
-            size_t imagesCount = graph.Size();
+            // We only need the center ring (and a bit more)
+            size_t imagesCount = graph.GetRings()[1].size();
 
             AssertNEQM(graphConfig, RecorderGraph::ModeCenter, "Using multi-ring recorder for center ring only. Thats not efficient.");
 
