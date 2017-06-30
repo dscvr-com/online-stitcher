@@ -116,12 +116,12 @@ void Record(vector<string> &files) {
 #ifdef USE_THREE_RING 
             // MotorControlRecorder
             recorder = std::make_shared<RecorderToUse>(base, zero, 
-                        image->intrinsics, leftSink, rightSink, RecorderMode, 1.0, "", true);
+                        image->intrinsics, leftSink, rightSink, RecorderMode, 5.0, "", true);
 #else
             // Recorder2 
             // TODO: Change tolerance back!
             recorder = std::make_shared<RecorderToUse>(base, zero, 
-                        image->intrinsics, RecorderMode, 1.0, "", false);
+                        image->intrinsics, RecorderMode, 5.0, "", false);
 #endif
 
             recorder->SetIdle(false);

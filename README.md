@@ -118,3 +118,7 @@ This is natively supported on almost all OS.
 If you need to run it on Bash for Windows, install an XServer on windows (VcXsrv), invoke it with the command line (so the window is not hidden), then in Bash export the disaply (export DISPLAY=:0). 
 
 This will create a fine rendering context. 
+
+## Parameter Tuning
+
+The most tuneable global params are hOverlap/vOverlap for recorderGraphGenerator, which gives how many images we record, as well as hOverlap/vOverlap for StereoGenerator, which gives how much additional overlap we add to the sides of the image for later stitching. 
