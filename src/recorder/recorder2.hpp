@@ -9,6 +9,7 @@
 #include "imageLoader.hpp"
 #include "coordinateConverter.hpp"
 #include "debugSink.hpp"
+#include "recorderParamInfo.hpp"
 
 #ifndef OPTONAUT_RECORDER_2_HEADER
 #define OPTONAUT_RECORDER_2_HEADER
@@ -21,6 +22,7 @@ class SelectionInfoToImageSink : public MapSink<SelectionInfo, InputImageP> {
             return in.image;
         }, outSink) { }
 };
+
 
 class Recorder2 {
 
@@ -62,7 +64,7 @@ class Recorder2 {
                   const int graphConfig = RecorderGraph::ModeCenter, 
                   const double tolerance = 1.0,
                   const std::string debugPath = "",
-                  const bool highAccuracy = false) :
+                  const RecorderParamInfo paramInfo = RecorderParamInfo()) :
             zeroWithoutBase(_zeroWithoutBase),
             base(_base),
             intrinsics(_intrinsics),
@@ -70,10 +72,10 @@ class Recorder2 {
             graph(generator.Generate(
                     intrinsics, 
                     graphConfig, 
-                    highAccuracy
+                    paramInfo.halfGraph
                     ? RecorderGraph::DensityNormal
                     : RecorderGraph::DensityDouble,
-                    0, 8)),
+                    0, 8, paramInfo.graphHOverlap, paramInfo.graphVOverlap)),
             halfGraph(RecorderGraphGenerator::Sparse(graph, 2)),
             allRotations(fun::map<SelectionPoint*, Mat>(
                halfGraph.GetTargetsById(), 
@@ -82,7 +84,7 @@ class Recorder2 {
                })), 
             leftStitcher(allRotations, 1200, true),
             rightStitcher(allRotations, 1200, true),
-            stereoGenerator(leftStitcher, rightStitcher, halfGraph, highAccuracy ? 1 : 1, highAccuracy ? 0.00 : -0.05),
+            stereoGenerator(leftStitcher, rightStitcher, halfGraph, paramInfo.stereoHBuffer, paramInfo.stereoVBuffer),
             reselector(stereoGenerator, halfGraph),
             adjuster(reselector, graph),
             decoupler(adjuster, true),

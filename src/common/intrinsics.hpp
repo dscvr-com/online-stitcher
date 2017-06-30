@@ -19,8 +19,8 @@ namespace optonaut {
     //TODO - These are roughly calibrated with iPhone 6
     //Recalibrate. 
     double iPhone5IntrinsicsData[9] = {
-        0.77, 0, 0.36, 
-        0, 0.77, 0.64, 
+        0.7, 0, 0.36,
+        0, 0.7, 0.64,
         0, 0, 1};
 
     cv::Mat iPhone5Intrinsics(3, 3, CV_64F, iPhone5IntrinsicsData);

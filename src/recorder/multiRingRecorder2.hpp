@@ -11,13 +11,12 @@
 #include "coordinateConverter.hpp"
 #include "debugSink.hpp"
 #include "storageImageSink.hpp"
+#include "recorderParamInfo.hpp"
 
 #ifndef OPTONAUT_MOTOR_CONTROL_RECORDER_HEADER
 #define OPTONAUT_MOTOR_CONTROL_RECORDER_HEADER
 
 namespace optonaut {
-
-
 
 class MultiRingRecorder {
 
@@ -60,19 +59,21 @@ class MultiRingRecorder {
                   const int graphConfig = RecorderGraph::ModeAll,
                   const double tolerance = 1.0,
                   const std::string debugPath = "",
-                  const bool highAccuracy = false) :
+                  const RecorderParamInfo paramInfo = RecorderParamInfo()) :
             zeroWithoutBase(_zeroWithoutBase),
             base(_base),
             intrinsics(_intrinsics),
             generator(),
             graph(generator.Generate(
-                    intrinsics,
-                    graphConfig,
-                    RecorderGraph::DensityNormal,
-                    0, 8)),
+                 intrinsics,
+                 graphConfig,
+                 paramInfo.halfGraph
+                 ? RecorderGraph::DensityNormal
+                 : RecorderGraph::DensityDouble,
+                 0, 8, paramInfo.graphHOverlap, paramInfo.graphVOverlap)),
             leftSink(_leftSink),
             rightSink(_rightSink),
-            stereoGenerator(leftSink, rightSink, graph, highAccuracy ? 1 : 1, highAccuracy ? 0.05 : -0.05), 
+            stereoGenerator(leftSink, rightSink, graph, paramInfo.stereoHBuffer, paramInfo.stereoVBuffer), 
             asyncQueue(stereoGenerator, false),
             reselector(asyncQueue, graph),
             adjuster(reselector, graph),

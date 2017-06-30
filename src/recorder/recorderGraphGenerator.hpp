@@ -25,11 +25,6 @@ namespace optonaut {
 class RecorderGraphGenerator {
 
 private:
-	// adj[n] contains m if m is right of n
-	// Horizontal and Vertical overlap in percent.
-	static constexpr double hOverlap_ = 0.7;
-	static constexpr double vOverlap_ = 0.25;
-
     static const bool debug = false;
 
     /*
@@ -338,7 +333,7 @@ public:
 
         return sparse;
     }
-
+    
     /*
      * Generates a new recorder graph, based on the given parameters.
      *
@@ -347,8 +342,10 @@ public:
      * @param density The density of the recorder graph. 1 is normal. 2 leads to twice as many selection points.
      * @param lastRingOverdrive Additional edges to add to the last ring, so we record extra.
      * @param divider The ring size is guaranteed to be divisible by this divider. Useful if a sparse graph should be generated from this graph.
+     * @param hOverlap The horizontal extra space for each image, left and right. Take note that this parameter is not reliable, since it happens *before* focal length estimation.
+     * @param vOverlap The vertical extra space for each image, bottom and top.
      */
-    static RecorderGraph Generate(const Mat &intrinsics, const int mode = RecorderGraph::ModeAll, const float density = RecorderGraph::DensityNormal, const int lastRingOverdrive = 0, const int divider = 1) {
+    static RecorderGraph Generate(const Mat &intrinsics, const int mode = RecorderGraph::ModeAll, const float density = RecorderGraph::DensityNormal, const int lastRingOverdrive = 0, const int divider = 1, double hOverlap_ = 0.7, double vOverlap_ = 0.25) {
         AssertWGEM(density, 1.f,
                 "Reducing recorder graph density below one is potentially unsafe.");
 
