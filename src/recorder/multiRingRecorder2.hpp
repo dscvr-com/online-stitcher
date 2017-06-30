@@ -72,7 +72,7 @@ class MultiRingRecorder {
                     0, 8)),
             leftSink(_leftSink),
             rightSink(_rightSink),
-            stereoGenerator(leftSink, rightSink, graph, highAccuracy ? 0.6 : 0.6, highAccuracy ? 0.05 : -0.05), 
+            stereoGenerator(leftSink, rightSink, graph, highAccuracy ? 1 : 1, highAccuracy ? 0.05 : -0.05), 
             asyncQueue(stereoGenerator, false),
             reselector(asyncQueue, graph),
             adjuster(reselector, graph),
