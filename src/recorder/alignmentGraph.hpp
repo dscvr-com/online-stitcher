@@ -272,6 +272,8 @@ namespace optonaut {
                 size_t maxId = 0;
                 Edges allEdges;
 
+                Log << "Edges count: " << relations.GetEdges().size();
+
                 for(auto &adj : relations.GetEdges()) {
                     maxId = max(maxId, adj.first);
                 }

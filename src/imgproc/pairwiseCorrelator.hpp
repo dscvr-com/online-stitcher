@@ -168,6 +168,7 @@ public:
                 wa.rows < minHeight || wb.rows < minHeight) {
             result.valid = false;
             result.rejectionReason = RejectionNoOverlap;
+            Log << "Rejected: Overlap to small";
             return result;
         }
 
@@ -183,9 +184,7 @@ public:
         if(enableOutOfWindowTest && (res.offset.x < -maxX || res.offset.x > maxX 
                 || res.offset.y < -maxY || res.offset.y > maxY)) {
 
-            if(debug) {
-                cout << "Rejected because the correlation found an extremum at the border of the image." << endl;
-            }
+            Log << "Rejected: Correlation found an extremum at the border of the image.";
 
             result.valid = false;
             result.rejectionReason = RejectionOutOfWindow;
@@ -195,10 +194,8 @@ public:
         if(enableDeviationTest && (res.topDeviation < 1.5)) {
             result.valid = false;
             result.rejectionReason = RejectionDeviationTest;
-            
-            if(debug) {
-                cout << "Rejected because top deviation == " << res.topDeviation << " < 1.5." << endl;
-            }
+
+            Log << "Rejected: Top deviation == " << res.topDeviation << " < 1.5.";;
 
             return result;
         }

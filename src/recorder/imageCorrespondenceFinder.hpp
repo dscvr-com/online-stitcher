@@ -1,4 +1,4 @@
-#include "../math/stat.hpp"
+ #include "../math/stat.hpp"
 #include "../recorder/alignmentGraph.hpp"
 #include "../imgproc/pairwiseCorrelator.hpp"
 #include "../common/static_timer.hpp"
@@ -275,6 +275,8 @@ class ImageCorrespondenceFinder : public SelectionSink {
                     //4) TODO: correct graph for other rings. Alignment is probably sane, but
                     //it's way more efficient to "pre-turn" the rings. 
                     //DO NOT correct focal len
+                } else {
+                    Log << "Ring alignment skipped, because outer images had no match";
                 }
 
                 currentRing = graph.GetNextRing(currentRing);
@@ -285,9 +287,13 @@ class ImageCorrespondenceFinder : public SelectionSink {
                 SimpleSphereStitcher::StitchAndWrite("dbg/alignment_2_ring_closed.jpg", fun::map<SelectionInfo, InputImageP>(largeImages, [](const SelectionInfo& x) -> InputImageP { return x.image; }));
             }
 
+            Log << "Attempting to find alignment";
+
             // Second, perform global optimization. 
             alignment.FindAlignment(error); 
             exposure.FindGains();
+
+            Log << "Applying focal length adjustment";
 
             // Third, apply focal length corrections.  
             if(focalLenAdjustmentOn) {
@@ -341,6 +347,8 @@ class ImageCorrespondenceFinder : public SelectionSink {
                 SimpleSphereStitcher::StitchAndWrite("dbg/alignment_3_focal_len.jpg", fun::map<SelectionInfo, InputImageP>(largeImages, [](const SelectionInfo& x) -> InputImageP { return x.image; }));
             }
 
+            Log << "Applying extrinsics";
+
             if(fullAlignmentOn) {
                 // Todo - not sure if apply is good here. 
                 for(auto info : largeImages) {
@@ -360,6 +368,8 @@ class ImageCorrespondenceFinder : public SelectionSink {
             }
 
             planarCorrelations = CorrespondenceCrossProduct(planarCorrelations);
+
+            Log << "Finishing alignment";
 
             outSink.Push(GetAdjustedImages());
             outSink.Finish();
