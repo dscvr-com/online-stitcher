@@ -19,6 +19,8 @@ void saveDest(const Mat &dest, const char* name, float scale = 30) {
     }
 }
 
+
+
 static void
 FarnebackUpdateMatrices( const Mat& _R0, const Mat& _R1, const Mat& _flow, Mat& matM, int _y0, int _y1 )
 {
@@ -113,6 +115,187 @@ FarnebackUpdateMatrices( const Mat& _R0, const Mat& _R1, const Mat& _flow, Mat& 
         }
     }
 }
+
+static void
+FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
+                                 Mat& _flow, Mat& matM, int block_size,
+                                 bool update_matrices )
+{
+    int x, y, i, width = _flow.cols, height = _flow.rows;
+    int m = block_size/2;
+    int y0 = 0, y1;
+    int min_update_stripe = std::max((1 << 10)/width, block_size);
+    double sigma = m*0.3, s = 1;
+    
+    AutoBuffer<float> _vsum((width+m*2+2)*5 + 16), _hsum(width*5 + 16);
+    AutoBuffer<float> _kernel((m+1)*5 + 16);
+    AutoBuffer<float*> _srow(m*2+1);
+    float *vsum = alignPtr((float*)_vsum + (m+1)*5, 16), *hsum = alignPtr((float*)_hsum, 16);
+    float* kernel = (float*)_kernel;
+    const float** srow = (const float**)&_srow[0];
+    kernel[0] = (float)s;
+    
+    for( i = 1; i <= m; i++ )
+    {
+        float t = (float)std::exp(-i*i/(2*sigma*sigma) );
+        kernel[i] = t;
+        s += t*2;
+    }
+    
+    s = 1./s;
+    for( i = 0; i <= m; i++ )
+        kernel[i] = (float)(kernel[i]*s);
+    
+#if CV_SSE2
+    float* simd_kernel = alignPtr(kernel + m+1, 16);
+    volatile bool useSIMD = checkHardwareSupport(CV_CPU_SSE);
+    if( useSIMD )
+    {
+        for( i = 0; i <= m; i++ )
+            _mm_store_ps(simd_kernel + i*4, _mm_set1_ps(kernel[i]));
+    }
+#endif
+    
+    // compute blur(G)*flow=blur(h)
+    for( y = 0; y < height; y++ )
+    {
+        double g11, g12, g22, h1, h2;
+        float* flow = _flow.ptr<float>(y);
+        
+        // vertical blur
+        for( i = 0; i <= m; i++ )
+        {
+            srow[m-i] = matM.ptr<float>(std::max(y-i,0));
+            srow[m+i] = matM.ptr<float>(std::min(y+i,height-1));
+        }
+        
+        x = 0;
+#if CV_SSE2
+        if( useSIMD )
+        {
+            for( ; x <= width*5 - 16; x += 16 )
+            {
+                const float *sptr0 = srow[m], *sptr1;
+                __m128 g4 = _mm_load_ps(simd_kernel);
+                __m128 s0, s1, s2, s3;
+                s0 = _mm_mul_ps(_mm_loadu_ps(sptr0 + x), g4);
+                s1 = _mm_mul_ps(_mm_loadu_ps(sptr0 + x + 4), g4);
+                s2 = _mm_mul_ps(_mm_loadu_ps(sptr0 + x + 8), g4);
+                s3 = _mm_mul_ps(_mm_loadu_ps(sptr0 + x + 12), g4);
+                
+                for( i = 1; i <= m; i++ )
+                {
+                    __m128 x0, x1;
+                    sptr0 = srow[m+i], sptr1 = srow[m-i];
+                    g4 = _mm_load_ps(simd_kernel + i*4);
+                    x0 = _mm_add_ps(_mm_loadu_ps(sptr0 + x), _mm_loadu_ps(sptr1 + x));
+                    x1 = _mm_add_ps(_mm_loadu_ps(sptr0 + x + 4), _mm_loadu_ps(sptr1 + x + 4));
+                    s0 = _mm_add_ps(s0, _mm_mul_ps(x0, g4));
+                    s1 = _mm_add_ps(s1, _mm_mul_ps(x1, g4));
+                    x0 = _mm_add_ps(_mm_loadu_ps(sptr0 + x + 8), _mm_loadu_ps(sptr1 + x + 8));
+                    x1 = _mm_add_ps(_mm_loadu_ps(sptr0 + x + 12), _mm_loadu_ps(sptr1 + x + 12));
+                    s2 = _mm_add_ps(s2, _mm_mul_ps(x0, g4));
+                    s3 = _mm_add_ps(s3, _mm_mul_ps(x1, g4));
+                }
+                
+                _mm_store_ps(vsum + x, s0);
+                _mm_store_ps(vsum + x + 4, s1);
+                _mm_store_ps(vsum + x + 8, s2);
+                _mm_store_ps(vsum + x + 12, s3);
+            }
+            
+            for( ; x <= width*5 - 4; x += 4 )
+            {
+                const float *sptr0 = srow[m], *sptr1;
+                __m128 g4 = _mm_load_ps(simd_kernel);
+                __m128 s0 = _mm_mul_ps(_mm_loadu_ps(sptr0 + x), g4);
+                
+                for( i = 1; i <= m; i++ )
+                {
+                    sptr0 = srow[m+i], sptr1 = srow[m-i];
+                    g4 = _mm_load_ps(simd_kernel + i*4);
+                    __m128 x0 = _mm_add_ps(_mm_loadu_ps(sptr0 + x), _mm_loadu_ps(sptr1 + x));
+                    s0 = _mm_add_ps(s0, _mm_mul_ps(x0, g4));
+                }
+                _mm_store_ps(vsum + x, s0);
+            }
+        }
+#endif
+        for( ; x < width*5; x++ )
+        {
+            float s0 = srow[m][x]*kernel[0];
+            for( i = 1; i <= m; i++ )
+                s0 += (srow[m+i][x] + srow[m-i][x])*kernel[i];
+            vsum[x] = s0;
+        }
+        
+        // update borders
+        for( x = 0; x < m*5; x++ )
+        {
+            vsum[-1-x] = vsum[4-x];
+            vsum[width*5+x] = vsum[width*5+x-5];
+        }
+        
+        // horizontal blur
+        x = 0;
+#if CV_SSE2
+        if( useSIMD )
+        {
+            for( ; x <= width*5 - 8; x += 8 )
+            {
+                __m128 g4 = _mm_load_ps(simd_kernel);
+                __m128 s0 = _mm_mul_ps(_mm_loadu_ps(vsum + x), g4);
+                __m128 s1 = _mm_mul_ps(_mm_loadu_ps(vsum + x + 4), g4);
+                
+                for( i = 1; i <= m; i++ )
+                {
+                    g4 = _mm_load_ps(simd_kernel + i*4);
+                    __m128 x0 = _mm_add_ps(_mm_loadu_ps(vsum + x - i*5),
+                                           _mm_loadu_ps(vsum + x + i*5));
+                    __m128 x1 = _mm_add_ps(_mm_loadu_ps(vsum + x - i*5 + 4),
+                                           _mm_loadu_ps(vsum + x + i*5 + 4));
+                    s0 = _mm_add_ps(s0, _mm_mul_ps(x0, g4));
+                    s1 = _mm_add_ps(s1, _mm_mul_ps(x1, g4));
+                }
+                
+                _mm_store_ps(hsum + x, s0);
+                _mm_store_ps(hsum + x + 4, s1);
+            }
+        }
+#endif
+        for( ; x < width*5; x++ )
+        {
+            float sum = vsum[x]*kernel[0];
+            for( i = 1; i <= m; i++ )
+                sum += kernel[i]*(vsum[x - i*5] + vsum[x + i*5]);
+            hsum[x] = sum;
+        }
+        
+    //saveDest(flow, "flow_update_before_det", 10000);
+    //saveDest(M, "M_update_gefore_det", 10000);
+        for( x = 0; x < width; x++ )
+        {
+            g11 = hsum[x*5];
+            g12 = hsum[x*5+1];
+            g22 = hsum[x*5+2];
+            h1 = hsum[x*5+3];
+            h2 = hsum[x*5+4];
+            
+            double idet = 1./(g11*g22 - g12*g12 + 1e-3);
+            
+            flow[x*2] = (float)((g11*h2-g12*h1)*idet);
+            flow[x*2+1] = (float)((g22*h1-g12*h2)*idet);
+        }
+        
+        y1 = y == height - 1 ? height : y - block_size;
+        if( update_matrices && (y1 == height || y1 >= y0 + min_update_stripe) )
+        {
+            FarnebackUpdateMatrices( _R0, _R1, _flow, matM, y0, y1 );
+            y0 = y1;
+        }
+    }
+}
+
 
 void
 FarnebackPrepareGaussian(int n, double sigma, float *g, float *xg, float *xxg,
@@ -316,12 +499,12 @@ int main() {
     Mat src = imread("Murmeln_LEFT.jpg");
     Mat src2 = imread("Murmeln_RIGHT.jpg");
 
-    Mat planes[3];
+    Mat planes[3], planes2[3];
     split(src,planes);  
     Mat fimg, fimg2; 
     planes[2].convertTo(fimg, CV_32F, 1.0/255.0, 0); 
-    split(src2,planes);  
-    planes[2].convertTo(fimg2, CV_32F, 1.0/255.0, 0); 
+    split(src2,planes2);  
+    planes2[2].convertTo(fimg2, CV_32F, 1.0/255.0, 0); 
 
     Mat poly1, poly2;
 
@@ -329,12 +512,39 @@ int main() {
     polyExp(fimg2, poly2);
 
     Mat flow = Mat::zeros(poly1.rows, poly1.cols, CV_32FC2);
+    flow.setTo(Scalar(1, 0));
     Mat M;
     
     FarnebackUpdateMatrices( poly1, poly2, flow, M, 0, poly1.rows);
+    saveDest(flow, "flow_update", 10000);
+    saveDest(M, "M_update", 10000);
+    FarnebackUpdateFlow_GaussianBlur(poly1, poly2,
+                                 flow, M, 7, false);
+    saveDest(flow, "flow_update_g", 100);
+    saveDest(M, "M_update_g", 10000);
 
-    saveDest(flow, "flow", 100000);
-    saveDest(M, "M", 100000);
+    
+    FarnebackUpdateMatrices( poly1, poly2, flow, M, 0, poly1.rows);
+    saveDest(flow, "flow_update_2", 10000);
+    saveDest(M, "M_update_2", 10000);
+    FarnebackUpdateFlow_GaussianBlur(poly1, poly2,
+                                 flow, M, 7, false);
+    saveDest(flow, "flow_update_g_2", 100);
+    saveDest(M, "M_update_g_2", 10000);
+   
 
+    FarnebackUpdateMatrices( poly1, poly2, flow, M, 0, poly1.rows);
+    saveDest(flow, "flow_update_3", 10000);
+    saveDest(M, "M_update_3", 10000);
+    FarnebackUpdateFlow_GaussianBlur(poly1, poly2,
+                                 flow, M, 7, false);
+    saveDest(flow, "flow_update_g_3", 100);
+    saveDest(M, "M_update_g_3", 10000);
+
+    Mat truth = Mat::zeros(src.size(), CV_32FC2);
+
+    cv::calcOpticalFlowFarneback(planes[2], planes2[2], truth, 0.3, 0, 5, 5, 7, 1.5, 0);
+
+    saveDest(truth, "Truth", 1.0 / 255.0);
 }
 

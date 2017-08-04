@@ -19,7 +19,7 @@
 #include "recorder/multiRingRecorder2.hpp"
 
 // Comment in this define to use the motor pipeline for testing. 
-// #define USE_THREE_RING
+ #define USE_THREE_RING
 
 using namespace std;
 using namespace cv;
@@ -116,12 +116,12 @@ void Record(vector<string> &files) {
 #ifdef USE_THREE_RING 
             // MotorControlRecorder
             recorder = std::make_shared<RecorderToUse>(base, zero, 
-                        image->intrinsics, leftSink, rightSink, RecorderMode, 5.0, "", true);
+                        image->intrinsics, leftSink, rightSink, RecorderMode, 5.0, "");
 #else
             // Recorder2 
             // TODO: Change tolerance back!
             recorder = std::make_shared<RecorderToUse>(base, zero, 
-                        image->intrinsics, RecorderMode, 5.0, "", false);
+                        image->intrinsics, RecorderMode, 5.0, "");
 #endif
 
             recorder->SetIdle(false);

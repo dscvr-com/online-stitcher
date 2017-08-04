@@ -1,6 +1,7 @@
 #include <opencv2/stitching/detail/blenders.hpp>
 #include <opencv2/video/tracking.hpp>
-#include <arm_neon.h>
+#include "../common/NEON_2_SSE.h" // TODO: disable on ARM
+//#include <arm_neon.h>
 
 using namespace cv;
 using namespace std;
@@ -134,7 +135,8 @@ namespace optonaut {
     float neon_clamp ( float val, float minval, float maxval )
     {
         // Branchless NEON clamp.
-        return vmin_f32( vmax_f32(val, minval), maxval);
+        // return vminq_f32(vmaxq_f32(val, minval), maxval);
+        return std::min(std::max(val, minval), maxval);
     }
 
     void FlowBlender::Feed(const Mat &img, const Mat &flow, const Point &tl)
@@ -228,17 +230,16 @@ namespace optonaut {
 
                 // Check mapping - if out-of-bounds we use Identity mapping
                 // Todo: Might want to check mask
+                imgDx = imgDx < 0 || imgDx >= w ? x : imgDx;
+                imgDy = imgDy < 0 || imgDy >= h ? y : imgDy;
 
-                imgDx = neon_clamp(imgDx, 0, w);
-                imgDy = neon_clamp(imgDy, 0, h);
+                destDx = destDx < 0 || destDx >= dw ? x : destDx;
+                destDy = destDy < 0 || destDy >= dh ? y : destDy;
 
-                destDx = neon_clamp(destDx, 0, dw);
-                destDy = neon_clamp(destDy, 0, dh);
-
-                *pImgMapX++ += imgDx;
-                *pImgMapY++ += imgDy;
-                *pDestMapX++ += destDx;
-                *pDestMapY++ += destDy;
+                *pImgMapX++ = imgDx;
+                *pImgMapY++ = imgDy;
+                *pDestMapX++ = destDx;
+                *pDestMapY++ = destDy;
             }
         }
 
