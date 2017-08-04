@@ -1,5 +1,6 @@
 #include <opencv2/stitching/detail/blenders.hpp>
 #include <opencv2/video/tracking.hpp>
+#include <arm_neon.h>
 
 using namespace cv;
 using namespace std;
@@ -129,6 +130,13 @@ namespace optonaut {
         t.Tick("Flow Calculation");
     }
 
+
+    float neon_clamp ( float val, float minval, float maxval )
+    {
+        // Branchless NEON clamp.
+        return vmin_f32( vmax_f32(val, minval), maxval);
+    }
+
     void FlowBlender::Feed(const Mat &img, const Mat &flow, const Point &tl)
     {
         AssertEQ(img.type(), CV_8UC3);
@@ -179,7 +187,6 @@ namespace optonaut {
 
         Mat temp(img.size(), CV_8UC3);
 
-
         int w = img.cols;
         int h = img.rows;
         int dw = dest.cols;
@@ -221,19 +228,17 @@ namespace optonaut {
 
                 // Check mapping - if out-of-bounds we use Identity mapping
                 // Todo: Might want to check mask
-                if(imgDx < 0 || imgDy < 0 || imgDx >= w || imgDy >= h) {
-                    imgDx = x;
-                    imgDy = y;
-                }
-                if(destDx < 0 || destDy < 0 || destDx >= dw || destDy >= dh || destMask.at<uchar>(destDy, destDx) == 0) {
-                    destDx = dx + x;
-                    destDy = dy + y;
-                }
 
-                *pImgMapX++ = imgDx;
-                *pImgMapY++ = imgDy;
-                *pDestMapX++ = destDx;
-                *pDestMapY++ = destDy;
+                imgDx = neon_clamp(imgDx, 0, w);
+                imgDy = neon_clamp(imgDy, 0, h);
+
+                destDx = neon_clamp(destDx, 0, dw);
+                destDy = neon_clamp(destDy, 0, dh);
+
+                *pImgMapX++ += imgDx;
+                *pImgMapY++ += imgDy;
+                *pDestMapX++ += destDx;
+                *pDestMapY++ += destDy;
             }
         }
 
@@ -259,7 +264,7 @@ namespace optonaut {
                 float wcs = 1.f - wcd;
 
                 for(int c = 0; c < 3; c++) {
-                    *pTemp++ = wcd * (*pRemappedDest++) + wcs * (*pRemappedImg++);
+                    *pTemp++ = (uchar)(wcd * (*pRemappedDest++) + wcs * (*pRemappedImg++));
                 }
             }
         }
