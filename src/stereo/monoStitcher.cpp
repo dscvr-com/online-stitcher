@@ -165,8 +165,8 @@ Point2f MapToTarget(const InputImageP a, const StereoTarget &target, Mat &result
     Mat transformationF;
     From3DoubleTo3Float(transformation, transformationF);
     //transformationF = Mat::eye(3, 3, CV_32F);
-    //transformationF.at<float>(0, 2) = (int)transformation.at<double>(0, 2);
-    //transformationF.at<float>(1, 2) = (int)transformation.at<double>(1, 2);
+    //transformationF.at<float>(0, 2) = 0;
+    //transformationF.at<float>(1, 2) = 0;
 
     //cout << rot << endl;
     //cout << aK.inv() << endl;
