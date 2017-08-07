@@ -453,7 +453,7 @@ class PyramidPlanarAligner {
                 // If we skip, just upsample the guess. 
                 res = guess * 2;
             } else {
-                STimer cTimer(true);
+                STimer cTimer(false);
                 Mat corrBf;
 
                 // Perform a brute force correlation, but just for a very small area. 
@@ -493,7 +493,7 @@ class PyramidPlanarAligner {
         } else {
             // If we are at the bottom of our pyramid and the image is already very small, 
             // perform a brute-force correlation. 
-            STimer cTimer(true);
+            STimer cTimer(false);
             PlanarCorrelationResult detailedRes = 
                 BruteForcePlanarAligner<Correlator>::Align(a, b, corr, wx, wy);
 
