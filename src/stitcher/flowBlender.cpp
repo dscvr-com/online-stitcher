@@ -1,6 +1,6 @@
 #include <opencv2/stitching/detail/blenders.hpp>
 #include <opencv2/video/tracking.hpp>
-#include "../common/NEON_2_SSE.h" // TODO: disable on ARM
+//#include "../common/NEON_2_SSE.h" // TODO: disable on ARM
 //#include <arm_neon.h>
 
 using namespace cv;
@@ -97,7 +97,7 @@ namespace optonaut {
 
             calcOpticalFlowFarneback(dg, ig, tmp, 
                     0.5, // Pyr Scale
-                    2, // Levels
+                    1, // Levels
                     5, // Winsize
                     4, // Iterations
                     5, // Poly N 

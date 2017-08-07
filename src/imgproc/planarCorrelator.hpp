@@ -13,6 +13,7 @@
 using namespace cv;
 using namespace std; 
 
+
 namespace optonaut {
 
 /*
@@ -21,6 +22,7 @@ namespace optonaut {
  */
 template <typename ErrorMetric>
 class BaseCorrelator {
+    const int step = 4;
     public:
     /*
      * Calculates the correlation value.
@@ -42,8 +44,8 @@ class BaseCorrelator {
         float corr = 0;
 
         // Lop over overlapping area and calculate correlation value. 
-        for(int x = sx; x < ex; x++) {
-            for(int y = sy; y < ey; y++) {
+        for(int y = sy; y < ey; y += 3) {
+            for(int x = sx; x < ex; x += 3) {
                  corr += ErrorMetric::Calculate(a, b, x, y, x + dx, y + dy);
             }
         }
