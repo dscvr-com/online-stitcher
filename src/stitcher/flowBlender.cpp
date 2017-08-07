@@ -40,8 +40,11 @@ namespace optonaut {
 
         if(overlap.width == 0 || overlap.height == 0)
             return;
-        
-        if(useFlow) {
+      
+        // Corner case: Super-big image for border images.  
+        const bool tooBig = a.cols > destRoi.width / 4 || b.cols > destRoi.width / 4;
+
+        if(useFlow && !tooBig) {
             Rect aOverlap(overlap.tl() - aTl, overlap.size());
             Rect bOverlap(overlap.tl() - bTl, overlap.size());
 

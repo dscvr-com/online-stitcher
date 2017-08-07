@@ -8,8 +8,10 @@
 #ifndef OPTONAUT_LOGGER_HEADER
 #define OPTONAUT_LOGGER_HEADER
 
-#define Log Logger(__PRETTY_FUNCTION__, true)
-#define LogR Logger("RESULT ", false)
+#define Log !(false) ? (void)0 : \
+     LoggerVoidify() & Logger(__PRETTY_FUNCTION__, true)
+#define LogR !(false) ? (void)0 : \
+     LoggerVoidify() & Logger("RESULT ", false)
 
 namespace optonaut {
 class Logger
@@ -46,6 +48,12 @@ class Logger
             std::cout << line.str() << std::endl;
 #endif
         }
+};
+
+class LoggerVoidify
+{
+    public:
+        void operator & (Logger&) { }
 };
 }
 #endif

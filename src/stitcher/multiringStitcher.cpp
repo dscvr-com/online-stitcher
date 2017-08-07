@@ -200,6 +200,7 @@ namespace optonaut {
 
     StitchingResultP MultiRingStitcher::Stitch(ProgressCallback &progress, const string &debugName) {
 
+        stitcherTimer.Reset();
         stitcherTimer.Tick("StitchStart");
        
         // Try to load the result. If we can load it, we don't have to stitch it.  

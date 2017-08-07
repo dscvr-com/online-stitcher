@@ -13,9 +13,9 @@ namespace optonaut {
         /*
          * Global enable/disable flag. 
          */
-        static const bool g_enabled = true;
+        static const bool g_enabled = false;
 
-        bool enabled;
+        const bool enabled;
         std::chrono::high_resolution_clock::time_point last;
 
         public:
@@ -24,7 +24,7 @@ namespace optonaut {
          *
          * @param enable Forcefully enable/disable the timer. 
          */
-        STimer(bool enabled = g_enabled) : enabled(enabled), last(std::chrono::high_resolution_clock::now()) { }
+        STimer(const bool enabled = g_enabled) : enabled(enabled), last(std::chrono::high_resolution_clock::now()) { }
 
         /*
          * Measures past time since timer creation, timer reset or last tick event and 
