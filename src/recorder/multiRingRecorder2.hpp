@@ -172,7 +172,19 @@ class MultiRingRecorder {
         }
         vector<SelectionPoint> GetSelectionPoints() const {
             vector<SelectionPoint> converted;
-            for(auto ring : graph.GetRings()) {
+            vector<vector<SelectionPoint>> rings = graph.GetRings();
+            vector<vector<SelectionPoint>> orderedRings(rings.size());
+            if(rings.size() == 1) {
+                orderedRings = rings;
+            } else {
+                // Hard coded ordering, so we bring all selection points in order.
+                // TODO: Careful, this is not compatible with iOS at the moment. We would have
+                // to remove the re-ordering there.
+                orderedRings[0] = rings[1];
+                orderedRings[1] = rings[0];
+                orderedRings[2] = rings[2];
+            }
+            for(auto ring : orderedRings) {
                 ring.push_back(ring.front());
                 for(auto point : ring) {
                     SelectionPoint n;
