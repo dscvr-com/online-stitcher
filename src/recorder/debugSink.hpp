@@ -11,7 +11,9 @@ class DebugSink : public Sink<InputImageP> {
         Sink<InputImageP> &outputSink;
         
         void SaveOutput(const InputImageP image) {
-            InputImageToFile(image, debugPath + ToString(image->id) + ".jpg");
+            const string path = debugPath + ToString(image->id) + ".jpg";
+            Log << "Saving debug image " << path;
+            InputImageToFile(image, path);
         }
 
     public:
