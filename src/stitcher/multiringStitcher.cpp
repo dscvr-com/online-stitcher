@@ -92,6 +92,9 @@ namespace optonaut {
             TermCriteria termination(TermCriteria::COUNT + TermCriteria::EPS,
                     iterations, eps);
 
+
+            Log << "AffineDYOrig: " << dy;
+
             try {
 
                 if(imgA->image.data.type() != CV_8UC1) {
@@ -105,6 +108,7 @@ namespace optonaut {
                     findTransformECC(imgA->image.data, imgB->image.data, affine, warp, termination);
                 }
                 dy = affine.at<float>(1, 2);
+                Log << "AffineDY: " << dy;
             } catch (Exception ex) {
                 // :(
             }

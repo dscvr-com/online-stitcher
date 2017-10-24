@@ -88,6 +88,7 @@ namespace optonaut {
     
     void CheckpointStore::Clear() {
         DeleteDirectories(basePath);
+        DeleteDirectories(sharedPath);
     }
     
     bool CheckpointStore::HasData() {

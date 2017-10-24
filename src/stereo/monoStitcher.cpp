@@ -112,7 +112,10 @@ void GetTargetArea(const SelectionPoint &a, const SelectionPoint &b, Mat &center
     Log << "Given hfov " << a.hFov;
     Log << "Given hpos " << a.hPos;
     Log << "Given hBuffer " << hBufferRatio;
-    
+    Log << "Given vfov " << a.vFov;
+    Log << "Given vpos " << a.vPos;
+    Log << "Given vBuffer " << vBufferRatio;
+
     // TODO - this is a hard coded corner case for mono-rectify
     // which is only used for preview images. Still it is very ugly. Remove it.
     if(a.globalId == b.globalId) {
@@ -275,9 +278,9 @@ void MonoStitcher::CreateStereo(const SelectionInfo &a, const SelectionInfo &b, 
     AreaToCorners(a.image->image.size(), target.R, a.image->intrinsics, 
             targetArea, corners);
     
-    //for(auto c : corners) {
-    //    //Log << "Target corner: " << c;
-    //}
+    for(auto c : corners) {
+        Log << "Target corner: " << c;
+    }
 
     Rect roi = CornersToRoi(corners);
     target.size = roi.size();
